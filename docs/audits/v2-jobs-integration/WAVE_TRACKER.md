@@ -12,7 +12,7 @@
 | 06 | CLI modularization | WAVE_COMPLETE | `2d08506d85bc287b21c92c2e28e4e81bfa1b4efb` | `7675422c1d077572f96ff4fad1b8c703d53ffb31` | 177 passed; Ruff, compileall, public API check, and changed-source architecture gate passed; 47 LOC violations remain | isolated integration |
 | 07 | Plugin system | WAVE_COMPLETE | `3efd890b5deb1ccf36e423d3000fa1b75f1481d0` | `ce598c2859b31d0abdfaaf6c071a6898eec60782` | 450 passed/40 skipped without external checkout; 30 cross-repo contracts and 9 Fluent tests passed; one load-sensitive wx timeout passed on reruns; Ruff, compileall, API and architecture gates passed; 42 LOC violations remain | isolated integration |
 | 08 | Qt Jobs Outputs | WAVE_COMPLETE | `7f340c3bd9122627deb9fa63b9e1d98e631065f0` | `abe774525cf93b4f20c810b70e8e19fa7585d762` | 97 passed, 4 subtests passed; Ruff, compileall, API parity, and changed-source architecture gate passed; 39 inherited LOC violations remain | isolated integration |
-| 09 | Splash, updater and dialogs | NOT STARTED | — | — | — | isolated integration |
+| 09 | Splash, updater and dialogs | WAVE_COMPLETE | `3b58c8f08a458d05b263ac9ffcd9daf9438291a0` | `4c8232a746643350f29affa8b6c621c1303364e2` | 454 passed, 0 failed/skipped, 3 subtests; Ruff, compileall, facade/API and architecture gates passed; 33 global LOC violations remain; mixed exploratory run had an unbound `0xC000041D` Qt teardown crash | isolated integration |
 | 10 | Files / FTP modularization | NOT STARTED | — | — | — | isolated integration |
 | 11 | Remaining large modules | NOT STARTED | — | — | — | isolated integration |
 | 12 | Final acceptance | NOT STARTED | — | — | — | isolated integration |

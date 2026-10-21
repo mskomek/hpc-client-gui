@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "status": "WAVE_08_COMPLETE",
+  "status": "WAVE_09_COMPLETE",
   "created_at_local": "2026-10-21",
   "target_branch": "develop",
   "integration_branch": "codex/integration/v2-jobs-staged-20261021",
   "integration_worktree": "D:\\Projeler\\.tmp\\hpc-client-gui\\v2-jobs-staged-20261021",
   "integration_start_sha": "f61919bad12be5f328cb9db3fee3c8de8563fa5b",
-  "latest_integration_sha": "abe774525cf93b4f20c810b70e8e19fa7585d762",
-  "latest_integration_tree_sha": "460075cd2dbfccdd591ec4f6d376d54f5142a438",
+  "latest_integration_sha": "4c8232a746643350f29affa8b6c621c1303364e2",
+  "latest_integration_tree_sha": "3c9238647ea871553a0340949e609ebcafeb0370",
   "wave_00_source_sha": "718fbd01296793b513526adabedd3e48deea2d4a",
   "wave_00_tree_sha": "bc4297dce73099e4003a93d52d66247b6ecba719",
   "wave_00_source_fingerprint_sha256": "37be9c808f09d80dc5763520d19d8ee756c8cfa2b8ccc20f919f4fb9256f7a07",
@@ -276,11 +276,11 @@
     }
   },
   "global_architecture_inventory": {
-    "over_limit_python_count": 42,
+    "over_limit_python_count": 33,
     "unresolved_internal_imports": 1,
     "cycles": 8,
     "api_errors": 0,
-    "latest_gate_source_sha": "ce598c2859b31d0abdfaaf6c071a6898eec60782",
+    "latest_gate_source_sha": "4c8232a746643350f29affa8b6c621c1303364e2",
     "final_zero_gate_reached": false
   },
   "wave_05": {
@@ -742,6 +742,212 @@
     "develop_updated": false,
     "remote_mutations": false,
     "wip_snapshot_modified": false,
+    "full_release_acceptance_run": false,
+    "windows11_guest_acceptance_run": false,
+    "ubuntu_linux_acceptance_run": false,
+    "github_actions_run": false
+  },
+  "wave_09": {
+    "status": "WAVE_COMPLETE",
+    "start_sha": "3b58c8f08a458d05b263ac9ffcd9daf9438291a0",
+    "source_sha": "4c8232a746643350f29affa8b6c621c1303364e2",
+    "source_tree_sha": "3c9238647ea871553a0340949e609ebcafeb0370",
+    "jobs_source_sha": "713949fb752b90601e007812ebf2bd765da5ad52",
+    "v2_source_sha": "c0c6d0e956c9283f0c05f25b799e1b1f57ecb240",
+    "v2_wip_snapshot_fingerprint_sha256": "889fb7432500705ff44281ad2c76407d5ec334de17f2ab777128e33ad0d4980b",
+    "source_fingerprint_sha256": "ef2d598529b1de60d1fbd98999932c8e02c7b26584f5f9eb99d9dcfb1c4c77d2",
+    "source_fingerprint_method": "SHA256 of sorted path + NUL + SHA256(committed blob bytes) + newline records",
+    "changed_file_count": 27,
+    "changed_python_file_count": 27,
+    "added_application_modules": 18,
+    "added_test_support_modules": 1,
+    "added_test_modules": 1,
+    "source_commits": [
+      "4c8232a746643350f29affa8b6c621c1303364e2"
+    ],
+    "physical_loc": {
+      "src/hpc_gui/services/app_updater.py": [
+        664,
+        488
+      ],
+      "src/hpc_gui/services/_app_updater_script.py": [
+        0,
+        236
+      ],
+      "src/hpc_gui/wx_updater_view.py": [
+        1213,
+        487
+      ],
+      "src/hpc_gui/_wx_updater_actions.py": [
+        0,
+        189
+      ],
+      "src/hpc_gui/_wx_updater_available_views.py": [
+        0,
+        343
+      ],
+      "src/hpc_gui/_wx_updater_lifecycle.py": [
+        0,
+        89
+      ],
+      "src/hpc_gui/_wx_updater_progress_views.py": [
+        0,
+        246
+      ],
+      "src/hpc_gui/_wx_updater_state.py": [
+        0,
+        32
+      ],
+      "src/hpc_gui/_wx_updater_text.py": [
+        0,
+        63
+      ],
+      "src/hpc_gui/ui/dialogs/connection_dialog.py": [
+        1031,
+        409
+      ],
+      "src/hpc_gui/ui/dialogs/_connection_dialog_actions.py": [
+        0,
+        149
+      ],
+      "src/hpc_gui/ui/dialogs/_connection_dialog_lifecycle.py": [
+        0,
+        52
+      ],
+      "src/hpc_gui/ui/dialogs/_connection_dialog_profile.py": [
+        0,
+        164
+      ],
+      "src/hpc_gui/ui/dialogs/_connection_dialog_storage.py": [
+        0,
+        326
+      ],
+      "src/hpc_gui/ui/dialogs/_connection_dialog_templates.py": [
+        0,
+        98
+      ],
+      "src/hpc_gui/ui/dialogs/settings_dialog.py": [
+        529,
+        500
+      ],
+      "src/hpc_gui/ui/dialogs/_settings_dialog_file_associations.py": [
+        0,
+        53
+      ],
+      "src/hpc_gui/ui/dialogs/_settings_dialog_transfer_actions.py": [
+        0,
+        92
+      ],
+      "src/hpc_gui/ui/dialogs/transfer_dialog.py": [
+        805,
+        273
+      ],
+      "src/hpc_gui/ui/dialogs/_transfer_dialog_execution.py": [
+        0,
+        241
+      ],
+      "src/hpc_gui/ui/dialogs/_transfer_dialog_queue.py": [
+        0,
+        152
+      ],
+      "src/hpc_gui/ui/dialogs/_transfer_dialog_support.py": [
+        0,
+        117
+      ],
+      "src/hpc_gui/ui/dialogs/_transfer_dialog_views.py": [
+        0,
+        89
+      ],
+      "src/hpc_gui/ui/widgets/jobs_outputs_widget.py": [
+        407,
+        408
+      ],
+      "tests/support/test_wx_updater_shared.py": [
+        0,
+        55
+      ],
+      "tests/test_wx_updater_installation.py": [
+        0,
+        325
+      ],
+      "tests/test_wx_updater_spec.py": [
+        684,
+        356
+      ]
+    },
+    "tests": {
+      "updater_splash_installation": {
+        "passed": 89,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0,
+        "log": ".tmp/wave09-committed-updater.log"
+      },
+      "ftp_widget_gui": {
+        "passed": 168,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0,
+        "log": ".tmp/wave09-committed-ftp-widget.log"
+      },
+      "connection_settings_profiles_templates": {
+        "passed": 101,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0,
+        "log": ".tmp/wave09-committed-dialogs.log"
+      },
+      "transfer_recovery_conflict_concurrency": {
+        "passed": 96,
+        "failed": 0,
+        "skipped": 0,
+        "passed_subtests": 3,
+        "exit_code": 0,
+        "log": ".tmp/wave09-committed-transfer.log"
+      },
+      "committed_source_total": {
+        "passed": 454,
+        "failed": 0,
+        "skipped": 0,
+        "passed_subtests": 3,
+        "exit_code": 0
+      },
+      "mixed_domain_diagnostic": {
+        "native_exit_code": -1073740771,
+        "windows_exception": "0xC000041D",
+        "source_bound": false,
+        "description": "Qt teardown access violation at QApplication.processEvents during a mixed run that overlapped source edits; domain-separated committed-source batches all passed",
+        "log": ".tmp/wave09-regression-final.log"
+      },
+      "ruff_exit_code": 0,
+      "ruff_log": ".tmp/wave09-committed-ruff.log",
+      "compileall_exit_code": 0,
+      "compileall_log": ".tmp/wave09-committed-compileall.log",
+      "facade_method_counts": {
+        "ConnectionDialog": 29,
+        "SettingsDialog": 10,
+        "TransferDialog": 33,
+        "missing": 0
+      },
+      "changed_source_gate": {
+        "status": "PASS",
+        "python_file_count": 887,
+        "over_limit_python_count": 33,
+        "baseline_over_limit_before": 39,
+        "inherited_unresolved_internal_imports": 1,
+        "inherited_cycles": 8,
+        "new_dependency_errors": 0,
+        "new_cycles": 0,
+        "api_errors": 0,
+        "exit_code": 0,
+        "json_report": ".tmp/wave09-committed-architecture.json",
+        "markdown_report": ".tmp/wave09-committed-architecture.md",
+        "stdout_log": ".tmp/wave09-committed-architecture.log"
+      }
+    },
+    "develop_updated": false,
+    "remote_mutations": false,
+    "v2_wip_snapshot_modified": false,
     "full_release_acceptance_run": false,
     "windows11_guest_acceptance_run": false,
     "ubuntu_linux_acceptance_run": false,
