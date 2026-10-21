@@ -10,74 +10,35 @@ GitHub token are needed at test time.
 
 from __future__ import annotations
 
-import importlib.util
-import json
-import os
-import sys
-from pathlib import Path
-
-import pytest
-
-from hpc_gui.plugins.compatibility import (
-    effective_requires_app,
-    is_app_compatible,
-    validate_compatibility_override,
-)
-from hpc_gui.plugins.installer import InstallError, install_plugin_from_registry
-from hpc_gui.plugins.loader import load_installed_plugins
-from hpc_gui.plugins.registry_client import (
-    OFFICIAL_RAW_BASE,
-    OFFICIAL_REGISTRY_URL,
-    find_registry_entry,
-    parse_registry,
-)
-from hpc_gui.plugins.schema_compat import (
+pytest_plugins = ('support.test_plugin_contract_shared',)
+from support.test_plugin_contract_shared import (
+    CONTRACT_APP_VERSION,
+    InstallError,
     MIN_APP_VERSION_FOR_SCHEMA,
+    OLDEST_SUPPORTED_APP_VERSION,
+    Path,
+    RELEASED_APP_VERSION,
+    REPO,
+    _install,
     app_supports_schema,
+    effective_requires_app,
+    find_registry_entry,
+    importlib,
+    install_plugin_from_registry,
+    is_app_compatible,
+    json,
+    load_installed_plugins,
+    pytest,
     schema_floor_error,
+    sys,
+    validate_compatibility_override,
+    validate_registry_dict,
 )
-from hpc_gui.plugins.state import activate_version
-from hpc_gui.plugins.validator import validate_registry_dict
 
-# Current application release line under test (first schema-3/4 capable).
-CONTRACT_APP_VERSION = "1.5.9"
-# Published release with cluster-profile schemas 1-2 only.
-RELEASED_APP_VERSION = "1.5.8"
-# Oldest registry-served application line.
-OLDEST_SUPPORTED_APP_VERSION = "1.5.5"
-
-REPO = os.environ.get("HPC_GUI_CONTRACT_REPO", "")
 pytestmark = pytest.mark.skipif(
     not REPO or not Path(REPO).is_dir(),
     reason="HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout",
 )
-
-
-@pytest.fixture(scope="module")
-def plugins_repo() -> Path:
-    return Path(REPO).resolve()
-
-
-@pytest.fixture(scope="module")
-def local_fetcher(plugins_repo: Path):
-    def fetch(url: str, max_bytes: int) -> bytes:
-        if url == OFFICIAL_REGISTRY_URL:
-            payload = (plugins_repo / "registry.json").read_bytes()
-        elif url.startswith(OFFICIAL_RAW_BASE):
-            payload = (plugins_repo / url[len(OFFICIAL_RAW_BASE):]).read_bytes()
-        else:
-            raise OSError(f"unexpected URL outside the official raw base: {url}")
-        if len(payload) > max_bytes:
-            raise OSError("response exceeds size limit")
-        return payload
-
-    return fetch
-
-
-@pytest.fixture(scope="module")
-def registry(plugins_repo: Path) -> dict:
-    return parse_registry((plugins_repo / "registry.json").read_bytes())
-
 
 @pytest.mark.contract
 def test_real_registry_passes_repository_validator(plugins_repo: Path):
@@ -91,7 +52,6 @@ def test_real_registry_passes_repository_validator(plugins_repo: Path):
         assert not errors, f"registry validation failed: {errors}"
     finally:
         sys.path.remove(str(scripts_dir))
-
 
 @pytest.mark.contract
 def test_override_contract_agrees_across_both_repositories(plugins_repo: Path, registry: dict):
@@ -136,7 +96,6 @@ def test_override_contract_agrees_across_both_repositories(plugins_repo: Path, r
     finally:
         sys.path.remove(str(scripts_dir))
 
-
 @pytest.mark.contract
 def test_real_registry_resolution_honours_a_narrowing_override(registry: dict):
     """The production resolver, on the real registry, obeys an override."""
@@ -157,7 +116,6 @@ def test_real_registry_resolution_honours_a_narrowing_override(registry: dict):
     )
     assert resolved["version"] != baseline["version"]
 
-
 @pytest.mark.contract
 def test_plugin_repository_schema_matrix_matches_application(plugins_repo: Path):
     """Drift guard: the independently validatable plugin-side matrix must
@@ -170,7 +128,6 @@ def test_plugin_repository_schema_matrix_matches_application(plugins_repo: Path)
     spec.loader.exec_module(module)
     assert module.MIN_APP_VERSION_FOR_SCHEMA == MIN_APP_VERSION_FOR_SCHEMA
 
-
 @pytest.mark.contract
 def test_every_plugin_id_resolves_on_current_app(registry: dict):
     ids = sorted({entry["id"] for entry in registry["plugins"]})
@@ -181,7 +138,6 @@ def test_every_plugin_id_resolves_on_current_app(registry: dict):
             f"{plugin_id} resolved to {entry['version']} which excludes "
             f"{CONTRACT_APP_VERSION}"
         )
-
 
 @pytest.mark.contract
 def test_manifest_hashes_and_identities_match_registry(registry: dict, plugins_repo: Path):
@@ -200,7 +156,6 @@ def test_manifest_hashes_and_identities_match_registry(registry: dict, plugins_r
             assert "linter-tool" in manifest["capabilities"]
             continue
         assert manifest["plugin_api"] == 1
-
 
 @pytest.mark.contract
 def test_published_payload_schema_floors_are_honest(registry: dict, plugins_repo: Path):
@@ -222,16 +177,6 @@ def test_published_payload_schema_floors_are_honest(registry: dict, plugins_repo
                 problems.append(f"{entry['id']}@{entry['version']}: {error}")
     assert not problems, "\n".join(problems)
 
-
-def _install(local_fetcher, tmp_path: Path, entry: dict, app_version: str = CONTRACT_APP_VERSION):
-    return install_plugin_from_registry(
-        entry,
-        root=tmp_path,
-        app_version=app_version,
-        fetcher=local_fetcher,
-    )
-
-
 @pytest.mark.integration
 def test_truba_latest_resolves_and_profile_loads(registry, local_fetcher, tmp_path: Path):
     entry = find_registry_entry(
@@ -250,7 +195,6 @@ def test_truba_latest_resolves_and_profile_loads(registry, local_fetcher, tmp_pa
     assert profiles[0].scheduler == "slurm"
     assert profiles[0].schema_version == 4
 
-
 @pytest.mark.integration
 def test_released_1_5_8_gets_latest_compatible_truba(registry, local_fetcher, tmp_path: Path):
     """v1.5.8 supports schemas 1-2 only; TRUBA 1.3.0 is the fallback."""
@@ -267,7 +211,6 @@ def test_released_1_5_8_gets_latest_compatible_truba(registry, local_fetcher, tm
     assert result.activated
     assert result.installed.cluster_profiles[0].schema_version == 2
 
-
 @pytest.mark.integration
 def test_truba_1_4_0_rejected_on_released_1_5_8(registry, local_fetcher, tmp_path: Path):
     entry = find_registry_entry(
@@ -283,7 +226,6 @@ def test_truba_1_4_0_rejected_on_released_1_5_8(registry, local_fetcher, tmp_pat
             app_version=RELEASED_APP_VERSION,
             fetcher=local_fetcher,
         )
-
 
 @pytest.mark.integration
 def test_registry_compatibility_claim_cannot_bypass_schema_rejection(
@@ -318,7 +260,6 @@ def test_registry_compatibility_claim_cannot_bypass_schema_rejection(
     assert not app_supports_schema(RELEASED_APP_VERSION, 3)
     assert app_supports_schema(CONTRACT_APP_VERSION, 3)
 
-
 @pytest.mark.integration
 def test_truba_1_4_0_installs_on_schema3_capable_release(
     registry, local_fetcher, tmp_path: Path
@@ -333,7 +274,6 @@ def test_truba_1_4_0_installs_on_schema3_capable_release(
     assert result.activated
     assert result.installed.cluster_profiles[0].schema_version == 3
     assert result.installed.cluster_profiles[0].job_outputs is not None
-
 
 @pytest.mark.integration
 def test_truba_v2_plugin_installs_and_retains_structured_sections(
@@ -356,7 +296,6 @@ def test_truba_v2_plugin_installs_and_retains_structured_sections(
     assert {item["id"] for item in profile.storage} == {"home", "scratch"}
     assert profile.quota_sources[0]["enabled"] is False
 
-
 @pytest.mark.contract
 def test_current_app_line_resolves_every_published_plugin(registry: dict):
     """Nothing published may be unreachable by the current application line."""
@@ -365,7 +304,6 @@ def test_current_app_line_resolves_every_published_plugin(registry: dict):
             registry, plugin_id, app_version=CONTRACT_APP_VERSION
         )
         assert is_app_compatible(str(entry["requires_app"]), CONTRACT_APP_VERSION)
-
 
 @pytest.mark.contract
 def test_oldest_supported_app_line_still_resolves_a_version(registry: dict):
@@ -382,131 +320,3 @@ def test_oldest_supported_app_line_still_resolves_a_version(registry: dict):
         assert is_app_compatible(
             str(entry["requires_app"]), OLDEST_SUPPORTED_APP_VERSION
         )
-
-
-@pytest.mark.integration
-def test_fluent_latest_compatible_and_loads(registry, local_fetcher, tmp_path: Path):
-    entry = find_registry_entry(
-        registry, "org.hpcclient.fluent", app_version=CONTRACT_APP_VERSION
-    )
-    assert entry["version"] == "0.3.0"
-    # Explicit selection still resolves exactly.
-    old = find_registry_entry(
-        registry, "org.hpcclient.fluent", version="0.1.0", app_version=CONTRACT_APP_VERSION
-    )
-    assert old["version"] == "0.1.0"
-
-    result = _install(local_fetcher, tmp_path, entry)
-    assert result.installed.manifest.version == "0.3.0"
-    capabilities = set(result.installed.manifest.capabilities)
-    assert {"lint-rules", "job-template"} <= capabilities
-
-
-@pytest.mark.integration
-def test_fluent_lint_rules_run(registry, local_fetcher, tmp_path: Path):
-    from hpc_gui.lint.engine import lint_text
-    from hpc_gui.lint.rulepack import load_lint_packs
-
-    entry = find_registry_entry(
-        registry, "org.hpcclient.fluent", app_version=CONTRACT_APP_VERSION
-    )
-    _install(local_fetcher, tmp_path, entry)
-
-    packs = load_lint_packs(root=tmp_path, app_version=CONTRACT_APP_VERSION)
-    fluent_packs = [
-        pack for pack in packs if pack.plugin_id == "org.hpcclient.fluent"
-    ]
-    assert fluent_packs, "Fluent lint pack must load"
-
-    journal_without_tui = "/solve/iterate 100\n"
-    diagnostics = []
-    for pack in fluent_packs:
-        diagnostics.extend(
-            lint_text(journal_without_tui, file_name="run.jou", rule_pack=pack)
-        )
-    rule_ids = {diagnostic.rule_id for diagnostic in diagnostics}
-    assert any(rule_id.startswith("FLUENT") for rule_id in rule_ids), sorted(rule_ids)
-
-
-@pytest.mark.integration
-def test_fluent_slurm_template_is_plain_substitution(
-    registry, local_fetcher, tmp_path: Path
-):
-    from hpc_gui.plugins.job_templates import load_job_templates, render_template
-
-    entry = find_registry_entry(
-        registry, "org.hpcclient.fluent", app_version=CONTRACT_APP_VERSION
-    )
-    result_version = _install(local_fetcher, tmp_path, entry).installed.manifest.version
-
-    templates = load_job_templates(root=tmp_path, app_version=CONTRACT_APP_VERSION)
-    assert templates, "Fluent job template must load"
-    template = next(t for t in templates if t.id == "fluent-slurm-basic")
-
-    values = {
-        "partition": "long",
-        "cpus": 16,
-        "time_limit": "04:00:00",
-        "fluent_version": "v252",
-        "journal_file": "case.jou",
-        "journal_base": "fluent_run",
-    }
-    rendered = render_template(template, values)
-
-    # Plain substitution proof: manual replacement over the exact installed
-    # template bytes must produce identical output. No shell/format
-    # evaluation happens during rendering.
-    body = (
-        tmp_path
-        / "packages"
-        / "org.hpcclient.fluent"
-        / result_version
-        / "templates"
-        / "fluent_job.slurm.tpl"
-    ).read_text(encoding="utf-8")
-    expected = body
-    for key, value in values.items():
-        expected = expected.replace("{{" + key + "}}", str(value))
-    assert rendered == expected
-    assert "{{" not in rendered
-
-    # Template content never executes anything by itself: no command is run
-    # during rendering; this assertion documents the invariant explicitly.
-    assert "#!/bin/bash" in rendered
-
-
-@pytest.mark.integration
-def test_fluent_update_then_rollback_preserves_versions(
-    registry, local_fetcher, tmp_path: Path
-):
-    old = find_registry_entry(
-        registry, "org.hpcclient.fluent", version="0.1.0", app_version=CONTRACT_APP_VERSION
-    )
-    new = find_registry_entry(
-        registry, "org.hpcclient.fluent", version="0.2.0", app_version=CONTRACT_APP_VERSION
-    )
-
-    _install(local_fetcher, tmp_path, old)
-    packages = tmp_path / "packages" / "org.hpcclient.fluent"
-    assert (packages / "0.1.0").is_dir()
-
-    _install(local_fetcher, tmp_path, new)
-    loaded = load_installed_plugins(root=tmp_path, app_version=CONTRACT_APP_VERSION)
-    active_fluent = [
-        p.manifest.version for p in loaded.plugins if p.manifest.id == "org.hpcclient.fluent"
-    ]
-    assert active_fluent == ["0.2.0"]
-    assert (packages / "0.1.0").is_dir()  # kept for rollback
-
-    activate_version("org.hpcclient.fluent", "0.1.0", root=tmp_path)
-    loaded = load_installed_plugins(root=tmp_path, app_version=CONTRACT_APP_VERSION)
-    active_fluent = [
-        p.manifest.version for p in loaded.plugins if p.manifest.id == "org.hpcclient.fluent"
-    ]
-    assert active_fluent == ["0.1.0"]
-
-
-@pytest.mark.audit
-def test_contract_metadata_documented(plugins_repo: Path):
-    readme = (plugins_repo / "README.md").read_text(encoding="utf-8")
-    assert "Available plugins" in readme
