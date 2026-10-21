@@ -92,7 +92,9 @@ def parse_sacct_history(text: str) -> list[dict[str, str]]:
             "reason": parts[7], "exit_code": parts[8],
             "submit_time": parts[9], "end_time": parts[10],
             "workdir": parts[11], "stdout_path": parts[12],
-            "stderr_path": parts[13], "source": "sacct",
+            "stderr_path": parts[13],
+            "workdir_source": "sacct" if parts[11] else "",
+            "source": "sacct",
         })
     return rows
 

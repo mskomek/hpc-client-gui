@@ -13,6 +13,8 @@ def test_parse_sacct_history_omits_step_rows_and_keeps_array_tasks():
     assert [row["job_id"] for row in rows] == ["123", "123_1"]
     assert rows[1]["exit_code"] == "1:0"
     assert rows[1]["end_time"] == "2026-10-01T10:06:00"
+    assert rows[0]["workdir_source"] == "sacct"
+    assert rows[1]["workdir_source"] == "sacct"
 
 
 def test_merge_keeps_compact_pending_array_summary():
