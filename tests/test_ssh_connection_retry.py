@@ -7,6 +7,7 @@ import pytest
 from hpc_gui.config.storage import get_ssh_connection_attempts, set_ssh_connection_attempts
 from hpc_gui.ssh.client import SSHClientWrapper
 from hpc_gui.ssh.host_keys import HostKeyRejectedError
+from hpc_gui.ssh.jump import JumpAuthenticationError, JumpForwardingDeniedError
 from hpc_gui.ssh.retry import retry_connection
 
 
@@ -53,6 +54,23 @@ def test_host_key_rejection_is_never_retried(monkeypatch):
         )
 
     assert operation.call_count == 1
+    sleep.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "error_type", [JumpAuthenticationError, JumpForwardingDeniedError]
+)
+def test_jump_host_security_errors_are_never_retried(error_type, monkeypatch):
+    wrapper = SSHClientWrapper()
+    connect_once = Mock(side_effect=error_type("jump host rejected connection"))
+    sleep = Mock()
+    monkeypatch.setattr(wrapper, "_connect_once", connect_once)
+    monkeypatch.setattr("hpc_gui.ssh.retry.time.sleep", sleep)
+
+    with pytest.raises(error_type, match="jump host rejected connection"):
+        wrapper.connect()
+
+    assert connect_once.call_count == 1
     sleep.assert_not_called()
 
 
