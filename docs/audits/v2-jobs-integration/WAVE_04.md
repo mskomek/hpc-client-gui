@@ -1,6 +1,6 @@
 # WAVE 04 — Config Storage
 
-Status: **WAVE_COMPLETE** on the isolated integration branch. `develop` remains unchanged.
+Status: **WAVE_COMPLETE** on the isolated integration branch. After WAVE 04, the integration branch was synchronized with the newer local and remote `develop` head; `develop` itself was not changed by this task.
 
 ## Source identity
 
@@ -77,4 +77,8 @@ GitHub Actions were not run. Full release acceptance, native Windows11 guest acc
 
 ## Integration state
 
-The source commit is complete on `codex/integration/v2-jobs-staged-20261021`. It has not been merged to local `develop`; that branch remains checked out in a separate worktree. No remote mutation was made.
+WAVE 04 source commit `71ef960bb486cc821e1a79f969e5b58913841715` is complete on `codex/integration/v2-jobs-staged-20261021`. The local `develop` branch advanced independently from the initial `f61919bad12be5f328cb9db3fee3c8de8563fa5b` to `d91c84f1d784fd3391bf132a54134faef44e63c9`, matching the current `origin/develop`. That commit adds collapsible SSH command log groups. It was merged into the isolated integration branch without conflicts as checkpoint `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b` (tree `c6ef9fdb8af7df91f2ad9bbaf0d62aa3deaa3d71`); no changes were made to the `develop` worktree or remote.
+
+After synchronization, `tests/test_wx_logs_groups.py` passed 10/10 (exit 0; `.tmp/develop-sync-wx-logs-20261021T180714963.log`). The changed-source architecture gate based on `0aa8ce54321c9b5130bcf4366a88f8d731ac0898` passed across 823 Python files with 50 inherited over-limit files and no new dependency/API errors (`.tmp/develop-sync-arch-20261021T180715073.json` and `.md`). The additional test and gate results are synchronization checks, not WAVE 04 source tests.
+
+WAVE 04 remains complete at its source commit. The integration branch now includes the current `develop` head through the separate sync checkpoint, and is ready to start WAVE 05 from the documentation closeout commit. No remote mutation was made.

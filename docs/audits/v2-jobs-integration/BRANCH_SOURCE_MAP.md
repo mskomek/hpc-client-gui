@@ -4,12 +4,12 @@
 
 | Ref | Commit | Advertised remote head | Worktree state |
 |---|---|---|---|
-| local `develop` | `f61919bad12be5f328cb9db3fee3c8de8563fa5b` | `origin/develop` = `b2de2bb8ccc533aa0b0ecb7dd2a798a4fcdf709a` | clean; checked out in `D:\Projeler\hpc-client-gui-i18n-develop` |
+| local `develop` | `d91c84f1d784fd3391bf132a54134faef44e63c9` | `origin/develop` = `d91c84f1d784fd3391bf132a54134faef44e63c9` | clean; checked out in `D:\Projeler\hpc-client-gui-i18n-develop` |
 | Jobs | `713949fb752b90601e007812ebf2bd765da5ad52` | same | clean; `C:\Users\mskomek\.codex\worktrees\jobs-workspace-recovery-merge` |
 | V2 | `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` | same | 99 modified tracked, 74 untracked, 32 ignored entries |
-| integration | `codex/integration/v2-jobs-staged-20261021` at `71ef960bb486cc821e1a79f969e5b58913841715` | local only | isolated worktree; no remote branch |
+| integration | `codex/integration/v2-jobs-staged-20261021` at `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b` | local only | isolated worktree; synchronized with current `develop`; no remote branch |
 
-Live `git ls-remote` confirmed the three advertised GitHub heads above on 2026-10-21. The supplied starting SHAs still match Jobs and V2. The supplied `develop` SHA is the remote-tracking head; local `develop` has one additional committed change.
+At startup, the supplied `develop` SHA was the remote-tracking head and local `develop` had one additional commit. During the run, local and remote `develop` advanced to `d91c84f1d784fd3391bf132a54134faef44e63c9` with the collapsible SSH log groups change. The isolated integration branch now contains that head through a clean no-conflict merge checkpoint `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b`. The initial source refs remain recorded below and in the manifest; Jobs and V2 source branches remain unchanged.
 
 ## History and divergence
 
@@ -45,6 +45,8 @@ V2 commits after its common base, in order:
 - Develop's hide-finished Jobs and SSH retry preferences were absent from the V2 facade, so both getter/setter pairs were restored and included in the public API contract.
 - The V2 WIP core's dynamic facade callbacks were rejected to keep dependencies one-way. The profile WIP's use of a core module reference was retained as an explicit import; deletion cleanup is composed by the facade to avoid a new dependency cycle.
 - The 27-file source set has fingerprint `c41c0f9b5873f2e0ee49c5420d1bb3fd2f4aa63aa885c7073c226f2b74c6f153`; its source commit is `71ef960bb486cc821e1a79f969e5b58913841715`. It is isolated and has not been merged into local `develop`.
+
+After WAVE 04, current `develop` `d91c84f1d784fd3391bf132a54134faef44e63c9` was merged into integration as `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b` (tree `c6ef9fdb8af7df91f2ad9bbaf0d62aa3deaa3d71`). The sync added the develop SSH log-group feature and passed its focused 10-test suite. The source branch itself remains unchanged.
 
 ## Dirty and ignored source classification
 

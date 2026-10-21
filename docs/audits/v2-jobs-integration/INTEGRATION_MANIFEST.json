@@ -6,8 +6,8 @@
   "integration_branch": "codex/integration/v2-jobs-staged-20261021",
   "integration_worktree": "D:\\Projeler\\.tmp\\hpc-client-gui\\v2-jobs-staged-20261021",
   "integration_start_sha": "f61919bad12be5f328cb9db3fee3c8de8563fa5b",
-  "latest_integration_sha": "71ef960bb486cc821e1a79f969e5b58913841715",
-  "latest_integration_tree_sha": "7e9ade7db80efb0a186a16a45c7c1660074c3f6f",
+  "latest_integration_sha": "1995d7f5cb28de5cdf34737f95202e9d4fb7af9b",
+  "latest_integration_tree_sha": "c6ef9fdb8af7df91f2ad9bbaf0d62aa3deaa3d71",
   "wave_00_source_sha": "718fbd01296793b513526adabedd3e48deea2d4a",
   "wave_00_tree_sha": "bc4297dce73099e4003a93d52d66247b6ecba719",
   "wave_00_source_fingerprint_sha256": "37be9c808f09d80dc5763520d19d8ee756c8cfa2b8ccc20f919f4fb9256f7a07",
@@ -125,7 +125,7 @@
     "develop_updated": false,
     "remote_mutations": false
   },
-  "origin_develop_sha": "b2de2bb8ccc533aa0b0ecb7dd2a798a4fcdf709a",
+  "origin_develop_sha": "d91c84f1d784fd3391bf132a54134faef44e63c9",
   "jobs_source_sha": "713949fb752b90601e007812ebf2bd765da5ad52",
   "v2_source_sha": "c0c6d0e956c9283f0c05f25b799e1b1f57ecb240",
   "merge_bases": {
@@ -245,5 +245,34 @@
     "develop_updated": false,
     "remote_mutations": false,
     "wip_snapshot_modified": false
+  },
+  "current_local_develop_sha": "d91c84f1d784fd3391bf132a54134faef44e63c9",
+  "current_origin_develop_sha": "d91c84f1d784fd3391bf132a54134faef44e63c9",
+  "develop_sync": {
+    "status": "SYNCED_INTEGRATION_ONLY",
+    "source_develop_sha": "d91c84f1d784fd3391bf132a54134faef44e63c9",
+    "integration_merge_sha": "1995d7f5cb28de5cdf34737f95202e9d4fb7af9b",
+    "integration_tree_sha": "c6ef9fdb8af7df91f2ad9bbaf0d62aa3deaa3d71",
+    "merge_conflicts": 0,
+    "develop_worktree_modified_by_task": false,
+    "remote_mutations": false,
+    "focused_test": {
+      "command": "python -m pytest -q tests/test_wx_logs_groups.py",
+      "passed": 10,
+      "failed": 0,
+      "exit_code": 0,
+      "log": ".tmp/develop-sync-wx-logs-20261021T180714963.log"
+    },
+    "changed_source_architecture_gate": {
+      "status": "PASS",
+      "python_file_count": 823,
+      "over_limit_count": 50,
+      "new_dependency_errors": 0,
+      "new_cycles": 0,
+      "api_errors": 0,
+      "exit_code": 0,
+      "json_report": ".tmp/develop-sync-arch-20261021T180715073.json",
+      "markdown_report": ".tmp/develop-sync-arch-20261021T180715073.md"
+    }
   }
 }

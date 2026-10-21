@@ -7,7 +7,8 @@
 | 02 | Jobs workspace and wx UI | WAVE_COMPLETE | `7c3ee2260aac03eea2e6aebf7d9f3e7a39ee55e3` | `d12a752c1557b2cff7ea5a21bbf2d391c13b5fa3` | 95 focused tests plus 64 extended GUI tests passed; post-fix stress 10/10; architecture gate, Ruff and compileall passed; 51 global LOC violations remain | isolated integration |
 | 03 | Release runner and test scopes | WAVE_COMPLETE | `49ce32cc85d9a926542597b33f70dec259e7e2e1` | `4ed2075c072b0cd38ca05249a9670aa96dfc3af1` | 13 focused tests passed; Ruff, compileall, evidence SHA and wheel build passed; changed-source gate passed; full architecture remains baseline-failing at 51 files | isolated integration |
 | 04 | Config storage | WAVE_COMPLETE | `66f07565e19947b8140c5f7798fa32c2b3e36890` | `71ef960bb486cc821e1a79f969e5b58913841715` | 384 passed, 0 failed, 1 POSIX-only skip; Ruff, compileall, facade API and changed-source gate passed | isolated integration |
-| 05 | Connection and SSH | NOT STARTED | — | — | — | isolated integration |
+| Sync | Advance isolated integration to current develop | COMPLETE | `0aa8ce54321c9b5130bcf4366a88f8d731ac0898` | `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b` | SSH log groups regression 10/10; changed-source architecture gate passed, 50 baseline LOC violations remain | isolated integration |
+| 05 | Connection and SSH | IN PROGRESS | `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b` | — | WIP source review underway | isolated integration |
 | 06 | CLI modularization | NOT STARTED | — | — | — | isolated integration |
 | 07 | Plugin system | NOT STARTED | — | — | — | isolated integration |
 | 08 | Qt Jobs Outputs | NOT STARTED | — | — | — | isolated integration |
