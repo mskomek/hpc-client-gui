@@ -2,5 +2,4 @@
 pytest-cov==7.1.0
 ruff==0.15.5
 pre-commit==4.3.0
-build==1.5.0
 pip-audit==2.9.0

@@ -1,7 +1,9 @@
 altgraph==0.17.5
 backports.tarfile==1.2.0
 bcrypt==5.0.0
+build==1.5.0
 cffi==2.1.1
+colorama==0.4.6
 # macOS x86_64 has no supported cryptography wheel after 48.x.
 cryptography==50.0.0; sys_platform != "darwin" or platform_machine != "x86_64"
 cryptography==48.0.1; sys_platform == "darwin" and platform_machine == "x86_64"
@@ -19,6 +21,7 @@ pluggy==1.6.0
 pyasynchat==1.0.5
 pyasyncore==1.0.5
 pycparser==3.0
+pyproject_hooks==1.2.0
 pyftpdlib==2.2.0
 Pygments==2.21.0
 pyinstaller==6.22.2
