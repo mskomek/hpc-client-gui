@@ -9,7 +9,7 @@ Status values remain **NOT VERIFIED** until focused tests pass against the integ
 | Jobs deletion | Delete Details is local-only, multi-delete scopes targets, Cancel Job stays distinct | At `d12a752c`: store tombstone and `test_wx_jobs_bulk_delete.py` passed; no remote cancel/delete was issued | PARTIALLY VERIFIED |
 | Async Jobs | Refresh/reconnect preserve selected job and reject stale async results | At `d12a752c`: controller coordinator, provider status, refresh identity, stale-selection/reconnect tests passed | PARTIALLY VERIFIED |
 | wx Jobs | Details/Files/Outputs selection and event lifecycle | At `d12a752c`: 95 focused controller/workspace tests and 64 extended GUI tests passed; post-fix teardown stress passed | PARTIALLY VERIFIED; Windows11 guest acceptance remains |
-| Release runner | Dynamic GUI discovery, isolated processes, scope selection, evidence hashes, crash visibility and coverage | Jobs/V2 runner overlap; not reconciled | NOT VERIFIED |
+| Release runner | Dynamic GUI discovery, isolated processes, portable/acceptance scopes, pinned evidence hashes, crash visibility and coverage | At `4ed2075c`: 13 runner tests passed; hash check and temporary wheel build passed; dynamic wx/Qt and future FTP split selectors are covered | PARTIALLY VERIFIED; full acceptance suite and coverage matrix remain |
 | Config | Profiles, legacy JSON, unknown fields, atomic writes, settings, transfer and window state | Focused persistence tests pending | NOT VERIFIED |
 | SSH/SFTP | Password/key/keyboard-interactive, credential store, jump host, reconnect and redaction | Focused auth tests pending | NOT VERIFIED |
 | CLI | Aliases, saved profiles, policy, Files/Jobs commands, validation, exit codes and JSON/UTF-8 | Focused CLI tests pending | NOT VERIFIED |

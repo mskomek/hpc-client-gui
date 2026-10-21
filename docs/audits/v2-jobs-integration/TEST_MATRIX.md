@@ -24,6 +24,14 @@
 | Wave 02 Ruff and compileall | changed Jobs/controller/helper implementation files | passed | 0 |
 | Wave 02 changed-source architecture gate | base `7c3ee2260aac03eea2e6aebf7d9f3e7a39ee55e3`, 817 Python files | PASS; 51 untouched over-limit files remain; no new import/API/cycle errors | 0 |
 | Wave 02 full project architecture | `--mode full` at `d12a752c1557b2cff7ea5a21bbf2d391c13b5fa3` | FAIL expected: 51 LOC violations, 2 unresolved imports, 8 cycles, 0 API errors | 1 |
+| Wave 03 release runner | `python -m pytest tests/test_release_test_suite.py -q` at `4ed2075c072b0cd38ca05249a9670aa96dfc3af1` | 13 passed, 0 failed, 0 skipped | 0 |
+| Wave 03 Ruff | `python -m ruff check scripts/release_test_suite.py scripts/native_gui_test_files.py scripts/ci.py tests/test_release_test_suite.py` | passed | 0 |
+| Wave 03 compileall | `python -m compileall -q scripts/release_test_suite.py scripts/native_gui_test_files.py scripts/ci.py tests/test_release_test_suite.py` | passed | 0 |
+| Wave 03 evidence hash | `_evidence_failures()` against the committed W04 support matrix | no evidence failures; raw file SHA-256 matches the pinned digest | 0 |
+| Wave 03 wheel build | `python -m build --wheel --outdir <temporary .tmp directory> <repository>` | wheel built successfully; non-fatal setuptools license-format deprecation warning | 0 |
+| Wave 03 changed-source architecture | `--mode gate --base 49ce32cc85d9a926542597b33f70dec259e7e2e1` at WAVE 03 source | PASS; 818 Python files scanned, no new LOC/import/cycle/API errors | 0 |
+| Wave 03 full project architecture | `--mode full` at `4ed2075c072b0cd38ca05249a9670aa96dfc3af1` | FAIL baseline debt: 51 LOC violations, 2 unresolved imports, 8 cycles, 0 API errors | 1 |
+| Full release acceptance suite | `python scripts/release_test_suite.py --scope acceptance` | NOT RUN; retained for WAVE 12 full acceptance | — |
 | GitHub Actions | not run | NOT RUN | — |
 
 The first `py -m pytest` attempt used the global Python 3.14 installation, which has no pytest module; the WAVE 00 suite was rerun with the project `.venv` and passed 5/5. During Wave 01 source selection, one exploratory suite invocation had 44 passes and one failure because a later Jobs Wave 02 test rewrite patched an extracted module not yet present. That test-only rewrite was excluded from Wave 01; the final WAVE 01 suites passed 45/45 with the existing test retained and provenance assertions added. This diagnostic failure is source incompatibility, not an unresolved product failure.

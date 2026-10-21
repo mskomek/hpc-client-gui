@@ -7,7 +7,7 @@
 | local `develop` | `f61919bad12be5f328cb9db3fee3c8de8563fa5b` | `origin/develop` = `b2de2bb8ccc533aa0b0ecb7dd2a798a4fcdf709a` | clean; checked out in `D:\Projeler\hpc-client-gui-i18n-develop` |
 | Jobs | `713949fb752b90601e007812ebf2bd765da5ad52` | same | clean; `C:\Users\mskomek\.codex\worktrees\jobs-workspace-recovery-merge` |
 | V2 | `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` | same | 99 modified tracked, 74 untracked, 32 ignored entries |
-| integration | created from local `develop` | local only | isolated worktree; no remote branch |
+| integration | `codex/integration/v2-jobs-staged-20261021` at `4ed2075c072b0cd38ca05249a9670aa96dfc3af1` | local only | isolated worktree; no remote branch |
 
 Live `git ls-remote` confirmed the three advertised GitHub heads above on 2026-10-21. The supplied starting SHAs still match Jobs and V2. The supplied `develop` SHA is the remote-tracking head; local `develop` has one additional committed change.
 
@@ -30,6 +30,14 @@ Jobs commits after its develop merge base, in order:
 V2 commits after its common base, in order:
 
 `c4d4be9c`, `79fec477`, `e6440fbb`, `24b41444`, `c0c6d0e9`.
+
+## WAVE 03 source selection
+
+- Jobs release/test runner paths were selected from `f119e2e7`, `4f1179d3`, `8a27b784`, and `753db9f6`. Their dynamic GUI discovery, filesystem boundary, environment isolation, and test reporting were retained.
+- V2 runner changes were selected from `c4d4be9c` and `e6440fbb`: portable/acceptance scopes, pinned evidence SHA-256, and split FTP test boundaries. The FTP boundaries now discover `test_ftp_widget_*.py` modules dynamically.
+- `artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md` was restored from V2 at its exact pinned content hash and is normalized to LF with a narrow `.gitattributes` rule.
+- The preserved V2 dirty snapshot contains no runner files from this wave; it was not modified.
+- The wave source commit is `4ed2075c072b0cd38ca05249a9670aa96dfc3af1`; it is isolated and has not been merged into local `develop`.
 
 ## Dirty and ignored source classification
 
