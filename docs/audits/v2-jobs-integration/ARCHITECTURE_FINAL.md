@@ -1,6 +1,6 @@
 # Final Architecture Status
 
-Status: **PENDING**. Final acceptance requires a fresh shared Agent Core `project` scope run and the project import/API gate on the final integration commit. The latest checkpoint is `4ed2075c072b0cd38ca05249a9670aa96dfc3af1` after WAVE 03; its full scan reports 51 over-limit files, 2 unresolved internal imports, 8 cycles, and 0 public API errors. The changed-source gate passed with no new violations. This checkpoint is not final acceptance.
+Status: **PENDING**. Final acceptance requires a fresh shared Agent Core `project` scope run and the project import/API gate on the final integration commit. The latest source checkpoint is `71ef960bb486cc821e1a79f969e5b58913841715` after WAVE 04; its architecture report scans 822 Python files and records 50 over-limit files, 2 inherited unresolved internal imports, 8 inherited cycles, and 0 public API errors. The changed-source gate passed with no new violations. This checkpoint is not final acceptance.
 
 Required final counts:
 

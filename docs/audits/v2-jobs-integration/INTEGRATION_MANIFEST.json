@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "status": "WAVE_03_COMPLETE",
+  "status": "WAVE_04_COMPLETE",
   "created_at_local": "2026-10-21",
   "target_branch": "develop",
   "integration_branch": "codex/integration/v2-jobs-staged-20261021",
   "integration_worktree": "D:\\Projeler\\.tmp\\hpc-client-gui\\v2-jobs-staged-20261021",
   "integration_start_sha": "f61919bad12be5f328cb9db3fee3c8de8563fa5b",
-  "latest_integration_sha": "4ed2075c072b0cd38ca05249a9670aa96dfc3af1",
-  "latest_integration_tree_sha": "11aea5e0142d715deaeb662b411340e0d9f73143",
+  "latest_integration_sha": "71ef960bb486cc821e1a79f969e5b58913841715",
+  "latest_integration_tree_sha": "7e9ade7db80efb0a186a16a45c7c1660074c3f6f",
   "wave_00_source_sha": "718fbd01296793b513526adabedd3e48deea2d4a",
   "wave_00_tree_sha": "bc4297dce73099e4003a93d52d66247b6ecba719",
   "wave_00_source_fingerprint_sha256": "37be9c808f09d80dc5763520d19d8ee756c8cfa2b8ccc20f919f4fb9256f7a07",
@@ -27,9 +27,21 @@
       "7051a62c516b921d21030391f06621bd0e04bd3e",
       "a043d8d59bd5cec717b103c6f959a37abd7e7cba"
     ],
-    "tests": {"passed": 45, "failed": 0, "skipped": 0, "exit_code": 0},
+    "tests": {
+      "passed": 45,
+      "failed": 0,
+      "skipped": 0,
+      "exit_code": 0
+    },
     "changed_source_gate_exit_code": 0,
-    "full_architecture_gate": {"status": "FAIL_BASELINE_DEBT", "over_limit": 52, "dependency_errors": 2, "cycles": 8, "api_errors": 0, "exit_code": 1}
+    "full_architecture_gate": {
+      "status": "FAIL_BASELINE_DEBT",
+      "over_limit": 52,
+      "dependency_errors": 2,
+      "cycles": 8,
+      "api_errors": 0,
+      "exit_code": 1
+    }
   },
   "wave_02": {
     "status": "WAVE_COMPLETE",
@@ -48,9 +60,23 @@
       "90876b1aa2d9eb02f930dde5f9735d58f2902aec",
       "753db9f69eaf053a4e2bced63411543cc24d4e0c"
     ],
-    "tests": {"primary_passed": 95, "extended_passed": 64, "post_fix_stress_passed": 10, "api_compatibility_passed": 14, "architecture_gate_passed": 6, "unresolved_failures": 0},
+    "tests": {
+      "primary_passed": 95,
+      "extended_passed": 64,
+      "post_fix_stress_passed": 10,
+      "api_compatibility_passed": 14,
+      "architecture_gate_passed": 6,
+      "unresolved_failures": 0
+    },
     "changed_source_gate_exit_code": 0,
-    "full_architecture_gate": {"status": "FAIL_BASELINE_DEBT", "over_limit": 51, "dependency_errors": 2, "cycles": 8, "api_errors": 0, "exit_code": 1},
+    "full_architecture_gate": {
+      "status": "FAIL_BASELINE_DEBT",
+      "over_limit": 51,
+      "dependency_errors": 2,
+      "cycles": 8,
+      "api_errors": 0,
+      "exit_code": 1
+    },
     "wx_unregisterclass_warning": "Observed once before fixture fix; post-fix stress and window-handoff reruns exited cleanly"
   },
   "wave_03": {
@@ -65,8 +91,16 @@
     "changed_file_count": 8,
     "changed_python_file_count": 4,
     "added_python_modules": 1,
-    "jobs_source_commits": ["f119e2e7", "4f1179d3", "8a27b784", "753db9f6"],
-    "v2_source_commits": ["c4d4be9c", "e6440fbb"],
+    "jobs_source_commits": [
+      "f119e2e7",
+      "4f1179d3",
+      "8a27b784",
+      "753db9f6"
+    ],
+    "v2_source_commits": [
+      "c4d4be9c",
+      "e6440fbb"
+    ],
     "tests": {
       "runner_passed": 13,
       "failed": 0,
@@ -100,9 +134,18 @@
     "jobs_v2": "42c8b471cf24c047c2f7f58047a5177bfd158a20"
   },
   "divergence_counts_left_right": {
-    "develop_jobs": [1, 23],
-    "develop_v2": [11, 5],
-    "jobs_v2": [33, 5]
+    "develop_jobs": [
+      1,
+      23
+    ],
+    "develop_v2": [
+      11,
+      5
+    ],
+    "jobs_v2": [
+      33,
+      5
+    ]
   },
   "remote_heads_verified": true,
   "main_user_worktree_preserved": true,
@@ -121,5 +164,86 @@
     "cycles": 8
   },
   "remote_mutations": false,
-  "github_actions_tested": false
+  "github_actions_tested": false,
+  "wave_04": {
+    "status": "WAVE_COMPLETE",
+    "start_sha": "66f07565e19947b8140c5f7798fa32c2b3e36890",
+    "source_sha": "71ef960bb486cc821e1a79f969e5b58913841715",
+    "source_tree_sha": "7e9ade7db80efb0a186a16a45c7c1660074c3f6f",
+    "jobs_source_sha": "713949fb752b90601e007812ebf2bd765da5ad52",
+    "v2_source_sha": "c0c6d0e956c9283f0c05f25b799e1b1f57ecb240",
+    "v2_selected_commit": "79fec4776066d9e0759adcbeb3f90430d4fc0955",
+    "source_fingerprint_sha256": "c41c0f9b5873f2e0ee49c5420d1bb3fd2f4aa63aa885c7073c226f2b74c6f153",
+    "source_fingerprint_method": "SHA256 of sorted path + NUL + SHA256(committed blob bytes) + newline records",
+    "changed_file_count": 27,
+    "changed_python_file_count": 27,
+    "added_application_modules": 4,
+    "modularized_file_lines": {
+      "src/hpc_gui/config/storage.py": [
+        832,
+        233
+      ],
+      "src/hpc_gui/config/_storage_core.py": [
+        0,
+        174
+      ],
+      "src/hpc_gui/config/_storage_preferences.py": [
+        0,
+        406
+      ],
+      "src/hpc_gui/config/_storage_profiles.py": [
+        0,
+        130
+      ],
+      "src/hpc_gui/config/_storage_window_state.py": [
+        0,
+        127
+      ]
+    },
+    "tests": {
+      "focused_passed": 356,
+      "wx_settings_passed": 27,
+      "ftp_sbatch_follow_passed": 1,
+      "compatibility_spot_rerun_passed": 38,
+      "unique_passed": 384,
+      "failed": 0,
+      "skipped": 1,
+      "skip_reason": "tests/test_security_hardening_wave.py:176: POSIX permission semantics on Windows",
+      "focused_exit_code": 0,
+      "wx_settings_exit_code": 0,
+      "ftp_sbatch_follow_exit_code": 0,
+      "ruff_exit_code": 0,
+      "compileall_exit_code": 0,
+      "facade_api_check_exit_code": 0,
+      "github_actions_run": false,
+      "logs": [
+        ".tmp/wave04-config-tests-skip-reasons-20261021T180207137.log",
+        ".tmp/wave04-wx-settings-committed-20261021T180318451.log",
+        ".tmp/wave04-ftp-follow-committed-20261021T180318688.log",
+        ".tmp/wave04-restored-target-tests-20261021T180026689.log"
+      ]
+    },
+    "changed_source_gate": {
+      "status": "PASS",
+      "python_file_count": 822,
+      "over_limit_python_count": 50,
+      "baseline_over_limit_before": 51,
+      "new_dependency_errors": 0,
+      "new_cycles": 0,
+      "api_errors": 0,
+      "exit_code": 0,
+      "json_report": ".tmp/wave04-architecture-committed-20261021T180318694.json",
+      "markdown_report": ".tmp/wave04-architecture-committed-20261021T180318694.md"
+    },
+    "global_architecture_inventory": {
+      "over_limit_python_count": 50,
+      "unresolved_internal_imports": 2,
+      "cycles": 8,
+      "api_errors": 0,
+      "final_zero_gate_reached": false
+    },
+    "develop_updated": false,
+    "remote_mutations": false,
+    "wip_snapshot_modified": false
+  }
 }

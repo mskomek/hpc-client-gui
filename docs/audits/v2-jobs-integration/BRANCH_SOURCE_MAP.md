@@ -7,7 +7,7 @@
 | local `develop` | `f61919bad12be5f328cb9db3fee3c8de8563fa5b` | `origin/develop` = `b2de2bb8ccc533aa0b0ecb7dd2a798a4fcdf709a` | clean; checked out in `D:\Projeler\hpc-client-gui-i18n-develop` |
 | Jobs | `713949fb752b90601e007812ebf2bd765da5ad52` | same | clean; `C:\Users\mskomek\.codex\worktrees\jobs-workspace-recovery-merge` |
 | V2 | `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` | same | 99 modified tracked, 74 untracked, 32 ignored entries |
-| integration | `codex/integration/v2-jobs-staged-20261021` at `4ed2075c072b0cd38ca05249a9670aa96dfc3af1` | local only | isolated worktree; no remote branch |
+| integration | `codex/integration/v2-jobs-staged-20261021` at `71ef960bb486cc821e1a79f969e5b58913841715` | local only | isolated worktree; no remote branch |
 
 Live `git ls-remote` confirmed the three advertised GitHub heads above on 2026-10-21. The supplied starting SHAs still match Jobs and V2. The supplied `develop` SHA is the remote-tracking head; local `develop` has one additional committed change.
 
@@ -38,6 +38,13 @@ V2 commits after its common base, in order:
 - `artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md` was restored from V2 at its exact pinned content hash and is normalized to LF with a narrow `.gitattributes` rule.
 - The preserved V2 dirty snapshot contains no runner files from this wave; it was not modified.
 - The wave source commit is `4ed2075c072b0cd38ca05249a9670aa96dfc3af1`; it is isolated and has not been merged into local `develop`.
+
+## WAVE 04 source selection
+
+- Jobs has no config-storage implementation delta for this wave. The V2 modular storage implementation was selected from `79fec477` on branch `codex/v2-master-repair-20261017` and reconciled with the integration source.
+- Develop's hide-finished Jobs and SSH retry preferences were absent from the V2 facade, so both getter/setter pairs were restored and included in the public API contract.
+- The V2 WIP core's dynamic facade callbacks were rejected to keep dependencies one-way. The profile WIP's use of a core module reference was retained as an explicit import; deletion cleanup is composed by the facade to avoid a new dependency cycle.
+- The 27-file source set has fingerprint `c41c0f9b5873f2e0ee49c5420d1bb3fd2f4aa63aa885c7073c226f2b74c6f153`; its source commit is `71ef960bb486cc821e1a79f969e5b58913841715`. It is isolated and has not been merged into local `develop`.
 
 ## Dirty and ignored source classification
 

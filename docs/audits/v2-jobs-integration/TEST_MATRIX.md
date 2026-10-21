@@ -31,6 +31,13 @@
 | Wave 03 wheel build | `python -m build --wheel --outdir <temporary .tmp directory> <repository>` | wheel built successfully; non-fatal setuptools license-format deprecation warning | 0 |
 | Wave 03 changed-source architecture | `--mode gate --base 49ce32cc85d9a926542597b33f70dec259e7e2e1` at WAVE 03 source | PASS; 818 Python files scanned, no new LOC/import/cycle/API errors | 0 |
 | Wave 03 full project architecture | `--mode full` at `4ed2075c072b0cd38ca05249a9670aa96dfc3af1` | FAIL baseline debt: 51 LOC violations, 2 unresolved imports, 8 cycles, 0 API errors | 1 |
+| Wave 04 config/profile/CLI/Jobs-history/SSH regressions | `python -m pytest -q -rs` over 21 focused modules at `71ef960bb486cc821e1a79f969e5b58913841715` | 356 passed, 0 failed, 1 skipped (`test_security_hardening_wave.py:176`, POSIX permission semantics) | 0 |
+| Wave 04 wx settings/window state | `tests/test_w37_settings_plugin_gui.py tests/test_w40_localization_window_settings.py` at `71ef960bb486cc821e1a79f969e5b58913841715` | 27 passed, 0 failed, 0 skipped | 0 |
+| Wave 04 FTP sbatch-follow setting | `tests/test_ftp_widget.py -k sbatch_follow_mode_settings_migrate_and_persist` at `71ef960bb486cc821e1a79f969e5b58913841715` | 1 passed; 167 deselected by the explicit focused selector | 0 |
+| Wave 04 compatibility spot rerun | storage-path, migration-write, atomic config, profile, provider, and SSH retry selections at `71ef960bb486cc821e1a79f969e5b58913841715` | 38 passed, 0 failed, 0 skipped | 0 |
+| Wave 04 Ruff and compileall | Ruff on changed Python files; `python -m compileall -q src/hpc_gui/config` | passed | 0 |
+| Wave 04 facade API check | committed facade imported with `src` on `sys.path` | 93 declared exports, 0 missing runtime names | 0 |
+| Wave 04 changed-source architecture | `--mode gate --base 66f07565e19947b8140c5f7798fa32c2b3e36890` at `71ef960bb486cc821e1a79f969e5b58913841715` | PASS; 822 Python files, 50 global over-limit files, 0 new dependency/import/cycle/API errors | 0 |
 | Full release acceptance suite | `python scripts/release_test_suite.py --scope acceptance` | NOT RUN; retained for WAVE 12 full acceptance | — |
 | GitHub Actions | not run | NOT RUN | — |
 
