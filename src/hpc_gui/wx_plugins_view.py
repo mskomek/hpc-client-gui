@@ -117,10 +117,7 @@ def _build_plugins(
     # the toggle is offered; a bare checkbox is misleading.
     effect_note = wx.StaticText(
         panel,
-        label=t("plugins.lifecycle_effect_note")
-        if t("plugins.lifecycle_effect_note") != "[plugins.lifecycle_effect_note]"
-        else "Disabling a plugin stops its profiles, templates, rules and tools "
-        "the next time plugins load. No app restart is needed.",
+        label=t("plugins.lifecycle_effect_note"),
     )
     try:
         effect_note.Wrap(760)

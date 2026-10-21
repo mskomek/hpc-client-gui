@@ -104,6 +104,7 @@ def test_w24_directories_rebind_and_disconnect_helpers():
         mark_directories_disconnected,
         rebind_directories_storage,
     )
+    from hpc_gui.core.i18n import current_language, load_language
 
     class _Label:
         def __init__(self, text=""):
@@ -147,7 +148,13 @@ def test_w24_directories_rebind_and_disconnect_helpers():
     assert host._wx_dirs_controls["home_label"].text == "Home — /home/new"
     # Stale provider-A history must not survive the rebind.
     assert host._wx_dirs_models["scratch"].history == []
-    # Negative: disconnect must not keep stale paths as valid.
-    mark_directories_disconnected(host)
-    assert host._wx_dirs_controls["scratch_label"].text == "Scratch — disconnected"
-    assert host._wx_dirs_controls["home_label"].text == "Home — disconnected"
+    # Exercise the localized UI helper with a loaded catalog, then preserve
+    # the language state used by the rest of the test process.
+    previous_language = current_language()
+    try:
+        load_language("en")
+        mark_directories_disconnected(host)
+        assert host._wx_dirs_controls["scratch_label"].text == "Scratch — disconnected"
+        assert host._wx_dirs_controls["home_label"].text == "Home — disconnected"
+    finally:
+        load_language(previous_language)

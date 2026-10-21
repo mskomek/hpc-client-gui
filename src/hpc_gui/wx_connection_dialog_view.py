@@ -24,7 +24,7 @@ class ConnectionDialogViewMixin:
         content = wx.BoxSizer(wx.VERTICAL)
 
         # Profile section
-        profile_box = wx.StaticBox(scrolled, label=t("connection.profile_section") if t("connection.profile_section") != "[connection.profile_section]" else "Profile")
+        profile_box = wx.StaticBox(scrolled, label=t("connection.profile_section"))
         profile_sizer = wx.StaticBoxSizer(profile_box, wx.VERTICAL)
         profile_grid = wx.FlexGridSizer(cols=2, vgap=8, hgap=12)
         profile_grid.AddGrowableCol(1, 1)
@@ -34,7 +34,7 @@ class ConnectionDialogViewMixin:
         profile_grid.Add(self.profile_name_ctrl, 1, wx.EXPAND)
 
         # Provider template row: button with menu + save template button
-        tmpl_label = wx.StaticText(profile_box, label=t("connection.system_templates_menu") if t("connection.system_templates_menu") != "[connection.system_templates_menu]" else "Provider / System template")
+        tmpl_label = wx.StaticText(profile_box, label=t("connection.system_templates_menu"))
         tmpl_row = wx.BoxSizer(wx.HORIZONTAL)
         self.btn_system_templates = wx.Button(profile_box, label=t("connection.system_templates_menu"))
         self.btn_save_system_template = wx.Button(profile_box, label=t("connection.save_system_template"))
@@ -52,7 +52,7 @@ class ConnectionDialogViewMixin:
         content.Add(profile_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
         # Connection section
-        conn_box = wx.StaticBox(scrolled, label=t("connection.connection_section") if t("connection.connection_section") != "[connection.connection_section]" else "Connection")
+        conn_box = wx.StaticBox(scrolled, label=t("connection.connection_section"))
         # Fallback label if key missing
         if conn_box.GetLabel() in ("[connection.connection_section]", "connection.connection_section"):
             conn_box.SetLabelText("Connection")
@@ -90,7 +90,7 @@ class ConnectionDialogViewMixin:
         content.Add(conn_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
         # Authentication section
-        auth_box = wx.StaticBox(scrolled, label=t("connection.auth_section") if t("connection.auth_section") != "[connection.auth_section]" else "Authentication")
+        auth_box = wx.StaticBox(scrolled, label=t("connection.auth_section"))
         if auth_box.GetLabel().startswith("["):
             auth_box.SetLabelText("Authentication")
         auth_sizer = wx.StaticBoxSizer(auth_box, wx.VERTICAL)
@@ -113,7 +113,7 @@ class ConnectionDialogViewMixin:
         radio_sizer = wx.BoxSizer(wx.VERTICAL)
         radio_sizer.Add(self.rb_prompt_when_needed, 0, wx.BOTTOM, 4)
         radio_sizer.Add(self.rb_prompt_edit_only, 0)
-        auth_grid.Add(wx.StaticText(auth_box, label=t("connection.password_prompt_policy") if t("connection.password_prompt_policy") != "[connection.password_prompt_policy]" else "Password prompt"), 0, wx.ALIGN_CENTER_VERTICAL)
+        auth_grid.Add(wx.StaticText(auth_box, label=t("connection.password_prompt_policy")), 0, wx.ALIGN_CENTER_VERTICAL)
         auth_grid.Add(radio_sizer, 1, wx.EXPAND)
         # SSH key row
         self.key_path_ctrl = wx.TextCtrl(auth_box)
@@ -129,7 +129,7 @@ class ConnectionDialogViewMixin:
         content.Add(auth_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
         # Cluster Settings collapsible
-        self.cluster_toggle = wx.ToggleButton(scrolled, label=(t("connection.system_settings") if t("connection.system_settings") != "[connection.system_settings]" else "Cluster Settings") + "  ▶")
+        self.cluster_toggle = wx.ToggleButton(scrolled, label=(t("connection.system_settings")) + "  ▶")
         content.Add(self.cluster_toggle, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 8)
         self.cluster_panel = wx.Panel(scrolled)
         cluster_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -198,7 +198,7 @@ class ConnectionDialogViewMixin:
         quota_sizer = wx.StaticBoxSizer(quota_box, wx.VERTICAL)
         self.quota_enabled_cb = wx.CheckBox(quota_box, label=t("connection.quota_enable"))
         self.quota_consent_cb = wx.CheckBox(quota_box, label=t("connection.quota_consent"))
-        self.quota_backend_choice = wx.Choice(quota_box, choices=[t("connection.quota_status_unconfigured") if t("connection.quota_status_unconfigured") != "[connection.quota_status_unconfigured]" else "Unconfigured"])
+        self.quota_backend_choice = wx.Choice(quota_box, choices=[t("connection.quota_status_unconfigured")])
         self.quota_backend_choice.SetSelection(0)
         self.quota_command_ctrl = wx.TextCtrl(quota_box)
         self.quota_command_ctrl.SetHint(t("connection.quota_command"))
@@ -206,7 +206,7 @@ class ConnectionDialogViewMixin:
         self.quota_scope_ctrl.SetHint(t("connection.quota_scope"))
         self.quota_subject_ctrl = wx.TextCtrl(quota_box)
         self.quota_subject_ctrl.SetHint(t("connection.quota_subject"))
-        self.quota_status_label = wx.StaticText(quota_box, label=t("connection.quota_status_off") if t("connection.quota_status_off") != "[connection.quota_status_off]" else "Quota monitoring is off.")
+        self.quota_status_label = wx.StaticText(quota_box, label=t("connection.quota_status_off"))
         self.quota_status_label.Wrap(500)
         # Quota grid
         quota_grid = wx.FlexGridSizer(cols=2, vgap=6, hgap=12)
@@ -232,7 +232,7 @@ class ConnectionDialogViewMixin:
         content.Add(self.cluster_panel, 0, wx.EXPAND | wx.ALL, 8)
 
         # Advanced SSH / Client Settings collapsible
-        self.advanced_toggle = wx.ToggleButton(scrolled, label=(t("connection.advanced_settings") if t("connection.advanced_settings") != "[connection.advanced_settings]" else "Advanced Settings") + "  ▶")
+        self.advanced_toggle = wx.ToggleButton(scrolled, label=(t("connection.advanced_settings")) + "  ▶")
         content.Add(self.advanced_toggle, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 8)
         self.advanced_panel = wx.Panel(scrolled)
         adv_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -314,7 +314,7 @@ class ConnectionDialogViewMixin:
         self.cb_cli_allowed = wx.CheckBox(other_box, label=t("connection.cli_allowed"))
         self.default_local_dir_ctrl = wx.TextCtrl(other_box)
         self.default_local_dir_ctrl.SetHint(t("connection.default_local_dir"))
-        btn_local_browse = wx.Button(other_box, label=t("connection.browse_default_local_folder") if t("connection.browse_default_local_folder") != "[connection.browse_default_local_folder]" else t("login.browse"))
+        btn_local_browse = wx.Button(other_box, label=t("connection.browse_default_local_folder"))
         local_row = wx.BoxSizer(wx.HORIZONTAL)
         local_row.Add(self.default_local_dir_ctrl, 1, wx.EXPAND | wx.RIGHT, 8)
         local_row.Add(btn_local_browse, 0)

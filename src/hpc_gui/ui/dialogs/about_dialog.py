@@ -60,14 +60,11 @@ class AboutDialog(QDialog):
         title.setStyleSheet("font-weight: 700; font-size: 16px;")
         layout.addWidget(title)
 
-        version_label = QLabel(t("about.version_label").format(version=__version__) if "[about.version_label]" not in t("about.version_label") else f"Version {__version__}")
-        # Fallback if key missing
-        if version_label.text().startswith("["):
-            version_label.setText(f"Version {__version__}")
+        version_label = QLabel(t("about.version_label").format(version=__version__))
         version_label.setStyleSheet("color: #333; font-size: 13px;")
         layout.addWidget(version_label)
 
-        desc = QLabel(t("about.description") if t("about.description") != "[about.description]" else "SSH · Slurm · X11 workflow manager for HPC clusters.")
+        desc = QLabel(t("about.description"))
         desc.setWordWrap(True)
         layout.addWidget(desc)
 
@@ -75,14 +72,14 @@ class AboutDialog(QDialog):
 
         # Repository access – canonical HTTPS
         repo_url = "https://github.com/mskomek/hpc-client-gui"
-        self._repo_btn = QPushButton(t("about.project") if t("about.project") != "[about.project]" else "Project Repository")
+        self._repo_btn = QPushButton(t("about.project"))
         self._repo_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(repo_url)))
         layout.addWidget(self._repo_btn)
 
         # License access – open local file if available, otherwise canonical URL fallback (no source-checkout-only button)
         license_path = _get_license_text_path()
         license_url = "https://github.com/mskomek/hpc-client-gui/blob/main/LICENSE"
-        self._license_btn = QPushButton(t("about.license") if t("about.license") != "[about.license]" else "License")
+        self._license_btn = QPushButton(t("about.license"))
         def open_license():
             if license_path and license_path.is_file():
                 # Open via file url if possible, but ensure not source-checkout-only: we always fallback to HTTPS if file not found
@@ -102,7 +99,7 @@ class AboutDialog(QDialog):
                 notices_path = cand
                 break
         notices_url = "https://github.com/mskomek/hpc-client-gui/blob/main/THIRD_PARTY_NOTICES.md"
-        self._notices_btn = QPushButton(t("about.notices") if t("about.notices") != "[about.notices]" else "Third-Party Notices")
+        self._notices_btn = QPushButton(t("about.notices"))
         def open_notices():
             if notices_path and notices_path.is_file():
                 try:
@@ -118,7 +115,7 @@ class AboutDialog(QDialog):
 
         close_row = QHBoxLayout()
         close_row.addStretch(1)
-        close_btn = QPushButton(t("about.close") if t("about.close") != "[about.close]" else t("common.close"))
+        close_btn = QPushButton(t("about.close"))
         close_btn.clicked.connect(self.accept)
         close_row.addWidget(close_btn)
         layout.addLayout(close_row)
@@ -129,12 +126,10 @@ class AboutDialog(QDialog):
     def retranslate_ui(self):
         self.setWindowTitle(t("about.title"))
         # Update version label retains authoritative version
-        ver_text = t("about.version_label")
-        if ver_text != "[about.version_label]":
-            self._version_label_ref.setText(ver_text.format(version=__version__))
-        else:
-            self._version_label_ref.setText(f"Version {__version__}")
-        self._repo_btn.setText(t("about.project") if t("about.project") != "[about.project]" else "Project Repository")
-        self._license_btn.setText(t("about.license") if t("about.license") != "[about.license]" else "License")
-        self._notices_btn.setText(t("about.notices") if t("about.notices") != "[about.notices]" else "Third-Party Notices")
-        self._close_btn.setText(t("about.close") if t("about.close") != "[about.close]" else t("common.close"))
+        self._version_label_ref.setText(
+            t("about.version_label").format(version=__version__)
+        )
+        self._repo_btn.setText(t("about.project"))
+        self._license_btn.setText(t("about.license"))
+        self._notices_btn.setText(t("about.notices"))
+        self._close_btn.setText(t("about.close"))

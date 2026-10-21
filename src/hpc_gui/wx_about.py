@@ -70,13 +70,13 @@ def show_about(parent=None) -> int:
     ver_label = wx.StaticText(panel, label=ver_text)
     root.Add(ver_label, 0, wx.LEFT | wx.BOTTOM, 10)
 
-    desc_text = t("about.description") if t("about.description") != "[about.description]" else "SSH · Slurm · X11 workflow manager for HPC clusters."
+    desc_text = t("about.description")
     desc = wx.StaticText(panel, label=desc_text)
     desc.Wrap(440)
     root.Add(desc, 0, wx.LEFT | wx.BOTTOM | wx.TOP, 10)
 
     repo_url = "https://github.com/mskomek/hpc-client-gui"
-    repo_btn = wx.Button(panel, label=t("about.project") if t("about.project") != "[about.project]" else "Project Repository")
+    repo_btn = wx.Button(panel, label=t("about.project"))
 
     def open_repo(_event):
         webbrowser.open(repo_url)
@@ -86,7 +86,7 @@ def show_about(parent=None) -> int:
 
     license_path = _get_license_text_path()
     license_url = "https://github.com/mskomek/hpc-client-gui/blob/main/LICENSE"
-    license_btn = wx.Button(panel, label=t("about.license") if t("about.license") != "[about.license]" else "License")
+    license_btn = wx.Button(panel, label=t("about.license"))
 
     def open_license(_event):
         if license_path and license_path.is_file():
@@ -108,7 +108,7 @@ def show_about(parent=None) -> int:
 
     notices_path = _get_notices_path()
     notices_url = "https://github.com/mskomek/hpc-client-gui/blob/main/THIRD_PARTY_NOTICES.md"
-    notices_btn = wx.Button(panel, label=t("about.notices") if t("about.notices") != "[about.notices]" else "Third-Party Notices")
+    notices_btn = wx.Button(panel, label=t("about.notices"))
 
     def open_notices(_event):
         if notices_path and notices_path.is_file():
@@ -130,7 +130,7 @@ def show_about(parent=None) -> int:
 
     root.AddStretchSpacer(1)
 
-    close_btn = wx.Button(panel, label=t("about.close") if t("about.close") != "[about.close]" else t("common.close"))
+    close_btn = wx.Button(panel, label=t("about.close"))
 
     def close_dialog(_event):
         dlg.EndModal(wx.ID_OK)

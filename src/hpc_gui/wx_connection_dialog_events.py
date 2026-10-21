@@ -28,12 +28,12 @@ class ConnectionDialogEventsMixin:
         self.quota_command_ctrl.Bind(wx.EVT_TEXT, lambda e: self._update_quota_status())
         self.quota_scope_ctrl.Bind(wx.EVT_TEXT, lambda e: self._update_quota_status())
     def _set_cluster_visible(self, visible: bool) -> None:
-        label_base = t("connection.system_settings") if t("connection.system_settings") != "[connection.system_settings]" else "Cluster Settings"
+        label_base = t("connection.system_settings")
         self.cluster_toggle.SetLabel(f"{label_base}  {'▼' if visible else '▶'}")
         self.cluster_panel.Show(visible)
         self._relayout()
     def _set_advanced_visible(self, visible: bool) -> None:
-        label_base = t("connection.advanced_settings") if t("connection.advanced_settings") != "[connection.advanced_settings]" else "Advanced Settings"
+        label_base = t("connection.advanced_settings")
         self.advanced_toggle.SetLabel(f"{label_base}  {'▼' if visible else '▶'}")
         self.advanced_panel.Show(visible)
         self._relayout()

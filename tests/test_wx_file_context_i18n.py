@@ -23,6 +23,14 @@ def _pump(app, predicate):
     assert predicate()
 
 
+def _first_context_target(listing):
+    """Return a real file row; the parent-navigation row has no context menu."""
+    for index in range(listing.GetItemCount()):
+        if listing.GetItemText(index) not in {"..", "../"}:
+            return index
+    raise AssertionError("The file listing contains no context-menu target")
+
+
 @pytest.fixture
 def wx_app():
     load_language("en")
@@ -54,10 +62,11 @@ def test_wx_remote_context_menu_reopens_with_turkish_labels(wx_app):
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
     listing = frame._wx_remote_controls["listing"]
     _pump(wx_app, lambda: listing.GetItemCount() > 0)
-    listing.Select(0)
+    target_index = _first_context_target(listing)
+    listing.Select(target_index)
     labels = []
     listing.PopupMenu = lambda menu: labels.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
-    rect = listing.GetItemRect(0)
+    rect = listing.GetItemRect(target_index)
     position = listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(position)
@@ -79,11 +88,12 @@ def test_wx_local_context_menu_reopens_with_turkish_labels(wx_app, tmp_path: Pat
     show_local_files(path=tmp_path, upload=lambda _paths: None)
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_local_controls")][-1]
     listing = frame._wx_local_controls["listing"]
-    listing.Select(0)
     labels = []
     listing.PopupMenu = lambda menu: labels.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
     _pump(wx_app, lambda: listing.GetItemCount() > 0)
-    rect = listing.GetItemRect(0)
+    target_index = _first_context_target(listing)
+    listing.Select(target_index)
+    rect = listing.GetItemRect(target_index)
     position = listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(position)

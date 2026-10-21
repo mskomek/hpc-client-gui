@@ -226,21 +226,21 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
             return issues
         stripped = text.lstrip()
         if not stripped.startswith("#!"):
-            issues.append(t("editor.validation_missing_shebang") if t("editor.validation_missing_shebang") != "[editor.validation_missing_shebang]" else "- Missing shebang")
+            issues.append(t("editor.validation_missing_shebang"))
         if "#SBATCH" not in text:
-            issues.append(t("editor.validation_missing_sbatch") if t("editor.validation_missing_sbatch") != "[editor.validation_missing_sbatch]" else "- No #SBATCH")
+            issues.append(t("editor.validation_missing_sbatch"))
         if "USERNAME" in text or "<partition>" in text:
-            issues.append(t("editor.validation_placeholders") if t("editor.validation_placeholders") != "[editor.validation_placeholders]" else "- placeholders")
+            issues.append(t("editor.validation_placeholders"))
         if "--time=" not in text and "\n#SBATCH -t " not in text:
-            issues.append(t("editor.validation_missing_time") if t("editor.validation_missing_time") != "[editor.validation_missing_time]" else "- Time limit not set")
+            issues.append(t("editor.validation_missing_time"))
         if "--output=" not in text and "\n#SBATCH -o " not in text:
-            issues.append(t("editor.validation_missing_output") if t("editor.validation_missing_output") != "[editor.validation_missing_output]" else "- Output not set")
+            issues.append(t("editor.validation_missing_output"))
         return issues
 
     def _show_lint_dialog(lpath, issues):
-        title = t("editor.lint_results_title") if t("editor.lint_results_title") != "[editor.lint_results_title]" else "Lint results"
+        title = t("editor.lint_results_title")
         if not issues:
-            msg = t("editor.lint_ok") if t("editor.lint_ok") != "[editor.lint_ok]" else "Lint passed."
+            msg = t("editor.lint_ok")
             wx.MessageBox(msg, title, wx.OK | wx.ICON_INFORMATION, host)
             return
         # show results dialog with listbox
@@ -677,7 +677,7 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
             return
         hdr = remote_path.GetValue().strip()
         if not hdr:
-            wx.MessageBox(t("editor.lint_need_path"), t("editor.lint_results_title") if t("editor.lint_results_title") != "[editor.lint_results_title]" else "Lint results", wx.OK | wx.ICON_INFORMATION, host)
+            wx.MessageBox(t("editor.lint_need_path"), t("editor.lint_results_title"), wx.OK | wx.ICON_INFORMATION, host)
             return
         issues = _collect_lint_issues(hdr, editor.GetValue())
         _show_lint_dialog(hdr, issues)
@@ -814,7 +814,7 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
 
     def refresh_labels(_language=None):
         try:
-            _rl = t("editor.remote") if t("editor.remote") != "[editor.remote]" else t("dirs.path")
+            _rl = t("editor.remote")
             remote_label.SetLabel(_rl)
         except Exception:
             pass

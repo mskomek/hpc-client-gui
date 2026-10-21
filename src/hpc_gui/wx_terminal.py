@@ -113,7 +113,7 @@ def build_terminal_panel(parent, *, model: TerminalModel | None = None, ssh=None
     root = wx.BoxSizer(wx.VERTICAL)
     toolbar = wx.BoxSizer(wx.HORIZONTAL)
     find_ctrl = wx.TextCtrl(panel, value="", style=wx.TE_PROCESS_ENTER)
-    find_ctrl.SetHint(t("login.terminal_find") if t("login.terminal_find") != "[login.terminal_find]" else "Find")
+    find_ctrl.SetHint(t("login.terminal_find"))
     find_btn = wx.Button(panel, label=t("login.terminal_find"))
     clear_btn = wx.Button(panel, label=t("login.terminal_clear"))
     font_down_btn = wx.Button(panel, label=t("login.terminal_font_decrease_short"))

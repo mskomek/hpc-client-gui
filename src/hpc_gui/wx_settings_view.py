@@ -29,18 +29,18 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     title.SetFont(title.GetFont().Bold())
 
     # Global settings
-    cb_remote_cache = wx.CheckBox(panel, label=t("settings.remote_directory_cache_label") if t("settings.remote_directory_cache_label") != "[settings.remote_directory_cache_label]" else "Cache remote directory listings")
+    cb_remote_cache = wx.CheckBox(panel, label=t("settings.remote_directory_cache_label"))
     cb_remote_cache.SetValue(bool(model.global_settings.get("remote_directory_cache", True)))
-    cb_checksum = wx.CheckBox(panel, label=t("settings.transfer_checksum_verification_label") if t("settings.transfer_checksum_verification_label") != "[settings.transfer_checksum_verification_label]" else "Verify transfers with SHA-256")
+    cb_checksum = wx.CheckBox(panel, label=t("settings.transfer_checksum_verification_label"))
     cb_checksum.SetValue(bool(model.global_settings.get("transfer_checksum", False)))
     btn_reset_smart_open = wx.Button(panel, label=t("settings.smart_open_reset"))
 
     # Profile settings
-    lbl_parallel = wx.StaticText(panel, label=t("connection.transfer_parallelism") if t("connection.transfer_parallelism") != "[connection.transfer_parallelism]" else "Profile transfer parallelism")
+    lbl_parallel = wx.StaticText(panel, label=t("connection.transfer_parallelism"))
     sp_parallel = wx.SpinCtrl(panel, min=1, max=16, initial=int(model.profile_settings.get("transfer_parallelism", 1) or 1))
-    lbl_timeout = wx.StaticText(panel, label=t("connection.ssh_timeout") if t("connection.ssh_timeout") != "[connection.ssh_timeout]" else "SSH timeout (0 = default)")
+    lbl_timeout = wx.StaticText(panel, label=t("connection.ssh_timeout"))
     sp_timeout = wx.SpinCtrl(panel, min=0, max=300, initial=int(model.profile_settings.get("ssh_timeout", 0) or 0))
-    lbl_attempts = wx.StaticText(panel, label=t("settings.ssh_connection_attempts") if t("settings.ssh_connection_attempts") != "[settings.ssh_connection_attempts]" else "SSH connection attempts")
+    lbl_attempts = wx.StaticText(panel, label=t("settings.ssh_connection_attempts"))
     sp_attempts = wx.SpinCtrl(panel, min=1, max=5, initial=int(model.global_settings.get("ssh_connection_attempts", 5) or 5))
 
     btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -173,11 +173,11 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
         try:
             host.set_host_title(t("settings.dialog_title"))
             title.SetLabel(t("settings.dialog_title"))
-            cb_remote_cache.SetLabel(t("settings.remote_directory_cache_label") if t("settings.remote_directory_cache_label") != "[settings.remote_directory_cache_label]" else "Cache remote directory listings")
-            cb_checksum.SetLabel(t("settings.transfer_checksum_verification_label") if t("settings.transfer_checksum_verification_label") != "[settings.transfer_checksum_verification_label]" else "Verify transfers with SHA-256")
+            cb_remote_cache.SetLabel(t("settings.remote_directory_cache_label"))
+            cb_checksum.SetLabel(t("settings.transfer_checksum_verification_label"))
             btn_reset_smart_open.SetLabel(t("settings.smart_open_reset"))
-            lbl_parallel.SetLabel(t("connection.transfer_parallelism") if t("connection.transfer_parallelism") != "[connection.transfer_parallelism]" else "Profile transfer parallelism")
-            lbl_timeout.SetLabel(t("connection.ssh_timeout") if t("connection.ssh_timeout") != "[connection.ssh_timeout]" else "SSH timeout (0 = default)")
+            lbl_parallel.SetLabel(t("connection.transfer_parallelism"))
+            lbl_timeout.SetLabel(t("connection.ssh_timeout"))
             btn_apply.SetLabel(t("settings.apply"))
             btn_close.SetLabel(t("common.close"))
         except Exception:

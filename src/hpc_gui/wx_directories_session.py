@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from hpc_gui.config.system_profile import format_remote_path, normalize_system_settings
+from hpc_gui.core.i18n import t
 
 
 def _resolve_scratch_home(session_state) -> tuple[str, str]:
@@ -125,6 +126,6 @@ def mark_directories_disconnected(host) -> None:
         label = controls.get(f"{key}_label")
         if label is not None:
             try:
-                label.SetLabel(f"{key.title()} — disconnected")
+                label.SetLabel(t("dirs.disconnected_label").format(name=key.title()))
             except Exception:
                 pass

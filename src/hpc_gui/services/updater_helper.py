@@ -313,19 +313,21 @@ def perform_update(config: HelperConfig, progress: Progress, runner=subprocess.r
 
 
 def run_helper(config_path: Path) -> int:
+    from hpc_gui.core.i18n import load_saved_language, system_default_language, t
     from PySide6.QtCore import QObject, QThread, Qt, Signal
     from PySide6.QtWidgets import QApplication, QDialog, QLabel, QProgressBar, QVBoxLayout
 
+    load_saved_language(system_default_language())
     _application = QApplication.instance() or QApplication([])
     dialog = QDialog()
-    dialog.setWindowTitle("Application Update")
+    dialog.setWindowTitle(t("updates.helper_title"))
     dialog.setFixedSize(480, 250)
     dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
     layout = QVBoxLayout(dialog)
-    title = QLabel("APPLICATION UPDATE")
+    title = QLabel(t("updates.helper_title").upper())
     title.setStyleSheet("font-size: 28px; font-weight: bold;")
     title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    status = QLabel("Preparing update...")
+    status = QLabel(t("updates.helper_preparing"))
     status.setAlignment(Qt.AlignmentFlag.AlignCenter)
     bar = QProgressBar()
     bar.setRange(0, 100)
@@ -333,7 +335,9 @@ def run_helper(config_path: Path) -> int:
     bar.setTextVisible(True)
     layout.addStretch()
     layout.addWidget(title)
-    layout.addWidget(QLabel("Updating...", alignment=Qt.AlignmentFlag.AlignCenter))
+    layout.addWidget(
+        QLabel(t("updates.helper_updating"), alignment=Qt.AlignmentFlag.AlignCenter)
+    )
     layout.addStretch()
     layout.addWidget(status)
     layout.addWidget(bar)
@@ -356,14 +360,26 @@ def run_helper(config_path: Path) -> int:
     thread = QThread()
     worker.moveToThread(thread)
     thread.started.connect(worker.run)
-    worker.changed.connect(lambda value, text: (status.setText(text), bar.setRange(0, 0) if value is None else (bar.setRange(0, 100), bar.setValue(value))))
+    def update_progress(value, message: str) -> None:
+        status.setText(_localized_progress_text(message, t))
+        if value is None:
+            bar.setRange(0, 0)
+        else:
+            bar.setRange(0, 100)
+            bar.setValue(value)
+
+    worker.changed.connect(update_progress)
     worker.done.connect(dialog.accept)
     def show_failure(message: str) -> None:
         from PySide6.QtWidgets import QMessageBox
 
-        status.setText("Update failed.")
+        status.setText(t("updates.helper_failed"))
         bar.setRange(0, 100)
-        QMessageBox.critical(dialog, "Application Update", message)
+        QMessageBox.critical(
+            dialog,
+            t("updates.helper_title"),
+            t("updates.helper_failed_detail").format(error=message),
+        )
         dialog.reject()
 
     worker.failed.connect(show_failure)
@@ -375,6 +391,25 @@ def run_helper(config_path: Path) -> int:
     result = dialog.exec()
     thread.wait()
     return 0 if result else 1
+
+
+def _localized_progress_text(message: str, translate) -> str:
+    if message.startswith("Copying: "):
+        return translate("updates.helper_copying").format(path=message.partition(": ")[2])
+    exact = {
+        "Waiting for application to close...": "helper_waiting",
+        "Validating AppImage target...": "helper_validating_appimage",
+        "Starting application...": "helper_starting",
+        "Update complete.": "helper_complete",
+        "Restoring previous version...": "helper_restoring",
+        "Requesting administrator permission...": "helper_admin_permission",
+        "Verifying installed version...": "helper_verifying_version",
+        "Updating application with Flatpak...": "helper_updating_flatpak",
+        "Verifying installation...": "helper_verifying_installation",
+        "Mounting update image...": "helper_mounting_image",
+    }
+    key = exact.get(message)
+    return translate(f"updates.{key}") if key else message
 
 
 if __name__ == "__main__":

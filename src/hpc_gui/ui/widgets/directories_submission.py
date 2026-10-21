@@ -292,8 +292,6 @@ class DirectoriesSubmissionMixin:
                 }
             )
             message = t("dirs.submit_failed_no_job_id")
-            if message == "[dirs.submit_failed_no_job_id]":
-                message = "Submission returned no valid job ID. Check the script and Slurm response."
             if output:
                 message += f"\n\n{output}"
             QMessageBox.critical(self, t("common.error"), message)
@@ -310,8 +308,6 @@ class DirectoriesSubmissionMixin:
         )
         self.script_submitted.emit(job_id, script_path)
         message = t("dirs.submit_success")
-        if message == "[dirs.submit_success]":
-            message = "Submitted with sbatch. Job ID: {jobid}"
         QMessageBox.information(
             self,
             t("common.info"),
@@ -329,8 +325,6 @@ class DirectoriesSubmissionMixin:
             }
         )
         message = t("dirs.submit_failed")
-        if message == "[dirs.submit_failed]":
-            message = "sbatch submission failed: {err}\nCheck the connection and Slurm script directives."
         QMessageBox.critical(self, t("common.error"), message.format(err=error))
     def _create_shell_run_result_dialog(
         self,
@@ -376,8 +370,6 @@ class DirectoriesSubmissionMixin:
             }
         )
         message = t("dirs.run_shell_success")
-        if message == "[dirs.run_shell_success]":
-            message = "Script completed in terminal."
         self._create_shell_run_result_dialog(script_path, message, output).exec()
     @Slot(object, str, str)
     def _on_shell_run_failed(self, worker: _ShellRunWorker, script_path: str, error: str) -> None:
@@ -391,8 +383,6 @@ class DirectoriesSubmissionMixin:
             }
         )
         message = t("dirs.run_shell_failed")
-        if message == "[dirs.run_shell_failed]":
-            message = "Script run failed: {err}"
         QMessageBox.critical(self, t("common.error"), message.format(err=error))
     @staticmethod
     def _extract_job_id(sbatch_output: str) -> str:

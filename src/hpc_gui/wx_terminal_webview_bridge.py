@@ -35,8 +35,27 @@ class TerminalBridgeMixin:
         # Page loaded — xterm will post {type:"ready"} when bridge is ready
         self._page_loaded = True
         self._webview_failure_stage = "page-loaded"
+        self._update_accessibility_label()
         try:
             event.Skip()
+        except Exception:
+            pass
+
+    def _update_accessibility_label(self) -> None:
+        webview = getattr(self, "_webview", None)
+        if webview is None:
+            return
+        label = t("login.terminal_accessible_name")
+        try:
+            webview.SetName(label)
+            webview.SetAccessibleName(label)
+        except Exception:
+            pass
+        try:
+            webview.RunScript(
+                "const terminal = document.getElementById('terminal');"
+                f"if (terminal) terminal.setAttribute('aria-label', {json.dumps(label, ensure_ascii=False)});"
+            )
         except Exception:
             pass
 
@@ -150,7 +169,7 @@ class TerminalBridgeMixin:
         self._webview_failure_stage = "bridge-timeout"
         # Readiness timeout — show diagnostic but remain functional if ready arrives later
         try:
-            self._status_label.SetLabel(t("login.terminal_readiness_timeout") if t("login.terminal_readiness_timeout") != "[login.terminal_readiness_timeout]" else "Terminal did not become ready in time.")
+            self._status_label.SetLabel(t("login.terminal_readiness_timeout"))
         except Exception:
             pass
         # REL-046: a native controller that aborted silently (e.g. WebView2

@@ -629,9 +629,9 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         identity = f"{user}@{host_val}" if user and host_val else host_val or user or ""
         provider = ""
         provider = _provider_name(prof)
-        detail_name.SetLabel(f"{t('login.profile_name_label')}: {name}" if t('login.profile_name_label') != "[login.profile_name_label]" else f"Profile: {name}")
+        detail_name.SetLabel(f"{t('login.profile_name_label')}: {name}")
         if identity:
-            detail_host.SetLabel(f"{t('login.host')}: {identity}" if t('login.host') != "[login.host]" else f"Host: {identity}")
+            detail_host.SetLabel(f"{t('login.host')}: {identity}")
         else:
             detail_host.SetLabel("")
         if provider:
@@ -674,7 +674,10 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 # Distinguish selected vs active
                 sel = choices.GetStringSelection()
                 if sel and sel != active_name:
-                    active_label.SetLabel(f"{t('login.status_connected')}: {active_name}  —  {t('common.details') if t('common.details') != '[common.details]' else 'Selected'}: {sel}")
+                    active_label.SetLabel(
+                        f"{t('login.status_connected')}: {active_name} — "
+                        f"{t('connection.selected_profile')}: {sel}"
+                    )
                 else:
                     active_label.SetLabel(f"{t('login.status_connected')}: {active_name}")
             else:
@@ -1044,7 +1047,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             model.controller.cancel_connect()
         except Exception:
             pass
-        cancelled_msg = t("connection.auth_cancelled") if t("connection.auth_cancelled") != "[connection.auth_cancelled]" else "Authentication cancelled"
+        cancelled_msg = t("connection.auth_cancelled")
         status.SetLabel(cancelled_msg)
         _update_button_states()
 
@@ -1111,7 +1114,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         except RuntimeError as exc:
             msg = str(exc)
             if "master_cancelled" in msg:
-                status.SetLabel(t("connection.auth_cancelled") if t("connection.auth_cancelled") != "[connection.auth_cancelled]" else "Authentication cancelled")
+                status.SetLabel(t("connection.auth_cancelled"))
                 _update_button_states()
                 return False
             elif "master_wrong" in msg:
@@ -1214,7 +1217,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                     connect_fn = _default
                 session = connect_fn(dict(transient))
                 if session is False:
-                    raise RuntimeError(t("login.error") if t("login.error") != "[login.error]" else "Connection failed")
+                    raise RuntimeError(t("login.error"))
                 # Never finish the controller on the worker thread: the GUI
                 # thread owns the attempt check in done(), so a stale or
                 # cancelled attempt can be dropped before it touches state.
@@ -1248,7 +1251,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                     model.controller.cancel_connect()
                 except Exception:
                     pass
-                cancelled_msg = t("connection.auth_cancelled") if t("connection.auth_cancelled") != "[connection.auth_cancelled]" else "Authentication cancelled"
+                cancelled_msg = t("connection.auth_cancelled")
                 connection_progress.set_stage(t("connection.progress_cancelled"))
                 model.progress_callback = None
                 status.SetLabel(cancelled_msg)
@@ -1277,7 +1280,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 model.progress_callback = None
                 # Map safe known errors to translated messages
                 if "master_cancelled" in str(error):
-                    msg = t("connection.auth_cancelled") if t("connection.auth_cancelled") != "[connection.auth_cancelled]" else "Authentication cancelled"
+                    msg = t("connection.auth_cancelled")
                     # The controller.fail() repaint is already queued via
                     # CallAfter; write the cancel status after it so the
                     # cancellation stays visibly distinct from a failure.

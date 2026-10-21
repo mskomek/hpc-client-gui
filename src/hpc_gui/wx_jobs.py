@@ -1466,14 +1466,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                             if machine2.stale:
                                 jobs_refresh_label.SetLabel(
                                     f"{t('jobs.refresh_failed_stale')}: {machine2.last_error}"
-                                    if _has_key("jobs.refresh_failed_stale")
-                                    else f"Refresh failed (stale): {machine2.last_error}"
                                 )
                             else:
                                 jobs_refresh_label.SetLabel(
                                     f"{t('jobs.refresh_failed')}: {machine2.last_error}"
-                                    if _has_key("jobs.refresh_failed")
-                                    else f"Refresh failed: {machine2.last_error}"
                                 )
                         except Exception:
                             pass
@@ -1500,8 +1496,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                         try:
                             jobs_refresh_label.SetLabel(
                                 f"{t('jobs.refresh_updated')}: {machine2.last_success_ts}"
-                                if _has_key("jobs.refresh_updated")
-                                else f"Updated: {machine2.last_success_ts}"
                             )
                         except Exception:
                             pass

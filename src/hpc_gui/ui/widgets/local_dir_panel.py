@@ -307,7 +307,7 @@ class LocalDirPanel(QWidget):
             t("dirs.col_size"),
             t("dirs.col_type"),
             t("dirs.col_mtime"),
-            t("ftp.comparison_column") if t("ftp.comparison_column") != "[ftp.comparison_column]" else "Comparison",
+            t("ftp.comparison_column"),
         ])
         tree.hideColumn(4)
         tree.setRootIsDecorated(False)
@@ -361,8 +361,6 @@ class LocalDirPanel(QWidget):
         self.btn_refresh.setText(t("ftp.refresh"))
         comparison_header = (
             t("ftp.comparison_column")
-            if t("ftp.comparison_column") != "[ftp.comparison_column]"
-            else "Comparison"
         )
         self.tree.setHeaderLabels(
             [
@@ -722,12 +720,10 @@ class LocalDirPanel(QWidget):
         act_open_with = menu.addAction(t("files.open_with"))
         act_open_new_tab = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[5])
         act_edit = menu.addAction(
-            t("dirs.edit") if t("dirs.edit") != "[dirs.edit]" else "Edit"
+            t("dirs.edit")
         )
         act_edit_new_window = menu.addAction(
             t("dirs.edit_new_window")
-            if t("dirs.edit_new_window") != "[dirs.edit_new_window]"
-            else "Edit in new window"
         )
         menu.addSeparator()
         binding = active_binding("FILE-NEW-FOLDER", current_os())
@@ -1116,7 +1112,7 @@ class LocalDirPanel(QWidget):
         old = Path(str(selected[0].data(0, Qt.ItemDataRole.UserRole)))
         new_name, ok = QInputDialog.getText(
             self,
-            t("dirs.rename") if t("dirs.rename") != "[dirs.rename]" else "Yeniden Adlandır",
+            t("dirs.rename"),
             t("dirs.rename_label"),
             text=old.name,
         )

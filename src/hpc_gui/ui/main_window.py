@@ -150,10 +150,10 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.directories, t("tabs.directories"))
         self.tabs.addTab(
             self.ftp,
-            t("tabs.ftp") if t("tabs.ftp") != "[tabs.ftp]" else "FTP",
+            t("tabs.ftp"),
         )
         self.tabs.addTab(self.editor, t("tabs.editor"))
-        self.tabs.addTab(self.logs, t("tabs.logs") if t("tabs.logs") != "[tabs.logs]" else "Logs")
+        self.tabs.addTab(self.logs, t("tabs.logs"))
         if is_source_run():
             telemetry = QApplication.instance().findChild(DebugTelemetry)
             if telemetry is not None:
@@ -963,7 +963,7 @@ class MainWindow(QMainWindow):
             self.tabs.setTabText(self.tabs.indexOf(self.directories), t("tabs.directories"))
             self.tabs.setTabText(
                 self.tabs.indexOf(self.ftp),
-                t("tabs.ftp") if t("tabs.ftp") != "[tabs.ftp]" else "FTP",
+                t("tabs.ftp"),
             )
             self.tabs.setTabText(self.tabs.indexOf(self.editor), t("tabs.editor"))
             self.tabs.setTabText(self.tabs.indexOf(self.logs), t("tabs.logs"))

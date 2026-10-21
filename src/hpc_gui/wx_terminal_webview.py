@@ -168,7 +168,7 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         # Toolbar — keep Find/Clear/A-/A+ for compat, add dimensions + status
         toolbar = wx.BoxSizer(wx.HORIZONTAL)
         self._find_ctrl = wx.TextCtrl(self, value="", style=wx.TE_PROCESS_ENTER)
-        self._find_ctrl.SetHint(t("login.terminal_find") if t("login.terminal_find") != "[login.terminal_find]" else "Find")
+        self._find_ctrl.SetHint(t("login.terminal_find"))
         self._find_btn = wx.Button(self, label=t("login.terminal_find"))
         self._clear_btn = wx.Button(self, label=t("login.terminal_clear"))
         self._font_down_btn = wx.Button(self, label=t("login.terminal_font_decrease_short"))
@@ -211,7 +211,7 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
             self._diagnostic_text = self._build_diagnostic_text("WebView backend unavailable")
             err_panel = wx.Panel(self)
             err_sizer = wx.BoxSizer(wx.VERTICAL)
-            err_label = wx.StaticText(err_panel, label=t("login.terminal_page_failed") if t("login.terminal_page_failed") != "[login.terminal_page_failed]" else "Terminal unavailable: WebView backend missing (WebView2/Edge on Windows, WebKit2 on Linux/macOS)")
+            err_label = wx.StaticText(err_panel, label=t("login.terminal_page_failed"))
             err_label.Wrap(600)
             diag = wx.TextCtrl(err_panel, value=self._diagnostic_text, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
             diag.SetMinSize(wx.Size(-1, 120))
@@ -260,7 +260,7 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
             self._diagnostic_text = self._build_diagnostic_text(f"WebView creation failed: {exc}")
             err_panel = wx.Panel(self)
             err_sizer = wx.BoxSizer(wx.VERTICAL)
-            err_label = wx.StaticText(err_panel, label=t("login.terminal_page_failed") if t("login.terminal_page_failed") != "[login.terminal_page_failed]" else f"Terminal unavailable: {exc}")
+            err_label = wx.StaticText(err_panel, label=t("login.terminal_page_failed"))
             diag = wx.TextCtrl(err_panel, value=self._diagnostic_text, style=wx.TE_MULTILINE | wx.TE_READONLY)
             err_sizer.Add(err_label, 0, wx.ALL, 8)
             err_sizer.Add(diag, 1, wx.EXPAND | wx.ALL, 8)
@@ -287,9 +287,9 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         # WebView succeeded
         self._webview.SetMinSize(wx.Size(400, 200))
         # Accessibility
-        self._webview.SetName(t("login.terminal_accessible_name") if t("login.terminal_accessible_name") != "[login.terminal_accessible_name]" else "Remote terminal")
+        self._webview.SetName(t("login.terminal_accessible_name"))
         try:
-            self._webview.SetAccessibleName(t("login.terminal_accessible_name") if t("login.terminal_accessible_name") != "[login.terminal_accessible_name]" else "Remote terminal")
+            self._webview.SetAccessibleName(t("login.terminal_accessible_name"))
         except Exception:
             pass
 
@@ -380,6 +380,7 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
     # ---------- Language ----------
 
     def _refresh_labels(self, _lang=None):
+        self._update_accessibility_label()
         try:
             self._find_ctrl.SetHint(t("login.terminal_find"))
             self._find_btn.SetLabel(t("login.terminal_find"))
@@ -398,8 +399,6 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
 
     def _write_failure_text(self) -> str:
         msg = t("login.terminal_write_failed")
-        if msg == "[login.terminal_write_failed]":
-            return "Terminal input could not be sent."
         return msg
 
     def _show_write_failure(self):

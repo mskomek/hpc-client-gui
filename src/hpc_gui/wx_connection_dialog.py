@@ -170,7 +170,7 @@ class WxConnectionDialog(
             if not prov_name and isinstance(self._provider_template.get("site"), dict):
                 prov_name = str(self._provider_template.get("site").get("name") or "")
         if prov_name:
-            self.provider_info.SetLabel(f"{t('connection.system_templates_menu')}: {prov_name}" if t("connection.system_templates_menu") != "[connection.system_templates_menu]" else f"Provider: {prov_name}")
+            self.provider_info.SetLabel(f"{t('connection.provider')}: {prov_name}")
         else:
             self.provider_info.SetLabel("")
 
