@@ -38,6 +38,11 @@
 | Wave 04 Ruff and compileall | Ruff on changed Python files; `python -m compileall -q src/hpc_gui/config` | passed | 0 |
 | Wave 04 facade API check | committed facade imported with `src` on `sys.path` | 93 declared exports, 0 missing runtime names | 0 |
 | Wave 04 changed-source architecture | `--mode gate --base 66f07565e19947b8140c5f7798fa32c2b3e36890` at `71ef960bb486cc821e1a79f969e5b58913841715` | PASS; 822 Python files, 50 global over-limit files, 0 new dependency/import/cycle/API errors | 0 |
+| Wave 05 auth/profile/SSH/CLI/SFTP regressions | `.venv` pytest batch at `b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825` | 139 passed, 0 failed, 0 skipped; 9 subtests passed | 0 |
+| Wave 05 wx connection/profile/security/lifecycle regressions | `.venv` pytest batch with `load_language('en')` before pytest at `b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825` | 87 passed, 0 failed, 0 skipped | 0 |
+| Wave 05 locale precondition diagnosis | `test_selected_vs_active_profile` at `b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825` | Without locale initialization: fallback translation keys caused 1 test failure; with English loaded: 1 passed; full locale-initialized batch passed 87/87 | 0 on controlled reruns |
+| Wave 05 Ruff and compileall | Ruff over all 13 changed Python files; compileall over changed application modules at `b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825` | passed | 0 |
+| Wave 05 changed-source architecture | `--mode gate --base fabc11b01b517f53c55ebf882972c6529a441a9f` at `b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825` | PASS; 831 Python files, 48 global over-limit files, 0 new import/cycle/API errors | 0 |
 | Current develop sync regression | `python -m pytest -q tests/test_wx_logs_groups.py` at integration sync `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b` | 10 passed, 0 failed | 0 |
 | Current develop sync architecture gate | shared Agent Core + project gate, baseline `0aa8ce54321c9b5130bcf4366a88f8d731ac0898`, at integration sync `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b` | PASS; 823 Python files, 50 LOC violations remain, 0 new import/API/cycle errors | 0 |
 | Full release acceptance suite | `python scripts/release_test_suite.py --scope acceptance` | NOT RUN; retained for WAVE 12 full acceptance | — |

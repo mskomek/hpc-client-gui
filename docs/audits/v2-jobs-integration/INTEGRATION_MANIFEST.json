@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "status": "WAVE_04_COMPLETE",
+  "status": "WAVE_05_COMPLETE",
   "created_at_local": "2026-10-21",
   "target_branch": "develop",
   "integration_branch": "codex/integration/v2-jobs-staged-20261021",
   "integration_worktree": "D:\\Projeler\\.tmp\\hpc-client-gui\\v2-jobs-staged-20261021",
   "integration_start_sha": "f61919bad12be5f328cb9db3fee3c8de8563fa5b",
-  "latest_integration_sha": "1995d7f5cb28de5cdf34737f95202e9d4fb7af9b",
-  "latest_integration_tree_sha": "c6ef9fdb8af7df91f2ad9bbaf0d62aa3deaa3d71",
+  "latest_integration_sha": "b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825",
+  "latest_integration_tree_sha": "9ad65473fa6d6f0d5d944de65d2a7057ce952a05",
   "wave_00_source_sha": "718fbd01296793b513526adabedd3e48deea2d4a",
   "wave_00_tree_sha": "bc4297dce73099e4003a93d52d66247b6ecba719",
   "wave_00_source_fingerprint_sha256": "37be9c808f09d80dc5763520d19d8ee756c8cfa2b8ccc20f919f4fb9256f7a07",
@@ -274,5 +274,96 @@
       "json_report": ".tmp/develop-sync-arch-20261021T180715073.json",
       "markdown_report": ".tmp/develop-sync-arch-20261021T180715073.md"
     }
+  },
+  "global_architecture_inventory": {
+    "over_limit_python_count": 48,
+    "unresolved_internal_imports": 1,
+    "cycles": 8,
+    "api_errors": 0,
+    "latest_gate_source_sha": "b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825",
+    "final_zero_gate_reached": false
+  },
+  "wave_05": {
+    "status": "WAVE_COMPLETE",
+    "start_sha": "fabc11b01b517f53c55ebf882972c6529a441a9f",
+    "source_sha": "b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825",
+    "source_tree_sha": "9ad65473fa6d6f0d5d944de65d2a7057ce952a05",
+    "source_commits": [
+      "b0f8f4cbb8deb59169c8ee5f10274b9fc4abf089",
+      "b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825"
+    ],
+    "jobs_source_sha": "713949fb752b90601e007812ebf2bd765da5ad52",
+    "v2_source_sha": "c0c6d0e956c9283f0c05f25b799e1b1f57ecb240",
+    "source_fingerprint_sha256": "e43d66cbaa374901a18a465c2fdaa0e3e793b8a902b692893de59c517a47f483",
+    "source_fingerprint_method": "SHA256 of sorted path + NUL + SHA256(committed blob bytes) + newline records",
+    "changed_file_count": 13,
+    "changed_python_file_count": 13,
+    "added_application_modules": 2,
+    "added_test_support_modules": 6,
+    "tests": {
+      "core_passed": 139,
+      "core_subtests_passed": 9,
+      "wx_connection_passed": 87,
+      "failed": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "diagnostic_uninitialized_locale_failure": 1,
+      "diagnostic_failure_resolved_by_locale_initialization": true,
+      "logs": [
+        ".tmp/wave05-ssh-core-final.log",
+        ".tmp/wave05-wx-connection-final.log"
+      ]
+    },
+    "ruff_exit_code": 0,
+    "compileall_exit_code": 0,
+    "changed_source_gate": {
+      "status": "PASS",
+      "python_file_count": 831,
+      "over_limit_python_count": 48,
+      "baseline_over_limit_before": 50,
+      "new_dependency_errors": 0,
+      "new_cycles": 0,
+      "api_errors": 0,
+      "exit_code": 0,
+      "json_report": ".tmp/wave05-architecture-final.json",
+      "markdown_report": ".tmp/wave05-architecture-final.md"
+    },
+    "line_counts": {
+      "src/hpc_gui/services/connection_profile_service.py": [
+        484,
+        434
+      ],
+      "src/hpc_gui/services/connection_auth_policy.py": [
+        0,
+        74
+      ],
+      "src/hpc_gui/ssh/client.py": [
+        500,
+        477
+      ],
+      "src/hpc_gui/ssh/command_runner.py": [
+        0,
+        59
+      ],
+      "tests/test_ssh_credential_flow.py": [
+        673,
+        307
+      ],
+      "tests/test_ssh_jump_host.py": [
+        538,
+        176
+      ],
+      "tests/test_ssh_connection_retry.py": [
+        77,
+        94
+      ]
+    },
+    "develop_updated": false,
+    "remote_mutations": false,
+    "wip_snapshot_modified": false,
+    "full_release_acceptance_run": false,
+    "windows11_guest_acceptance_run": false,
+    "ubuntu_linux_acceptance_run": false,
+    "github_actions_run": false
   }
 }
