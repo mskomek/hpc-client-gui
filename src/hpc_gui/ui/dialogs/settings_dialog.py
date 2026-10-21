@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import os
 
-from PySide6.QtCore import QThreadPool, Qt
+from PySide6.QtCore import QThreadPool as QThreadPool, Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QFileDialog,
+    QFileDialog as QFileDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -41,18 +41,28 @@ from hpc_gui.config.storage import (
     get_upload_preflight_confirmation_enabled,
     load_profiles,
     load_settings,
-    set_file_association,
     update_settings,
+)
+from hpc_gui.config.storage import set_file_association as set_file_association
+from hpc_gui.services.transfer_speed_test import (
+    run_transfer_speed_test as run_transfer_speed_test,
+)
+from hpc_gui.ui.async_call import AsyncCall as AsyncCall
+from hpc_gui.config.system_profile import (
+    format_remote_path as format_remote_path,
+    hpc_default_remote_paths as hpc_default_remote_paths,
 )
 from hpc_gui.core.i18n import t
 from hpc_gui.core.platform import current_os
 from hpc_gui.core.terminal_graphics import has_flag, normalize_settings
-from hpc_gui.services.transfer_speed_test import run_transfer_speed_test
-from hpc_gui.ui.async_call import AsyncCall
 from hpc_gui.config.system_profile import (
-    format_remote_path,
     normalize_system_settings,
-    hpc_default_remote_paths,
+)
+from hpc_gui.ui.dialogs._settings_dialog_file_associations import (
+    _SettingsDialogFileAssociationsMixin,
+)
+from hpc_gui.ui.dialogs._settings_dialog_transfer_actions import (
+    _SettingsDialogTransferActionsMixin,
 )
 
 
@@ -61,7 +71,11 @@ def _tr(key: str, fallback: str) -> str:
     return fallback if value == f"[{key}]" else value
 
 
-class SettingsDialog(QDialog):
+class SettingsDialog(
+    _SettingsDialogTransferActionsMixin,
+    _SettingsDialogFileAssociationsMixin,
+    QDialog,
+):
     def __init__(
         self,
         parent=None,
@@ -123,13 +137,19 @@ class SettingsDialog(QDialog):
         self.sp_jobs_outputs_refresh_interval.setRange(1, 3600)
         self.sp_jobs_outputs_refresh_interval.setSingleStep(1)
         self.sp_jobs_outputs_refresh_interval.setValue(get_jobs_outputs_refresh_interval_seconds())
-        self.sp_jobs_outputs_refresh_interval.setToolTip(t("settings.jobs_outputs_refresh_interval_tip"))
+        self.sp_jobs_outputs_refresh_interval.setToolTip(
+            t("settings.jobs_outputs_refresh_interval_tip")
+        )
 
         self.sp_live_tracking_warning_interval = QSpinBox()
         self.sp_live_tracking_warning_interval.setRange(0, 3600)
-        self.sp_live_tracking_warning_interval.setValue(get_live_tracking_warning_interval_seconds())
+        self.sp_live_tracking_warning_interval.setValue(
+            get_live_tracking_warning_interval_seconds()
+        )
         self.sp_live_tracking_warning_interval.setSuffix(" s")
-        self.sp_live_tracking_warning_interval.setToolTip(t("settings.live_tracking_warning_interval_tip"))
+        self.sp_live_tracking_warning_interval.setToolTip(
+            t("settings.live_tracking_warning_interval_tip")
+        )
 
         self.cb_pause_live_follow_when_minimized = QCheckBox(
             t("settings.pause_live_follow_when_minimized_label")
@@ -144,9 +164,7 @@ class SettingsDialog(QDialog):
         self.cb_follow_window_open_minimized = QCheckBox(
             t("settings.follow_window_open_minimized_label")
         )
-        self.cb_follow_window_open_minimized.setChecked(
-            get_follow_window_open_minimized_enabled()
-        )
+        self.cb_follow_window_open_minimized.setChecked(get_follow_window_open_minimized_enabled())
         self.cb_follow_window_open_minimized.setToolTip(
             t("settings.follow_window_open_minimized_tip")
         )
@@ -166,10 +184,26 @@ class SettingsDialog(QDialog):
         self.cb_sbatch_follow_mode = QComboBox()
         for mode, label_key, tip_key in (
             ("none", "settings.sbatch_follow_mode_none", "settings.sbatch_follow_mode_none_tip"),
-            ("outputs_tab", "settings.sbatch_follow_mode_outputs_tab", "settings.sbatch_follow_mode_outputs_tab_tip"),
-            ("new_tabs_split", "settings.sbatch_follow_mode_tabs", "settings.sbatch_follow_mode_tabs_tip"),
-            ("new_window_combined", "settings.sbatch_follow_mode_window_combined", "settings.sbatch_follow_mode_window_combined_tip"),
-            ("new_windows_split", "settings.sbatch_follow_mode_windows_split", "settings.sbatch_follow_mode_windows_split_tip"),
+            (
+                "outputs_tab",
+                "settings.sbatch_follow_mode_outputs_tab",
+                "settings.sbatch_follow_mode_outputs_tab_tip",
+            ),
+            (
+                "new_tabs_split",
+                "settings.sbatch_follow_mode_tabs",
+                "settings.sbatch_follow_mode_tabs_tip",
+            ),
+            (
+                "new_window_combined",
+                "settings.sbatch_follow_mode_window_combined",
+                "settings.sbatch_follow_mode_window_combined_tip",
+            ),
+            (
+                "new_windows_split",
+                "settings.sbatch_follow_mode_windows_split",
+                "settings.sbatch_follow_mode_windows_split_tip",
+            ),
         ):
             self.cb_sbatch_follow_mode.addItem(t(label_key), mode)
             self.cb_sbatch_follow_mode.setItemData(
@@ -235,10 +269,21 @@ class SettingsDialog(QDialog):
         self.cb_transfer_speed_test_size = QComboBox()
         for size_mib in (8, 32, 100):
             self.cb_transfer_speed_test_size.addItem(f"{size_mib} MiB", size_mib)
-        self.cb_transfer_speed_test_size.setToolTip(_tr("settings.transfer_speed_test_size_tip", "Choose the temporary test file size."))
-        self.btn_transfer_speed_test = QPushButton(_tr("settings.transfer_speed_test", "Run remote transfer speed test"))
-        self.btn_transfer_speed_test.setEnabled(bool(session and session.get("connected") and session.get("files")))
-        self.btn_transfer_speed_test.setToolTip(_tr("settings.transfer_speed_test_tip", "Uploads and downloads a temporary 8 MiB file, verifies it, then removes it."))
+        self.cb_transfer_speed_test_size.setToolTip(
+            _tr("settings.transfer_speed_test_size_tip", "Choose the temporary test file size.")
+        )
+        self.btn_transfer_speed_test = QPushButton(
+            _tr("settings.transfer_speed_test", "Run remote transfer speed test")
+        )
+        self.btn_transfer_speed_test.setEnabled(
+            bool(session and session.get("connected") and session.get("files"))
+        )
+        self.btn_transfer_speed_test.setToolTip(
+            _tr(
+                "settings.transfer_speed_test_tip",
+                "Uploads and downloads a temporary 8 MiB file, verifies it, then removes it.",
+            )
+        )
         self.btn_transfer_speed_test.clicked.connect(self._run_transfer_speed_test)
 
         self.cb_ftp_transfer_type = QComboBox()
@@ -277,8 +322,12 @@ class SettingsDialog(QDialog):
 
         graphics_group = QGroupBox(t("settings.terminal_graphics_section"))
         graphics_form = QFormLayout(graphics_group)
-        graphics_form.addRow(t("settings.terminal_graphics_mode_label"), self.cb_terminal_graphics_mode)
-        graphics_form.addRow(t("settings.terminal_graphics_applied_label"), self.lbl_terminal_graphics_applied)
+        graphics_form.addRow(
+            t("settings.terminal_graphics_mode_label"), self.cb_terminal_graphics_mode
+        )
+        graphics_form.addRow(
+            t("settings.terminal_graphics_applied_label"), self.lbl_terminal_graphics_applied
+        )
         graphics_form.addRow(self.lbl_terminal_graphics_remembered)
         graphics_form.addRow(self.lbl_terminal_graphics_tip)
         graphics_form.addRow(self.btn_reset_terminal_graphics)
@@ -289,7 +338,10 @@ class SettingsDialog(QDialog):
             t("settings.jobs_outputs_refresh_interval_label"),
             self.sp_jobs_outputs_refresh_interval,
         )
-        jobs_form.addRow(t("settings.live_tracking_warning_interval_label"), self.sp_live_tracking_warning_interval)
+        jobs_form.addRow(
+            t("settings.live_tracking_warning_interval_label"),
+            self.sp_live_tracking_warning_interval,
+        )
         jobs_form.addRow(self.cb_pause_live_follow_when_minimized)
         jobs_form.addRow(self.cb_follow_window_open_minimized)
         jobs_form.addRow(self.cb_squeue_auto_refresh)
@@ -303,9 +355,7 @@ class SettingsDialog(QDialog):
         ftp_group = QGroupBox(t("settings.ftp_section"))
         ftp_form = QFormLayout(ftp_group)
         cfg = (session or {}).get("cfg") if session else None
-        system = normalize_system_settings(
-            getattr(cfg, "system_settings", None) if cfg else None
-        )
+        system = normalize_system_settings(getattr(cfg, "system_settings", None) if cfg else None)
         self.ftp_scratch_dir = QLineEdit(system["scratch_dir"])
         self.ftp_home_dir = QLineEdit(system["home_dir"])
         self._saved_remote_defaults = (
@@ -328,13 +378,13 @@ class SettingsDialog(QDialog):
         )
         ftp_form.addRow(self.cb_upload_preflight_confirmation)
         ftp_form.addRow(self.cb_transfer_checksum_verification)
-        ftp_form.addRow(t("settings.transfer_speed_test_size_label"), self.cb_transfer_speed_test_size)
+        ftp_form.addRow(
+            t("settings.transfer_speed_test_size_label"), self.cb_transfer_speed_test_size
+        )
         ftp_form.addRow(self.btn_transfer_speed_test)
         ftp_form.addRow(self.cb_remote_directory_cache)
         ftp_form.addRow(self.btn_clear_remote_directory_cache)
-        self.btn_ftp_reset_defaults = QPushButton(
-            t("settings.ftp_reset_defaults")
-        )
+        self.btn_ftp_reset_defaults = QPushButton(t("settings.ftp_reset_defaults"))
         self.btn_ftp_reset_defaults.setEnabled(profile_available)
         self.btn_ftp_reset_defaults.clicked.connect(self._reset_ftp_defaults)
         ftp_form.addRow(self.btn_ftp_reset_defaults)
@@ -344,18 +394,10 @@ class SettingsDialog(QDialog):
         self.file_associations_list = QListWidget()
         associations_layout.addWidget(self.file_associations_list)
         association_buttons = QHBoxLayout()
-        self.btn_change_file_association = QPushButton(
-            t("settings.file_association_change")
-        )
-        self.btn_clear_file_association = QPushButton(
-            t("settings.file_association_clear")
-        )
-        self.btn_change_file_association.clicked.connect(
-            self._change_selected_file_association
-        )
-        self.btn_clear_file_association.clicked.connect(
-            self._clear_selected_file_association
-        )
+        self.btn_change_file_association = QPushButton(t("settings.file_association_change"))
+        self.btn_clear_file_association = QPushButton(t("settings.file_association_clear"))
+        self.btn_change_file_association.clicked.connect(self._change_selected_file_association)
+        self.btn_clear_file_association.clicked.connect(self._clear_selected_file_association)
         association_buttons.addWidget(self.btn_change_file_association)
         association_buttons.addWidget(self.btn_clear_file_association)
         associations_layout.addLayout(association_buttons)
@@ -396,8 +438,12 @@ class SettingsDialog(QDialog):
                 "close_x11_procs_on_exit": self.cb_close_x11_procs_on_exit.isChecked(),
                 "cli_external_access_enabled": self.cb_cli_external_access.isChecked(),
                 "cli_default_profile": str(self.cb_cli_default_profile.currentData() or ""),
-                "jobs_outputs_refresh_interval_seconds": int(self.sp_jobs_outputs_refresh_interval.value()),
-                "live_tracking_warning_interval_seconds": int(self.sp_live_tracking_warning_interval.value()),
+                "jobs_outputs_refresh_interval_seconds": int(
+                    self.sp_jobs_outputs_refresh_interval.value()
+                ),
+                "live_tracking_warning_interval_seconds": int(
+                    self.sp_live_tracking_warning_interval.value()
+                ),
                 "pause_live_follow_when_minimized_enabled": (
                     self.cb_pause_live_follow_when_minimized.isChecked()
                 ),
@@ -416,11 +462,11 @@ class SettingsDialog(QDialog):
                 "transfer_checksum_verification_enabled": (
                     self.cb_transfer_checksum_verification.isChecked()
                 ),
-                "ftp_transfer_type": str(
-                    self.cb_ftp_transfer_type.currentData() or "auto"
-                ),
+                "ftp_transfer_type": str(self.cb_ftp_transfer_type.currentData() or "auto"),
                 "remote_directory_cache_enabled": self.cb_remote_directory_cache.isChecked(),
-                "terminal_graphics_mode": str(self.cb_terminal_graphics_mode.currentData() or "auto"),
+                "terminal_graphics_mode": str(
+                    self.cb_terminal_graphics_mode.currentData() or "auto"
+                ),
                 "terminal_graphics_auto_compatibility": self._terminal_graphics_auto_compatibility,
             }
         )
@@ -439,82 +485,7 @@ class SettingsDialog(QDialog):
             self._saved_remote_defaults = remote_defaults
 
     def _reset_terminal_graphics(self) -> None:
-        self.cb_terminal_graphics_mode.setCurrentIndex(
-            max(0, self.cb_terminal_graphics_mode.findData("auto"))
-        )
-        self._terminal_graphics_auto_compatibility = False
-        update_settings({
-            "terminal_graphics_mode": "auto",
-            "terminal_graphics_auto_compatibility": False,
-        })
-        self.lbl_terminal_graphics_remembered.setText(t("settings.terminal_graphics_not_remembered"))
-
-    def _run_transfer_speed_test(self) -> None:
-        session = self._session
-        files = session.get("files") if session else None
-        if not session or not session.get("connected") or not files:
-            QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
-            return
-        cfg = session.get("cfg")
-        system = normalize_system_settings(getattr(cfg, "system_settings", None))
-        remote_dir = format_remote_path(system["scratch_dir"], getattr(cfg, "username", "user"))
-        self.btn_transfer_speed_test.setEnabled(False)
-        worker = AsyncCall(("speed-test", id(self)), lambda: run_transfer_speed_test(files, remote_dir=remote_dir, size_mib=int(self.cb_transfer_speed_test_size.currentData() or 8)))
-        self._speed_test_worker = worker
-        def finished(_token, result) -> None:
-            self._speed_test_worker = None
-            self.btn_transfer_speed_test.setEnabled(True)
-            QMessageBox.information(self, _tr("settings.transfer_speed_test", "Remote transfer speed test"), _tr("settings.transfer_speed_test_result", "Size: {size} MiB\\nUpload: {upload} MiB/s\\nDownload: {download} MiB/s").format(size=f"{result['size_mib']:.0f}", upload=f"{result['upload_mib_s']:.2f}", download=f"{result['download_mib_s']:.2f}"))
-        def failed(_token, error) -> None:
-            self._speed_test_worker = None
-            self.btn_transfer_speed_test.setEnabled(True)
-            QMessageBox.warning(self, _tr("common.error", "Error"), str(error))
-        worker.signals.finished.connect(finished)
-        worker.signals.failed.connect(failed)
-        QThreadPool.globalInstance().start(worker)
-
-    def _clear_remote_directory_cache_clicked(self) -> None:
-        if self._clear_remote_directory_cache is not None:
-            self._clear_remote_directory_cache()
-
-    def _reset_ftp_defaults(self) -> None:
-        defaults = hpc_default_remote_paths()
-        self.ftp_scratch_dir.setText(defaults["scratch_dir"])
-        self.ftp_home_dir.setText(defaults["home_dir"])
-
-    def _refresh_file_association_list(self) -> None:
-        self.file_associations_list.clear()
-        for extension, program in sorted(self._file_associations.items()):
-            self.file_associations_list.addItem(f"{extension} -> {program}")
-        empty = not self._file_associations
-        self.btn_change_file_association.setEnabled(not empty)
-        self.btn_clear_file_association.setEnabled(not empty)
-
-    def _selected_file_association_extension(self) -> str:
-        item = self.file_associations_list.currentItem()
-        if item is None:
-            return ""
-        return item.text().split(" -> ", 1)[0].strip()
-
-    def _change_selected_file_association(self) -> None:
-        extension = self._selected_file_association_extension()
-        if not extension:
-            QMessageBox.information(
-                self,
-                t("common.info"),
-                t("settings.file_association_none_selected"),
-            )
-            return
-        program, _ = QFileDialog.getOpenFileName(
-            self,
-            t("files.open_with_select_program"),
-            self._file_associations.get(extension, ""),
-            t("files.open_with_program_filter"),
-        )
-        if not program:
-            return
-        self._file_associations = set_file_association(extension, program)
-        self._refresh_file_association_list()
+        return _SettingsDialogTransferActionsMixin._reset_terminal_graphics(self, update_settings)
 
     def _clear_selected_file_association(self) -> None:
         extension = self._selected_file_association_extension()

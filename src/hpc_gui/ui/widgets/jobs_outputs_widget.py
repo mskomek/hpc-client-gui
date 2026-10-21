@@ -61,6 +61,7 @@ from ._jobs_output_follower_windows import _FollowerWindow, _SingleFileFollowerW
 
 class JobsOutputsWidget(_JobsOutputsLifecycleMixin, _JobsOutputsJobsMixin, _JobsOutputsFollowersMixin, _JobsOutputsLiveMixin, QWidget):
     polling_visibility_changed = Signal()
+    request_show_directories = Signal()
 
     def __init__(self):
         super().__init__()
