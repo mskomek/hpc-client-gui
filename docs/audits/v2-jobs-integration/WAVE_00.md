@@ -1,10 +1,13 @@
 # WAVE 00 — Repository and Architecture Foundation
 
-Status: **IN PROGRESS**. The complete starting baseline is described in [WAVE_00_ARCHITECTURE_BASELINE.md](WAVE_00_ARCHITECTURE_BASELINE.md).
+Status: **WAVE_COMPLETE**. The complete starting baseline is described in [WAVE_00_ARCHITECTURE_BASELINE.md](WAVE_00_ARCHITECTURE_BASELINE.md).
 
 ## Starting state
 
 - Starting integration commit: `f61919bad12be5f328cb9db3fee3c8de8563fa5b`.
+- Wave source commit: `718fbd01296793b513526adabedd3e48deea2d4a` (`chore(architecture): establish staged 500-line enforcement`).
+- Wave source tree: `bc4297dce73099e4003a93d52d66247b6ecba719`.
+- Fingerprint of 30 files changed by this wave (sorted path + SHA-256): `37be9c808f09d80dc5763520d19d8ee756c8cfa2b8ccc20f919f4fb9256f7a07`.
 - Local `develop` was clean but checked out in another worktree, so this wave uses isolated branch `codex/integration/v2-jobs-staged-20261021`.
 - Main user checkout changes and V2 dirty source were preserved; V2 tracked/untracked changes were copied to `D:\Projeler\.tmp\hpc-client-gui\v2-wip-snapshot-20261021` and fingerprinted.
 - Branch heads, merge bases, live remote advertisements, and divergence counts are recorded in [BRANCH_SOURCE_MAP.md](BRANCH_SOURCE_MAP.md).
@@ -17,12 +20,13 @@ Status: **IN PROGRESS**. The complete starting baseline is described in [WAVE_00
 
 ## Evidence
 
-- Focused tests: 5 passed, exit 0, using the project `.venv`.
-- `py_compile`: exit 0 for the new checker and test.
-- Changed-source gate against starting SHA: pending final rerun after baseline source correction.
-- Full starting architecture check: FAIL, exit 1, with 52 baseline LOC violations. The WAVE 00 working tree still has those 52, the same 2 pre-existing unresolved imports, 8 cycles, and 0 API errors. These are recorded as baseline debt, not acceptance.
+- Focused tests: `python -m pytest tests/test_source_architecture_gate.py -q` — 5 passed, exit 0, using the project `.venv`.
+- Ruff: `python -m ruff check scripts/check_source_architecture.py tests/test_source_architecture_gate.py` — passed, exit 0.
+- `py_compile`: `python -m py_compile scripts/check_source_architecture.py tests/test_source_architecture_gate.py` — passed, exit 0.
+- Changed-source gate against starting SHA: `python scripts/check_source_architecture.py --mode gate --base f61919bad12be5f328cb9db3fee3c8de8563fa5b` — passed, exit 0; 779 Python files scanned, 52 baseline files remain over 500 lines.
+- Full project architecture check: FAIL, exit 1, with 52 baseline LOC violations, the same 2 pre-existing unresolved imports, 8 cycles, and 0 API errors. These are recorded as baseline debt, not acceptance.
 - GitHub Actions has not run.
 
 ## Completion condition
 
-Before committing WAVE 00, verify the report outputs, rerun the focused suite and changed-source gate, and capture the exact source fingerprint. No wave is marked complete until that checkpoint is committed.
+The implementation and evidence checkpoint is committed. A documentation-only closeout commit records this verified report; it does not change the wave source tree or its fingerprint.

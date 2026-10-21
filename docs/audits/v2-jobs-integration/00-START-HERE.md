@@ -1,6 +1,6 @@
 # V2 + Jobs Integration Checkpoint
 
-Status: **WAVE 00 in progress**. Work is isolated on `codex/integration/v2-jobs-staged-20261021`, based on local `develop` at `f61919bad12be5f328cb9db3fee3c8de8563fa5b`. The actual `develop` worktree remains unchanged.
+Status: **WAVE 00 complete; overall integration partial**. Work is isolated on `codex/integration/v2-jobs-staged-20261021`, based on local `develop` at `f61919bad12be5f328cb9db3fee3c8de8563fa5b`. Wave 00 source commit is `718fbd01296793b513526adabedd3e48deea2d4a`; the actual `develop` worktree remains unchanged.
 
 Start with [the branch source map](BRANCH_SOURCE_MAP.md), [the architecture baseline](ARCHITECTURE_BASELINE.md), and [the wave tracker](WAVE_TRACKER.md). The full transition plan is recorded in [WAVE_00](WAVE_00.md) through [WAVE_12](WAVE_12.md).
 

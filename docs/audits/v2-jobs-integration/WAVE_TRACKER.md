@@ -2,7 +2,7 @@
 
 | Wave | Scope | Status | Start SHA | End SHA | Local tests | Merge target |
 |---|---|---|---|---|---|---|
-| 00 | Repository and architecture foundation | IN PROGRESS | `f61919bad12be5f328cb9db3fee3c8de8563fa5b` | pending | 4 architecture tests pass; staged gate pass | isolated integration |
+| 00 | Repository and architecture foundation | WAVE_COMPLETE | `f61919bad12be5f328cb9db3fee3c8de8563fa5b` | `718fbd01296793b513526adabedd3e48deea2d4a` | 5 focused tests, Ruff, py_compile, changed-source gate pass; global baseline scan has 52 LOC violations | isolated integration |
 | 01 | Jobs persistence and history | NOT STARTED | — | — | — | isolated integration |
 | 02 | Jobs workspace and wx UI | NOT STARTED | — | — | — | isolated integration |
 | 03 | Release runner and test scopes | NOT STARTED | — | — | — | isolated integration |
