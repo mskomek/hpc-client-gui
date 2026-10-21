@@ -717,6 +717,7 @@
     "export_diagnostics_hint": "Günlük ve tanı bilgilerini bir pakete aktar",
     "collapse_repeats": "Tekrarları birleştir",
     "repeated_summary": "{count} kez daha tekrarlandı",
+    "command_group_summary": "{command} — {count} çalıştırma{time_range}",
     "select_output_folder": "Çıktı klasörünü seç",
     "diagnostics_title": "Tanı",
     "send_open_failed": "Günlük gönderme penceresi açılamadı. Ayrıntılar günlüklere yazıldı.",

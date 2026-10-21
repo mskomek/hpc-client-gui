@@ -8,7 +8,7 @@ from threading import Thread
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.core.logging import log_path as default_log_path
 from hpc_gui.wx_host import make_host
-from hpc_gui.wx_logs import WxLogsModel
+from hpc_gui.wx_logs import LogDisplayEntry, WxLogsModel, group_repeated_ssh_commands
 
 
 def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Path | None = None, bundle=None, embedded):
@@ -54,23 +54,114 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
         actions.Add(button, 0, wx.ALL, 3)
 
     text = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+    grouped = wx.TreeCtrl(
+        panel,
+        style=wx.TR_HAS_BUTTONS | wx.TR_SINGLE | wx.TR_HIDE_ROOT | wx.HSCROLL,
+    )
+    grouped.Hide()
 
     root.Add(top, 0, wx.EXPAND)
     root.Add(actions, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 3)
     root.Add(text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+    root.Add(grouped, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     panel.SetSizer(root)
 
     display_override = {"text": None}
+
+    def _group_identity(entry: LogDisplayEntry, occurrence: int) -> tuple:
+        first_line = entry.raw_lines[0] if entry.raw_lines else ""
+        return entry.command_family, entry.first_timestamp, first_line, occurrence
+
+    def _expanded_groups() -> set[tuple]:
+        expanded: set[tuple] = set()
+        tree_root = grouped.GetRootItem()
+        if not tree_root.IsOk():
+            return expanded
+        item, cookie = grouped.GetFirstChild(tree_root)
+        while item.IsOk():
+            if grouped.ItemHasChildren(item) and grouped.IsExpanded(item):
+                data = grouped.GetItemData(item)
+                try:
+                    key = data.GetData()
+                except (AttributeError, RuntimeError):
+                    key = data
+                if isinstance(key, tuple):
+                    expanded.add(key)
+            item, cookie = grouped.GetNextChild(tree_root, cookie)
+        return expanded
+
+    def _line_label(line: str) -> str:
+        return line.rstrip("\r\n") or " "
+
+    def _render_grouped() -> None:
+        expanded = _expanded_groups()
+        entries = group_repeated_ssh_commands(model.text)
+        occurrences: dict[tuple, int] = {}
+        grouped.Freeze()
+        try:
+            grouped.DeleteAllItems()
+            tree_root = grouped.AddRoot("")
+            for entry in entries:
+                if not entry.is_group:
+                    for line in entry.raw_lines:
+                        grouped.AppendItem(tree_root, _line_label(line))
+                    continue
+
+                base = (entry.command_family, entry.first_timestamp, entry.raw_lines[0])
+                occurrence = occurrences.get(base, 0)
+                occurrences[base] = occurrence + 1
+                key = _group_identity(entry, occurrence)
+                time_range = ""
+                if entry.first_timestamp and entry.last_timestamp:
+                    first = entry.first_timestamp[11:19] or entry.first_timestamp
+                    last = entry.last_timestamp[11:19] or entry.last_timestamp
+                    time_range = f" ({first}–{last})"
+                label = t("logs.command_group_summary").format(
+                    command=entry.command_family,
+                    count=entry.command_count,
+                    time_range=time_range,
+                )
+                parent_item = grouped.AppendItem(tree_root, label)
+                grouped.SetItemData(parent_item, key)
+                for line in entry.raw_lines:
+                    grouped.AppendItem(parent_item, _line_label(line))
+                if key in expanded:
+                    grouped.Expand(parent_item)
+        finally:
+            grouped.Thaw()
+
+    def _toggle_group(item) -> None:
+        if not item or not item.IsOk() or not grouped.ItemHasChildren(item):
+            return
+        if grouped.IsExpanded(item):
+            grouped.Collapse(item)
+        else:
+            grouped.Expand(item)
+
+    def _on_group_click(event) -> None:
+        item, flags = grouped.HitTest(event.GetPosition())
+        disclosure_button = getattr(wx, "TREE_HITTEST_ONITEMBUTTON", 0)
+        if item and item.IsOk() and grouped.ItemHasChildren(item) and not (flags & disclosure_button):
+            grouped.SelectItem(item)
+            _toggle_group(item)
+            return
+        event.Skip()
 
     def render_text() -> str:
         override = display_override["text"]
         if override is not None:
             value = override
-        elif collapse_repeats.GetValue():
-            value = model.collapsed_text(t("logs.repeated_summary"))
         else:
             value = model.copy_all()
-        text.SetValue(value)
+        if override is None and collapse_repeats.GetValue():
+            text.Hide()
+            grouped.Show()
+            _render_grouped()
+        else:
+            grouped.Hide()
+            text.Show()
+            text.SetValue(value)
+        root.Layout()
         return value
 
     def _set_clipboard(value: str) -> None:
@@ -108,7 +199,7 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
         Thread(target=worker, daemon=True).start()
 
     def copy_all(_event=None) -> None:
-        value = render_text() if model.text else text.GetValue()
+        value = text.GetValue() if display_override["text"] is not None else model.copy_all()
         _set_clipboard(value)
 
     def copy_path(_event=None) -> None:
@@ -174,6 +265,7 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
     btn_folder.Bind(wx.EVT_BUTTON, open_logs_folder)
     btn_diag.Bind(wx.EVT_BUTTON, export_diagnostics)
     collapse_repeats.Bind(wx.EVT_CHECKBOX, lambda _event: render_text())
+    grouped.Bind(wx.EVT_LEFT_DOWN, _on_group_click)
 
     def refresh_labels(_language=None):
         host.set_host_title(t("tabs.logs"))
@@ -208,6 +300,7 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
     host._wx_logs_controls = {
         "title": title_label,
         "text": text,
+        "grouped": grouped,
         "copy": btn_copy,
         "copy_path": btn_copy_path,
         "open_folder": btn_folder,
@@ -218,6 +311,7 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
     host._wx_logs_model = model
     host._wx_logs_refresh = refresh
     host._wx_logs_open_folder = open_logs_folder
+    host._wx_logs_toggle_group = _toggle_group
 
     # Initial load off-GUI thread
     refresh()
