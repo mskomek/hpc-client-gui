@@ -69,6 +69,13 @@
 | Wave 09 mixed-domain exploratory run | One mixed updater/FTP/dialog pytest invocation while source edits were still in progress | Native Windows access violation `0xC000041D` at `tests/test_ftp_widget.py` teardown (`QApplication.processEvents()`); not bound to the committed source. Separate committed-source batches above passed; final release-runner isolation and GUI teardown checks remain required | `-1073740771` |
 | Current develop sync regression | `python -m pytest -q tests/test_wx_logs_groups.py` at integration sync `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b` | 10 passed, 0 failed | 0 |
 | Current develop sync architecture gate | shared Agent Core + project gate, baseline `0aa8ce54321c9b5130bcf4366a88f8d731ac0898`, at integration sync `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b` | PASS; 823 Python files, 50 LOC violations remain, 0 new import/API/cycle errors | 0 |
+| Wave 10 FTP widget regression | 20 individual FTP test files, each launched in its own pytest process, at `4e5b698653538ceeadb7a2cd16ae593e942b18a4` | 168 passed, 0 failed, 0 skipped | 0 |
+| Wave 10 adjacent Files/FTP regressions | 10 related directory listing, cache, sync, transfer-conflict and wx UI files, individually isolated, at `4e5b698653538ceeadb7a2cd16ae593e942b18a4` | 116 passed, 0 failed, 1 skipped (`test_synchronized_browsing.py`, POSIX-only behavior on Windows) | 0 |
+| Wave 10 combined regression | Both isolated batches above | 284 passed, 0 failed, 1 platform skip; all 30 file processes exited 0 | 0 |
+| Wave 10 compatibility and test preservation | Facade API probe and AST comparison for pre-split `test_ftp_widget.py` | All checked legacy methods/symbols and patch hooks remain; all 168 test functions retained with matching AST | 0 |
+| Wave 10 Ruff and compileall | Ruff on changed FTP/panel/i18n/test sources; `python -m compileall -q src/hpc_gui tests` at `4e5b698653538ceeadb7a2cd16ae593e942b18a4` | passed | 0 |
+| Wave 10 changed-source architecture | `--mode gate --base 3e648fbeae29cb2307bbc787288368ce478cb26a` at `4e5b698653538ceeadb7a2cd16ae593e942b18a4` | PASS; 937 Python files, 29 over-limit files; 0 new dependency/cycle/API errors | 0 |
+| Wave 10 i18n | `python scripts/check_i18n.py` at WAVE 10 start and source commits | FAIL on both with the same 7 hardcoded strings and 3 missing keys in Jobs Outputs modules; inherited debt assigned to WAVE 11/12 | 1 |
 | Full release acceptance suite | `python scripts/release_test_suite.py --scope acceptance` | NOT RUN; retained for WAVE 12 full acceptance | — |
 | GitHub Actions | not run | NOT RUN | — |
 
