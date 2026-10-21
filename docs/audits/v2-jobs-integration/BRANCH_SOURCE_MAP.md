@@ -7,7 +7,7 @@
 | local `develop` | `d91c84f1d784fd3391bf132a54134faef44e63c9` | `origin/develop` = `d91c84f1d784fd3391bf132a54134faef44e63c9` | clean; checked out in `D:\Projeler\hpc-client-gui-i18n-develop` |
 | Jobs | `713949fb752b90601e007812ebf2bd765da5ad52` | same | clean; `C:\Users\mskomek\.codex\worktrees\jobs-workspace-recovery-merge` |
 | V2 | `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` | same | 99 modified tracked, 74 untracked, 32 ignored entries |
-| integration | `codex/integration/v2-jobs-staged-20261021` at `b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825` | local only | isolated worktree; synchronized with current `develop`; no remote branch |
+| integration | `codex/integration/v2-jobs-staged-20261021` at `7675422c1d077572f96ff4fad1b8c703d53ffb31` | local only | isolated worktree; synchronized with current `develop`; no remote branch |
 
 At startup, the supplied `develop` SHA was the remote-tracking head and local `develop` had one additional commit. During the run, local and remote `develop` advanced to `d91c84f1d784fd3391bf132a54134faef44e63c9` with the collapsible SSH log groups change. The isolated integration branch now contains that head through a clean no-conflict merge checkpoint `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b`. The initial source refs remain recorded below and in the manifest; Jobs and V2 source branches remain unchanged.
 
@@ -54,6 +54,13 @@ After WAVE 04, current `develop` `d91c84f1d784fd3391bf132a54134faef44e63c9` was 
 - V2 source `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` supplied the auth-policy module and split credential/jump-host tests. The source test split retained all 45 original test function names without duplicates.
 - WIP snapshot review found the dirty login facade and `_login_*` modules, with test patch-target changes that correspond to that modularization. These changes were not copied during WAVE 05; they remain available in the unchanged snapshot for the later login/UI wave. No WIP source edits for the auth policy, connection-profile service, or SSH client were present.
 - WAVE 05 final source commit is `b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825`, with fingerprint `e43d66cbaa374901a18a465c2fdaa0e3e793b8a902b692893de59c517a47f483`. It is isolated and has not been merged into local `develop`.
+
+## WAVE 06 source selection
+
+- V2 source `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` supplied the command module layout; selected dirty snapshot versions of the CLI facade, remote commands, and shared helpers were reconciled into the integration source.
+- The existing Jobs/develop session and terminal input path were preserved because V2's `session.py` removed saved master-password and keyboard-interactive behavior and its terminal rewrite dropped raw-key lifecycle handling. Existing saved-credential and terminal-output tests remain.
+- The V2 job ID validator was replaced with the canonical Jobs identity validator, preserving array and heterogeneous Slurm IDs. All prior public names remain available from `hpc_gui.cli.main`.
+- WAVE 06 source commit is `7675422c1d077572f96ff4fad1b8c703d53ffb31`, with fingerprint `e88f1f29f2fc1db360bc84acca16280008e65be87505978e4fea3d24b8c2554c`. It is isolated and has not been merged into local `develop`.
 
 ## Dirty and ignored source classification
 

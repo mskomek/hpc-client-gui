@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "status": "WAVE_05_COMPLETE",
+  "status": "WAVE_06_COMPLETE",
   "created_at_local": "2026-10-21",
   "target_branch": "develop",
   "integration_branch": "codex/integration/v2-jobs-staged-20261021",
   "integration_worktree": "D:\\Projeler\\.tmp\\hpc-client-gui\\v2-jobs-staged-20261021",
   "integration_start_sha": "f61919bad12be5f328cb9db3fee3c8de8563fa5b",
-  "latest_integration_sha": "b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825",
-  "latest_integration_tree_sha": "9ad65473fa6d6f0d5d944de65d2a7057ce952a05",
+  "latest_integration_sha": "7675422c1d077572f96ff4fad1b8c703d53ffb31",
+  "latest_integration_tree_sha": "eeab892b309b65d4d3bd88d9eacc86e71f8ff3f1",
   "wave_00_source_sha": "718fbd01296793b513526adabedd3e48deea2d4a",
   "wave_00_tree_sha": "bc4297dce73099e4003a93d52d66247b6ecba719",
   "wave_00_source_fingerprint_sha256": "37be9c808f09d80dc5763520d19d8ee756c8cfa2b8ccc20f919f4fb9256f7a07",
@@ -276,11 +276,11 @@
     }
   },
   "global_architecture_inventory": {
-    "over_limit_python_count": 48,
+    "over_limit_python_count": 47,
     "unresolved_internal_imports": 1,
     "cycles": 8,
     "api_errors": 0,
-    "latest_gate_source_sha": "b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825",
+    "latest_gate_source_sha": "7675422c1d077572f96ff4fad1b8c703d53ffb31",
     "final_zero_gate_reached": false
   },
   "wave_05": {
@@ -357,6 +357,102 @@
         77,
         94
       ]
+    },
+    "develop_updated": false,
+    "remote_mutations": false,
+    "wip_snapshot_modified": false,
+    "full_release_acceptance_run": false,
+    "windows11_guest_acceptance_run": false,
+    "ubuntu_linux_acceptance_run": false,
+    "github_actions_run": false
+  },
+  "wave_06": {
+    "status": "WAVE_COMPLETE",
+    "start_sha": "2d08506d85bc287b21c92c2e28e4e81bfa1b4efb",
+    "source_sha": "7675422c1d077572f96ff4fad1b8c703d53ffb31",
+    "source_tree_sha": "eeab892b309b65d4d3bd88d9eacc86e71f8ff3f1",
+    "jobs_source_sha": "713949fb752b90601e007812ebf2bd765da5ad52",
+    "v2_source_sha": "c0c6d0e956c9283f0c05f25b799e1b1f57ecb240",
+    "v2_wip_snapshot_fingerprint_sha256": "889fb7432500705ff44281ad2c76407d5ec334de17f2ab777128e33ad0d4980b",
+    "v2_wip_selected_files": {
+      "src/hpc_gui/cli/main.py": "f1b31d147bcbf1adb09b48ca8b60b82202f5f4e156a025292f1a9d7400fbafcb",
+      "src/hpc_gui/cli/_remote_commands.py": "023e287b7ead8035583973aa70ee8fce5e2b43732b974d753b87d11d76e16deb",
+      "src/hpc_gui/cli/_shared.py": "73df43717a74a6535c01573e1339d9f153b8152b588471937157446ab1e16bf5"
+    },
+    "source_fingerprint_sha256": "e88f1f29f2fc1db360bc84acca16280008e65be87505978e4fea3d24b8c2554c",
+    "source_fingerprint_method": "SHA256 of sorted path + NUL + SHA256(committed blob bytes) + newline records",
+    "changed_python_files": 17,
+    "added_application_modules": 8,
+    "line_counts": {
+      "src/hpc_gui/cli/main.py": [
+        1023,
+        190
+      ],
+      "src/hpc_gui/cli/_contracts.py": [
+        0,
+        13
+      ],
+      "src/hpc_gui/cli/_doctor_commands.py": [
+        0,
+        75
+      ],
+      "src/hpc_gui/cli/_file_commands.py": [
+        0,
+        130
+      ],
+      "src/hpc_gui/cli/_job_commands.py": [
+        0,
+        82
+      ],
+      "src/hpc_gui/cli/_parser.py": [
+        0,
+        221
+      ],
+      "src/hpc_gui/cli/_profile_commands.py": [
+        0,
+        112
+      ],
+      "src/hpc_gui/cli/_remote_commands.py": [
+        0,
+        175
+      ],
+      "src/hpc_gui/cli/_shared.py": [
+        0,
+        154
+      ]
+    },
+    "preserved_compatibility": [
+      "saved master-password and keyboard-interactive session support",
+      "raw-key terminal input and shell output activation lifecycle",
+      "canonical Jobs Slurm ID grammar including compact arrays and heterogeneous IDs",
+      "all pre-refactor CLI main.py public symbols",
+      "existing saved-credential and terminal-output tests"
+    ],
+    "tests": {
+      "passed": 177,
+      "failed": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "ruff_exit_code": 0,
+      "compileall_exit_code": 0,
+      "public_api_missing_symbols": 0,
+      "logs": [
+        ".tmp/wave06-cli-tests.log"
+      ]
+    },
+    "changed_source_gate": {
+      "status": "PASS",
+      "python_file_count": 839,
+      "over_limit_python_count": 47,
+      "baseline_over_limit_before": 48,
+      "new_dependency_errors": 0,
+      "new_cycles": 0,
+      "api_errors": 0,
+      "inherited_unresolved_imports": 1,
+      "inherited_cycles": 8,
+      "exit_code": 0,
+      "json_report": ".tmp/wave06-architecture-final.json",
+      "markdown_report": ".tmp/wave06-architecture-final.md"
     },
     "develop_updated": false,
     "remote_mutations": false,
