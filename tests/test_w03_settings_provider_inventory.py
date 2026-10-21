@@ -29,14 +29,14 @@ from hpc_gui.wx_settings import GLOBAL_KEYS, LEGACY_IGNORED_KEYS, PROFILE_KEYS, 
 
 
 # ---------------------------------------------------------------------------
-# Isolation helper (repo convention: patch storage._config_path)
+# Isolation helper (repo convention: patch _storage_core._config_path)
 # ---------------------------------------------------------------------------
 
 
 @pytest.fixture
 def isolated_config(tmp_path, monkeypatch):
     config_path = tmp_path / "config.json"
-    monkeypatch.setattr(storage, "_config_path", lambda: config_path)
+    monkeypatch.setattr("hpc_gui.config._storage_core._config_path", lambda: config_path)
     return config_path
 
 

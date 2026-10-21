@@ -46,9 +46,9 @@ def test_binary_named_as_text_is_not_decoded_and_text_encodings_are_supported():
 
 @pytest.mark.unit
 def test_smart_open_preferences_persist_and_reset(monkeypatch, tmp_path: Path):
-    from hpc_gui.config import storage
+    from hpc_gui.config import _storage_core
 
-    monkeypatch.setattr(storage, "_config_path", lambda: tmp_path / "config.json")
+    monkeypatch.setattr(_storage_core, "_config_path", lambda: tmp_path / "config.json")
     remember_smart_open("PNG", "system")
     assert smart_open_preferences() == {".png": "system"}
     reset_smart_open_preferences()

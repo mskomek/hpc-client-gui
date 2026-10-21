@@ -31,7 +31,7 @@ class TestExistingUserUpgrade:
         from hpc_gui.config import storage
 
         config_path = tmp_path / "config.json"
-        monkeypatch.setattr(storage, "_config_path", lambda: config_path)
+        monkeypatch.setattr("hpc_gui.config._storage_core._config_path", lambda: config_path)
         payload = {
             "profiles": [{"name": "Türkçe İş", "home_dir": "/home/işçi", "future": "日本語"}],
             "settings": {"last_profile": "Türkçe İş"},
@@ -61,7 +61,7 @@ class TestExistingUserUpgrade:
         from hpc_gui.config import storage
 
         config_path = tmp_path / "config.json"
-        monkeypatch.setattr(storage, "_config_path", lambda: config_path)
+        monkeypatch.setattr("hpc_gui.config._storage_core._config_path", lambda: config_path)
         storage.save_config({"profiles": [], "settings": {"label": "Çalışma"}})
         assert json.loads(config_path.read_text(encoding="utf-8"))["settings"]["label"] == "Çalışma"
         assert list(tmp_path.glob("config.json.*.tmp")) == []

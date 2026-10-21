@@ -32,7 +32,7 @@ from hpc_gui.services import shortcut_preferences as shortcuts
 @pytest.fixture
 def isolated_config(tmp_path, monkeypatch):
     config_path = tmp_path / "config.json"
-    monkeypatch.setattr(storage, "_config_path", lambda: config_path)
+    monkeypatch.setattr("hpc_gui.config._storage_core._config_path", lambda: config_path)
     return config_path
 
 
@@ -225,7 +225,7 @@ def test_w38_migration_failure_does_not_destroy_original(isolated_config, monkey
     def _fail(_cfg):
         raise OSError("simulated W38 migration write failure")
 
-    monkeypatch.setattr(storage, "save_config", _fail)
+    monkeypatch.setattr("hpc_gui.config._storage_core.save_config", _fail)
     with pytest.raises(OSError, match="simulated W38 migration write failure"):
         storage.load_profiles()
     assert isolated_config.read_bytes() == original

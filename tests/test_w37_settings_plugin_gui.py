@@ -16,7 +16,7 @@ from hpc_gui.wx_settings import (
 @pytest.fixture
 def isolated_config(tmp_path, monkeypatch):
     config_path = tmp_path / "config.json"
-    monkeypatch.setattr(storage, "_config_path", lambda: config_path)
+    monkeypatch.setattr("hpc_gui.config._storage_core._config_path", lambda: config_path)
     return config_path
 
 # UPD-060 / PLUGINSET-001/002 / UPD-074 absent-plugin safety (UPD-048)

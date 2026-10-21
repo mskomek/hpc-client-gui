@@ -169,7 +169,7 @@ def test_wx_settings_checksum_checkbox_persists_to_stored_setting(tmp_path, monk
     import hpc_gui.config.storage as storage
     from hpc_gui.wx_settings import WxSettingsModel, persist_transfer_checksum_to_storage
 
-    monkeypatch.setattr(storage, "_config_path", lambda: tmp_path / "config.json")
+    monkeypatch.setattr("hpc_gui.config._storage_core._config_path", lambda: tmp_path / "config.json")
     assert storage.get_transfer_checksum_verification_enabled() is False
     assert persist_transfer_checksum_to_storage(WxSettingsModel({"transfer_checksum": True})) is True
     assert storage.get_transfer_checksum_verification_enabled() is True

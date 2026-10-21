@@ -83,7 +83,7 @@ def test_profile_show_never_prints_sensitive_field_values(capsys) -> None:
 @pytest.mark.semantic
 def test_profile_create_round_trips_to_config_path(capsys, tmp_path: Path) -> None:
     config = tmp_path / "config.json"
-    with patch("hpc_gui.config.storage._config_path", return_value=config):
+    with patch("hpc_gui.config._storage_core._config_path", return_value=config):
         assert (
             run_cli(
                 [
@@ -149,7 +149,7 @@ def test_profile_update_preserves_secrets_and_system_round_trip(capsys, tmp_path
         "password_salt": "salt-value",
         "system": {"slurm": True},
     }
-    with patch("hpc_gui.config.storage._config_path", return_value=config):
+    with patch("hpc_gui.config._storage_core._config_path", return_value=config):
         json.dump({"profiles": [existing]}, config.open("w", encoding="utf-8"))
         assert run_cli(["--format", "json", "profile", "update", "alpha", "--host", "new.example"]) == 0
     output = capsys.readouterr().out

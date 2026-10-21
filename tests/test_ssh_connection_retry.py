@@ -4,7 +4,6 @@ from unittest.mock import Mock
 
 import pytest
 
-from hpc_gui.config import storage
 from hpc_gui.config.storage import get_ssh_connection_attempts, set_ssh_connection_attempts
 from hpc_gui.ssh.client import SSHClientWrapper
 from hpc_gui.ssh.host_keys import HostKeyRejectedError
@@ -14,7 +13,7 @@ from hpc_gui.ssh.retry import retry_connection
 @pytest.fixture
 def isolated_config(tmp_path, monkeypatch):
     path = tmp_path / "config.json"
-    monkeypatch.setattr(storage, "_config_path", lambda: path)
+    monkeypatch.setattr("hpc_gui.config._storage_core._config_path", lambda: path)
     return path
 
 

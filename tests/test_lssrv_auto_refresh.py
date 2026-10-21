@@ -300,7 +300,7 @@ class LssrvAutoRefreshTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
 
             config_path = os.path.join(temp_dir, "config.json")
-            with patch.object(storage, "_config_path", return_value=Path(config_path)):
+            with patch("hpc_gui.config._storage_core._config_path", return_value=Path(config_path)):
                 self.assertFalse(storage.get_lssrv_auto_refresh_enabled())
 
     @pytest.mark.integration
@@ -308,7 +308,7 @@ class LssrvAutoRefreshTests(unittest.TestCase):
     def test_setting_persists_enabled_value(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.json")
-            with patch.object(storage, "_config_path", return_value=Path(config_path)):
+            with patch("hpc_gui.config._storage_core._config_path", return_value=Path(config_path)):
                 storage.set_lssrv_auto_refresh_enabled(True)
                 self.assertTrue(storage.get_lssrv_auto_refresh_enabled())
 

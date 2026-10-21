@@ -56,7 +56,7 @@ def isolated_app_data(tmp_path, monkeypatch):
 @pytest.fixture
 def isolated_config(tmp_path, monkeypatch):
     config_path = tmp_path / "config.json"
-    monkeypatch.setattr(storage, "_config_path", lambda: config_path)
+    monkeypatch.setattr("hpc_gui.config._storage_core._config_path", lambda: config_path)
     return config_path
 
 

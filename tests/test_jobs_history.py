@@ -88,7 +88,7 @@ def test_list_jobs_uses_and_retains_cached_sacct_when_temporarily_unavailable(mo
 
 def test_hide_finished_jobs_setting_persists(monkeypatch, tmp_path):
     path = tmp_path / "config.json"
-    monkeypatch.setattr(storage, "_config_path", lambda: path)
+    monkeypatch.setattr("hpc_gui.config._storage_core._config_path", lambda: path)
     assert storage.get_hide_finished_jobs_enabled() is False
     storage.set_hide_finished_jobs_enabled(True)
     assert storage.get_hide_finished_jobs_enabled() is True

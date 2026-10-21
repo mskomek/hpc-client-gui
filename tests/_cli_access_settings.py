@@ -20,7 +20,7 @@ def test_cli_settings_round_trip_and_defaults(tmp_path: Path) -> None:
     )
 
     config = tmp_path / "config.json"
-    with patch("hpc_gui.config.storage._config_path", return_value=config):
+    with patch("hpc_gui.config._storage_core._config_path", return_value=config):
         assert get_cli_external_access_enabled() is False
         assert get_cli_default_profile() == ""
         assert set_cli_external_access_enabled(True) is True

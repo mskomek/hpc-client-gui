@@ -18,7 +18,7 @@ Live owners:
   src/hpc_gui/plugins/settings.py (namespaced plugin settings)
 
 All storage uses disposable tmp roots via monkeypatched
-``storage._config_path``; no network, no real user config. GUI claims use
+``_storage_core._config_path``; no network, no real user config. GUI claims use
 real wx runtime (event -> model -> storage -> readback).
 """
 
@@ -47,7 +47,7 @@ from hpc_gui.wx_settings import (
 @pytest.fixture
 def isolated_config(tmp_path, monkeypatch):
     config_path = tmp_path / "config.json"
-    monkeypatch.setattr(storage, "_config_path", lambda: config_path)
+    monkeypatch.setattr("hpc_gui.config._storage_core._config_path", lambda: config_path)
     return config_path
 
 
@@ -253,8 +253,9 @@ def test_w37_failed_write_raises_no_false_success(isolated_config, monkeypatch):
 
     model = build_model_from_storage(apply=lambda snap: persist_model_snapshot(snap))
     model.set_global("transfer_checksum", True)
-    with mock_patch.object(
-        storage, "save_config", side_effect=OSError("read-only location")
+    with mock_patch(
+        "hpc_gui.config._storage_core.save_config",
+        side_effect=OSError("read-only location"),
     ):
         with pytest.raises(RuntimeError, match="persist rejected"):
             model.apply()
