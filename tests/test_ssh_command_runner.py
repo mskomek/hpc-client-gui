@@ -76,4 +76,3 @@ def test_command_timeout_returns_shell_timeout_status() -> None:
 
     assert result == (124, "", "")
     assert "[timeout after" in messages[-1]
-
