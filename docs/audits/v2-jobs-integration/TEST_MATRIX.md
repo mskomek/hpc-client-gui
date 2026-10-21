@@ -54,6 +54,10 @@
 | Wave 07 Ruff and compileall | Ruff and compileall over all 19 changed Python files at `ce598c2859b31d0abdfaaf6c071a6898eec60782` | passed | 0 |
 | Wave 07 facade API check | `validator.py` and `ui_contributions.py` compared against `3efd890b` | no previous public symbols missing; all explicit facade exports exist at runtime | 0 |
 | Wave 07 changed-source architecture | `--mode gate --base 3efd890b5deb1ccf36e423d3000fa1b75f1481d0` at `ce598c2859b31d0abdfaaf6c071a6898eec60782` | PASS; 853 Python files, 42 global over-limit files, 0 new dependency/cycle/API errors | 0 |
+| Wave 08 Qt Jobs Outputs regression batch | focused scroll, output selection, live tracking, WAVE 80, context menu, and W29 suites at `abe774525cf93b4f20c810b70e8e19fa7585d762` | 97 passed, 0 failed, 0 skipped; 4 subtests passed | 0 |
+| Wave 08 Ruff and compileall | Ruff and compileall over all 19 changed Python files at `abe774525cf93b4f20c810b70e8e19fa7585d762` | passed | 0 |
+| Wave 08 facade compatibility | runtime `__all__` check plus AST method comparison at `abe774525cf93b4f20c810b70e8e19fa7585d762` | 72 exports present; all 58 pre-refactor widget methods retained | 0 |
+| Wave 08 changed-source architecture | `--mode gate --base 7f340c3bd9122627deb9fa63b9e1d98e631065f0` at `abe774525cf93b4f20c810b70e8e19fa7585d762` | PASS; 867 Python files, 39 global over-limit files, 0 new dependency/API/cycle errors | 0 |
 | Current develop sync regression | `python -m pytest -q tests/test_wx_logs_groups.py` at integration sync `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b` | 10 passed, 0 failed | 0 |
 | Current develop sync architecture gate | shared Agent Core + project gate, baseline `0aa8ce54321c9b5130bcf4366a88f8d731ac0898`, at integration sync `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b` | PASS; 823 Python files, 50 LOC violations remain, 0 new import/API/cycle errors | 0 |
 | Full release acceptance suite | `python scripts/release_test_suite.py --scope acceptance` | NOT RUN; retained for WAVE 12 full acceptance | — |
@@ -63,4 +67,4 @@ The first `py -m pytest` attempt used the global Python 3.14 installation, which
 
 ## Pending suites
 
-Focused suites will be added as waves land. Local and GitHub Actions results remain separate. Unrun suites must remain `NOT RUN`; skipped tests and environmental blockers are recorded individually and never counted as PASS.
+Focused suites will be added as waves land. Local and GitHub Actions results remain separate. Unrun suites must remain `NOT RUN`; skipped tests and environmental blockers are recorded individually and never counted as PASS. WAVE 08 command output is retained under `.tmp/wave08-*.log` in the integration worktree.

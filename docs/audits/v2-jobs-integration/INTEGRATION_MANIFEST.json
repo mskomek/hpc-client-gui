@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "status": "WAVE_07_COMPLETE",
+  "status": "WAVE_08_COMPLETE",
   "created_at_local": "2026-10-21",
   "target_branch": "develop",
   "integration_branch": "codex/integration/v2-jobs-staged-20261021",
   "integration_worktree": "D:\\Projeler\\.tmp\\hpc-client-gui\\v2-jobs-staged-20261021",
   "integration_start_sha": "f61919bad12be5f328cb9db3fee3c8de8563fa5b",
-  "latest_integration_sha": "ce598c2859b31d0abdfaaf6c071a6898eec60782",
-  "latest_integration_tree_sha": "418427c15e5c10de085df3b47f7137e4fc057310",
+  "latest_integration_sha": "abe774525cf93b4f20c810b70e8e19fa7585d762",
+  "latest_integration_tree_sha": "460075cd2dbfccdd591ec4f6d376d54f5142a438",
   "wave_00_source_sha": "718fbd01296793b513526adabedd3e48deea2d4a",
   "wave_00_tree_sha": "bc4297dce73099e4003a93d52d66247b6ecba719",
   "wave_00_source_fingerprint_sha256": "37be9c808f09d80dc5763520d19d8ee756c8cfa2b8ccc20f919f4fb9256f7a07",
@@ -595,6 +595,149 @@
       "exit_code": 0,
       "json_report": ".tmp/wave07-architecture-final.json",
       "markdown_report": ".tmp/wave07-architecture-final.md"
+    },
+    "develop_updated": false,
+    "remote_mutations": false,
+    "wip_snapshot_modified": false,
+    "full_release_acceptance_run": false,
+    "windows11_guest_acceptance_run": false,
+    "ubuntu_linux_acceptance_run": false,
+    "github_actions_run": false
+  },
+  "wave_08": {
+    "status": "WAVE_COMPLETE",
+    "start_sha": "7f340c3bd9122627deb9fa63b9e1d98e631065f0",
+    "source_sha": "abe774525cf93b4f20c810b70e8e19fa7585d762",
+    "source_tree_sha": "460075cd2dbfccdd591ec4f6d376d54f5142a438",
+    "jobs_source_sha": "713949fb752b90601e007812ebf2bd765da5ad52",
+    "v2_source_sha": "c0c6d0e956c9283f0c05f25b799e1b1f57ecb240",
+    "v2_wip_snapshot_fingerprint_sha256": "889fb7432500705ff44281ad2c76407d5ec334de17f2ab777128e33ad0d4980b",
+    "source_fingerprint_sha256": "7fb57948b6bf38da8626992d0d6c94773c81c4a9fd225a2d10ce993c04b3e2a3",
+    "changed_file_count": 19,
+    "changed_python_file_count": 19,
+    "added_application_modules": 8,
+    "added_test_support_modules": 2,
+    "added_test_modules": 4,
+    "source_commits": [
+      "abe774525cf93b4f20c810b70e8e19fa7585d762"
+    ],
+    "physical_loc": {
+      "src/hpc_gui/ui/widgets/jobs_outputs_widget.py": [
+        1892,
+        407
+      ],
+      "src/hpc_gui/ui/widgets/_jobs_output_follower_views.py": [
+        0,
+        431
+      ],
+      "src/hpc_gui/ui/widgets/_jobs_output_follower_windows.py": [
+        0,
+        32
+      ],
+      "src/hpc_gui/ui/widgets/_jobs_output_rendering.py": [
+        0,
+        84
+      ],
+      "src/hpc_gui/ui/widgets/_jobs_output_text.py": [
+        0,
+        105
+      ],
+      "src/hpc_gui/ui/widgets/_jobs_outputs_followers.py": [
+        0,
+        313
+      ],
+      "src/hpc_gui/ui/widgets/_jobs_outputs_jobs.py": [
+        0,
+        215
+      ],
+      "src/hpc_gui/ui/widgets/_jobs_outputs_lifecycle.py": [
+        0,
+        286
+      ],
+      "src/hpc_gui/ui/widgets/_jobs_outputs_live.py": [
+        0,
+        246
+      ],
+      "tests/support/test_jobs_outputs_scroll_shared.py": [
+        0,
+        34
+      ],
+      "tests/support/test_wave80_files_outputs_shared.py": [
+        0,
+        5
+      ],
+      "tests/test_jobs_outputs_context_menu.py": [
+        0,
+        110
+      ],
+      "tests/test_jobs_outputs_follow_targets.py": [
+        0,
+        133
+      ],
+      "tests/test_jobs_outputs_scroll.py": [
+        606,
+        356
+      ],
+      "tests/test_jobs_outputs_scroll_jobs_outputs_scroll_tests_output_selection_rendering.py": [
+        0,
+        185
+      ],
+      "tests/test_live_tracking_settings.py": [
+        17,
+        17
+      ],
+      "tests/test_lssrv_auto_refresh.py": [
+        317,
+        335
+      ],
+      "tests/test_wave80_files_outputs.py": [
+        609,
+        284
+      ],
+      "tests/test_wave80_files_outputs_audit_behavior.py": [
+        0,
+        321
+      ]
+    },
+    "tests": {
+      "final_focused_batch": {
+        "passed": 97,
+        "failed": 0,
+        "skipped": 0,
+        "passed_subtests": 4,
+        "exit_code": 0,
+        "source_sha": "abe774525cf93b4f20c810b70e8e19fa7585d762",
+        "log": ".tmp/wave08-qt-outputs-tests.log"
+      },
+      "earlier_scroll_timing_observation": {
+        "failed_subtests": 1,
+        "description": "output1 scroll position changed by 28 pixels in one full batch",
+        "isolated_repeat_passes": 5,
+        "final_full_batch_passed": true,
+        "assertions_weakened": false
+      },
+      "ruff_exit_code": 0,
+      "ruff_log": ".tmp/wave08-ruff.log",
+      "compileall_exit_code": 0,
+      "compileall_log": ".tmp/wave08-compileall.log",
+      "runtime_exports": 72,
+      "runtime_exports_missing": 0,
+      "api_log": ".tmp/wave08-api-runtime.log",
+      "legacy_widget_methods": 58,
+      "legacy_widget_methods_missing": 0
+    },
+    "changed_source_gate": {
+      "status": "PASS",
+      "python_file_count": 867,
+      "over_limit_python_count": 39,
+      "baseline_over_limit_before": 42,
+      "new_dependency_errors": 0,
+      "new_cycles": 0,
+      "api_errors": 0,
+      "exit_code": 0,
+      "json_report": ".tmp/wave08-architecture-final.json",
+      "markdown_report": ".tmp/wave08-architecture-final.md",
+      "stdout_log": ".tmp/wave08-architecture-final.stdout.log"
     },
     "develop_updated": false,
     "remote_mutations": false,
