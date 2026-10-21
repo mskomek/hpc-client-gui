@@ -18,8 +18,10 @@ from __future__ import annotations
 
 import argparse
 import os
+import site
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -59,6 +61,10 @@ ISOLATED_WIRE_FILES = (
     "tests/test_editor_flow.py",
     "tests/test_remote_directory_listing.py",
 )
+# Bundle replacement is a Windows filesystem resource boundary. When it runs
+# in the broad process after unrelated temp-directory stress, Windows can
+# transiently deny the staged-directory rename; the same test passes alone.
+ISOLATED_FILESYSTEM_FILES = ("tests/test_updater_helper.py",)
 # When combined in one process, these wx modules create and tear down a real
 # wx.App before the Qt Jobs-scroll widget; the sequence terminates Windows
 # with 0xC000041D despite no live wx windows or worker threads. The WebView2
@@ -134,7 +140,16 @@ ISOLATED_TEST_NODES = (
     "tests/test_wx_file_actions_stress.py::test_wx_remote_context_target_stress_uses_real_events",
     "tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths",
 )
-ISOLATED_FILES = tuple(dict.fromkeys((*ISOLATED_WIRE_FILES, *ISOLATED_NATIVE_GUI_FILES)))
+ISOLATED_FILES = tuple(
+    dict.fromkeys(
+        (*ISOLATED_WIRE_FILES, *ISOLATED_FILESYSTEM_FILES, *ISOLATED_NATIVE_GUI_FILES)
+    )
+)
+ISOLATED_NODE_SELECTORS = tuple(
+    nodeid
+    for nodeid in ISOLATED_TEST_NODES
+    if nodeid.split("::", 1)[0] not in ISOLATED_FILES
+)
 EVIDENCE_GATED_TESTS = {
     "tests/test_w04_support_freeze.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
     "tests/test_w04_menu_actions.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
@@ -144,6 +159,7 @@ EVIDENCE_GATED_TESTS = {
 
 
 COVERAGE_FAIL_UNDER = 65
+_TEST_CONFIG_ROOT: str | None = None
 
 COVERAGE_ARGS = (
     "--cov=hpc_gui",
@@ -162,9 +178,26 @@ COVERAGE_APPEND_ARGS = (
 
 
 def _test_environment() -> dict[str, str]:
-    """Keep Qt tests headless without changing the caller's environment."""
+    """Redirect per-user test state into a temporary home and keep Qt headless."""
     environment = os.environ.copy()
     environment.setdefault("QT_QPA_PLATFORM", "offscreen")
+    # APPDATA is redirected below to isolate the application's settings, but
+    # Python also derives its user-site package directory from APPDATA on
+    # Windows. Preserve the existing user base so installed test extras remain
+    # importable in child pytest processes.
+    user_base = site.getuserbase()
+    if user_base and not environment.get("PYTHONUSERBASE"):
+        environment["PYTHONUSERBASE"] = user_base
+    if _TEST_CONFIG_ROOT:
+        environment.pop("HPC_GUI_CONFIG_ROOT", None)
+        environment["HOME"] = _TEST_CONFIG_ROOT
+        environment["USERPROFILE"] = _TEST_CONFIG_ROOT
+        environment["APPDATA"] = str(Path(_TEST_CONFIG_ROOT) / "AppData" / "Roaming")
+        environment["LOCALAPPDATA"] = str(
+            Path(_TEST_CONFIG_ROOT) / "AppData" / "Local"
+        )
+        environment["XDG_CONFIG_HOME"] = str(Path(_TEST_CONFIG_ROOT) / ".config")
+        environment["XDG_DATA_HOME"] = str(Path(_TEST_CONFIG_ROOT) / ".local" / "share")
     return environment
 
 
@@ -185,16 +218,16 @@ def build_commands(*, coverage: bool) -> list[tuple[str, ...]]:
     )
     deselects = tuple(
         argument
-        for nodeid in ISOLATED_TEST_NODES
+        for nodeid in ISOLATED_NODE_SELECTORS
         for argument in ("--deselect", nodeid)
     )
     commands.append(
         PYTEST_BASE + ignores + evidence_ignores + deselects + (COVERAGE_ARGS if coverage else ())
     )
-    isolated_selectors = (
-        *ISOLATED_TEST_NODES,
-        *ISOLATED_FILES,
+    runnable_isolated_files = tuple(
+        path for path in ISOLATED_FILES if path not in blocked_paths
     )
+    isolated_selectors = (*ISOLATED_NODE_SELECTORS, *runnable_isolated_files)
     for index, selector in enumerate(isolated_selectors):
         coverage_args = COVERAGE_APPEND_ARGS if coverage else ()
         if coverage and index == len(isolated_selectors) - 1:
@@ -219,20 +252,30 @@ def main(argv: list[str] | None = None) -> int:
                 flush=True,
             )
 
+    global _TEST_CONFIG_ROOT
+    temp_root = REPO_ROOT / ".tmp"
+    temp_root.mkdir(parents=True, exist_ok=True)
     failed_test_partition = 0
-    for index, command in enumerate(build_commands(coverage=args.coverage)):
-        printable = " ".join(str(part) for part in command)
-        print(f"[release-test-suite] {printable}", flush=True)
-        result = subprocess.run(command, cwd=REPO_ROOT, env=_test_environment())
-        if result.returncode:
-            print(
-                f"[release-test-suite] FAILED with exit code {result.returncode}: {printable}",
-                file=sys.stderr,
-            )
-            if index < len(PREFLIGHT_COMMANDS):
-                return result.returncode
-            if not failed_test_partition:
-                failed_test_partition = result.returncode
+    with tempfile.TemporaryDirectory(
+        prefix="release-test-config-", dir=temp_root
+    ) as isolated_config_root:
+        _TEST_CONFIG_ROOT = isolated_config_root
+        try:
+            for index, command in enumerate(build_commands(coverage=args.coverage)):
+                printable = " ".join(str(part) for part in command)
+                print(f"[release-test-suite] {printable}", flush=True)
+                result = subprocess.run(command, cwd=REPO_ROOT, env=_test_environment())
+                if result.returncode:
+                    print(
+                        f"[release-test-suite] FAILED with exit code {result.returncode}: {printable}",
+                        file=sys.stderr,
+                    )
+                    if index < len(PREFLIGHT_COMMANDS):
+                        return result.returncode
+                    if not failed_test_partition:
+                        failed_test_partition = result.returncode
+        finally:
+            _TEST_CONFIG_ROOT = None
     if failed_test_partition:
         return failed_test_partition
     print("[release-test-suite] all release preflight gates passed")

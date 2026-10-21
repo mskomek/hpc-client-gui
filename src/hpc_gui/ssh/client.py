@@ -4,10 +4,6 @@ import contextlib
 from pathlib import Path
 from typing import Callable, Optional, Tuple
 
-import socket
-
-from hpc_gui.core.debug_support import timed
-
 import paramiko
 
 from hpc_gui.core.logging import get_logger
@@ -38,14 +34,14 @@ from hpc_gui.ssh.host_keys import (
     _KnownHostsPolicy,  # noqa: F401 - compatibility re-export
     configure_known_hosts,
 )
-from hpc_gui.services.command_history_store import is_sensitive_command
 from hpc_gui.ssh.sftp_channels import (
     SFTPChannelManager,
     _SFTP_LISTING_TIMEOUT_SECONDS,  # noqa: F401  (re-exported facade constant)
     _SFTP_TRANSFER_TIMEOUT_SECONDS,  # noqa: F401  (re-exported facade constant)
 )
 from hpc_gui.ssh.retry import retry_connection
-from hpc_gui.ssh.shell_session import InteractiveShellSession, _sanitize_terminal_text
+from hpc_gui.ssh.command_runner import run_ssh_command
+from hpc_gui.ssh.shell_session import InteractiveShellSession
 from hpc_gui.ssh.text import decode_remote_text as _decode_remote_text
 
 class _ConnectionAuthStrategy(_BaseConnectionAuthStrategy):
@@ -471,40 +467,11 @@ class SSHClientWrapper:
         timeout_s: Optional[float] = None,
         log_output: bool = True,
     ) -> Tuple[int, str, str]:
-        if not self.client:
-            raise RuntimeError("SSH client not connected")
-        t0 = timed()
-        # Never echo secrets into the UI/logs.
-        if is_sensitive_command(command):
-            self.log("SSH$ <redacted>")
-        else:
-            self.log(f"SSH$ {command}")
-        stdin, stdout, stderr = self.client.exec_command(command)
-        if timeout_s is None and getattr(self.info, "timeout", None) is not None:
-            timeout_s = self.info.timeout
-        if timeout_s is not None:
-            try:
-                stdout.channel.settimeout(timeout_s)
-                stderr.channel.settimeout(timeout_s)
-            except Exception:
-                pass
-        try:
-            out = _decode_remote_text(stdout.read())
-            err = _decode_remote_text(stderr.read())
-            code = stdout.channel.recv_exit_status()
-            timed_out = False
-        except socket.timeout:
-            out = ""
-            err = ""
-            code = 124
-            timed_out = True
-        if log_output and out.strip():
-            self.log(_sanitize_terminal_text(out).rstrip("\n"))
-        if log_output and err.strip():
-            self.log("STDERR:\n" + _sanitize_terminal_text(err).rstrip("\n"))
-        dt = timed() - t0
-        if timed_out:
-            self.log(f"[timeout after {dt:.1f}s exit={code}]")
-        else:
-            self.log(f"[exit={code} duration={dt:.2f}s]")
-        return code, out, err
+        return run_ssh_command(
+            self.client,
+            command,
+            log=self.log,
+            timeout_s=timeout_s,
+            connection_timeout=getattr(self.info, "timeout", None),
+            log_output=log_output,
+        )

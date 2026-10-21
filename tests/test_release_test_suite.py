@@ -9,10 +9,13 @@ import pytest
 
 from scripts.release_test_suite import (
     ISOLATED_FILES,
+    ISOLATED_FILESYSTEM_FILES,
     ISOLATED_NATIVE_GUI_FILES,
+    ISOLATED_NODE_SELECTORS,
     ISOLATED_TEST_NODES,
     EVIDENCE_GATED_TESTS,
     PREFLIGHT_COMMANDS,
+    _test_environment,
     build_commands,
     main,
 )
@@ -39,33 +42,56 @@ class ReleaseTestSuiteTests(unittest.TestCase):
         required_boundaries = {
             "tests/test_wx_jobs_behavior.py",
             "tests/test_wx_jobs_files_outputs.py",
+            "tests/test_jobs_history_mock_wire.py",
+            "tests/test_wx_dispatch_error_gov.py",
+            "tests/test_jobs_auto_refresh_toggle.py",
+            "tests/test_wx_connection_progress.py",
+            "tests/test_wx_shell_layout.py",
             "tests/test_wx_terminal_webview_lifecycle.py",
             "tests/test_remote_accordion.py",
             "tests/test_startup_changelog.py",
             "tests/test_transfer_performance_scenarios.py",
         }
         self.assertTrue(required_boundaries.issubset(ISOLATED_NATIVE_GUI_FILES))
+        self.assertIn("tests/test_updater_helper.py", ISOLATED_FILESYSTEM_FILES)
         discovered = set(discover_native_gui_test_files(Path(__file__).parent))
         self.assertTrue(discovered.issubset(ISOLATED_NATIVE_GUI_FILES))
         self.assertEqual(len(ISOLATED_NATIVE_GUI_FILES), len(set(ISOLATED_NATIVE_GUI_FILES)))
         broad = next(command for command in commands if "--ignore" in command)
-        self.assertIn("--deselect", broad)
+        blocked_paths = {
+            path for path, prerequisite in EVIDENCE_GATED_TESTS.items()
+            if not (Path(__file__).resolve().parents[1] / prerequisite).is_file()
+        }
+        if ISOLATED_NODE_SELECTORS:
+            self.assertIn("--deselect", broad)
+        else:
+            self.assertNotIn("--deselect", broad)
         for path, prerequisite in EVIDENCE_GATED_TESTS.items():
             if not (Path(__file__).resolve().parents[1] / prerequisite).is_file():
                 self.assertIn(path, broad)
+                isolated_commands = commands[len(PREFLIGHT_COMMANDS) + 1 :]
+                self.assertFalse(any(command[-1] == path for command in isolated_commands))
         for nodeid in ISOLATED_TEST_NODES:
-            self.assertIn(nodeid, broad)
+            test_file = nodeid.split("::", 1)[0]
+            if test_file in ISOLATED_FILES:
+                self.assertIn(test_file, broad)
+                self.assertNotIn(nodeid, broad)
+            else:
+                self.assertIn(nodeid, broad)
         for path in ISOLATED_FILES:
             self.assertIn(path, broad)
             isolated = [
                 command for command in commands
                 if path in command and "--ignore" not in command
             ]
+            if path in blocked_paths:
+                self.assertEqual(isolated, [])
+                continue
             self.assertEqual(len(isolated), 1)
             self.assertNotIn("--deselect", isolated[0])
             self.assertEqual(isolated[0][-1], path)
         for index, nodeid in enumerate(
-            ISOLATED_TEST_NODES, start=len(PREFLIGHT_COMMANDS) + 1
+            ISOLATED_NODE_SELECTORS, start=len(PREFLIGHT_COMMANDS) + 1
         ):
             self.assertEqual(commands[index][-1], nodeid)
             self.assertNotIn("--deselect", commands[index])
@@ -83,6 +109,7 @@ class ReleaseTestSuiteTests(unittest.TestCase):
         )
 
         with (
+            patch.dict("os.environ", {"HPC_GUI_CONFIG_ROOT": ""}),
             patch("scripts.release_test_suite.subprocess.run", run),
             redirect_stdout(StringIO()),
             redirect_stderr(StringIO()),
@@ -91,6 +118,26 @@ class ReleaseTestSuiteTests(unittest.TestCase):
 
         self.assertEqual(result, 1)
         self.assertEqual(run.call_count, len(commands))
+        environments = [call.kwargs["env"] for call in run.call_args_list]
+        config_roots = {environment["HOME"] for environment in environments}
+        self.assertEqual(len(config_roots), 1)
+        config_root = Path(config_roots.pop())
+        self.assertEqual(config_root.parent, Path(__file__).resolve().parents[1] / ".tmp")
+        self.assertFalse(config_root.exists())
+        self.assertTrue(all("HPC_GUI_CONFIG_ROOT" not in environment for environment in environments))
+
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    def test_test_environment_redirects_per_user_state(self):
+        with (
+            patch.dict("os.environ", {"HPC_GUI_CONFIG_ROOT": "caller-config"}),
+            patch("scripts.release_test_suite._TEST_CONFIG_ROOT", "isolated-config"),
+        ):
+            environment = _test_environment()
+            self.assertEqual(environment["HOME"], "isolated-config")
+            self.assertEqual(environment["USERPROFILE"], "isolated-config")
+            self.assertNotIn("HPC_GUI_CONFIG_ROOT", environment)
+            self.assertTrue(environment.get("PYTHONUSERBASE"))
 
 
 @pytest.mark.unit
@@ -109,9 +156,26 @@ def test_native_gui_discovery_handles_pytest_aliases(tmp_path):
     (tests_dir / "test_plain.py").write_text(
         "def test_plain(): pass\n", encoding="utf-8"
     )
+    (tests_dir / "test_native_wx_import.py").write_text(
+        "import wx\ndef test_window(): pass\n", encoding="utf-8"
+    )
+    (tests_dir / "test_optional_wx_import.py").write_text(
+        'import pytest\nwx = pytest.importorskip("wx")\ndef test_optional_window(): pass\n',
+        encoding="utf-8",
+    )
+    (tests_dir / "test_helper_wx_import.py").write_text(
+        "from gui_test_support import wx\ndef test_helper_window(): pass\n",
+        encoding="utf-8",
+    )
+    (tests_dir / "test_manual_verification.py").write_text(
+        "import wx\ndef run_verification(): pass\n", encoding="utf-8"
+    )
 
     assert discover_native_gui_test_files(tests_dir) == (
         "tests/test_gui.py",
+        "tests/test_helper_wx_import.py",
+        "tests/test_native_wx_import.py",
+        "tests/test_optional_wx_import.py",
         "tests/test_qt.py",
     )
 

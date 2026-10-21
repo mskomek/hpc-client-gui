@@ -31,6 +31,7 @@ from hpc_gui.services.slurm_models import (
     safe_state_display,
 )
 from hpc_gui.services.slurm_ssh import SlurmCommandResult
+from support.wx_window_cleanup import cleanup_wx_windows
 
 pytestmark = pytest.mark.contract
 
@@ -312,23 +313,9 @@ def _open(app, list_jobs, read_output=None, **kwargs):
 def wx_app():
     load_language("en")
     app = wx.App.Get() or wx.App(False)
+    existing_ids = {window.GetId() for window in wx.GetTopLevelWindows()}
     yield app
-    try:
-        for window in list(wx.GetTopLevelWindows()):
-            try:
-                if window:
-                    window.Destroy()
-            except Exception:
-                pass
-        for _ in range(5):
-            try:
-                app.ProcessPendingEvents()
-                wx.SafeYield()
-            except Exception:
-                break
-            wx.MilliSleep(10)
-    except Exception:
-        pass
+    cleanup_wx_windows(wx, app, existing_ids)
 
 
 @pytest.mark.gui

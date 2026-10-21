@@ -287,12 +287,15 @@ class TestEncodingBoundaryInventory:
 
     @pytest.mark.audit
     def test_ssh_client_decodes_output(self):
-        """SSH facade should use the centralized UTF-8 decoder."""
+        """SSH command runner should use the centralized UTF-8 decoder."""
         client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
-        if client.is_file():
-            content = client.read_text(encoding="utf-8")
-            assert "decode_remote_text as _decode_remote_text" in content
-            assert "_decode_remote_text(stdout.read())" in content
+        runner = ROOT / "src" / "hpc_gui" / "ssh" / "command_runner.py"
+        if client.is_file() and runner.is_file():
+            facade = client.read_text(encoding="utf-8")
+            implementation = runner.read_text(encoding="utf-8")
+            assert "from hpc_gui.ssh.command_runner import run_ssh_command" in facade
+            assert "decode_remote_text" in implementation
+            assert "decode_remote_text(stdout.read())" in implementation
 
     @pytest.mark.audit
     def test_files_ssh_uses_utf8(self):

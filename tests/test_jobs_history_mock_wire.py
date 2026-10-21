@@ -6,6 +6,7 @@ import sys
 import time
 
 from pathlib import Path
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer  # noqa: E402
@@ -13,11 +14,12 @@ from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer 
 from hpc_gui.services.slurm_ssh import SSHSlurmBackend  # noqa: E402
 from hpc_gui.ssh.client import SSHClientWrapper, SSHConnInfo  # noqa: E402
 from hpc_gui.wx_shell_jobs import _jobs_callbacks  # noqa: E402
+from support.wx_window_cleanup import cleanup_wx_windows
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
-    import pytest
-
     wx = pytest.importorskip("wx")
     from hpc_gui.wx_jobs import show_jobs
 
@@ -33,6 +35,8 @@ def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
                 known_hosts_path=str(tmp_path / "known_hosts"),
             )
         )
+        app = None
+        existing_ids = set()
         try:
             backend = SSHSlurmBackend(ssh)
             state = {
@@ -44,6 +48,7 @@ def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
             callbacks = _jobs_callbacks(state, None, None)
             result = callbacks["list_jobs"]()
             app = wx.App.Get() or wx.App(False)
+            existing_ids = {window.GetId() for window in wx.GetTopLevelWindows()}
             show_jobs(**callbacks)
             frames = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_jobs_controls")]
             assert frames
@@ -122,15 +127,8 @@ def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
                 "6810497_[0-3%4]", "12345", "12344", "12343"
             ]
         finally:
-            for window in list(wx.GetTopLevelWindows()):
-                try:
-                    window.Destroy()
-                except Exception:
-                    pass
-            try:
-                wx.SafeYield()
-            except Exception:
-                pass
+            if app is not None:
+                cleanup_wx_windows(wx, app, existing_ids)
             ssh.close()
 
     assert [(row["job_id"], row["state"]) for row in result["jobs"]] == [
