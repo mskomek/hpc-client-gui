@@ -1,0 +1,1223 @@
+{
+  "files": [
+    {
+      "bytes": 147910,
+      "path": "V2_MUSE_EVIDENCE_INDEX.json",
+      "python": false,
+      "sha256": "1990357b489f4f16e9bffc6ac14c26c5bf2d847db328f42f6d53ddd801e74790",
+      "status": " M"
+    },
+    {
+      "bytes": 5734,
+      "path": "V2_MUSE_FINAL_STATUS_2026-10-17.md",
+      "python": false,
+      "sha256": "1e0f086e8f74d769b0651f27e58b58095507e39ae6255f315e7a7a85fc2d682f",
+      "status": " M"
+    },
+    {
+      "bytes": 3347,
+      "path": "V2_MUSE_FINDINGS.md",
+      "python": false,
+      "sha256": "6467a1566a6466f0ff6665b0cfc9f6731cadcce7728f24566de33160f35c14ff",
+      "status": " M"
+    },
+    {
+      "bytes": 188088,
+      "path": "V2_MUSE_WAVE_STATE.json",
+      "python": false,
+      "sha256": "83d4bd5b32697aa6fd44819f55934fd32aed4e4307314dc7e3a056c5e46a3575",
+      "status": " M"
+    },
+    {
+      "bytes": 58082,
+      "path": "V2_MUSE_WAVE_TRACKER.md",
+      "python": false,
+      "sha256": "720aec5a98714a51eede99fb312e2edb6091feca7ede6161b78e91b1db4a52d8",
+      "status": " M"
+    },
+    {
+      "bytes": 2107,
+      "path": "build/linux/Dockerfile",
+      "python": false,
+      "sha256": "95444a4fb17f3997d27e34abbf1d49a8914e092f0b769ebfe73592393a111770",
+      "status": " M"
+    },
+    {
+      "bytes": 503,
+      "path": "build/linux/deb/DEBIAN/control",
+      "python": false,
+      "sha256": "284a18cebca9eff37333e5d3b1c63b628a0d383c0383071b1bf4ca0d81ef1145",
+      "status": " M"
+    },
+    {
+      "bytes": 4248,
+      "path": "build/linux/hpc-client-gui-linux.spec",
+      "python": false,
+      "sha256": "bff16059201900580d04d63ed42ff8a23e4d658c45ac135a82c1a7140f81cae5",
+      "status": " M"
+    },
+    {
+      "bytes": 4461,
+      "path": "build/macos/hpc-client-gui.spec",
+      "python": false,
+      "sha256": "e263378fe60f348ef053ff6ad9c33b31871c0bea65da09acbcfbb6159386cd92",
+      "status": " M"
+    },
+    {
+      "bytes": 2173,
+      "path": "build/windows/hpc-client-cli.spec",
+      "python": false,
+      "sha256": "c75197f915670754acdf660eebe609cf4a090298dc5e3572f6eb1bb0e803f2e2",
+      "status": " M"
+    },
+    {
+      "bytes": 6406,
+      "path": "build/windows/hpc-client-gui.spec",
+      "python": false,
+      "sha256": "330bfa7bd7506298a830de9d6c36b6b3dc6ac7e8db8d8e79345d2ea509ddeb09",
+      "status": " M"
+    },
+    {
+      "bytes": 152621,
+      "path": "docs/v2/muse-execution/V2_MUSE_EVIDENCE_INDEX.json",
+      "python": false,
+      "sha256": "58d7dcf35f460b6f1ea45e21b95177a1d16ccc0842c86c1746c772680b3d151f",
+      "status": " M"
+    },
+    {
+      "bytes": 5441,
+      "path": "docs/v2/muse-execution/V2_MUSE_FINDINGS.md",
+      "python": false,
+      "sha256": "35fdd47d0a525f4c02ab804220aee715643afb5f8542c9794cab393cb6a7645e",
+      "status": " M"
+    },
+    {
+      "bytes": 192930,
+      "path": "docs/v2/muse-execution/V2_MUSE_WAVE_STATE.json",
+      "python": false,
+      "sha256": "971dc423124f59e7fa710f72f843020219863c7618b1d797c7cb6c0bdbeffb38",
+      "status": " M"
+    },
+    {
+      "bytes": 62623,
+      "path": "docs/v2/muse-execution/V2_MUSE_WAVE_TRACKER.md",
+      "python": false,
+      "sha256": "353045640317c806c27d6f28ce68e66526443c5749ba6d67147dc3bd9c2ac6d4",
+      "status": " M"
+    },
+    {
+      "bytes": 4751,
+      "path": "scripts/build_release.ps1",
+      "python": false,
+      "sha256": "a4163efc5aa779e3bb4687676be9ed73aec9bea130ddc4722106366fd46ef98a",
+      "status": " M"
+    },
+    {
+      "bytes": 3886,
+      "path": "scripts/check_release_consistency.ps1",
+      "python": false,
+      "sha256": "34ffe269f62f28b3a8a70b42ee64e92ec5171d7b5a1504618d154ef926e05b55",
+      "status": " M"
+    },
+    {
+      "bytes": 3645,
+      "path": "scripts/check_release_surface.py",
+      "python": true,
+      "sha256": "37fb581fa1f581bf66493130292dde0f7ecccc56138f448e09d39f17ea6fea8b",
+      "status": " M"
+    },
+    {
+      "bytes": 3114,
+      "path": "scripts/generate_third_party_versions.py",
+      "python": true,
+      "sha256": "db69d4dd98ae1b359d29815db2da006d839cbfd2316d3e266b0e998050f477df",
+      "status": " M"
+    },
+    {
+      "bytes": 15507,
+      "path": "scripts/package_release.ps1",
+      "python": false,
+      "sha256": "d8ac50b0142e74c98368d7406e514502703006de616fb80f4368f9aaa7f51f09",
+      "status": " M"
+    },
+    {
+      "bytes": 8882,
+      "path": "scripts/release.ps1",
+      "python": false,
+      "sha256": "3d7e9f0361b5adfe0fe44b52055b506603bcc36549b5b46fe8120a6e015ccce6",
+      "status": " M"
+    },
+    {
+      "bytes": 16564,
+      "path": "scripts/release_linux.py",
+      "python": true,
+      "sha256": "b74a89e206574087bf4cb0318e707c3b449f6e150ac9246373d7b523505568d7",
+      "status": " M"
+    },
+    {
+      "bytes": 9533,
+      "path": "scripts/release_macos.py",
+      "python": true,
+      "sha256": "4d1470027b30cf95ab8ef5e77d13cfa3a2ba97e74813b9ba01541dd3176273da",
+      "status": " M"
+    },
+    {
+      "bytes": 14295,
+      "path": "scripts/wx_package_content.py",
+      "python": true,
+      "sha256": "575f05e3df0b5a3cbd7e3a8afb077370e492b7e93ade6834efbbd64d7a37b239",
+      "status": " M"
+    },
+    {
+      "bytes": 6291,
+      "path": "src/hpc_gui/cli/_remote_commands.py",
+      "python": true,
+      "sha256": "023e287b7ead8035583973aa70ee8fce5e2b43732b974d753b87d11d76e16deb",
+      "status": " M"
+    },
+    {
+      "bytes": 6397,
+      "path": "src/hpc_gui/cli/_shared.py",
+      "python": true,
+      "sha256": "73df43717a74a6535c01573e1339d9f153b8152b588471937157446ab1e16bf5",
+      "status": " M"
+    },
+    {
+      "bytes": 3388,
+      "path": "src/hpc_gui/cli/main.py",
+      "python": true,
+      "sha256": "f1b31d147bcbf1adb09b48ca8b60b82202f5f4e156a025292f1a9d7400fbafcb",
+      "status": " M"
+    },
+    {
+      "bytes": 6972,
+      "path": "src/hpc_gui/config/_storage_core.py",
+      "python": true,
+      "sha256": "9dd15527e6b4fe6925d5b12534980ad6cc5318b38c7b0ad8fb8547668d62baba",
+      "status": " M"
+    },
+    {
+      "bytes": 5564,
+      "path": "src/hpc_gui/config/_storage_profiles.py",
+      "python": true,
+      "sha256": "a461f70df7857a96ca4cf1340be2f43c7125f1fb48fe72acd954e1661c3c0ef3",
+      "status": " M"
+    },
+    {
+      "bytes": 6219,
+      "path": "src/hpc_gui/core/i18n.py",
+      "python": true,
+      "sha256": "102a0a3025e8f40c5bde2a1d310aefb341d8f3da980edf530d7ab1138b7cd553",
+      "status": " M"
+    },
+    {
+      "bytes": 19469,
+      "path": "src/hpc_gui/services/files_ssh.py",
+      "python": true,
+      "sha256": "ceebad5d48df7cbacfa31783a341ad52f99c9a60f5242341f5fad9c97bd56bef",
+      "status": " M"
+    },
+    {
+      "bytes": 19076,
+      "path": "src/hpc_gui/ui/dialogs/plugin_manager_dialog.py",
+      "python": true,
+      "sha256": "4b7deff31f172237c39940ef4224045e316e63bff3b051b0c18dfbc428c0e4ed",
+      "status": " M"
+    },
+    {
+      "bytes": 9111,
+      "path": "src/hpc_gui/ui/main_window.py",
+      "python": true,
+      "sha256": "044f1f72a4d9fef20ba992ad12d5256735984078fbb0da932ef2b84c55b2e984",
+      "status": " M"
+    },
+    {
+      "bytes": 19753,
+      "path": "src/hpc_gui/ui/widgets/_jobs_output_follower_views.py",
+      "python": true,
+      "sha256": "51b1de9b8c08f15172abcefb86b26dc235d37f0fd3940a20a41448b1df648bf6",
+      "status": " M"
+    },
+    {
+      "bytes": 16177,
+      "path": "src/hpc_gui/ui/widgets/ftp_widget.py",
+      "python": true,
+      "sha256": "f5ae3e715b8a75d827a6b129f6785895431ec71e7690709fd5799df0fdd2845e",
+      "status": " M"
+    },
+    {
+      "bytes": 13151,
+      "path": "src/hpc_gui/ui/widgets/jobs_outputs_widget.py",
+      "python": true,
+      "sha256": "f77f83fc7a763dee871dad146a5f083d912c8b772436ce08b1eb91e95ea8d991",
+      "status": " M"
+    },
+    {
+      "bytes": 19824,
+      "path": "src/hpc_gui/ui/widgets/local_dir_panel.py",
+      "python": true,
+      "sha256": "e999f588c1c20014dd607a7ea7f3f8efeba4626cdb67d3dff75214657e460ce2",
+      "status": " M"
+    },
+    {
+      "bytes": 20756,
+      "path": "src/hpc_gui/ui/widgets/login_widget.py",
+      "python": true,
+      "sha256": "b0450951a60b97835509b85195ea866bb477ec0ec89f16fe63ef619a341ba220",
+      "status": " M"
+    },
+    {
+      "bytes": 19807,
+      "path": "src/hpc_gui/ui/widgets/remote_dir_panel.py",
+      "python": true,
+      "sha256": "23df13f4fbc01cf6b733c78f25c1fd1a2242acb42c5dc8934525cf8fa9dfe542",
+      "status": " M"
+    },
+    {
+      "bytes": 18937,
+      "path": "src/hpc_gui/wx_connection.py",
+      "python": true,
+      "sha256": "1ea53375f3300a06818b90336a08197344b9f886c0b99157108abc120adf4e26",
+      "status": " M"
+    },
+    {
+      "bytes": 17342,
+      "path": "src/hpc_gui/wx_editor_view.py",
+      "python": true,
+      "sha256": "5712e80f1ea441cffcd482141e4d5f19ccdff69d16807f2b161b254da2867c87",
+      "status": " M"
+    },
+    {
+      "bytes": 19122,
+      "path": "src/hpc_gui/wx_jobs.py",
+      "python": true,
+      "sha256": "e248e4c655c4abba0af93a10df6867fa4dda69edca7c94eae9f6d7c1e2244392",
+      "status": " M"
+    },
+    {
+      "bytes": 10351,
+      "path": "src/hpc_gui/wx_local_files_mutations.py",
+      "python": true,
+      "sha256": "dc4177b72bdb354325dd612c16cdeab7cdde85031fa9b61310fd80bd8a9202a6",
+      "status": " M"
+    },
+    {
+      "bytes": 7418,
+      "path": "src/hpc_gui/wx_remote_files_actions.py",
+      "python": true,
+      "sha256": "bee9a0f7e88759234d5c8143db43aa92d22b7b90e726ae97f2c016ecfeaeba66",
+      "status": " M"
+    },
+    {
+      "bytes": 1241,
+      "path": "src/hpc_gui/wx_transfer_conflict_dialog.py",
+      "python": true,
+      "sha256": "824ea128fb51f4d5d378fc096924b0d8f1c46e45348fef36af29afd69ba789a0",
+      "status": " M"
+    },
+    {
+      "bytes": 9312,
+      "path": "src/hpc_gui/wx_transfer_workspace.py",
+      "python": true,
+      "sha256": "1bf92e0652386d910b8fae36fb88c731b10a96179b9979530e5533081a601436",
+      "status": " M"
+    },
+    {
+      "bytes": 4256,
+      "path": "tests/support/test_ssh_credential_flow_shared.py",
+      "python": true,
+      "sha256": "56724d351baa3a7817e61d2b06209f4814747b12ea95820005ceb13ecd5233d4",
+      "status": " M"
+    },
+    {
+      "bytes": 13967,
+      "path": "tests/support/test_wx_file003_final_stress_shared.py",
+      "python": true,
+      "sha256": "5e9c8f9cef73edc233e6c75eb36be72fbe7ec1fde1cdb288af8d1dcf84c0c930",
+      "status": " M"
+    },
+    {
+      "bytes": 2401,
+      "path": "tests/support/test_wx_file_browser_tabs_shared.py",
+      "python": true,
+      "sha256": "52dace76dec44fba49edf5e968b8d1117cc289453ef68eca32e3d930882e57cf",
+      "status": " M"
+    },
+    {
+      "bytes": 3772,
+      "path": "tests/support/test_wx_file_transfer_integration_shared.py",
+      "python": true,
+      "sha256": "b3e4c6d67bab16e7c42e4b276af427792d6acaeb4ca287293506ddb06fe4b7f4",
+      "status": " M"
+    },
+    {
+      "bytes": 3015,
+      "path": "tests/support/test_wx_remote_file_actions_behavior_shared.py",
+      "python": true,
+      "sha256": "8d58017ad0879ca9459dfe8c9b2e3d9fbb921cc62e376836aa33c1aaef820ef5",
+      "status": " M"
+    },
+    {
+      "bytes": 1684,
+      "path": "tests/support/wx_clipboard.py",
+      "python": true,
+      "sha256": "7ad144a3584aa4740254366e9710005af9c9dfa064f484c7dcb8d927fa33ef6d",
+      "status": " M"
+    },
+    {
+      "bytes": 11114,
+      "path": "tests/test_app_updater.py",
+      "python": true,
+      "sha256": "2b10aaaadf6eb5fa76f510bd511c5c9a109dbdd390407167f9e45db99b2cb758",
+      "status": " M"
+    },
+    {
+      "bytes": 13552,
+      "path": "tests/test_connection_advanced_settings.py",
+      "python": true,
+      "sha256": "02f2b4aeb097260ee18eff90d67d8d4b4a38e8ea2277739107f78afc6a9e2381",
+      "status": " M"
+    },
+    {
+      "bytes": 16351,
+      "path": "tests/test_ftp_widget.py",
+      "python": true,
+      "sha256": "b1fa0f0b186c82ec08be0f73ea9f9abdfa46b245c0e4eeba1dbfd2a0de5f2ecb",
+      "status": " M"
+    },
+    {
+      "bytes": 12924,
+      "path": "tests/test_ftp_widget_activity_queue_controls.py",
+      "python": true,
+      "sha256": "8b94901c24b3b47748019aa7971dbcb441910635394db18bc9eed3568e3d63c0",
+      "status": " M"
+    },
+    {
+      "bytes": 14709,
+      "path": "tests/test_ftp_widget_activity_rows_history.py",
+      "python": true,
+      "sha256": "f4726cbb2e44483d58b5bc6d49c550581b572ecf49ca81cee1c407462dd2bd92",
+      "status": " M"
+    },
+    {
+      "bytes": 13294,
+      "path": "tests/test_ftp_widget_connection_profiles.py",
+      "python": true,
+      "sha256": "7ddce3ad29625057446e350350cc747f93b0626a1e841ca80fd0558cd8a2b790",
+      "status": " M"
+    },
+    {
+      "bytes": 14916,
+      "path": "tests/test_ftp_widget_directory_tabs_cache_lifecycle.py",
+      "python": true,
+      "sha256": "1785e4fe5b1f92b0b1acdf1a2473a2bd411a1589d40c51a1e7bf56c7b4644dcf",
+      "status": " M"
+    },
+    {
+      "bytes": 10531,
+      "path": "tests/test_ftp_widget_directory_tabs_cache_lifecycle_2.py",
+      "python": true,
+      "sha256": "ea98f36ffb661eddc2e2b96733e69b46679ef37fd9f6c99d7a3d3581385218d1",
+      "status": " M"
+    },
+    {
+      "bytes": 11297,
+      "path": "tests/test_ftp_widget_job_output_following.py",
+      "python": true,
+      "sha256": "db36ff58d4727f0066ebbd4a2a2ab6aacc5257f9b55b9140cd4dbc7f8d023c85",
+      "status": " M"
+    },
+    {
+      "bytes": 14058,
+      "path": "tests/test_ftp_widget_local_file_operations.py",
+      "python": true,
+      "sha256": "161477c8bc02725d26db3dcf7ca9f0416aebebf85333d5259beb29f5c52048e0",
+      "status": " M"
+    },
+    {
+      "bytes": 8239,
+      "path": "tests/test_ftp_widget_permissions_and_path_navigation.py",
+      "python": true,
+      "sha256": "e7f72c82853e48358e22bb8bc3840ec0d1589e8e029732037a75801c7b9308d0",
+      "status": " M"
+    },
+    {
+      "bytes": 12746,
+      "path": "tests/test_ftp_widget_remote_file_operations.py",
+      "python": true,
+      "sha256": "39b6ff40004bab71805ed02062c4f2bdf05e3c622c438aa3b4b59ae2e422a566",
+      "status": " M"
+    },
+    {
+      "bytes": 12215,
+      "path": "tests/test_ftp_widget_settings_profiles.py",
+      "python": true,
+      "sha256": "7ab93a26bc769729bf302f3e2ce797ae276a8f612767200917dfd4a1306f14f3",
+      "status": " M"
+    },
+    {
+      "bytes": 15687,
+      "path": "tests/test_ftp_widget_transfer_preflight_pipeline.py",
+      "python": true,
+      "sha256": "540b90ca62f674fe368634dbd18568313873f731d4a76fc267f6ecf9e17f3d55",
+      "status": " M"
+    },
+    {
+      "bytes": 10076,
+      "path": "tests/test_linux_release.py",
+      "python": true,
+      "sha256": "6cba8fe1a2f58113653e03d736c0698b18bc2bf0424fcb3f0bb88f743b37f552",
+      "status": " M"
+    },
+    {
+      "bytes": 9283,
+      "path": "tests/test_local_dir_panel.py",
+      "python": true,
+      "sha256": "cdee4b0ea96b87d30ddbcbbc99acadeda2af98182bd0721d6bd9607c154ab52d",
+      "status": " M"
+    },
+    {
+      "bytes": 6623,
+      "path": "tests/test_master_password_dialog.py",
+      "python": true,
+      "sha256": "ba80cde95340a168374d975e8f49d53ef439d73b79aadaddb591320f71688ffa",
+      "status": " M"
+    },
+    {
+      "bytes": 7599,
+      "path": "tests/test_menu_redesign.py",
+      "python": true,
+      "sha256": "2a2f7020374b162989b956e9b03e4c33d2aa5d0e6821bcb3262dee3c8ba85e1d",
+      "status": " M"
+    },
+    {
+      "bytes": 12472,
+      "path": "tests/test_profile_patch_preservation.py",
+      "python": true,
+      "sha256": "c23eb64c75ec9d520a65c9cb72dd31ed95068c85b0710cff4c54e2492dd58d70",
+      "status": " M"
+    },
+    {
+      "bytes": 1670,
+      "path": "tests/test_release_surface.py",
+      "python": true,
+      "sha256": "00f928bf5c09cfa297dad06a8f417201e016020c2b13b4de2748e888651e35fa",
+      "status": " M"
+    },
+    {
+      "bytes": 2697,
+      "path": "tests/test_remote_dir_panel_create.py",
+      "python": true,
+      "sha256": "aef816f1c87639c07869b222ed1d7b9d87729d551b0db15f9bcde13fece10b1e",
+      "status": " M"
+    },
+    {
+      "bytes": 11730,
+      "path": "tests/test_ssh_credential_flow.py",
+      "python": true,
+      "sha256": "69f2cd81ab101acea2fd42fbc9d797376d699628e479c5750edace0f288db2fc",
+      "status": " M"
+    },
+    {
+      "bytes": 4408,
+      "path": "tests/test_ssh_credential_flow_save_redaction.py",
+      "python": true,
+      "sha256": "4bf0237cc1ad4a37cc223667d2ec6478b2f57f05b17731a178f7023e81559798",
+      "status": " M"
+    },
+    {
+      "bytes": 1828,
+      "path": "tests/test_third_party_versions.py",
+      "python": true,
+      "sha256": "041ca14fae9dffbd50d10732c8181266c8dd6376167b26ac0349a4c9719a63ff",
+      "status": " M"
+    },
+    {
+      "bytes": 8812,
+      "path": "tests/test_w20_terminal_io.py",
+      "python": true,
+      "sha256": "61e9907833647c63ced6638ddcb61c52908f3cc27b65686ef20d77a5ac7653a4",
+      "status": " M"
+    },
+    {
+      "bytes": 6697,
+      "path": "tests/test_wave0_unicode_baseline_boundaries_localization.py",
+      "python": true,
+      "sha256": "20f6d3e2f82e55e4cad0c495d4d169af5d1b5c11b69686dc268c3fca442c4b1b",
+      "status": " M"
+    },
+    {
+      "bytes": 1555,
+      "path": "tests/test_wave0_unicode_baseline_risk_classification.py",
+      "python": true,
+      "sha256": "19ef532e79cb8682dbb369b81de8390b1e8cc58ebf034ed5f6f629e57eb6b090",
+      "status": " M"
+    },
+    {
+      "bytes": 10923,
+      "path": "tests/test_wave1_unicode_core_policy.py",
+      "python": true,
+      "sha256": "d2697c981ae1e735f87a498bc73efb4e5b30643bc0d810613f530b85789c67b4",
+      "status": " M"
+    },
+    {
+      "bytes": 14404,
+      "path": "tests/test_wave9_ci_unicode_matrix.py",
+      "python": true,
+      "sha256": "8509d618c742e034b05fb1686d9dcefaa2d1ec7af916c433aad25764528cc7ce",
+      "status": " M"
+    },
+    {
+      "bytes": 4346,
+      "path": "tests/test_wx_connection.py",
+      "python": true,
+      "sha256": "8540430f91b8714cd82d59a7793e1f78876c90edd35731328352e20ee65d9912",
+      "status": " M"
+    },
+    {
+      "bytes": 16757,
+      "path": "tests/test_wx_connection_71_5.py",
+      "python": true,
+      "sha256": "e70d3fa94c48f017799da1219cdb1246675126b61d60c0e3087b2443bb3463a9",
+      "status": " M"
+    },
+    {
+      "bytes": 7130,
+      "path": "tests/test_wx_connection_71_5_profile_connect_actions_2.py",
+      "python": true,
+      "sha256": "8396f50e10865a66153742afc64ae5567f2e60ff62bd149ac9b648042113ea98",
+      "status": " M"
+    },
+    {
+      "bytes": 25444,
+      "path": "tests/test_wx_connection_hardening.py",
+      "python": true,
+      "sha256": "b41f392dc926875a67820750b7f0e5883a7e97d69df31ea01c2febaeff5b58b3",
+      "status": " M"
+    },
+    {
+      "bytes": 19744,
+      "path": "tests/test_wx_connection_hardening_save_connect_lifecycle.py",
+      "python": true,
+      "sha256": "b7f134bfa2343a826ed93e264f04f51445d8c2f02a8389649df5514187179b18",
+      "status": " M"
+    },
+    {
+      "bytes": 18055,
+      "path": "tests/test_wx_dispatch_error_gov.py",
+      "python": true,
+      "sha256": "6386bbd62f1b068183c482fb0dad44462a23bd93daff1651c2fc05134a07c2da",
+      "status": " M"
+    },
+    {
+      "bytes": 10530,
+      "path": "tests/test_wx_editor.py",
+      "python": true,
+      "sha256": "ced42248178ddd407bf8879397991988ac7aba374f6d2d78c020cfce3c093824",
+      "status": " M"
+    },
+    {
+      "bytes": 17995,
+      "path": "tests/test_wx_file003_final_stress.py",
+      "python": true,
+      "sha256": "29e9efa810ba19e6685255cb20b6eaa938d0b90eb277f7e11f2efe455137156d",
+      "status": " M"
+    },
+    {
+      "bytes": 14293,
+      "path": "tests/test_wx_file003_final_stress_lifecycle_races.py",
+      "python": true,
+      "sha256": "4c783e8046688a1e278977c7fe2774fbaa4cccf5eb743c2371a04ffa85d5ab17",
+      "status": " M"
+    },
+    {
+      "bytes": 3047,
+      "path": "tests/test_wx_file003_final_stress_reconnect_invariants.py",
+      "python": true,
+      "sha256": "c9bfb5a572844ea91e0483035460fcd55d461cca230cfd6b648baa717c3f38cf",
+      "status": " M"
+    },
+    {
+      "bytes": 9017,
+      "path": "tests/test_wx_file003_final_stress_transfer_unicode.py",
+      "python": true,
+      "sha256": "cef31654251d648a6e7c8794513b5b6e34f600c3c7cfe037df4fa90a7a99db15",
+      "status": " M"
+    },
+    {
+      "bytes": 1409,
+      "path": "tests/test_wx_file003_final_stress_wx_lifecycle.py",
+      "python": true,
+      "sha256": "541d78d4d2ce9034c6a72643c3a301b0317fb4feeff1ba788634670329fc1a92",
+      "status": " M"
+    },
+    {
+      "bytes": 13549,
+      "path": "tests/test_wx_file_context_matrix.py",
+      "python": true,
+      "sha256": "165938e2a45df3417bf77859dcfb2edbfffaca7ff2919daf1e41b56c97103e0a",
+      "status": " M"
+    },
+    {
+      "bytes": 7563,
+      "path": "tests/test_wx_file_transfer_integration.py",
+      "python": true,
+      "sha256": "f11e3adefa5e79c8c6e641e59acf76b21968916c2f222bb8aa258e2409013dc9",
+      "status": " M"
+    },
+    {
+      "bytes": 7410,
+      "path": "tests/test_wx_file_transfer_integration_conflict_policy.py",
+      "python": true,
+      "sha256": "0e66cb77f5ea176009cacff27eba78687d0101c860490e81c14f1077441e33ee",
+      "status": " M"
+    },
+    {
+      "bytes": 3391,
+      "path": "tests/test_wx_jobs.py",
+      "python": true,
+      "sha256": "d39e53a655b0c918f705ca9a717a412ec0aa94dc6fe1030f5ad3d5c113daf4f0",
+      "status": " M"
+    },
+    {
+      "bytes": 13845,
+      "path": "tests/test_wx_plugin_menu_contracts.py",
+      "python": true,
+      "sha256": "959836d7937a2c5092de24b938665f41ededbed5c604e7a4ae2499082b027e07",
+      "status": " M"
+    },
+    {
+      "bytes": 11847,
+      "path": "tests/test_wx_remote_file_actions_behavior_clipboard_navigation.py",
+      "python": true,
+      "sha256": "282fdf80f77bc8ad4e8dee72e2f332839b81b5524c462772128d3af966945693",
+      "status": " M"
+    },
+    {
+      "bytes": 51,
+      "path": "0",
+      "python": false,
+      "sha256": "a998ce6ac714abb16a2eb5b17566dec7e76a7c3bf0ff0b84544317a9ea2af5a5",
+      "status": "??"
+    },
+    {
+      "bytes": 51,
+      "path": "1",
+      "python": false,
+      "sha256": "a998ce6ac714abb16a2eb5b17566dec7e76a7c3bf0ff0b84544317a9ea2af5a5",
+      "status": "??"
+    },
+    {
+      "bytes": 4307,
+      "path": "SBOM.cdx.json",
+      "python": false,
+      "sha256": "dac33d223af9fea4ad2050c60be8858e4e0d4c0c34adbcfd07864367f5ebc24d",
+      "status": "??"
+    },
+    {
+      "bytes": 1430,
+      "path": "THIRD_PARTY_VERSIONS.txt",
+      "python": false,
+      "sha256": "443538b1763b9f607c4119b135afb5c14c989ba511f6323cff0a13bbf6953436",
+      "status": "??"
+    },
+    {
+      "bytes": 14557,
+      "path": "V2_G01_PROGRESS_REPORT_2026-10-18.md",
+      "python": false,
+      "sha256": "110814b0492024e1dddfe215e6e45f70d60a8550f92826e9e82d4c72fe58a03e",
+      "status": "??"
+    },
+    {
+      "bytes": 801,
+      "path": "repair41-win11-acceptance-harness.spec",
+      "python": false,
+      "sha256": "e4e0e2fb26a2ea3b45a8f2b57d01e329ace89af36ddc43c4b04417b43b4668da",
+      "status": "??"
+    },
+    {
+      "bytes": 801,
+      "path": "repair42-win11-acceptance-harness.spec",
+      "python": false,
+      "sha256": "893b20369e29453d709249fd2d2ae42368b8a9e7cd641b173d1e2063db8ac9cd",
+      "status": "??"
+    },
+    {
+      "bytes": 1015,
+      "path": "scripts/clean_windows_pyinstaller_outputs.ps1",
+      "python": false,
+      "sha256": "342e7762047c40ea0f3b87c606b9c40a3b4bf6fa5f64fc255a420495a939dc61",
+      "status": "??"
+    },
+    {
+      "bytes": 1389,
+      "path": "scripts/create_windows_release_archive.ps1",
+      "python": false,
+      "sha256": "562b96783086d022822dde128ab612e14b888a1a8235fe35540fb634e663ff37",
+      "status": "??"
+    },
+    {
+      "bytes": 4231,
+      "path": "scripts/linux_release_plan.py",
+      "python": true,
+      "sha256": "5f9e59f4445555149a47b61bd07bef1531ec03db806847f448cd1dbf6ae3a388",
+      "status": "??"
+    },
+    {
+      "bytes": 8367,
+      "path": "src/hpc_gui/_wx_connection_profiles.py",
+      "python": true,
+      "sha256": "9abfd3a234156a799d109aea8568fde9a3fdc19217b794bf0c8531240b5f19c7",
+      "status": "??"
+    },
+    {
+      "bytes": 11588,
+      "path": "src/hpc_gui/_wx_connection_worker.py",
+      "python": true,
+      "sha256": "866e43002a4c864acc8d112202f470b8a918daf24cae0a9711e45a2810f6ff5c",
+      "status": "??"
+    },
+    {
+      "bytes": 8686,
+      "path": "src/hpc_gui/_wx_editor_documents.py",
+      "python": true,
+      "sha256": "90380ff18fc6f38438d3c8b440f389c5bc374d23ad4fbf7e29bb9f2ca87b6e11",
+      "status": "??"
+    },
+    {
+      "bytes": 6445,
+      "path": "src/hpc_gui/_wx_editor_find.py",
+      "python": true,
+      "sha256": "6cc73bc7c9ef2b29c7d501af89b29bccd5d7a5838f5a93a64ca6f66c268790ec",
+      "status": "??"
+    },
+    {
+      "bytes": 14634,
+      "path": "src/hpc_gui/_wx_editor_save.py",
+      "python": true,
+      "sha256": "f590cb5d169a1d27e9ae64974f472e9a082f000cbe392689845bd4345bdf8945",
+      "status": "??"
+    },
+    {
+      "bytes": 17866,
+      "path": "src/hpc_gui/_wx_jobs_actions.py",
+      "python": true,
+      "sha256": "b4d862322d1520df5dd690ebdbc1aad128603e9fd46ffb4fbdbd7496ae71bfbb",
+      "status": "??"
+    },
+    {
+      "bytes": 11387,
+      "path": "src/hpc_gui/_wx_jobs_cluster.py",
+      "python": true,
+      "sha256": "55c534cb515e8e018b4c75fe1915b80d2b17f36d614ec8f51ccde60295e38b4f",
+      "status": "??"
+    },
+    {
+      "bytes": 17146,
+      "path": "src/hpc_gui/_wx_jobs_details.py",
+      "python": true,
+      "sha256": "b8b03e67d190272c276d1dd535a537534fc53c955ff9b8e1a1cb7d08c06167f8",
+      "status": "??"
+    },
+    {
+      "bytes": 11029,
+      "path": "src/hpc_gui/_wx_jobs_files.py",
+      "python": true,
+      "sha256": "c2ed3825c1a01c11aebe18a6f82d04e5d0a5afae7239a42ac5b31b748137f348",
+      "status": "??"
+    },
+    {
+      "bytes": 12108,
+      "path": "src/hpc_gui/_wx_jobs_inquiry.py",
+      "python": true,
+      "sha256": "a4a361b128adc50a8774cc5455d7357dc671dce18f1c983cbb02388d04dd571f",
+      "status": "??"
+    },
+    {
+      "bytes": 4835,
+      "path": "src/hpc_gui/_wx_jobs_output.py",
+      "python": true,
+      "sha256": "04a0166ecaeec946c9c95c015e85dcd57a84b65877a40d8122614fa0917fbd10",
+      "status": "??"
+    },
+    {
+      "bytes": 12103,
+      "path": "src/hpc_gui/_wx_jobs_output_tabs.py",
+      "python": true,
+      "sha256": "d6a804219682d55cc450d06c2e498ccb1b5e50cc3537944ec41f0db32f557d73",
+      "status": "??"
+    },
+    {
+      "bytes": 20548,
+      "path": "src/hpc_gui/_wx_jobs_outputs.py",
+      "python": true,
+      "sha256": "39ea1de57bb318595cec3742ea8b4e643ab3a134dd432482e2d855cf124411bf",
+      "status": "??"
+    },
+    {
+      "bytes": 13440,
+      "path": "src/hpc_gui/_wx_jobs_table.py",
+      "python": true,
+      "sha256": "593b89fd4b427ec3748ab8e1be19bffbf53d62a7aa2955ce9794dfadd5e4718a",
+      "status": "??"
+    },
+    {
+      "bytes": 3745,
+      "path": "src/hpc_gui/_wx_transfer_common.py",
+      "python": true,
+      "sha256": "829a486e2fbbbedf402ada6595ae60d7dbe53df583702c773849d7dc51a7061e",
+      "status": "??"
+    },
+    {
+      "bytes": 4997,
+      "path": "src/hpc_gui/_wx_transfer_conflict.py",
+      "python": true,
+      "sha256": "c38fafb21fea20a5494d4a71009e0e796e5844ef2f069c73f7ee20ae32a3b4da",
+      "status": "??"
+    },
+    {
+      "bytes": 5752,
+      "path": "src/hpc_gui/_wx_transfer_detached.py",
+      "python": true,
+      "sha256": "8a64305ac1c8b21fbf1579e1fcdcf487d60df3b418c1ee60c9be6480090f65ef",
+      "status": "??"
+    },
+    {
+      "bytes": 11588,
+      "path": "src/hpc_gui/_wx_transfer_embedded.py",
+      "python": true,
+      "sha256": "56dfbe4f37a0b46a608218f85df074bdba47e1f3ff4cf9c1c8a58b2b3b429837",
+      "status": "??"
+    },
+    {
+      "bytes": 13675,
+      "path": "src/hpc_gui/ui/_main_window_menubar.py",
+      "python": true,
+      "sha256": "d403fd4df71a75fc6e4628b70d5665ebbc903bf9ac3b7d11665a7aad2e8b9e5d",
+      "status": "??"
+    },
+    {
+      "bytes": 14963,
+      "path": "src/hpc_gui/ui/_main_window_plugins.py",
+      "python": true,
+      "sha256": "a1affc1dccf940e42465ef8330e827049bde5ecf273d52aa5dda46e83bc6b049",
+      "status": "??"
+    },
+    {
+      "bytes": 10325,
+      "path": "src/hpc_gui/ui/_main_window_updates.py",
+      "python": true,
+      "sha256": "01d254ead976171fb8291bf2c3bbaa3e6ec941f140cab2a2e27472b3f7e2789a",
+      "status": "??"
+    },
+    {
+      "bytes": 11015,
+      "path": "src/hpc_gui/ui/_main_window_workspace.py",
+      "python": true,
+      "sha256": "071b3d86c9af88098cc52c3328150e91254cc860b90fc3e62b91d60c71a375a1",
+      "status": "??"
+    },
+    {
+      "bytes": 15177,
+      "path": "src/hpc_gui/ui/dialogs/plugin_manager_cards.py",
+      "python": true,
+      "sha256": "eb2b2533608289bf1e6513a5892bf379c3dcb1f70275f9c6fe5e9b5b23420d54",
+      "status": "??"
+    },
+    {
+      "bytes": 10608,
+      "path": "src/hpc_gui/ui/dialogs/plugin_manager_state.py",
+      "python": true,
+      "sha256": "7825ad131b36f8f8f1cf3642cdd33b1dccad47951084e3a09b8a18eb6f044b33",
+      "status": "??"
+    },
+    {
+      "bytes": 1245,
+      "path": "src/hpc_gui/ui/widgets/_fm_dnd_contract.py",
+      "python": true,
+      "sha256": "7eda348d237736cc55dac2b7d1b729e6f12953a4e869dc7ecb2631394f4c0905",
+      "status": "??"
+    },
+    {
+      "bytes": 9593,
+      "path": "src/hpc_gui/ui/widgets/_ftp_activity_menus.py",
+      "python": true,
+      "sha256": "5495281007ed8be829ebff7d7e849a10b21bc52eef73e1f257e2b15e3d9bff2c",
+      "status": "??"
+    },
+    {
+      "bytes": 14250,
+      "path": "src/hpc_gui/ui/widgets/_ftp_activity_sync.py",
+      "python": true,
+      "sha256": "73f75e019581dd7756333e2db904a155b2143ed28fbb456ec1d2af5b33809335",
+      "status": "??"
+    },
+    {
+      "bytes": 10943,
+      "path": "src/hpc_gui/ui/widgets/_ftp_activity_table.py",
+      "python": true,
+      "sha256": "5fe92ce75189cb2c35240dc696538cf4036026f5ca581d175d6bd15356b7271a",
+      "status": "??"
+    },
+    {
+      "bytes": 5998,
+      "path": "src/hpc_gui/ui/widgets/_ftp_comparison.py",
+      "python": true,
+      "sha256": "8c9c9e0ddca3de5c5553966a1a74a5411a34c903f8fd76eb8fa5e3ad67fd2aac",
+      "status": "??"
+    },
+    {
+      "bytes": 9123,
+      "path": "src/hpc_gui/ui/widgets/_ftp_session.py",
+      "python": true,
+      "sha256": "afd88ed6c2c894160fcb75d54f0368bf14057c84c024a54d489ed9f391ab8d36",
+      "status": "??"
+    },
+    {
+      "bytes": 9047,
+      "path": "src/hpc_gui/ui/widgets/_ftp_sync_browsing.py",
+      "python": true,
+      "sha256": "4a36fb967f4e1748f9eaa31bbb0f31c3eb8c4af25cbff7c3ada076d9642e5251",
+      "status": "??"
+    },
+    {
+      "bytes": 7306,
+      "path": "src/hpc_gui/ui/widgets/_ftp_transfer_actions.py",
+      "python": true,
+      "sha256": "e42ee660932ae50e538c3d99680cd0543607bc42cc23e443776d181e1b08df84",
+      "status": "??"
+    },
+    {
+      "bytes": 9929,
+      "path": "src/hpc_gui/ui/widgets/_local_fs_ops.py",
+      "python": true,
+      "sha256": "f284e3b307873641d40e1d37ff4f7a553e7ed02ea99ea51a36be174b12296cea",
+      "status": "??"
+    },
+    {
+      "bytes": 11185,
+      "path": "src/hpc_gui/ui/widgets/_local_lint_tools.py",
+      "python": true,
+      "sha256": "385da141b5b2a44a8ddce3a97a3d8375fe9af8bf82d34cd3339ce318c63e2cba",
+      "status": "??"
+    },
+    {
+      "bytes": 10663,
+      "path": "src/hpc_gui/ui/widgets/_local_tree.py",
+      "python": true,
+      "sha256": "b7454d326a36ea670f784431ae18c727d5bd9273df4349fb18b3105386c7abe0",
+      "status": "??"
+    },
+    {
+      "bytes": 17710,
+      "path": "src/hpc_gui/ui/widgets/_login_connect.py",
+      "python": true,
+      "sha256": "a04840a3811862ad311ddbf1a1b0181e2b72093042d60a0f529f167dd96c6920",
+      "status": "??"
+    },
+    {
+      "bytes": 7346,
+      "path": "src/hpc_gui/ui/widgets/_login_connection_worker.py",
+      "python": true,
+      "sha256": "119d64e08f707ba5bfb34a99612d64e72686760c9bd371da70e513d160f5ec1b",
+      "status": "??"
+    },
+    {
+      "bytes": 571,
+      "path": "src/hpc_gui/ui/widgets/_login_ftp_mode.py",
+      "python": true,
+      "sha256": "226dac735caaa5c19d6f07fb15aeec874c3c2bc11b65ccbb603a996015d3278a",
+      "status": "??"
+    },
+    {
+      "bytes": 7681,
+      "path": "src/hpc_gui/ui/widgets/_login_profile_store.py",
+      "python": true,
+      "sha256": "9c87b9201299038b75609758db5a7f4815d56cbfbcbb5112bbc0e19c0a4289dc",
+      "status": "??"
+    },
+    {
+      "bytes": 12557,
+      "path": "src/hpc_gui/ui/widgets/_login_profiles.py",
+      "python": true,
+      "sha256": "285a2e2deeff6c894236af36fc08dc1b6c1a3fef3359f18ab647954bf2401be5",
+      "status": "??"
+    },
+    {
+      "bytes": 7283,
+      "path": "src/hpc_gui/ui/widgets/_login_secrets.py",
+      "python": true,
+      "sha256": "f42e02158c8ed8ada991b03884baf9d0e26a31db83cd2bc67e1865ee40e11577",
+      "status": "??"
+    },
+    {
+      "bytes": 7791,
+      "path": "src/hpc_gui/ui/widgets/_login_terminal.py",
+      "python": true,
+      "sha256": "3fd2f3a582b334e1f84bcfd6a78ed65304bf589e3f47714a50a0720d941adc1b",
+      "status": "??"
+    },
+    {
+      "bytes": 20988,
+      "path": "src/hpc_gui/ui/widgets/_remote_context_menu.py",
+      "python": true,
+      "sha256": "d30e7b57c7d0a164c84cb30876f14a701fbd899c8b053bc1930b8d64bdf00c69",
+      "status": "??"
+    },
+    {
+      "bytes": 14190,
+      "path": "src/hpc_gui/ui/widgets/_remote_lint_tools.py",
+      "python": true,
+      "sha256": "65593f23c555b68a253aae3e597d5799deee990d55a9973d49c2d6be01720520",
+      "status": "??"
+    },
+    {
+      "bytes": 13327,
+      "path": "src/hpc_gui/ui/widgets/_remote_listing.py",
+      "python": true,
+      "sha256": "685537103a2dc7a5d621c4c4dfb2325bf0dacc3288d21f24e2109c29b0630872",
+      "status": "??"
+    },
+    {
+      "bytes": 6158,
+      "path": "src/hpc_gui/ui/widgets/_remote_metadata.py",
+      "python": true,
+      "sha256": "3c3f45b0f203046a6bf7b1259da63affeac4b6875b9b219a5aebf4827d11ccd9",
+      "status": "??"
+    },
+    {
+      "bytes": 17769,
+      "path": "src/hpc_gui/ui/widgets/_remote_mutations.py",
+      "python": true,
+      "sha256": "1c8f84b705187e8346f99939a301a178e268ef4dd495d06a112660a0e0e8c119",
+      "status": "??"
+    },
+    {
+      "bytes": 10879,
+      "path": "src/hpc_gui/ui/widgets/_remote_navigation.py",
+      "python": true,
+      "sha256": "ce7d4e9da1a19edb142b8d47051e0bea9cb4d57de3287c8918454eadba73d685",
+      "status": "??"
+    },
+    {
+      "bytes": 7787,
+      "path": "src/hpc_gui/ui/widgets/_remote_permissions_dialog.py",
+      "python": true,
+      "sha256": "b1d801a40375b413a1bffd19d5c5df1f13ec30eb925b83d382f00deb00c40a73",
+      "status": "??"
+    },
+    {
+      "bytes": 5982,
+      "path": "src/hpc_gui/ui/widgets/_remote_transfer_copy_move.py",
+      "python": true,
+      "sha256": "50072ad4858940a522181fec4794231ab83273e37664c3448c60a5b45d980d1f",
+      "status": "??"
+    },
+    {
+      "bytes": 16915,
+      "path": "src/hpc_gui/ui/widgets/_remote_transfer_download.py",
+      "python": true,
+      "sha256": "2def58bdd22a463d5aa2dec3351381cc9c3d436c16f1547ab35b4cdd2e9099d7",
+      "status": "??"
+    },
+    {
+      "bytes": 18384,
+      "path": "src/hpc_gui/ui/widgets/_remote_transfer_exec.py",
+      "python": true,
+      "sha256": "4aa83964877eed3e563288640e02f035c7dd01269212f94bff7553e2cc5c1d2c",
+      "status": "??"
+    },
+    {
+      "bytes": 17254,
+      "path": "src/hpc_gui/ui/widgets/_remote_transfer_plan.py",
+      "python": true,
+      "sha256": "f34a49930bbe272c4b08a77b085fd13b51fcb0216e224b63109dfc5d2673c1db",
+      "status": "??"
+    },
+    {
+      "bytes": 4429,
+      "path": "src/hpc_gui/ui/widgets/_remote_transfer_progress.py",
+      "python": true,
+      "sha256": "f5d4aac4e0c7e7b9a0a43e7c0be3c3315ea64768fb5ec8fecf5dfef035f36673",
+      "status": "??"
+    },
+    {
+      "bytes": 6233,
+      "path": "src/hpc_gui/ui/widgets/_remote_transfer_ui.py",
+      "python": true,
+      "sha256": "8a8b74361762f5cd98f9b2e5b835226b6cd399c6438308bfe2b6706db18fc276",
+      "status": "??"
+    },
+    {
+      "bytes": 20321,
+      "path": "src/hpc_gui/ui/widgets/_remote_transfer_upload.py",
+      "python": true,
+      "sha256": "b9337298234f32e19cff2712e3ba5d39efa79c405feb83e3f18d9b43aa3f8d75",
+      "status": "??"
+    },
+    {
+      "bytes": 21164,
+      "path": "src/hpc_gui/ui/widgets/_remote_tree_view.py",
+      "python": true,
+      "sha256": "072113d7c6cab3c9c96115e3673f59cc1cbed4f58fb471b8b588f5c702ba0301",
+      "status": "??"
+    },
+    {
+      "bytes": 20063,
+      "path": "src/hpc_gui/wx_connection_model.py",
+      "python": true,
+      "sha256": "964cd3f509daf7581b45b210506328ce410f476436462379aba7a270a5425669",
+      "status": "??"
+    },
+    {
+      "bytes": 1482,
+      "path": "src/hpc_gui/wx_editor_guards.py",
+      "python": true,
+      "sha256": "3db80ea4f7ff05ca8573583ff81d0da75560d18c2aecbb59c7466ab9048aef44",
+      "status": "??"
+    },
+    {
+      "bytes": 10633,
+      "path": "src/hpc_gui/wx_jobs_model.py",
+      "python": true,
+      "sha256": "5c0d2d77f0b5368f43441f4d82605275cb0ef002fd3fbc97268122f7d74af471",
+      "status": "??"
+    },
+    {
+      "bytes": 2903,
+      "path": "src/hpc_gui/wx_transfer_workspace_model.py",
+      "python": true,
+      "sha256": "558a6c09d9b44626a0f9cba13cb9239e8a5378fdf30a17eda9a68eeb53a54fb7",
+      "status": "??"
+    },
+    {
+      "bytes": 22747,
+      "path": "tests/test_build_release_script.py",
+      "python": true,
+      "sha256": "6f6b5debd1c658ca4c96876f07959748d2ba97ddf69bb886fd03a041681ce30e",
+      "status": "??"
+    },
+    {
+      "bytes": 3499,
+      "path": "tests/test_release_consistency.py",
+      "python": true,
+      "sha256": "85ad7bc44de0e96b7c4cd2903fce2669b00353981f67f297dfe5e94fbd7a042b",
+      "status": "??"
+    },
+    {
+      "bytes": 4481,
+      "path": "tests/test_wx_file003_zzz_scoreboard.py",
+      "python": true,
+      "sha256": "fa7f6cc536740d5d335fd42a3c74fed6047c602b582d0ab58b7fc0dbdfdc9338",
+      "status": "??"
+    }
+  ],
+  "fingerprint_sha256": "889fb7432500705ff44281ad2c76407d5ec334de17f2ab777128e33ad0d4980b",
+  "missing_file_count": 0,
+  "python_file_count": 145,
+  "schema_version": 1,
+  "source_branch": "codex/v2-master-repair-20261017",
+  "source_commit": "c0c6d0e956c9283f0c05f25b799e1b1f57ecb240",
+  "source_worktree": "D:\\Projeler\\.tmp\\hpc-client-gui\\v2-master-repair-20261017",
+  "tracked_modified_and_untracked_file_count": 173
+}

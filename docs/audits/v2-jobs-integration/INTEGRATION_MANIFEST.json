@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "status": "WAVE_00_IN_PROGRESS",
+  "created_at_local": "2026-10-21",
+  "target_branch": "develop",
+  "integration_branch": "codex/integration/v2-jobs-staged-20261021",
+  "integration_worktree": "D:\\Projeler\\.tmp\\hpc-client-gui\\v2-jobs-staged-20261021",
+  "integration_start_sha": "f61919bad12be5f328cb9db3fee3c8de8563fa5b",
+  "origin_develop_sha": "b2de2bb8ccc533aa0b0ecb7dd2a798a4fcdf709a",
+  "jobs_source_sha": "713949fb752b90601e007812ebf2bd765da5ad52",
+  "v2_source_sha": "c0c6d0e956c9283f0c05f25b799e1b1f57ecb240",
+  "merge_bases": {
+    "develop_jobs": "b2de2bb8ccc533aa0b0ecb7dd2a798a4fcdf709a",
+    "develop_v2": "42c8b471cf24c047c2f7f58047a5177bfd158a20",
+    "jobs_v2": "42c8b471cf24c047c2f7f58047a5177bfd158a20"
+  },
+  "divergence_counts_left_right": {
+    "develop_jobs": [1, 23],
+    "develop_v2": [11, 5],
+    "jobs_v2": [33, 5]
+  },
+  "remote_heads_verified": true,
+  "main_user_worktree_preserved": true,
+  "v2_wip_snapshot": {
+    "path": "D:\\Projeler\\.tmp\\hpc-client-gui\\v2-wip-snapshot-20261021",
+    "file_count": 173,
+    "python_file_count": 145,
+    "fingerprint_sha256": "889fb7432500705ff44281ad2c76407d5ec334de17f2ab777128e33ad0d4980b",
+    "python_only_fingerprint_reported_by_audit": "caa232d0936316e9890fec7fadd0ba18b9d74dd2c6822654eebb80f85ea5d85f"
+  },
+  "initial_architecture": {
+    "source_count": 803,
+    "warning_count": 60,
+    "over_limit_count": 52,
+    "unresolved_internal_imports": 2,
+    "cycles": 8
+  },
+  "remote_mutations": false,
+  "github_actions_tested": false
+}
