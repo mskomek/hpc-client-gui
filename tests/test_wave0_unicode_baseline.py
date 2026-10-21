@@ -13,72 +13,26 @@ import sys
 import unicodedata
 
 import pytest
+from support.unicode_golden_fixtures import (
+    CORRECT_STAR,
+    JAPANESE_DIRS,
+    JAPANESE_FILES,
+    MIXED_DIRS,
+    MIXED_FILES,
+    MOJIBAKE_STAR,
+    SYMBOL_FILES,
+    TURKISH_CASING,
+    TURKISH_DIRS,
+    TURKISH_FILES,
+)
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
 
-# ---------------------------------------------------------------------------
-# Golden Fixtures — Reusable Unicode test data
-# ---------------------------------------------------------------------------
-
-# Turkish characters
-TURKISH_DIRS = [
-    "İşler_Çağrı_Ölçüm",
-    "Isı_İstanbul_Şehir",
-    "Üniversite_Kümesi",
-]
-TURKISH_FILES = [
-    "ısı_ölçümü_İstanbul.txt",
-    "şğüöçıİ.dat",
-    "Çalışma_Sonucu.txt",
-    "O'Brien_Çalışma.txt",
-]
-
-# Japanese characters
-JAPANESE_DIRS = [
-    "研究_ジョブ",
-    "計算_結果",
-    "日本語_ディレクトリ",
-]
-JAPANESE_FILES = [
-    "日本語_計算結果.txt",
-    "ジョブ結果.slurm",
-    "研究_スクリプト.sh",
-]
-
-# Mixed scripts
-MIXED_DIRS = [
-    "Türkçe_日本語",
-]
-MIXED_FILES = [
-    "iş_日本語_δ.txt",
-    "Çalışma_Sonucu_日本語.txt",
-]
-
-# Symbol/special fixtures
-SYMBOL_FILES = [
-    "★_Favorites.txt",
-    "ΔPressure_ölçüm.txt",
-    "🚀_job.txt",
-]
-
-# Turkish I/i casing variants
-TURKISH_CASING = [
-    "I_upper.txt",
-    "İ_upper.txt",
-    "ı_lower.txt",
-    "i_lower.txt",
-]
-
-# NFC/NFD normalization variants
-NFC_PATH = pathlib.PurePosixPath("café.txt")  # NFC: é = U+00E9
-NFD_PATH = pathlib.PurePosixPath(unicodedata.normalize("NFD", "café.txt"))  # NFD: e + combining acute
-
-# Mojibake reference
-MOJIBAKE_STAR = "â˜…"
-CORRECT_STAR = "★"
+NFC_PATH = pathlib.PurePosixPath("café.txt")
+NFD_PATH = pathlib.PurePosixPath(unicodedata.normalize("NFD", "café.txt"))
 
 
 # ---------------------------------------------------------------------------
@@ -306,67 +260,6 @@ class TestGoldenFixtures:
 
 
 # ---------------------------------------------------------------------------
-# 4. Golden Fixtures — Filesystem Operations
-# ---------------------------------------------------------------------------
-
-class TestGoldenFixturesFilesystem:
-    """Verify golden fixture names survive filesystem create/read/delete."""
-
-    pytestmark = [pytest.mark.contract, pytest.mark.semantic, pytest.mark.regression]
-
-    def test_turkish_file_create_and_read(self, tmp_path):
-        for name in TURKISH_FILES:
-            p = tmp_path / name
-            p.write_text("test content", encoding="utf-8")
-            assert p.exists()
-            assert p.read_text(encoding="utf-8") == "test content"
-
-    def test_japanese_file_create_and_read(self, tmp_path):
-        for name in JAPANESE_FILES:
-            p = tmp_path / name
-            p.write_text("テスト内容", encoding="utf-8")
-            assert p.exists()
-            assert p.read_text(encoding="utf-8") == "テスト内容"
-
-    def test_mixed_file_create_and_read(self, tmp_path):
-        for name in MIXED_FILES:
-            p = tmp_path / name
-            p.write_text("mixed content 日本語", encoding="utf-8")
-            assert p.exists()
-            assert p.read_text(encoding="utf-8") == "mixed content 日本語"
-
-    def test_symbol_file_create_and_read(self, tmp_path):
-        for name in SYMBOL_FILES:
-            p = tmp_path / name
-            p.write_text("symbol content", encoding="utf-8")
-            assert p.exists()
-            assert p.read_text(encoding="utf-8") == "symbol content"
-
-    def test_turkish_casing_file_create_and_read(self, tmp_path):
-        for name in TURKISH_CASING:
-            p = tmp_path / name
-            p.write_text("casing test", encoding="utf-8")
-            assert p.exists()
-            assert p.read_text(encoding="utf-8") == "casing test"
-
-    def test_nfc_nfd_file_create_and_read(self, tmp_path):
-        nfc_name = unicodedata.normalize("NFC", "café.txt")
-        nfd_name = unicodedata.normalize("NFD", "café.txt")
-        p_nfc = tmp_path / nfc_name
-        p_nfd = tmp_path / nfd_name
-        p_nfc.write_text("NFC content", encoding="utf-8")
-        p_nfd.write_text("NFD content", encoding="utf-8")
-        assert p_nfc.read_text(encoding="utf-8") == "NFC content"
-        assert p_nfd.read_text(encoding="utf-8") == "NFD content"
-
-    def test_star_file_create_and_read(self, tmp_path):
-        p = tmp_path / "★ Favorites.txt"
-        p.write_text("star content", encoding="utf-8")
-        assert p.exists()
-        assert p.read_text(encoding="utf-8") == "star content"
-
-
-# ---------------------------------------------------------------------------
 # 5. Encoding Boundary Inventory
 # ---------------------------------------------------------------------------
 
@@ -394,11 +287,15 @@ class TestEncodingBoundaryInventory:
 
     @pytest.mark.audit
     def test_ssh_client_decodes_output(self):
-        """ssh/client.py should decode SSH output."""
+        """SSH command runner should use the centralized UTF-8 decoder."""
         client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
-        if client.is_file():
-            content = client.read_text(encoding="utf-8")
-            assert "decode(" in content, "SSH client should decode bytes"
+        runner = ROOT / "src" / "hpc_gui" / "ssh" / "command_runner.py"
+        if client.is_file() and runner.is_file():
+            facade = client.read_text(encoding="utf-8")
+            implementation = runner.read_text(encoding="utf-8")
+            assert "from hpc_gui.ssh.command_runner import run_ssh_command" in facade
+            assert "decode_remote_text" in implementation
+            assert "decode_remote_text(stdout.read())" in implementation
 
     @pytest.mark.audit
     def test_files_ssh_uses_utf8(self):
@@ -428,11 +325,10 @@ class TestEncodingBoundaryInventory:
 
     @pytest.mark.audit
     def test_errors_replace_in_ssh(self):
-        """SSH output decoding should use errors='replace'."""
-        client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
-        if client.is_file():
-            content = client.read_text(encoding="utf-8")
-            assert 'errors="replace"' in content or "errors='replace'" in content
+        """Centralized SSH output decoding should replace invalid UTF-8."""
+        decoder = ROOT / "src" / "hpc_gui" / "ssh" / "text.py"
+        content = decoder.read_text(encoding="utf-8")
+        assert 'errors="replace"' in content or "errors='replace'" in content
 
     @pytest.mark.audit
     def test_errors_ignore_in_process_registry(self):
@@ -535,8 +431,6 @@ class TestRiskClassification:
     @pytest.mark.audit
     def test_p0_ssh_decode_risks_documented(self):
         """SSH decode with errors='replace' is P0 — data loss boundary."""
-        client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
-        if client.is_file():
-            content = client.read_text(encoding="utf-8")
-            # Document the finding
-            assert "decode(" in content
+        decoder = ROOT / "src" / "hpc_gui" / "ssh" / "text.py"
+        content = decoder.read_text(encoding="utf-8")
+        assert "decode_remote_text" in content and "errors=\"replace\"" in content

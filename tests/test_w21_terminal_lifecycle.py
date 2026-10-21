@@ -108,14 +108,14 @@ assert panel._webview is None and panel._is_parity is False
 panel.close()
 assert stops == ["Stop"] and destroys == []
 
-# Normal close still releases the native controller exactly once.
+# Normal close follows the same parent-owned native teardown contract.
 panel2 = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
 webview2 = panel2._webview
 stops2, destroys2 = [], []
 webview2.Stop = lambda *a, **k: stops2.append("Stop")
 webview2.Destroy = lambda *a, **k: destroys2.append("Destroy")
 panel2.close()
-assert stops2 == ["Stop"] and destroys2 == ["Destroy"], (stops2, destroys2)
+assert stops2 == ["Stop"] and destroys2 == [], (stops2, destroys2)
 frame.Destroy()
 import os; os._exit(0)
 """

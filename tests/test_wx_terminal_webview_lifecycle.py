@@ -95,6 +95,11 @@ def test_wx_terminal_generation_guard_rejects_stale_output():
 import sys, os
 sys.path.insert(0, "src")
 import wx, time
+import hpc_gui.wx_terminal_webview as terminal_webview
+# This case tests callback generations, not the native browser controller.
+def _native_view_not_needed():
+    return False
+terminal_webview._is_webview_available = _native_view_not_needed
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
 class FakeSSH:
@@ -161,6 +166,11 @@ def test_wx_terminal_header_status_updates():
 import sys, os
 sys.path.insert(0, "src")
 import wx, time
+import hpc_gui.wx_terminal_webview as terminal_webview
+# This case checks SSH identity/status labels and does not need WebView2.
+def _native_view_not_needed():
+    return False
+terminal_webview._is_webview_available = _native_view_not_needed
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
 class FakeSSH:
@@ -296,6 +306,12 @@ def test_wx_terminal_100_reconnects_no_leak():
 import sys, os
 sys.path.insert(0, "src")
 import wx, time
+import hpc_gui.wx_terminal_webview as terminal_webview
+# This case covers subscriber generations; native WebView startup/teardown is
+# covered separately and is unrelated to the reconnect invariant here.
+def _native_view_not_needed():
+    return False
+terminal_webview._is_webview_available = _native_view_not_needed
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
 class FakeSSH:

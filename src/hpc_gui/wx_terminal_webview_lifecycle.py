@@ -129,29 +129,17 @@ class TerminalLifecycleMixin:
             unsubscribe_language_change(self._lang_cb)
         except Exception:
             pass
-        # Release the native WebView2 controller. When wx is already tearing
-        # down this panel (IsBeingDeleted), an explicit Destroy races the
-        # native WebView2 teardown and is a known access-violation source
-        # (HPC-W05-TODO-LIFECYCLE-NATIVE-002): stop the loader best-effort,
-        # detach our reference, and let the parent destroy the child.
-        # Destroy explicitly only while the panel is not being deleted.
-        being_deleted = False
-        try:
-            is_being_deleted = getattr(self, "IsBeingDeleted", None)
-            if callable(is_being_deleted):
-                being_deleted = bool(is_being_deleted())
-        except Exception:
-            being_deleted = False
+        # Stop navigation but leave native controller destruction to wx's
+        # parent-child teardown. WebView2 can still have queued script/output
+        # callbacks when close is called on a live panel; explicitly calling
+        # Destroy here races those callbacks and can terminate the process
+        # with an access violation. The owning panel/frame destroys the child
+        # immediately after this close lifecycle completes.
         if webview is not None:
             try:
                 webview.Stop()
             except Exception:
                 pass
-            if not being_deleted:
-                try:
-                    webview.Destroy()
-                except Exception:
-                    pass
 
     def _update_status(self, state: str):
         """Update the connection status label. States: disconnected, connecting, connected, reconnecting."""

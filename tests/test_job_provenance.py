@@ -1,6 +1,6 @@
 import pytest
 
-from hpc_gui.services.job_provenance import JobProvenanceCapture
+from hpc_gui.services.job_provenance import JobProvenanceCapture, script_hash
 from hpc_gui.services.job_record_store import JobRecordStore
 
 
@@ -28,3 +28,28 @@ def test_array_parent_identity_and_restart(tmp_path):
     second = JobRecordStore(path)
     assert second.get("12345")["script_hash"]
     assert capture.analytics_job_id("12345_7") == "12345"
+
+
+@pytest.mark.integration
+def test_stored_script_redacts_secret_assignments(tmp_path):
+    store = JobRecordStore(tmp_path / "safe-script.sqlite3")
+    capture = JobProvenanceCapture(store)
+    capture.submitted("99", "#!/bin/bash\nexport API_TOKEN=top-secret\n#SBATCH --output=slurm-%j.out\n")
+    script = store.get("99")["script_text"]
+    assert "top-secret" not in script
+    assert "[REDACTED]" in script
+    assert "--output=slurm-%j.out" in script
+    store.close()
+
+
+def test_provenance_redacts_prefixed_keys_and_quoted_cli_values(tmp_path):
+    store = JobRecordStore(tmp_path / "safe-prefixed-script.sqlite3")
+    capture = JobProvenanceCapture(store)
+    script = 'export AWS_SECRET_ACCESS_KEY="aws-secret"\napp --token="two words"'
+    capture.submitted("91", script, profile_id="p", cluster_id="c", provider_id="slurm")
+    row = store.get("91", profile_id="p", cluster_id="c", provider_id="slurm")
+    assert "aws-secret" not in row["script_text"]
+    assert "two words" not in row["script_text"]
+    assert row["script_text"].count("[REDACTED]") == 2
+    assert row["script_hash"] == script_hash(row["script_text"])
+    store.close()

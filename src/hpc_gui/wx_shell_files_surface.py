@@ -52,12 +52,16 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
         pass
     compare_btn = wx.Button(files_page, label=t("ftp.compare_directories"))
     compare_btn.SetToolTip(t("ftp.compare_directories_tooltip") if t("ftp.compare_directories_tooltip") != "[ftp.compare_directories_tooltip]" else "Compare directories")
+    upload_selected_btn = wx.Button(files_page, label=t("ftp.upload_selected"))
+    download_selected_btn = wx.Button(files_page, label=t("ftp.download_selected"))
     # keep enabled for seam; handlers check session/connection if needed but allow fake backends in tests
     files_header.Add(transfer_type_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     files_header.Add(transfer_choice, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     files_header.Add(effective_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     files_header.Add(sync_cb, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     files_header.Add(compare_btn, 0, wx.ALL, 4)
+    files_header.Add(upload_selected_btn, 0, wx.ALL, 4)
+    files_header.Add(download_selected_btn, 0, wx.ALL, 4)
     files_header.AddStretchSpacer(1)
     files_sizer.Add(files_header, 0, wx.EXPAND | wx.ALL, 4)
     transfer_splitter = wx.SplitterWindow(files_page)
@@ -94,7 +98,9 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
             pass
     transfer_choice.Bind(wx.EVT_CHOICE, _on_transfer_choice)
     notebook.AddPage(files_page, t("tabs.ftp"), False)
-    page_controls["NAV-FILES"] = {"page": files_page, "local": local_panel, "remote": remote_panel, "transfers": transfers_panel, "splitter": transfer_splitter, "header": files_header, "transfer_type_label": transfer_type_label, "transfer_choice": transfer_choice, "effective_label": effective_label, "sync_cb": sync_cb, "compare_btn": compare_btn, "current_effective_mode": _current_effective_mode}
+    page_controls["NAV-FILES"] = {"page": files_page, "local": local_panel, "remote": remote_panel, "transfers": transfers_panel, "splitter": transfer_splitter, "header": files_header, "transfer_type_label": transfer_type_label, "transfer_choice": transfer_choice, "effective_label": effective_label, "sync_cb": sync_cb, "compare_btn": compare_btn, "upload_selected": upload_selected_btn, "download_selected": download_selected_btn, "current_effective_mode": _current_effective_mode}
+    upload_selected_btn.Bind(wx.EVT_BUTTON, lambda _evt: local_panel._wx_local_run_action("upload"))
+    download_selected_btn.Bind(wx.EVT_BUTTON, lambda _evt: remote_panel._wx_remote_run_action("download"))
     # --- Sync browsing & Compare directories wiring (Wave 48) ---
     _sync_state = {"enabled": False, "roots": SyncRoots(), "guard": False, "generation": 0}
     _compare_state = {"generation": 0, "in_flight": False, "closed": False}

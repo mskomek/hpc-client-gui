@@ -1,13 +1,13 @@
 """Shared utilities for the focused wx terminal WebView test modules."""
 from __future__ import annotations
 
-import os
 import pathlib
 import subprocess
 import sys
 import time
 
 import wx
+from support.subprocess_environment import project_python_environment
 
 ASSETS = pathlib.Path(__file__).parents[1] / "src" / "hpc_gui" / "assets" / "terminal"
 
@@ -63,8 +63,7 @@ def _show_frame_with_panel(frame, panel):
 
 def _run_subprocess_test(code_str, timeout=15):
     """Run an isolated wx test with the project source on PYTHONPATH."""
-    env = os.environ.copy()
-    env["PYTHONPATH"] = "src"
+    env = project_python_environment(pathlib.Path(__file__).parents[1])
     return subprocess.run(
         [sys.executable, "-c", code_str],
         capture_output=True,

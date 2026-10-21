@@ -159,6 +159,11 @@ def test_wx_terminal_find_next_and_prev():
 import sys, os, pathlib
 sys.path.insert(0, "src")
 import wx, time
+import hpc_gui.wx_terminal_webview as terminal_webview
+# The assertion captures generated JS calls; a live native WebView is not used.
+def _native_view_not_needed():
+    return False
+terminal_webview._is_webview_available = _native_view_not_needed
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
 class FakeSSH:
@@ -174,6 +179,7 @@ current_ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=current_ssh)
 panel._ready = True
 panel._is_parity = True
+panel._webview = object()
 
 # Capture JS calls
 calls = []
