@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "WAVE_00_COMPLETE",
+  "status": "WAVE_01_COMPLETE",
   "created_at_local": "2026-10-21",
   "target_branch": "develop",
   "integration_branch": "codex/integration/v2-jobs-staged-20261021",
@@ -10,6 +10,25 @@
   "wave_00_tree_sha": "bc4297dce73099e4003a93d52d66247b6ecba719",
   "wave_00_source_fingerprint_sha256": "37be9c808f09d80dc5763520d19d8ee756c8cfa2b8ccc20f919f4fb9256f7a07",
   "wave_00_changed_file_count": 30,
+  "wave_01": {
+    "status": "WAVE_COMPLETE",
+    "start_sha": "179fb47dfc94765cbec5d9eb058ba0d0f6247232",
+    "source_sha": "c1d8e66f5b5b4a06abcf79511c48bf97017df0cf",
+    "source_tree_sha": "fb33231d4639cc9af45d642c062e716ee524f324",
+    "jobs_source_sha": "713949fb752b90601e007812ebf2bd765da5ad52",
+    "source_fingerprint_sha256": "3f6fc206a44fed61fa8b53636f32444d4e76db417b34ed95677a1f6f4bbc6b74",
+    "changed_python_files": 11,
+    "added_application_modules": 2,
+    "source_commits": [
+      "72359f2788f7c598904e4f35837f081ed60503de",
+      "32aae234c3360172cc1d40592f3e7427912384eb",
+      "7051a62c516b921d21030391f06621bd0e04bd3e",
+      "a043d8d59bd5cec717b103c6f959a37abd7e7cba"
+    ],
+    "tests": {"passed": 45, "failed": 0, "skipped": 0, "exit_code": 0},
+    "changed_source_gate_exit_code": 0,
+    "full_architecture_gate": {"status": "FAIL_BASELINE_DEBT", "over_limit": 52, "dependency_errors": 2, "cycles": 8, "api_errors": 0, "exit_code": 1}
+  },
   "origin_develop_sha": "b2de2bb8ccc533aa0b0ecb7dd2a798a4fcdf709a",
   "jobs_source_sha": "713949fb752b90601e007812ebf2bd765da5ad52",
   "v2_source_sha": "c0c6d0e956c9283f0c05f25b799e1b1f57ecb240",

@@ -4,8 +4,8 @@ Status values remain **NOT VERIFIED** until focused tests pass against the integ
 
 | Area | Required behavior | Current evidence | Status |
 |---|---|---|---|
-| Jobs persistence | Finished Details, workdir, raw details, Files paths, stdout/stderr, Outputs, profile/job identity, safe migrations and tombstones | Jobs tests identified; not run on integration yet | NOT VERIFIED |
-| Jobs history | Reopen old jobs, retain cached accounting, ordering/hide settings | Jobs history and wx Jobs tests identified; not run | NOT VERIFIED |
+| Jobs persistence | Finished Details, workdir, raw details, Files paths, stdout/stderr, Outputs, profile/job identity, safe migrations and tombstones | At `c1d8e66f`: 45 focused tests passed; synthetic v2 migration, scoped records, tombstones, bounded/redacted snapshots, path fallback and selected identity covered | PARTIALLY VERIFIED; UI restoration remains |
+| Jobs history | Reopen old jobs, retain cached accounting, ordering/hide settings | At `c1d8e66f`: parser/workdir provenance and history service tests pass; stale accounting UI cache remains for wx Jobs wave | PARTIALLY VERIFIED |
 | Jobs deletion | Delete Details is local-only, multi-delete scopes targets, Cancel Job stays distinct | `test_wx_jobs_bulk_delete.py`; not run | NOT VERIFIED |
 | Async Jobs | Refresh/reconnect preserve selected job and reject stale async results | controller/provider/status tests identified; not run | NOT VERIFIED |
 | wx Jobs | Details/Files/Outputs selection and event lifecycle | wx Jobs suite identified; not run | NOT VERIFIED |
