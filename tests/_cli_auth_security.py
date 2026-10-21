@@ -6,6 +6,7 @@ from _cli_test_support import (
     pytest,
     run_cli,
     SSHConnInfo,
+    _isolated_cli_config,  # noqa: F401
 )
 from _cli_profile_commands import _profile_args
 

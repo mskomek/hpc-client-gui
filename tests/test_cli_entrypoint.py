@@ -10,6 +10,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from _cli_test_support import _isolated_cli_config  # noqa: F401
+
 from hpc_gui.cli.main import _normalize_alias_argv, _parser, _run_script, _run_sh, run_cli
 from hpc_gui.cli.session import CLIConnectionError, CLISession, build_ssh_conn_info
 
