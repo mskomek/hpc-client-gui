@@ -304,6 +304,7 @@ def test_profile_created_through_visible_add_dialog(monkeypatch):
 def test_closed_port_connect_fails_visibly_without_connected_state(monkeypatch):
     """NEG-W15-SAFE-FAILURE: refused connect ends FAILED, never connected-looking."""
     from hpc_gui.config import storage
+    from hpc_gui.core.i18n import t
     from hpc_gui.wx_connection import build_connection_panel
 
     _fresh_env(monkeypatch)
@@ -353,7 +354,7 @@ def test_closed_port_connect_fails_visibly_without_connected_state(monkeypatch):
             texts = [c.GetLabel() for c in find_status(host)]
             if (
                 model.controller.state.value == "failed"
-                and any("ail" in text or "ailed" in text for text in texts)
+                and t("connection.status_failed") in texts
             ):
                 label = texts
                 break
@@ -380,6 +381,7 @@ def test_visible_connect_drives_controller_to_connected(monkeypatch):
     What this test does NOT prove: real network authentication.
     """
     from hpc_gui.config import storage
+    from hpc_gui.core.i18n import t
     from hpc_gui.wx_connection import build_connection_panel
 
     _fresh_env(monkeypatch)
@@ -392,6 +394,7 @@ def test_visible_connect_drives_controller_to_connected(monkeypatch):
         host = build_connection_panel(
             frame, profiles=storage.load_profiles(), connect=lambda p: {"connected": True}
         )
+        model = host._wx_connection_model
 
         boxes = []
 
@@ -420,7 +423,10 @@ def test_visible_connect_drives_controller_to_connected(monkeypatch):
                 if isinstance(node, wx.StaticText):
                     texts.append(node.GetLabel())
                 stack.extend(node.GetChildren())
-            if any("onnected" in t and "isconnect" not in t and "onnecting" not in t for t in texts):
+            if (
+                model.controller.state.value == "connected"
+                and t("login.status_connected") in texts
+            ):
                 ok = True
                 break
             time.sleep(0.1)
