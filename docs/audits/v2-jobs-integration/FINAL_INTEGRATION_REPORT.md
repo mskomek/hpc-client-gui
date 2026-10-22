@@ -12,7 +12,7 @@
 - Source fingerprint SHA-256: `bbfbbfad02d5d3b0a2ae7acd143c49ae62349b8136b1bf766c7bd85f729bdbef` (1,516 tracked files; 23,440,549 bytes).
 - Jobs source: `713949fb752b90601e007812ebf2bd765da5ad52`; V2 source: `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240`.
 - Each successful wave has its own source commit. The final WAVE 12 code changes are `e888745396bab2a9c3f1be8e4333fab729ede79f` and `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913`.
-- The local `develop` worktree was safely fast-forwarded through the code commits without conflicts. A separate documentation-only checkpoint is being committed and fast-forwarded locally. `origin/develop` remains at its pre-integration SHA; nothing was pushed.
+- The local `develop` worktree was safely fast-forwarded through the code commits without conflicts. The documentation-only checkpoint was also fast-forwarded locally. `origin/develop` remains at its pre-integration SHA; nothing was pushed.
 - The main user checkout `D:\Projeler\hpc-client-gui` and its existing changes were preserved. The 173-file V2 WIP snapshot was preserved unchanged.
 - No remote branch mutation, PR, release, or GitHub Actions run occurred.
 
@@ -44,15 +44,17 @@ Representative WAVE 11 facade reductions: `ui/main_window.py` 1,182→331 lines;
 | Final integrated source SHA | `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913` |
 | Jobs / V2 source SHAs | `713949fb752b90601e007812ebf2bd765da5ad52` / `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` |
 | Completed waves | 00–11 complete; WAVE 12 code complete, acceptance blocked |
-| Local develop | All integration code fast-forwarded; docs-only checkpoint follows |
+| Report checkpoint | Separate documentation-only checkpoint, fast-forwarded locally after code integration |
+| Local develop | Code through `f6eb59c0` plus documentation checkpoint fast-forwarded locally |
 | Unmerged integration code | None |
 | Python files over 500 lines | 52 initially; 0 finally |
 | Changed Python paths / added Python files | 376 / 238 |
 | Added application modules | 142 |
 | Jobs behavior retained | Persistent records/history, old completed-job reopening, job/profile identity, workspace selection, Details/Files/Outputs context, targeted Details deletion, async job routing, and reconnect context covered by the wave regression suites |
+| Test PASS/FAIL/SKIP | Ubuntu full acceptance runner: 2,639 / 0 assertion failures / 210 skipped (exit 5). Per-run focused counts are in TEST_MATRIX; overlapping suites are not summed. Windows SFTP showed 2 failures and terminal bridge timed out after `.F` |
 | Ubuntu acceptance | `BLOCKED_ENVIRONMENT`: wxPython unavailable; full runner exit 5 |
 | Windows acceptance | `BLOCKED_TIMEOUT` with unresolved SFTP and terminal-bridge results |
 | CI / release artifacts | GitHub Actions NOT RUN; no source-matched release artifact built |
 | Final verdict | `INTEGRATION_CODE_COMPLETE_ACCEPTANCE_BLOCKED` |
 
-All WAVE 00–12 source commits listed in the wave records are local and integrated into `develop` through the source checkpoint. The report checkpoint is a separate local documentation commit. No commit was pushed.
+All WAVE 00–12 source commits listed in the wave records are local and integrated into `develop` through `f6eb59c0`. A separate documentation-only checkpoint is also on local `develop`. No commit was pushed.

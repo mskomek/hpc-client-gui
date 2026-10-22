@@ -1,6 +1,6 @@
 # V2 + Jobs Integration Checkpoint
 
-Status: **WAVEs 00–11 complete; WAVE 12 code complete, release acceptance blocked**. Integration code is on `codex/integration/v2-jobs-staged-20261021` and has been fast-forwarded to local `develop` through code commit `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913`. Final documentation checkpoint is being recorded separately. No remote branch was changed.
+Status: **WAVEs 00–11 complete; WAVE 12 code complete, release acceptance blocked**. Integration code is on `codex/integration/v2-jobs-staged-20261021` and has been fast-forwarded to local `develop` through code commit `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913`. Final documentation was committed separately and fast-forwarded locally. No remote branch was changed.
 
 The final source gate is bound to tree `450c1d0ddb079122d5aa3efc90516bead03f0797` and fingerprint `bbfbbfad02d5d3b0a2ae7acd143c49ae62349b8136b1bf766c7bd85f729bdbef`. Ubuntu-Test r33 reports zero global architecture violations across 1,015 Python files and 1,041 shared LOC entries. Release acceptance remains blocked by Ubuntu wxPython availability and unresolved Windows portable-suite results.
 
