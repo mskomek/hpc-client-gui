@@ -72,7 +72,7 @@
     },
     "scripts/check_source_architecture.py": {
       "loc": 405,
-      "sha256": "541d780caee7ace67a5af1151f0104b9489f68de48aa5d69dca81dd0c60c2e99"
+      "sha256": "29c1a8dd6f8a66193b7c52cfd41ea94540ba20bf51c2d3af35f1286620bbf29f"
     },
     "scripts/check_test_taxonomy.py": {
       "loc": 279,
@@ -96,15 +96,15 @@
     },
     "scripts/ftp_transfer_stress.py": {
       "loc": 471,
-      "sha256": "54bf2a1c428f0224b81b7a5beb840f19ef3018b96e02930b501bdfc5b692dfd2"
+      "sha256": "b9892785c72389e314627ad377988fc84be6395438157515ab3dcc50fdd2dde4"
     },
     "scripts/ftp_transfer_stress_cleanup.py": {
       "loc": 22,
-      "sha256": "ed4bd18cd6757d8751a6455baf2a55670b90b2525c8d2056b9acd89401a2d180"
+      "sha256": "c97c51a17e4e2021c340d141a843289f9b7ee30d9db700fe61cddb595385b4d4"
     },
     "scripts/ftp_transfer_stress_metrics.py": {
       "loc": 39,
-      "sha256": "55e5c433bd917fb46142cf7d9d112a63932350fe32b1b8c47007bdab859fa82d"
+      "sha256": "74f8fd2ec64004ae8bbb1cb5014cc82c9bc47984001f5281e4abebaad50344e9"
     },
     "scripts/generate_current_gui_manifest.py": {
       "loc": 116,
@@ -200,7 +200,7 @@
     },
     "scripts/source_architecture_api.py": {
       "loc": 56,
-      "sha256": "029e4364e577aee7f47f727110e1144afb6337d765cb1ab30e294b6295146170"
+      "sha256": "65b31f1328c5210d44db4772a2cddcb63da4168ec1d4e1295e86b8c76848b09d"
     },
     "scripts/sync_version.py": {
       "loc": 51,
@@ -252,7 +252,7 @@
     },
     "src/hpc_gui/_wx_connection_worker.py": {
       "loc": 333,
-      "sha256": "8b9d190350489a5576f93080e68f410a10bc88a54338430026d07e4b03e50f86"
+      "sha256": "589cc874a8008d689145c673b21afd828e86d978a0cca65c9cf2f5754a070855"
     },
     "src/hpc_gui/_wx_editor_documents.py": {
       "loc": 222,
@@ -260,7 +260,7 @@
     },
     "src/hpc_gui/_wx_editor_find.py": {
       "loc": 194,
-      "sha256": "6cc73bc7c9ef2b29c7d501af89b29bccd5d7a5838f5a93a64ca6f66c268790ec"
+      "sha256": "e54878ab78c3c610259982b34f48ecd7627468653f9adb43dfcc934680ba5fa5"
     },
     "src/hpc_gui/_wx_editor_save.py": {
       "loc": 388,
@@ -268,27 +268,27 @@
     },
     "src/hpc_gui/_wx_plugins_view_builder.py": {
       "loc": 496,
-      "sha256": "b16e9e7d551431abbdea9788e08c3b96171cef434481eb42c6505baac32f7afc"
+      "sha256": "9ae3db9ea05be38fa77cf5495855553b858fb2381688fd7f522024f596a9a45b"
     },
     "src/hpc_gui/_wx_plugins_view_shared.py": {
       "loc": 87,
-      "sha256": "132cfefe1b095416258778594479642d1c004cc3fe18277690cfd11c654cad58"
+      "sha256": "9a5bd66bfcf0a6418035b6cf02cf2cb4a38b783a28fa84bda7e559ca5ea22ea2"
     },
     "src/hpc_gui/_wx_transfer_common.py": {
       "loc": 163,
-      "sha256": "c390ef572fe424461311d6a7d79b49b16813b649d46f2bab75e226d7baa14014"
+      "sha256": "cd1895b2bc978c21e661f310eccf4cee8f4fb98d76bc9b0d61484fb0191a13f5"
     },
     "src/hpc_gui/_wx_transfer_conflict.py": {
       "loc": 150,
-      "sha256": "1be1b35e6b69f8d79feb7f8cd99b40a2b4053974ce71d4b94548c29c983aef9f"
+      "sha256": "cdb471eda075dbd59069e55614f2fbcc5668c1c1c02b998ced5dbcf446c28449"
     },
     "src/hpc_gui/_wx_transfer_detached.py": {
       "loc": 154,
-      "sha256": "8a64305ac1c8b21fbf1579e1fcdcf487d60df3b418c1ee60c9be6480090f65ef"
+      "sha256": "280458c7b321af9a8a2339e357765535e28ff77a39c326bebb09cfa649c0ddf9"
     },
     "src/hpc_gui/_wx_transfer_embedded.py": {
-      "loc": 316,
-      "sha256": "07457b3d4d5b7ad5fde29a1d08dc61696ccbc33e15c58d79a166ab6cd35ef869"
+      "loc": 320,
+      "sha256": "885286970663c874b3441c63fddabdb8c97ad657d02ef6e25cdeffdbe728d706"
     },
     "src/hpc_gui/_wx_updater_actions.py": {
       "loc": 189,
@@ -328,31 +328,31 @@
     },
     "src/hpc_gui/cli/_contracts.py": {
       "loc": 13,
-      "sha256": "abc37d7c4f6afaabb770e9409bab9c679fffac27f2687288fb6adda54caace6d"
+      "sha256": "c91fa6bc76535f1d022e3879bf5580f0770a939a14fc6bf4a305c2d526bd792d"
     },
     "src/hpc_gui/cli/_doctor_commands.py": {
       "loc": 75,
-      "sha256": "d96c32e58f6e942f088935457768e0b7502f1a802f20c94b7f0601d35ec58fcc"
+      "sha256": "3459f4fa557295f5d385131d7ea2495ce1bf07ed3a567e6582b0194e88f8b4c1"
     },
     "src/hpc_gui/cli/_file_commands.py": {
       "loc": 130,
-      "sha256": "853b762412117bdf4cf93b6991e6d17329a2a24db2929f985d427397531036b1"
+      "sha256": "5c5a78e308a6f2d81c4a07c6bcf499351c38658f67a7be71619674ed14852d39"
     },
     "src/hpc_gui/cli/_job_commands.py": {
       "loc": 82,
-      "sha256": "0fb6e9e769edf531c06fa46844fef55b0c23849c7abd148194c9faf9848c5293"
+      "sha256": "a2bc09727cabca4dd6c226372a56898d63f67e3ea8b651bd98328547e751ea73"
     },
     "src/hpc_gui/cli/_parser.py": {
       "loc": 221,
-      "sha256": "c3970e9ec4e22760d9a20fb2fc44a76788660994508fc3249c555d1609ba0496"
+      "sha256": "246207bcb6bd8f56ec001817e3d04304bd296dd2d81793df0cec4e108f6160b9"
     },
     "src/hpc_gui/cli/_profile_commands.py": {
       "loc": 112,
-      "sha256": "e9e37edd55b41e264443f1f2a6d89f522d272de052510a0de3d9193097d590b5"
+      "sha256": "eb17b2ccaa6d682590dcefa1fdf4e9d925c78b1f3eeab3dddb9d5eb1593d2ca8"
     },
     "src/hpc_gui/cli/_remote_commands.py": {
       "loc": 175,
-      "sha256": "bd08c3c62516d1598d7c358a738712b916d58310b7e58a194aa55f8d1d2bf9e3"
+      "sha256": "411dbf3cf2ce549809af148158aba267af943cc5ab0d2be9e02cbd77c7f230a7"
     },
     "src/hpc_gui/cli/_shared.py": {
       "loc": 154,
@@ -376,7 +376,7 @@
     },
     "src/hpc_gui/cli/main.py": {
       "loc": 190,
-      "sha256": "c2264b49ad8959c3d9789ae475291a7f8ac9c85e7713bdb497d1babd2c07a346"
+      "sha256": "118b039b86734a5421f4d5cf99ff2a485c71f20850d06170d458967e5b2bd7fc"
     },
     "src/hpc_gui/cli/session.py": {
       "loc": 269,
@@ -392,19 +392,19 @@
     },
     "src/hpc_gui/config/_storage_core.py": {
       "loc": 174,
-      "sha256": "c018ef609ab386b8cce02cd0d3a8a21e1d1d53d8933df32269118f46c4b4c008"
+      "sha256": "e18394f28ab1e4f2947e02d3a4062421595f042a9afbc6f35c459c696989522b"
     },
     "src/hpc_gui/config/_storage_preferences.py": {
       "loc": 406,
-      "sha256": "276160fc716cd648b1baaa05d3d4954eb5c6fcaa7a24137b0269bf143eb58967"
+      "sha256": "025c13c933a515f192261d5e535f412d168152e68499374db88b16b0e1fb2ae7"
     },
     "src/hpc_gui/config/_storage_profiles.py": {
       "loc": 130,
-      "sha256": "21fb81f3114860d48d55f69d3414fb61c819624c2289b4a6126b6a116e44cdca"
+      "sha256": "861d3bd1b53a8f2a2c27993c0cda7d3bd251c1b46e17a811cd80a9c72a052dcb"
     },
     "src/hpc_gui/config/_storage_window_state.py": {
       "loc": 127,
-      "sha256": "56d602f08a44eacda1eb270c257a9387df48c20d470a87345533ae7ad8aa9925"
+      "sha256": "9d6498172e33d39d6d2711eb97ae1ced5c5b856943b5a74c9903ab680ce7b444"
     },
     "src/hpc_gui/config/file_manager_profile.py": {
       "loc": 107,
@@ -420,11 +420,11 @@
     },
     "src/hpc_gui/config/profiles.py": {
       "loc": 18,
-      "sha256": "37d8aaad3386d19c444daa523b4494071154845934f5f69ac0a5d81553101d14"
+      "sha256": "08c59ef2b3a5b5b13b8503378e0426710b7971b431252f6af29ca600e278408a"
     },
     "src/hpc_gui/config/storage.py": {
       "loc": 233,
-      "sha256": "483d66d5b9a2c124dfe71e10645b05b5a0217338a747d452516929b917e114fe"
+      "sha256": "21050b811ef0f492694dcd2042dad7b69b6f212ccc756ccbc2c7be5b920fbc17"
     },
     "src/hpc_gui/config/system_profile.py": {
       "loc": 224,
@@ -628,27 +628,27 @@
     },
     "src/hpc_gui/plugins/_manifest_validation.py": {
       "loc": 254,
-      "sha256": "fd1db35cd86d0f3b4e7ac8f156f1343961d73338649bc2a569151e75798fdcb0"
+      "sha256": "231497aebfa0ca6269bb20a617483a735bff4021f2f60843213243e3e8c0e311"
     },
     "src/hpc_gui/plugins/_profile_validation.py": {
       "loc": 215,
-      "sha256": "2da73c2a123ca55c3cc8f73e8ec8081dcd8114a8e6262df14009df411994d35f"
+      "sha256": "14f3e221faa470d6c62a1ab5ef5439dcfa492e1262ba878115ed8afa0892ac74"
     },
     "src/hpc_gui/plugins/_registry_validation.py": {
       "loc": 80,
-      "sha256": "d4ce1f8eaf180c43dcd448cf3717e1d7675e3f0495858ba96628e00747cc0063"
+      "sha256": "f524ea57f598915004ba4f8aadee3f52cdea5ffcd9eb4c9859877ed65d222b63"
     },
     "src/hpc_gui/plugins/_ui_contribution_parser.py": {
       "loc": 295,
-      "sha256": "b4ca03ea76cb156c08b938064f916c60cd57966440f8596469c4f8bd98c45ca5"
+      "sha256": "eba89b3b1f44c63d6bcb2564eb8b92beffd704748649c7f7ab2fa98efaa4eb26"
     },
     "src/hpc_gui/plugins/_ui_contribution_shared.py": {
       "loc": 210,
-      "sha256": "1438d74d0c39f3d4c9977ca9dc4e3ceab3d1223964e34319c5e7455ee6868896"
+      "sha256": "06887517f6b891986dfe3888e749607405da4474a619d45a8442a28d65fbd8ff"
     },
     "src/hpc_gui/plugins/_validator_contracts.py": {
       "loc": 150,
-      "sha256": "c6e5604c311c5836f081d715584dbc161a418a9ce1d67256636a4a1c0b11ecfd"
+      "sha256": "71d11ceddc83f97de44183af17324da46f50b60a8e280120fb9813710df14270"
     },
     "src/hpc_gui/plugins/compatibility.py": {
       "loc": 328,
@@ -664,7 +664,7 @@
     },
     "src/hpc_gui/plugins/installed_state.py": {
       "loc": 67,
-      "sha256": "77a2353dab132f3eee358835edc848c449b5c8806501b068445ef873e56ba28a"
+      "sha256": "197f84248b975878ef18bd21d0bd425b8c52b59619ab525a18b11b3f0c7b6387"
     },
     "src/hpc_gui/plugins/installer.py": {
       "loc": 451,
@@ -728,11 +728,11 @@
     },
     "src/hpc_gui/plugins/ui_contributions.py": {
       "loc": 234,
-      "sha256": "2bba4a0c30e8fea7df2a9531ae548f099327f13606f4c944870b1a5fb597f90e"
+      "sha256": "3c45285abe0c9a397931d79fa3c36f43603a1139015222558f45b249e56678bb"
     },
     "src/hpc_gui/plugins/validator.py": {
       "loc": 103,
-      "sha256": "e5f76654859a7537a4118177612caac2ab54a4bf0e8102f6150d9fa78bba2ef5"
+      "sha256": "0c3423018458fd008927352711e144f034ca2bc1acf3d69397a0bf3fec17de24"
     },
     "src/hpc_gui/runtime.py": {
       "loc": 3,
@@ -756,7 +756,7 @@
     },
     "src/hpc_gui/services/app_updater.py": {
       "loc": 488,
-      "sha256": "560aa33b90c93a1be677a26531c3b06533ad001da714656921b0f292862e6c80"
+      "sha256": "ef3a028b99668814db480b0122bec082dd72e28aafe6af4818c649abd8f1b7d0"
     },
     "src/hpc_gui/services/capability_report.py": {
       "loc": 79,
@@ -792,7 +792,7 @@
     },
     "src/hpc_gui/services/connection_auth_policy.py": {
       "loc": 74,
-      "sha256": "8d4e7b71f9b04287c2080910e65cec40b58b9ad2e2605e76fce8556773677bad"
+      "sha256": "291a41fccc190f74234e0d8797e3dcb7f8156661bb4edfcc5299d5891dd48c4c"
     },
     "src/hpc_gui/services/connection_controller.py": {
       "loc": 122,
@@ -1036,7 +1036,7 @@
     },
     "src/hpc_gui/services/quota_contracts.py": {
       "loc": 21,
-      "sha256": "87cfe6a186557d158f02daf45590227d37005b35df887907fcf7648c6edb5540"
+      "sha256": "af0f03bc3e7a6f50503b401d847cb802b328dc0e971028b3df415f23cdd77ba8"
     },
     "src/hpc_gui/services/quota_monitor.py": {
       "loc": 155,
@@ -1212,7 +1212,7 @@
     },
     "src/hpc_gui/ssh/command_runner.py": {
       "loc": 59,
-      "sha256": "06e82d3468984674abc6c202368b474df2f1408a3d36f72ae4579dbc4abda280"
+      "sha256": "5a7963e7bc4eec4edd4085171dca854c266847e4390a8eb3ad59e134b1df23e3"
     },
     "src/hpc_gui/ssh/contracts.py": {
       "loc": 72,
@@ -1252,23 +1252,23 @@
     },
     "src/hpc_gui/ui/_main_window_contracts.py": {
       "loc": 18,
-      "sha256": "c2125e2abb1343b5fcb8bae06a9f7159a0d5e749c261788e839bb2cdc7eef590"
+      "sha256": "e7f65080e6b838628d97b395ab09cd1112a774b9e6cc962c582a72721abb2fff"
     },
     "src/hpc_gui/ui/_main_window_menubar.py": {
       "loc": 288,
-      "sha256": "d403fd4df71a75fc6e4628b70d5665ebbc903bf9ac3b7d11665a7aad2e8b9e5d"
+      "sha256": "6df714a562c836c8d4dc580639b62ca41cea357bafc40efe9eb0134de63127d6"
     },
     "src/hpc_gui/ui/_main_window_plugins.py": {
       "loc": 282,
-      "sha256": "188e179deaffd40c4c570b6710b03f12b4e1e4d045b244a66ebd3f50b9a520b1"
+      "sha256": "b96fc2b9d19a69d2520215a980925f123d9d0af0d8f0b913ea687f7e0308a1c9"
     },
     "src/hpc_gui/ui/_main_window_updates.py": {
       "loc": 273,
-      "sha256": "8e1827a52cc3f0272a231830dfcf70637f6f4a89562d8627f48accb2859ac2b5"
+      "sha256": "210325471ffaa80b74ab1786a180a035016590cef4894bd31aaa27f8a5b1d15b"
     },
     "src/hpc_gui/ui/_main_window_workspace.py": {
       "loc": 303,
-      "sha256": "9bf4704ca75714b58f037c6a78badf1ed474df312473a64ca00303a7c68628d6"
+      "sha256": "fa813754d203f8a4e044d64ad748bdbca59167080d2258679d84199b15570686"
     },
     "src/hpc_gui/ui/async_call.py": {
       "loc": 34,
@@ -1348,15 +1348,15 @@
     },
     "src/hpc_gui/ui/dialogs/plugin_manager_cards.py": {
       "loc": 472,
-      "sha256": "eb2b2533608289bf1e6513a5892bf379c3dcb1f70275f9c6fe5e9b5b23420d54"
+      "sha256": "79272c9b60870db0b1e076d1fde0ee786599600f91e86c06955d87484e264a54"
     },
     "src/hpc_gui/ui/dialogs/plugin_manager_dialog.py": {
       "loc": 500,
-      "sha256": "4b7deff31f172237c39940ef4224045e316e63bff3b051b0c18dfbc428c0e4ed"
+      "sha256": "36c78ed0e919960035f30434dfd590203f7bf0a88174dfcefb229f40caac43af"
     },
     "src/hpc_gui/ui/dialogs/plugin_manager_state.py": {
       "loc": 279,
-      "sha256": "7825ad131b36f8f8f1cf3642cdd33b1dccad47951084e3a09b8a18eb6f044b33"
+      "sha256": "9334ec53ae50e4f11474e9c8425460109d974dc21f71a04eaaaac057817f4a6f"
     },
     "src/hpc_gui/ui/dialogs/quick_tour.py": {
       "loc": 211,
@@ -1384,7 +1384,7 @@
     },
     "src/hpc_gui/ui/dialogs/transfer_dialog.py": {
       "loc": 273,
-      "sha256": "e45a6e6c559a11fabd6083b2f14373165d338b0e45b30105c0b71c968c28f284"
+      "sha256": "35f776d541251025ae1ac9df78a102870d4223ec0b2276e61b35240e192422bb"
     },
     "src/hpc_gui/ui/dialogs/welcome_dialog.py": {
       "loc": 48,
@@ -1396,7 +1396,7 @@
     },
     "src/hpc_gui/ui/main_window.py": {
       "loc": 364,
-      "sha256": "4682b1ebb277bd9ff4de3e3ddc771379f5dc6b3438256b792766585561df12b2"
+      "sha256": "e233c2c4f45a5bb3836428dc8fcc8bc5446b5aa5a373d4cab21ff5b598fe5373"
     },
     "src/hpc_gui/ui/models/__init__.py": {
       "loc": 1,
@@ -1424,11 +1424,11 @@
     },
     "src/hpc_gui/ui/widgets/_fm_dnd_contract.py": {
       "loc": 40,
-      "sha256": "7eda348d237736cc55dac2b7d1b729e6f12953a4e869dc7ecb2631394f4c0905"
+      "sha256": "96a62eb6697d4094930a499ef241b7a279d4664bf7a8a5a724ff17c7347d035e"
     },
     "src/hpc_gui/ui/widgets/_ftp_activity_menus.py": {
       "loc": 234,
-      "sha256": "5495281007ed8be829ebff7d7e849a10b21bc52eef73e1f257e2b15e3d9bff2c"
+      "sha256": "99c01996ab037b2565411a107c28d4ed96b44b42d15c4c160687a9073b8759df"
     },
     "src/hpc_gui/ui/widgets/_ftp_activity_sync.py": {
       "loc": 346,
@@ -1440,7 +1440,7 @@
     },
     "src/hpc_gui/ui/widgets/_ftp_comparison.py": {
       "loc": 148,
-      "sha256": "8c9c9e0ddca3de5c5553966a1a74a5411a34c903f8fd76eb8fa5e3ad67fd2aac"
+      "sha256": "671bdcade2eeb473ebc74c771a0d84efb04cd3b1065d0170820387c4cae11dc5"
     },
     "src/hpc_gui/ui/widgets/_ftp_session.py": {
       "loc": 199,
@@ -1448,11 +1448,11 @@
     },
     "src/hpc_gui/ui/widgets/_ftp_sync_browsing.py": {
       "loc": 246,
-      "sha256": "4a36fb967f4e1748f9eaa31bbb0f31c3eb8c4af25cbff7c3ada076d9642e5251"
+      "sha256": "b62ac8b6f4e1e52e4d721cc4c814b08e749331b353c960ef29d08e0af06bab8e"
     },
     "src/hpc_gui/ui/widgets/_ftp_transfer_actions.py": {
       "loc": 183,
-      "sha256": "e42ee660932ae50e538c3d99680cd0543607bc42cc23e443776d181e1b08df84"
+      "sha256": "712a7a3cf26ab33c8489493672d39b8b50d0a7d413be322b99abdd8373a2e92e"
     },
     "src/hpc_gui/ui/widgets/_jobs_output_follower_views.py": {
       "loc": 427,
@@ -1460,31 +1460,31 @@
     },
     "src/hpc_gui/ui/widgets/_jobs_output_follower_windows.py": {
       "loc": 32,
-      "sha256": "8010546d3ad433bbbde6ef855e84390821973dfaedd20d088fd7955bd511eeee"
+      "sha256": "9fd6ddd60d12e4681acca7c9374bf37e4d2cc27cfd37a2e69a97716fc0b93e60"
     },
     "src/hpc_gui/ui/widgets/_jobs_output_rendering.py": {
       "loc": 84,
-      "sha256": "5b1333458a87934b3318766d21ef61588087ed7579ecb352a7510c1f00c67da4"
+      "sha256": "9ae0b1274ac742d755bf90cf8da208d3e6d2d284733cf7d113bf07f0a3b9f3f1"
     },
     "src/hpc_gui/ui/widgets/_jobs_output_text.py": {
       "loc": 105,
-      "sha256": "a18735837046401d15cfca66a6970854fee3ead0ada70147cc5e77334a116ace"
+      "sha256": "02ddd753ac2c2d9f60307a0b9a8b81534e0b3f268dc71208c84a62fbe14e3af1"
     },
     "src/hpc_gui/ui/widgets/_jobs_outputs_followers.py": {
       "loc": 313,
-      "sha256": "397fd3261a843e0c5f4977863fd9ef00eefca56cd7e5eb561708f17e83b8e07a"
+      "sha256": "de963105f2f4756ecec8fed633455334ba30845dc1d4ad38a60911cbb74a9001"
     },
     "src/hpc_gui/ui/widgets/_jobs_outputs_jobs.py": {
       "loc": 215,
-      "sha256": "5b7a045508ad03049fc19b3686ff4fd72950fb4a3382fd81ceb36c55fa5a159f"
+      "sha256": "f1092b305784fa7f3fe2803a4f7a454eaa2c0a769611ee610dcf406e3985c8bd"
     },
     "src/hpc_gui/ui/widgets/_jobs_outputs_lifecycle.py": {
       "loc": 286,
-      "sha256": "934bb333d518bbc5ded0970080a7ac8d277c8693ac79d8b894fa62c4813a6932"
+      "sha256": "2ca741d0b51554dfa9311906e7cb491ff404af23964d25af9c1e777a8e648588"
     },
     "src/hpc_gui/ui/widgets/_jobs_outputs_live.py": {
       "loc": 246,
-      "sha256": "e167079c0ddc3d6648821d2dac2a0612e801793cd54a6d1b6ee0923d8793b387"
+      "sha256": "5c26be6d353f95e99e535f5f539ed79d6051a7082f4e95d80f32915971303562"
     },
     "src/hpc_gui/ui/widgets/_local_context_menu.py": {
       "loc": 184,
@@ -1496,7 +1496,7 @@
     },
     "src/hpc_gui/ui/widgets/_local_lint_tools.py": {
       "loc": 278,
-      "sha256": "385da141b5b2a44a8ddce3a97a3d8375fe9af8bf82d34cd3339ce318c63e2cba"
+      "sha256": "2f44f47fcc5d85cbfcbfe0d0bc4af5bed2bfe1166873f5e0054c684bc5dedffa"
     },
     "src/hpc_gui/ui/widgets/_local_tree.py": {
       "loc": 292,
@@ -1504,39 +1504,39 @@
     },
     "src/hpc_gui/ui/widgets/_login_compat.py": {
       "loc": 124,
-      "sha256": "8c32c622eacff068ac45ae93e0abffec0a5525792af1af75fc3923f79f516513"
+      "sha256": "02171475ff00ab13c3eaef5a8a68838fd28377f174c43eb53f0f6fa7ea158752"
     },
     "src/hpc_gui/ui/widgets/_login_connect.py": {
       "loc": 455,
-      "sha256": "6b6b5e5a31afa0242f2db9046556b0273629558637065adc19eef775203f4af0"
+      "sha256": "7b69697dddc43d5adb41b6fe23729b97acb9ebcb45fd156c86c2479866f5e8e0"
     },
     "src/hpc_gui/ui/widgets/_login_connection_worker.py": {
       "loc": 197,
-      "sha256": "119d64e08f707ba5bfb34a99612d64e72686760c9bd371da70e513d160f5ec1b"
+      "sha256": "795301d5a39fad7c6e63d8ad539716138538df9e5efb0706d826faa112f39251"
     },
     "src/hpc_gui/ui/widgets/_login_ftp_mode.py": {
       "loc": 21,
-      "sha256": "226dac735caaa5c19d6f07fb15aeec874c3c2bc11b65ccbb603a996015d3278a"
+      "sha256": "806e656cb989d4f2824451257551e0dbbd4aeb0c21ce3655067401ca399dfbc1"
     },
     "src/hpc_gui/ui/widgets/_login_profile_store.py": {
       "loc": 198,
-      "sha256": "9c87b9201299038b75609758db5a7f4815d56cbfbcbb5112bbc0e19c0a4289dc"
+      "sha256": "f12d566c5da641f97d64690c02640713da62f7ccf72c039f115def29517ed403"
     },
     "src/hpc_gui/ui/widgets/_login_profiles.py": {
       "loc": 318,
-      "sha256": "285a2e2deeff6c894236af36fc08dc1b6c1a3fef3359f18ab647954bf2401be5"
+      "sha256": "3d742a58cb61d97196153f1919c7d5940269347732cdc2c0d605d73b0c777556"
     },
     "src/hpc_gui/ui/widgets/_login_retranslate.py": {
       "loc": 39,
-      "sha256": "38c87328affa07b3197d7687cc5a1a683ec4ffe855b4e48fe42c129155608742"
+      "sha256": "49c6b0cb00734db70826d276f4e28bfa7391f9af657813563f6e9c571285ca2b"
     },
     "src/hpc_gui/ui/widgets/_login_secrets.py": {
       "loc": 200,
-      "sha256": "f42e02158c8ed8ada991b03884baf9d0e26a31db83cd2bc67e1865ee40e11577"
+      "sha256": "d0c0176cdd3bd761563fed25bb9960564fa8a90ddbbca22be83dd67a7ffd3705"
     },
     "src/hpc_gui/ui/widgets/_login_terminal.py": {
       "loc": 238,
-      "sha256": "3fd2f3a582b334e1f84bcfd6a78ed65304bf589e3f47714a50a0720d941adc1b"
+      "sha256": "e06a290952c91f6bbfffc7a6132cda35a6b168540a6df40a8b7966c71e1647f4"
     },
     "src/hpc_gui/ui/widgets/_remote_context_menu.py": {
       "loc": 486,
@@ -1552,7 +1552,7 @@
     },
     "src/hpc_gui/ui/widgets/_remote_metadata.py": {
       "loc": 156,
-      "sha256": "3c3f45b0f203046a6bf7b1259da63affeac4b6875b9b219a5aebf4827d11ccd9"
+      "sha256": "33103b54926fce7f016cc8b3e0cf246bea8793ea68b6ff487c9741f91f9695c5"
     },
     "src/hpc_gui/ui/widgets/_remote_mutations.py": {
       "loc": 427,
@@ -1568,7 +1568,7 @@
     },
     "src/hpc_gui/ui/widgets/_remote_transfer_copy_move.py": {
       "loc": 153,
-      "sha256": "50072ad4858940a522181fec4794231ab83273e37664c3448c60a5b45d980d1f"
+      "sha256": "1fae4d4b4d0866c3f9910b658fabbd7777259f692351a47a2fba9d9679d1a159"
     },
     "src/hpc_gui/ui/widgets/_remote_transfer_download.py": {
       "loc": 399,
@@ -1584,7 +1584,7 @@
     },
     "src/hpc_gui/ui/widgets/_remote_transfer_progress.py": {
       "loc": 108,
-      "sha256": "f5d4aac4e0c7e7b9a0a43e7c0be3c3315ea64768fb5ec8fecf5dfef035f36673"
+      "sha256": "ee1caca4ef75b02769aa5e82d67009428d164cbe921605b90c56b54a5f6ce9ec"
     },
     "src/hpc_gui/ui/widgets/_remote_transfer_ui.py": {
       "loc": 142,
@@ -1644,7 +1644,7 @@
     },
     "src/hpc_gui/ui/widgets/jobs_outputs_widget.py": {
       "loc": 406,
-      "sha256": "e653408f203c8ce0b1ff7edf6f6422de6ed39c2db9e6cc9c8f1a44a14fffee7e"
+      "sha256": "e9bd2a343d91f272866272e35d526125e45dd85c000172f262526e615589b5af"
     },
     "src/hpc_gui/ui/widgets/jobs_widget.py": {
       "loc": 56,
@@ -1656,7 +1656,7 @@
     },
     "src/hpc_gui/ui/widgets/login_widget.py": {
       "loc": 480,
-      "sha256": "b8b77f07ff40c4ed4ac1d96bb3f26ac5ffb50e1f2c3ec316778645fd68dd953c"
+      "sha256": "1ca4a16ccc46cfd8819f455e9021200d1c7095495f593d2eedd229006fb958d9"
     },
     "src/hpc_gui/ui/widgets/logs_widget.py": {
       "loc": 107,
@@ -1704,7 +1704,7 @@
     },
     "src/hpc_gui/wx_connection.py": {
       "loc": 459,
-      "sha256": "41fb718d46563c3e380896ea7ff09b8d592d860e8f47b0c300130a78fbaac3d4"
+      "sha256": "7349b3c9fbf00de9f1382aa55e2f29bfb2d7970ee0806d1793625fc2b89e2da2"
     },
     "src/hpc_gui/wx_connection_dialog.py": {
       "loc": 262,
@@ -1736,7 +1736,7 @@
     },
     "src/hpc_gui/wx_connection_model.py": {
       "loc": 491,
-      "sha256": "b933b5d630231676f8277d7767effe22cf05d0dd1607dcf52257c21d8a98a6bb"
+      "sha256": "def9c9730e497326e3cf05269a427712735904c3c76a01e5cb46493e0d108901"
     },
     "src/hpc_gui/wx_connection_progress.py": {
       "loc": 120,
@@ -1744,7 +1744,7 @@
     },
     "src/hpc_gui/wx_connection_prompts.py": {
       "loc": 22,
-      "sha256": "c5ee8d858ea0519bdb3ec57dfcf3ad4017c5ba4485062fbc32bc9f30c5d8f855"
+      "sha256": "bbd31980d11ec6f226cf76f26a63aa1754b0261007fba56b1d6b850b898f748b"
     },
     "src/hpc_gui/wx_directories.py": {
       "loc": 64,
@@ -1764,7 +1764,7 @@
     },
     "src/hpc_gui/wx_editor_guards.py": {
       "loc": 52,
-      "sha256": "3db80ea4f7ff05ca8573583ff81d0da75560d18c2aecbb59c7466ab9048aef44"
+      "sha256": "0500940cb276611b515929e8264ff6f5a5f88573a3ee1a2ef9a0c3d205f5dd81"
     },
     "src/hpc_gui/wx_editor_view.py": {
       "loc": 355,
@@ -1848,7 +1848,7 @@
     },
     "src/hpc_gui/wx_plugins_view.py": {
       "loc": 55,
-      "sha256": "109bcc83e5ea54ffb23012ee1a93f2d7d93377066b3cafd5bfde589fc4181ebf"
+      "sha256": "c2405d855cc6ded53cd741361ec7bbcc82af03bd65a9a245e0eef16fc5848229"
     },
     "src/hpc_gui/wx_raw_viewer.py": {
       "loc": 234,
@@ -1927,8 +1927,8 @@
       "sha256": "9a4adc2967b9ae515c0871f689cd91636d856f51a19604336cde1e7c3d0307d7"
     },
     "src/hpc_gui/wx_shell_file_transfer.py": {
-      "loc": 387,
-      "sha256": "346c156be3128666f658ee15f251a4e5c17b192c027503e9eafc2fdbc3cde8c6"
+      "loc": 392,
+      "sha256": "010e017c36bb2626375b9b381b308fc78c36981a2f7d1b8ff0c8633cd3eacc1d"
     },
     "src/hpc_gui/wx_shell_files.py": {
       "loc": 471,
@@ -2100,11 +2100,11 @@
     },
     "src/hpc_gui/wx_transfer_workspace.py": {
       "loc": 232,
-      "sha256": "4da6c649d99a124b5ec95775a85216720f5229807c004d5926a1910ef449763f"
+      "sha256": "f327e86e13d58dc3d24c1d343272fb50b2bb1b829df2ec5ee4ddb763c647c4ad"
     },
     "src/hpc_gui/wx_transfer_workspace_model.py": {
       "loc": 66,
-      "sha256": "558a6c09d9b44626a0f9cba13cb9239e8a5378fdf30a17eda9a68eeb53a54fb7"
+      "sha256": "9e6397c06a8c87f3885b8ea59c64a86b2541fa4c86b2c4a2025e0a98d6560ad5"
     },
     "src/hpc_gui/wx_updater_view.py": {
       "loc": 487,
@@ -2124,15 +2124,15 @@
     },
     "tests/_cli_access_settings.py": {
       "loc": 289,
-      "sha256": "8ebf37c3062adf408c597f0df2589623cfd09aad669681ae80698311c3dee548"
+      "sha256": "cff0496392f447a378aac06f67dea1e80d7550008e4526c31c79e1c901431ad2"
     },
     "tests/_cli_auth_security.py": {
       "loc": 176,
-      "sha256": "61ee0e4d52d7b8d1c76d00f631112ae03b9fa4ae89ba41380e778d87d743e0a2"
+      "sha256": "86f4cc7c7c2308a104bc28666503cfaee8817a116ccad0a84e32c494327c5e46"
     },
     "tests/_cli_connection_diagnostics.py": {
       "loc": 198,
-      "sha256": "0f56adfb5aae296608a88f2cbcf7daf1553cc9b1db89071849b0d8e922007eb4"
+      "sha256": "48be485ae989043b7e04dfc6e90fdb7f9632f1ad00e381b16ae5da5d8dd123e0"
     },
     "tests/_cli_file_commands.py": {
       "loc": 222,
@@ -2148,15 +2148,15 @@
     },
     "tests/_cli_profile_commands.py": {
       "loc": 484,
-      "sha256": "a16b1e8dc2a335526ac36b5413e1c805fd9337acf460e3f220d351dda6f514ec"
+      "sha256": "b8dca9db80791f664d760d6853ccfa8d00201c967650f74feb5a63cb4ad5d468"
     },
     "tests/_cli_smoke.py": {
       "loc": 288,
-      "sha256": "04afc6b9addfae0ee5e1383a4a3e707cdb0d718b725e8c0c312b43ade2d1960a"
+      "sha256": "09828e691e385699df4704e29d941b1216cc1a01887e89864cf4bfa7da77e861"
     },
     "tests/_cli_test_support.py": {
       "loc": 62,
-      "sha256": "9f6b8e62274ced1028cb621a3b3db40827ad669a6ba8845339ecedb2b2cbc080"
+      "sha256": "6ec82551e5d6b857977122afd0bed991c0306b06f60b21291e7964e650fdf206"
     },
     "tests/_cli_transfer_policies.py": {
       "loc": 413,
@@ -2183,36 +2183,36 @@
       "sha256": "9fce0728730a0100f627bbdca659288e2f492e69704a9797ab21aa8bb73f7139"
     },
     "tests/support/mock_ssh_server.py": {
-      "loc": 474,
-      "sha256": "79145d729dd96622f5a93569fe2e48860120ee5f5f74b71309423f8866947469"
+      "loc": 480,
+      "sha256": "58ef1a61046cf6b5b3f9b11608d53943b10329ad10a1fcd5cd867e331a8edc5a"
     },
     "tests/support/test_jobs_outputs_scroll_shared.py": {
       "loc": 34,
-      "sha256": "010e45f1aeb1bc9719bc6a229164696c3928be4643284b1f06dd8a86aa0b26e5"
+      "sha256": "492cd357976ce455d9b2904f4c516d75033cd585c067382b5709953050730b58"
     },
     "tests/support/test_plugin_contract_shared.py": {
       "loc": 91,
-      "sha256": "c81279e6df54dfdd1fb2828da986f92765d0935519d3079e77dcb676640b7507"
+      "sha256": "264dbf638a2e2407420cd546fdf657e80fb99d95c38a20770f0e1b5a58d9c3eb"
     },
     "tests/support/test_plugin_installer_shared.py": {
       "loc": 184,
-      "sha256": "7e90b96099122216efeb4ed400ba744a74b53f5b5e26eabda174405caa17edd0"
+      "sha256": "1554055377b0709d1adee71b964470d9cbb5b0ad39b225b75c2a2acbb416a53b"
     },
     "tests/support/test_plugin_manager_ui_shared.py": {
       "loc": 220,
-      "sha256": "1dbb06c4356e717ddc8e278719d82614056d418178b9f0ce64f630275b298f84"
+      "sha256": "aae69629eb3ccac45d84003fa2d609e269a9e84c5a135d5291af884c901eb5ce"
     },
     "tests/support/test_ssh_credential_flow_shared.py": {
       "loc": 157,
-      "sha256": "ac7fed8d9d172dee5da1de2c6d80e6b5857ca6fb9c0576db4c6eddd266c0c862"
+      "sha256": "9bcc844ba7f10097ea764f8aa95445bf5400774f257f691e7f728c0e7c78b742"
     },
     "tests/support/test_ssh_jump_host_shared.py": {
       "loc": 183,
-      "sha256": "80bdaa3db933b6023b7b113ed8c819e8ed0d81fb8ac133976b6e4f227eedac2b"
+      "sha256": "ef6375d2c6a299fd15d6692e9384a7e536746717b09fae27f3bbfa137190be14"
     },
     "tests/support/test_wave80_files_outputs_shared.py": {
       "loc": 5,
-      "sha256": "05b635e662db252e62781ad2c8956e7e14cc94d5960d9a7b1e657a932525950b"
+      "sha256": "fefe4f66fe32e635a1f8ed40a472ef0f2ed161f0d090dbb534cd2db9e7b5ed8e"
     },
     "tests/support/test_wx_updater_shared.py": {
       "loc": 55,
@@ -2220,7 +2220,7 @@
     },
     "tests/support/wx65_stress.py": {
       "loc": 88,
-      "sha256": "1839709ebb73fd9ae3995bf0a7a86b1c7613cf551a5c38527811df74048275bf"
+      "sha256": "154e2964a0a15b49d4fa8c7d3c375b9e1b76764d0b2a8edc3eaa14536ee975ca"
     },
     "tests/support/wx_clipboard.py": {
       "loc": 33,
@@ -2228,7 +2228,7 @@
     },
     "tests/support/wx_file003_stress.py": {
       "loc": 25,
-      "sha256": "ff8f31cdf37e05cac0a4671825dcd970125cd28c35e973c450f1c3e2ac7f2c7d"
+      "sha256": "0bf85a2d7b1757c9a56a516f2678195b6fb4c6bffcf1c0ce33b4c79b84ddcf2f"
     },
     "tests/support/wx_jobs_test_harness.py": {
       "loc": 71,
@@ -2236,7 +2236,7 @@
     },
     "tests/support/wx_webview_probe.py": {
       "loc": 29,
-      "sha256": "df569faeec9fe50acbb3f3cc443711f1ec2bc33b7974028a7ec54052ce001854"
+      "sha256": "16d2fc4bf89e1ce21b99852bdf2041440fda1f35bef15e008b3ebbbfed17c7cd"
     },
     "tests/support/wx_window_cleanup.py": {
       "loc": 76,
@@ -2276,7 +2276,7 @@
     },
     "tests/test_cli_entrypoint.py": {
       "loc": 137,
-      "sha256": "c70a83e6205e17cb9454cd7a6eaeb6f70c00145d221d3f24ee21cb284e278a4b"
+      "sha256": "f438cabfb0ba06efb912df4e0d72164a60e4d18d9aa2effbeb9e61b6f458edcc"
     },
     "tests/test_cli_saved_credentials.py": {
       "loc": 167,
@@ -2308,7 +2308,7 @@
     },
     "tests/test_config_storage_atomic.py": {
       "loc": 38,
-      "sha256": "da19d4c0d33cfa8a0b1c958ac7b7804509ecf0a82ab05682afea178c7f66085e"
+      "sha256": "9f37e32950b174248384a3c65c2ff8552feb1da641d02681bac3388c48c42456"
     },
     "tests/test_connection_advanced_settings.py": {
       "loc": 355,
@@ -2388,7 +2388,7 @@
     },
     "tests/test_file_open_service.py": {
       "loc": 265,
-      "sha256": "6f329022fc40118ca26c81092a4ba8c12a6a26156f9842f5222054051a95c089"
+      "sha256": "448d43d04f07c8a051bfe72948650260f43bccdab376413c4d138f0d7bed4ff1"
     },
     "tests/test_fluent_plugin_integration.py": {
       "loc": 242,
@@ -2572,7 +2572,7 @@
     },
     "tests/test_jobs_history.py": {
       "loc": 115,
-      "sha256": "cf55b775b3dabb8eace7370486ea4a147d77990f5fe79da9a769ffb889782224"
+      "sha256": "ec8dbabdd403ec97369a68f9849b12879c0bdc2a564e6fcbb1a14339a93847d7"
     },
     "tests/test_jobs_history_mock_wire.py": {
       "loc": 181,
@@ -2580,19 +2580,19 @@
     },
     "tests/test_jobs_outputs_context_menu.py": {
       "loc": 110,
-      "sha256": "26292ceb7dded9f88b271c71124aae26c7bd28a1dda94cd1c25898c12a2276a3"
+      "sha256": "6825d00cfabf4496f8bd5a9d980f6ff0d83b180e2ceb2e052c53499daef7b2de"
     },
     "tests/test_jobs_outputs_follow_targets.py": {
       "loc": 133,
-      "sha256": "ef5a088d622aebe42204b3c1cefaa5ca349203bf5089194fbfac5464e9831eeb"
+      "sha256": "0467cf918aa5421a27e64e05b2eb709cdf2329d8261fbd5998b5bc2c27d44dd6"
     },
     "tests/test_jobs_outputs_scroll.py": {
       "loc": 356,
-      "sha256": "04fc4f886d2ee0d6099eeca703d04ce22ab8e035f1528777c1541f135d974fbf"
+      "sha256": "db37e9c2cc4361c20eb005a9e849787591f31b4fe0fc628c429c5c79ca478b34"
     },
     "tests/test_jobs_outputs_scroll_jobs_outputs_scroll_tests_output_selection_rendering.py": {
       "loc": 185,
-      "sha256": "71f93d7d47bd55c6fd26936f16caca22d75e10597b944154b62c1d0bf5535993"
+      "sha256": "527719bc509ee0caa8b9eeed33a926c721dbd14b4d4e5e3527e5eb0164a59666"
     },
     "tests/test_jobs_workspace_controllers.py": {
       "loc": 114,
@@ -2600,7 +2600,7 @@
     },
     "tests/test_legacy_patch_targets.py": {
       "loc": 37,
-      "sha256": "86afe1ce67ae7f8101253aac920a347b76eea826edf23b63f0123ef4e05ce50e"
+      "sha256": "d5a15865acdc72768e7804212f31d6cc95ad2addaa7e7e6945e63347661845c9"
     },
     "tests/test_lint_engine.py": {
       "loc": 496,
@@ -2628,7 +2628,7 @@
     },
     "tests/test_live_tracking_settings.py": {
       "loc": 17,
-      "sha256": "adfc484edbc4774524e707eb94cf79b2be31d044cefdb78a02dc9077080d9131"
+      "sha256": "09ab91d7d330a602e4ed971d8ef31aae8b79909a0e0bcdae8b84cc58084bfe45"
     },
     "tests/test_local_dir_panel.py": {
       "loc": 232,
@@ -2660,7 +2660,7 @@
     },
     "tests/test_lssrv_auto_refresh.py": {
       "loc": 335,
-      "sha256": "12e5013dfcc9b077458390078f9cd6a4be8451ac1045a79c52574e64b4679719"
+      "sha256": "472ec9443a204e10a2dd51524d9f56acc5806c60aa071c4e1b3813154610f7cd"
     },
     "tests/test_lumi_quota.py": {
       "loc": 16,
@@ -2768,11 +2768,11 @@
     },
     "tests/test_plugin_contract.py": {
       "loc": 322,
-      "sha256": "37ed97693bc748bd7b0e0d23d7110dc7992f81464dcb90c9998b2288c1447512"
+      "sha256": "a58ca4c04b2517b81653fceb227f4d1cfbfe4e6ac2385a1adca80664dadb667e"
     },
     "tests/test_plugin_contract_fluent_compatibility.py": {
       "loc": 151,
-      "sha256": "9ab3da8c108c5704aacf3e9203480170283acc7a2cadcc850df9e6176f4c4843"
+      "sha256": "465c6306762fe3e6b95302a1e903a5a76d222f9c6fe9c9aef5b10268fadc8a42"
     },
     "tests/test_plugin_core.py": {
       "loc": 394,
@@ -2788,15 +2788,15 @@
     },
     "tests/test_plugin_installer.py": {
       "loc": 169,
-      "sha256": "7d53a06af41790ae75cbd2f2360eaa857e41e719691557f6c35616a8d1312ba2"
+      "sha256": "a97310cb82ca789fda6f61b6427425c4994dfd1156bfdae6840069b68bb19f7f"
     },
     "tests/test_plugin_installer_install_transaction.py": {
       "loc": 372,
-      "sha256": "f616df9546ecfb4fddc97dde230c50cbdb2514b1d7dac427b46fdbdf367615ba"
+      "sha256": "30b4381b6f1c976409faa16fb9578e4d0d8690119656a63b9f60f36f3aeaca4b"
     },
     "tests/test_plugin_installer_payload_download.py": {
       "loc": 158,
-      "sha256": "5ca5a963cf5b57998b6e2365743efbf3498845688b4e112d6579b11f05f42710"
+      "sha256": "a3426a0e89d638a4c5b6e4a68a5aa2a459f812877d0c4642951b77eaff7f25c5"
     },
     "tests/test_plugin_integrity.py": {
       "loc": 256,
@@ -2804,15 +2804,15 @@
     },
     "tests/test_plugin_manager_ui.py": {
       "loc": 329,
-      "sha256": "8a84d1d1be28ea784a9989f88bd2a753473e7ca26f65e7f240a51382f9f3938f"
+      "sha256": "b388a378909853f46fe21d692f94aa34a0a613d857d85d61e2e7f29de7424677"
     },
     "tests/test_plugin_manager_ui_catalog_discovery.py": {
       "loc": 277,
-      "sha256": "8eb3e1e1c84ce6e77e3e791f0e4afa088c591a920af5563f9a437274257342c5"
+      "sha256": "a4ea0bc5d8080d751e841782b43a97e0cd93243dd5d0c0dbf80dacfd7bb1b219"
     },
     "tests/test_plugin_manager_ui_install_update_lifecycle.py": {
       "loc": 391,
-      "sha256": "d6d15d0c35f80f657b569465bc5edc607bc3f89159f63bf900376568fad25dd7"
+      "sha256": "0b531ab229dfa572d83aeeee8fed1725cbf546360193ef6c5ffdbe47803392a5"
     },
     "tests/test_plugin_profile_v2.py": {
       "loc": 54,
@@ -2972,7 +2972,7 @@
     },
     "tests/test_security_hardening_wave.py": {
       "loc": 186,
-      "sha256": "5a89af0b9cb91df57d450b7a11984013d5c42f59ebc11ee99c28c13e24f6b691"
+      "sha256": "f52e00a15a8310a19a26b7f59b89a0a17ec8c644f3352cd834a09590fc14fd16"
     },
     "tests/test_selected_job_context.py": {
       "loc": 279,
@@ -3016,7 +3016,7 @@
     },
     "tests/test_source_architecture_gate.py": {
       "loc": 112,
-      "sha256": "a4be01599d5a729de618845d7d80c672cc57e82b7af8b39ce97b571ac1874500"
+      "sha256": "82c007a11631054bad652d42055d79bc650a800266fe47f91de0165cb62482e1"
     },
     "tests/test_splash_update_real_release.py": {
       "loc": 44,
@@ -3028,23 +3028,23 @@
     },
     "tests/test_ssh_command_runner.py": {
       "loc": 78,
-      "sha256": "9ec0ec61342ae575b3a60cbf430a3c6eb14a2431accf005172e371c81544a1c4"
+      "sha256": "93f9df185c2c4879e82cc0b85990efe82f4cc077ea4512d58ab32a7912533e0d"
     },
     "tests/test_ssh_connection_retry.py": {
       "loc": 94,
-      "sha256": "65ffc718e21a0a10d3c812582d9e295c601b85a8ed0aae5c824062320044b8bf"
+      "sha256": "b9ef79f3555e59ed604c30e196c31b316e2d080b3f3e749bfb98113fa0c760f7"
     },
     "tests/test_ssh_credential_flow.py": {
       "loc": 307,
-      "sha256": "af334f6cbf14dbc71c9c1081f9cb2bb54d68edaba7f4f9d37bfff430437c4716"
+      "sha256": "c42288e9086a4fca23aa8f413e5d78b765b19d2e9be597b155d0e0ab2457a542"
     },
     "tests/test_ssh_credential_flow_auth_metadata.py": {
       "loc": 101,
-      "sha256": "6615ef39a098affea3801dcba944e4b7a94823699875e84bfa08d11fac378461"
+      "sha256": "7b5bb0c4c91de47dc5ea41fda4335a459ff0e6b6615898fc7d9cea87a781c77a"
     },
     "tests/test_ssh_credential_flow_save_redaction.py": {
       "loc": 113,
-      "sha256": "32b37c3ae336eab7f39602bceffd204a76c6dd727c556be2e0c188727f5f2547"
+      "sha256": "372c04a6b434f958ec0267ceb39c226898bf8ae09845265579bb2291d230d7f4"
     },
     "tests/test_ssh_directory_listing_wire.py": {
       "loc": 98,
@@ -3056,11 +3056,11 @@
     },
     "tests/test_ssh_jump_host.py": {
       "loc": 176,
-      "sha256": "681f10bdc2141192950ba3bcf22ac54f1dbb75eaa2a28e30e7477ba48b735fff"
+      "sha256": "70e84faf39e4e853be9de4bb7b2b9eb6f6e56292e3f86ecc517c0cffe474e7d0"
     },
     "tests/test_ssh_jump_host_failure_and_persistence.py": {
       "loc": 231,
-      "sha256": "e16b80b95c9ebdcec57c06846773218ae9aa9a6879fff4587ea06cecf63ae73a"
+      "sha256": "5ffaf8242987caafd82821aa4b3dbc50778ce8ed6b748862a83558b9a1edd549"
     },
     "tests/test_ssh_terminal_stream.py": {
       "loc": 123,
@@ -3160,7 +3160,7 @@
     },
     "tests/test_transfer_parallelism_migration.py": {
       "loc": 159,
-      "sha256": "1aa06aa9db3e1ecbf56cf6cdd28c56d9b57a84b5b83d5477b4047053342d02a0"
+      "sha256": "034aabdb9b6de693969de460f76391ae97c187c00db4ab148b7814c28adaa623"
     },
     "tests/test_transfer_performance_scenarios.py": {
       "loc": 115,
@@ -3220,7 +3220,7 @@
     },
     "tests/test_w03_settings_provider_inventory.py": {
       "loc": 357,
-      "sha256": "95a883b88d4fc890c11bce111f94ab430717fa4489071e04e894eb8858c1c6ef"
+      "sha256": "5dc1190e798607c9ea735315927d18e0830bb00beb81a844b450d25bf5093b94"
     },
     "tests/test_w04_about_packaging.py": {
       "loc": 78,
@@ -3248,7 +3248,7 @@
     },
     "tests/test_w11_ssh_lifecycle.py": {
       "loc": 492,
-      "sha256": "1a2955bb90f01183351f9b462d64699ba369e61acdbd128505d7bafbd0cbfc15"
+      "sha256": "803f60b11e91cd59de2ff16fe5c7c5c722efce50a7832bcf2def50ebd20537b2"
     },
     "tests/test_w12_sftp_semantics.py": {
       "loc": 425,
@@ -3256,7 +3256,7 @@
     },
     "tests/test_w13_slurm_state.py": {
       "loc": 327,
-      "sha256": "0891a955b6371866cc5db1df455b89f6d217720c56a2c0f49b6d167e73f552ec"
+      "sha256": "58dca1f0c9c07434c26abe218fbf1fe8be9ca8a6c4f10f2e0db8be28554a47d8"
     },
     "tests/test_w14_provenance_manifest.py": {
       "loc": 269,
@@ -3268,7 +3268,7 @@
     },
     "tests/test_w18_auth_hostkey.py": {
       "loc": 364,
-      "sha256": "fd877e747baf0d921e00837b57485fb46bf98d8f2a8cbca3bdd7a954f4e7522d"
+      "sha256": "7a4ffdf10e2ca1a50f63c9b671d175d7cacbd11646bbbd1162998efa1e471ff6"
     },
     "tests/test_w19_connection_gui.py": {
       "loc": 270,
@@ -3300,7 +3300,7 @@
     },
     "tests/test_w25_transfer_workspace_integrity.py": {
       "loc": 475,
-      "sha256": "00702c41eab3b058d08c181c3c4e71687936791e97add95ba855799a2f50b8f3"
+      "sha256": "693d302453cb417934a81460451f916558e7319f97ea1100e9c5b2bf2c146be6"
     },
     "tests/test_w26_editor_identity.py": {
       "loc": 306,
@@ -3316,7 +3316,7 @@
     },
     "tests/test_w28_jobs_identity_refresh.py": {
       "loc": 480,
-      "sha256": "4fdedccca9913e0cf76eca6bf675d48d18cd80da9dc38d8b85135c3645163eb1"
+      "sha256": "713eb58084d68349fc9185557a41d1d66596e47eb23c56bba6ae13db3e8d82f5"
     },
     "tests/test_w29_job_outputs.py": {
       "loc": 496,
@@ -3364,27 +3364,27 @@
     },
     "tests/test_w37_settings_persistence.py": {
       "loc": 422,
-      "sha256": "1611ff69568581383dfc1ee6edd65c9323949292234a19bdd56ad268ba320127"
+      "sha256": "208270b3eba051b3dbf6bdfb580019ac1575ebc348ab619ecbe89e010b5602ea"
     },
     "tests/test_w37_settings_plugin_gui.py": {
       "loc": 249,
-      "sha256": "1de453dfb65aaf19b9bbb04effe031d58299bbcd480ff1e893c4b6a1a23a7f83"
+      "sha256": "27bb367444ef045b17ebd7cb0b7ba548afedff4dd6ed70be1936647a181ea7bb"
     },
     "tests/test_w38_migration_secrets.py": {
       "loc": 347,
-      "sha256": "dfa13dce9c520aa4d504440edb50650749dbd709836072bc093d249eeea78c7b"
+      "sha256": "4275ac31a0a48b4598d8f4011c5ab45420c42f166b43483d2dcef418c9dfb7c4"
     },
     "tests/test_w39_logs_diagnostics.py": {
       "loc": 386,
-      "sha256": "05777b4ce93d92246ad1a979e44323563f47e8d44d14234e230cb0f2e4ab62a8"
+      "sha256": "4291e267596b63667f8dec9587bb128c40ba87a5b937ff5d346365ee6929c88b"
     },
     "tests/test_w40_gui_acceptance.py": {
       "loc": 258,
-      "sha256": "7b4377f395f540033e8db594ca31a6f479836e9f785338c4dc097f38cfe2aa06"
+      "sha256": "805831dc3e1e94d89f376fb564017303cda6aac7fea43ec3c3d3109a71777ba7"
     },
     "tests/test_w40_localization_window_settings.py": {
       "loc": 334,
-      "sha256": "9f58aaab0a33c972c9c13e116c40bd1e41f8d358ba52ac30251cf6ffbc7cf091"
+      "sha256": "98ffc68ac8988d5cd1ce4e1f987e938ca9c78e8689e03f5690c927e941be7b86"
     },
     "tests/test_w41_updater_routing.py": {
       "loc": 169,
@@ -3420,7 +3420,7 @@
     },
     "tests/test_wave10_release_gate.py": {
       "loc": 298,
-      "sha256": "0b60a1eb24e00776e8e52ae2793caaa308b0fbbf10c54bb9dc9b049cd67bd755"
+      "sha256": "ab5cd2250c7180e1e9c714a9070cd03d78fc52b2bba1d7644b9b51d0acf10e34"
     },
     "tests/test_wave1_unicode_core_policy.py": {
       "loc": 242,
@@ -3452,7 +3452,7 @@
     },
     "tests/test_wave37_diagnostics.py": {
       "loc": 41,
-      "sha256": "a1e9b6b9194441d14f8782042c7951762188237e8139630eaf46598ecb16f105"
+      "sha256": "c3d45b855d4badfd0bb6dd3ff449cc65c9cb7510ff92b7c24bc6acb997e50609"
     },
     "tests/test_wave37_output_buffer.py": {
       "loc": 28,
@@ -3504,11 +3504,11 @@
     },
     "tests/test_wave80_files_outputs.py": {
       "loc": 284,
-      "sha256": "07cc6c289b59a57c9849d0f837b4b0795ee6df359932ac14bddf5173dcf60286"
+      "sha256": "8149acc4756be821dc6ff6e0c313546b51e3693f4df2b040726dbbf49dd9e78b"
     },
     "tests/test_wave80_files_outputs_audit_behavior.py": {
       "loc": 321,
-      "sha256": "0d0456e958b4bfe11e6656f4e2e618fcacd669aa03cef47dd38cf0d42000ba52"
+      "sha256": "4928b0c204130189f055138c574b4c3f3ddb25e6c9804e09e2bec96e831f9baa"
     },
     "tests/test_wave8_i18n_ui_ergonomics.py": {
       "loc": 345,
@@ -3704,7 +3704,7 @@
     },
     "tests/test_wx_file003_final_stress_zz_report.py": {
       "loc": 56,
-      "sha256": "856d66421b47a12c0d2a79e9b76a6daa46079324e243e8f3f9592de67b3b7e51"
+      "sha256": "287c2a5ef626000c092624509bc3119cf113523ed859352b27d570229c6c0325"
     },
     "tests/test_wx_file_action_policy.py": {
       "loc": 63,
@@ -3840,7 +3840,7 @@
     },
     "tests/test_wx_logs_groups.py": {
       "loc": 310,
-      "sha256": "f1ee603c35cac8c60fa3d43aad37663dadcefa7666238a79765f49c4589550d8"
+      "sha256": "e497722fb699c86a32595b14abf5a1fbd00c7853e62d1bb9b08107c06c99aa01"
     },
     "tests/test_wx_macos_audit.py": {
       "loc": 9,
@@ -3848,7 +3848,7 @@
     },
     "tests/test_wx_migration.py": {
       "loc": 108,
-      "sha256": "4120d4993b23df980008df5c19cd7338fb24f85535592635a01adf08a917a374"
+      "sha256": "9a21ae80067ef0e0dc30a33819279f2a3882ca3c40e9f7dc61b58b8d688653ca"
     },
     "tests/test_wx_package_content.py": {
       "loc": 200,
@@ -3972,15 +3972,15 @@
     },
     "tests/test_wx_terminal_parity_evidence.py": {
       "loc": 183,
-      "sha256": "f83044975216661a1354df3f35362dd0ab977fa3864e8f2dc289c15860090e62"
+      "sha256": "3b439a90b7e0ef646c04a40daeb58cac2fc13a779a8a0a1228d5173afdad0888"
     },
     "tests/test_wx_terminal_parity_evidence_input_resize.py": {
       "loc": 147,
-      "sha256": "240ba5b0626fb80cf089c899d9c6899150688b8e28d9609023f3fb80072733a9"
+      "sha256": "6cd3051ef35897466afb99a2b41194c43d2bf8112bde46ad00355a12f22facc8"
     },
     "tests/test_wx_terminal_parity_evidence_lifecycle_evidence.py": {
       "loc": 209,
-      "sha256": "c6464f9a64aa62653f14d02d315877f0471e2b81678a539e269b450ac14dcdec"
+      "sha256": "24d17355aa99e7eb9f350d8e23d942631915d5129907de751222c4070b557c1c"
     },
     "tests/test_wx_terminal_url_bridge.py": {
       "loc": 91,
@@ -4092,7 +4092,7 @@
     "exit_code": 0,
     "over_limit": [],
     "over_limit_count": 0,
-    "root": "/tmp/hpc-client-gui-v2jobs-r30",
+    "root": "/tmp/hpc-client-gui-v2jobs-rerun-b255-syntax/repo",
     "scope": "project",
     "source_count": 1041,
     "status": "PASS",
@@ -4303,7 +4303,7 @@
         "path": "tests/_cli_transfer_policies.py"
       },
       {
-        "loc": 474,
+        "loc": 480,
         "path": "tests/support/mock_ssh_server.py"
       },
       {
@@ -4470,11 +4470,6 @@
   "over_limit_python_count": 0,
   "schema_version": 1,
   "shared_loc_passed": true,
-  "source_commit": "0ad0542918b49a4039db41c27ff62e2ab4c86ea1",
+  "source_commit": "2b1718c5a9078108629928086a34d3bbe39ee874",
   "status": "PASS"
-,
-  "integration_source_commit": "f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913",
-  "integration_source_tree_sha": "450c1d0ddb079122d5aa3efc90516bead03f0797",
-  "integration_source_fingerprint_sha256": "bbfbbfad02d5d3b0a2ae7acd143c49ae62349b8136b1bf766c7bd85f729bdbef",
-  "vm_snapshot_commit": "0ad0542918b49a4039db41c27ff62e2ab4c86ea1"
 }

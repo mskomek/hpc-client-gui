@@ -1053,3 +1053,7 @@
 | `tests/wx_terminal_behavioral_support.py` | 107 | `de15198e274b5a5436b9a7e28e6478ee9f7ad0a09f334d6254749dff16a45613` |
 | `tests/wx_terminal_webview_support.py` | 74 | `0e46570377421daba3e1df454800a422880b1d1ade1d8b174aab3090780a7a5c` |
 | `tools/gen_updater_screenshots.py` | 240 | `8d575025c6efca883a9f81660ddaa84c39d27969c9fbe9bc94728affb67408de` |
+
+## Latest architecture recheck - 2026-10-22
+
+Tested local source commit 78d233dcfdb3268793817ff0fc752a4d0099b80c, tree f5f37cc26cbe18c03798ae8eb02421b2f5ea0874; tracked-source fingerprint 906dfacff5c036b30743c747d318e2b741e56868f6d4eec965142add5d6d8924. Ubuntu-Test full mode scanned 1,015 Python files, including tools/gen_updater_screenshots.py, with 0 over-limit files, dependency errors, cycles, or public API errors. The corrected VM JSON SHA-256 is 1A69643C10C3E94055D4A2AF2C8005D151DA1E8820AB9B465EC5DAFABFB4222D and Markdown SHA-256 is E3D108EAA44B077BDD4262ABE58E24B5C5A5CA30E6AEA9239235F0A1D4D11E67. The earlier 1,014-file report is superseded.

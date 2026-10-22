@@ -48,3 +48,11 @@ Status: **WAVE_BLOCKED**. Code and global architecture work are complete and loc
 - Expanded Ruff initially found three unused items in `tools/gen_updater_screenshots.py`. The unused import and unused DC objects were removed; final Ruff passed. The screenshot generator itself was not executed because it writes documentation images.
 
 No Linux or Windows release artifact was built. GitHub Actions was not run. No remote branch, PR, or release was changed. Full release acceptance is not established.
+
+## Latest-source VM rerun - 2026-10-22
+
+Source commit 78d233dcfdb3268793817ff0fc752a4d0099b80c, tree f5f37cc26cbe18c03798ae8eb02421b2f5ea0874, tracked-source fingerprint 906dfacff5c036b30743c747d318e2b741e56868f6d4eec965142add5d6d8924. VM archive SHA-256 d0e03fdaed2ed16f6f424dde9a469317eff11cf9c8f845bb6874341a98282bb4; manifest SHA-256 15a8715536d74107a6bcce5dbe9560b2142bcdd8295ef710eae059505be8f1ce.
+
+Ubuntu-Test passed compileall, Ruff, i18n, the full architecture gate across 1,015 Python files, and 39 focused tests. One wx proof was skipped because wxPython is unavailable (pytest exit 5). Windows11 passed 24 Jobs/SFTP/transfer tests and 11 W15 startup/update tests. The terminal bridge emitted partial .F output and timed out after 180 seconds; its owned process tree was stopped. Full release acceptance remains blocked.
+
+The first architecture report on this Ubuntu staging snapshot covered 1,014 indexed files because an ignored-but-tracked first-party Python file was absent from the synthetic index. The temporary VM index was corrected and the full gate rerun successfully at 1,015 files. The corrected machine report is ARCHITECTURE_FINAL.json; evidence is in VM_RERUN_2026-10-22.md.

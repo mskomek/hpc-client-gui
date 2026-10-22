@@ -127,3 +127,18 @@ Source tree: `450c1d0ddb079122d5aa3efc90516bead03f0797`; source fingerprint: `bb
 | GitHub Actions | Not run | No hosted workflow result | — | NOT RUN |
 
 Windows terminal bridge host/guest hashes matched: `src/hpc_gui/wx_terminal_webview_bridge.py` `06cf09a766920819425555e5cc8fbafd0d40ad21c4b3aed9f6baa2d7e90585f7`, test `eedc26252adfc8b18a24bc8c2c665c2ed73d5949ab02b88f835b59048fe9f6af`, manifest `72d5333de0d59dd6a5bc4f0d2e7036d359d8bb24a06d96acc516e8fd1315d86a`. The Windows guest result is at `C:\Users\home\AppData\Local\CodexGuestRuns\e404c71b7f3c40069b7efb5d2d984006\result.json`; host runner trace and result are under `D:\Projeler\.tmp\hpc-client-gui\e404c71b7f3c40069b7efb5d2d984006.*`.
+
+## VM reruns - 2026-10-22, source 78d233dc
+
+| VM check | Result | Exit | Classification |
+|---|---|---:|---|
+| Ubuntu-Test full architecture after index correction | 1,015 Python files; 0 over-limit; 0 dependency, cycle, or API errors; shared LOC passed | 0 | PASS |
+| Ubuntu-Test compileall, Ruff, i18n | All passed on the exact source archive | 0 each | PASS |
+| Ubuntu-Test focused tests | App updater 18; transfer concurrency 10; download cancellation 4; architecture gate 7 | 0 each | PASS, 39 total |
+| Ubuntu-Test SFTP wx proof | 1 skipped because wxPython is unavailable | 5 | BLOCKED_ENVIRONMENT; not PASS |
+| Windows11 Jobs/SFTP/transfer | 24 passed on host/guest source-matched stage | 0 | PASS |
+| Windows11 W15 startup/update | 11 passed on host/guest source-matched stage | 0 | PASS |
+| Windows11 terminal bridge | Partial .F, 180-second timeout, owned process tree stopped | -1 | BLOCKED_TIMEOUT; unresolved |
+| Windows11 architecture | compileall completed; architecture could not enumerate files in the first no-.git stage; synthetic-index retry failed before launch | 1 / no target exit | NOT VERIFIED on Windows; Ubuntu full gate is authoritative |
+
+The corrected Ubuntu architecture JSON is ARCHITECTURE_FINAL.json. Commands, hashes, and the superseded 1,014-file report correction are in VM_RERUN_2026-10-22.md.
