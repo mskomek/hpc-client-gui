@@ -449,7 +449,13 @@ class MockSSHServer:
             channel = transport.accept(20)
             if channel is None:
                 return
-            server.event.wait(20)
+            # SFTP subsystem requests are handled by Paramiko's registered
+            # subsystem handler and do not set the shell server event. Keep
+            # the SSH transport alive while the client owns it; a fixed wait
+            # here dropped otherwise-healthy SFTP connections during longer
+            # transfer/cancel/resume tests.
+            while transport.is_active() and not self._stop.wait(0.1):
+                pass
         except Exception:
             pass
         finally:
