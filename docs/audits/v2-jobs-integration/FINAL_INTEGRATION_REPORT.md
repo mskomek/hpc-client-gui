@@ -2,53 +2,57 @@
 
 ## Verdict
 
-**INTEGRATION_CODE_COMPLETE_ACCEPTANCE_BLOCKED**. WAVEs 00–11 are implemented and committed separately on the integration line. Local `develop` is fast-forwarded to source commit `0ece0ad8fb52f028e9acf23bdc792dc6fd266fc0`. The global architecture gate is zero-clean. Final acceptance is blocked by Ubuntu wxPython being unavailable, the full Windows portable run still being in progress, and missing source-matched release artifacts / GitHub Actions evidence.
+**INTEGRATION_CODE_COMPLETE_ACCEPTANCE_BLOCKED**. WAVE 00–11 are complete; WAVE 12 source and architecture work are complete. The code is locally integrated through `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913`. Full acceptance remains blocked by Ubuntu wxPython absence and unresolved Windows full-suite, SFTP, and terminal-bridge results. No release artifact or hosted CI result was produced.
 
 ## Branch and merge state
 
-- Initial develop base: `f61919bad12be5f328cb9db3fee3c8de8563fa5b`.
-- Current develop before integration: `d91c84f1d784fd3391bf132a54134faef44e63c9`.
-- Final integrated source commit: `0ece0ad8fb52f028e9acf23bdc792dc6fd266fc0`.
-- Jobs source: `713949fb752b90601e007812ebf2bd765da5ad52`.
-- V2 source: `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240`.
-- WAVEs 00–11 were merged to local `develop` by a safe fast-forward from `d91c84f1` to `0ece0ad8`; no conflicts. The main user worktree `D:\Projeler\hpc-client-gui` was not changed.
-- WAVE 12 is a final acceptance/report checkpoint. No source change remains unintegrated. No remote branch, PR, Release, or GitHub Actions run was created.
+- Task-start `develop` reference: `f61919bad12be5f328cb9db3fee3c8de8563fa5b`.
+- Actual local and origin/develop before integration: `d91c84f1d784fd3391bf132a54134faef44e63c9`.
+- Integrated code commit/tree: `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913` / `450c1d0ddb079122d5aa3efc90516bead03f0797`.
+- Source fingerprint SHA-256: `bbfbbfad02d5d3b0a2ae7acd143c49ae62349b8136b1bf766c7bd85f729bdbef` (1,516 tracked files; 23,440,549 bytes).
+- Jobs source: `713949fb752b90601e007812ebf2bd765da5ad52`; V2 source: `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240`.
+- Each successful wave has its own source commit. The final WAVE 12 code changes are `e888745396bab2a9c3f1be8e4333fab729ede79f` and `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913`.
+- The local `develop` worktree was safely fast-forwarded through the code commits without conflicts. A separate documentation-only checkpoint is being committed and fast-forwarded locally. `origin/develop` remains at its pre-integration SHA; nothing was pushed.
+- The main user checkout `D:\Projeler\hpc-client-gui` and its existing changes were preserved. The 173-file V2 WIP snapshot was preserved unchanged.
+- No remote branch mutation, PR, release, or GitHub Actions run occurred.
 
 ## Architecture and source modularity
 
-The starting inventory had 52 first-party Python files over 500 physical lines. WAVE 11 split remaining large application and test modules by responsibility. The final Ubuntu-Test r29 scan covered 1,015 Python files: **0 over 500, 0 dependency/import errors, 0 cycles, and 0 public API errors**. Shared LOC scan: 1,041 sources; PASS. The temporary LOC baseline was removed, and `.github/workflows/ci.yml` now runs architecture validation in `--mode full`.
+The starting inventory had **52** first-party Python files above 500 physical lines. Ubuntu-Test r33 scanned **1,015** Python files and reported **0 over 500**, **0 dependency errors**, **0 cycles**, and **0 public API errors**. The shared LOC validator passed across 1,041 source entries with zero over-limit entries; 91 files are in the 400–500 warning band. The baseline is removed, and CI invokes full architecture mode.
 
-Representative facade reductions in WAVE 11: `ui/main_window.py` 1,182→331 lines; `ui/widgets/login_widget.py` 1,573→392; `ui/dialogs/plugin_manager_dialog.py` 914→425; `wx_connection.py` 1,331→411; `wx_editor_view.py` 945→312; `wx_transfer_workspace.py` 910→205. WAVE 11 added 36 application modules. It changed 163 Python paths and 167 total files.
+From task-start source to the final code commit, **376 Python paths changed**, **238 Python files were added**, including **142 under `src/hpc_gui`**. WAVE 11 changed 163 Python paths and added 36 application modules.
 
-The final architecture JSON records the tested source fingerprint, manifest and archive hashes, and notes that the Ubuntu VM did not have Git installed. A temporary outside-repository inventory adapter enumerated the full physical source tree for the full-mode scan; the report uses a disclosed synthetic VM commit rather than claiming a real VM Git commit.
+Representative WAVE 11 facade reductions: `ui/main_window.py` 1,182→331 lines; `ui/widgets/login_widget.py` 1,573→392; `ui/dialogs/plugin_manager_dialog.py` 914→425; `wx_connection.py` 1,331→411; `wx_editor_view.py` 945→312; `wx_transfer_workspace.py` 910→205.
 
-## Tests and acceptance
+## VM acceptance evidence
 
-- Ubuntu-Test r29 architecture full gate and architecture regression suite passed: 1,015 Python files, all global architecture counts zero; 7 tests passed, exit 0.
-- Ubuntu-Test r28 Ruff, compileall, and i18n checks passed, each exit 0; the Python sources were unchanged in r29.
-- Windows11 focused wx/Qt/Jobs/Files batch passed 114 tests; Windows11 plugin manager UI passed 12 tests with matching host/guest hashes.
-- Ubuntu-Test r28 portable release run: 2,639 passed, 0 assertion failures, 206 skipped, 61 deselected, 29 subtests passed. The runner returned exit 5 because 101 isolated wx test modules had only skips (`No module named 'wx'`). This is `BLOCKED_ENVIRONMENT`, not PASS.
-- Windows11 full portable release run `7ad295fc24b14163adf32c241c49eed1` is pending. Its final result must be added to WAVE 12 if it completes.
-- Windows release build/smoke, Ubuntu package, source-matched release artifact, and hosted GitHub Actions remain unverified. The VM snapshot is SHA-256 identified; this does not substitute for release artifact provenance.
+- Ubuntu-Test r33: full architecture gate, Ruff (`src scripts tests tools`), compileall, and i18n passed. The focused architecture/docs/Qt/provenance batch passed **41** tests. After report files were updated, the docs-reference suite passed **2/2** on Ubuntu-Test with exit 0; its first attempt could not resolve Git from the task PATH and was retried with the VM Git executable configured.
+- Ubuntu-Test r30 full acceptance runner: **2,639 passed**, **0 failed assertions**, **210 skipped**, **61 deselected**, **29 subtests passed**. Exit code 5 resulted from 105 wx-only isolated partitions with no runnable tests because wxPython is unavailable; this is an environment block, not PASS.
+- Ubuntu-Test r30 `tests/test_download_cancel_wire.py`: **4/4 passed**, exit 0. Ubuntu wheel packaging: **1 passed**, 3 deselected, exit 0. Linux package plan validated in dry-run mode; no package was built.
+- Windows11 r33 targeted W15 startup/connection suite: **11/11 passed**, exit 0, on the updated localized assertions.
+- Windows11 r28 full portable runner `7ad295fc24b14163adf32c241c49eed1`: timed out after 2,700 seconds, exit `-1`; the owned process tree was stopped. It surfaced 2 SFTP failures, 2 now-fixed English-only localization assertions, and executable-resolution errors for PowerShell/Git.
+- Windows11 focused terminal bridge run `e404c71b7f3c40069b7efb5d2d984006`: timed out after 600 seconds, exit `-1`, with partial `.F` output and no pytest failure traceback or final summary. This remains unresolved.
+- Windows download-cancel SFTP had 2 passes and 2 failures in the full run. A later direct attempt could not collect because that task environment lacked PySide6. Ubuntu's same test file passed 4/4; Windows result remains unresolved.
+- Windows11 earlier focused batches passed 114 and 12 tests. Qt editor under Ubuntu Xvfb/xcb had 3 focus assertion failures; offscreen rerun passed 14/14. Exploratory failures remain visible and are not counted as passes.
+- Windows/Linux artifacts were not built, and GitHub Actions was not run. Separate test runs can overlap, so counts are presented per run rather than summed as unique tests.
 
-VM results and hosted CI results are reported separately. Counts across separate test runs are execution totals and may overlap; they are not claimed as unique test cases. Earlier per-wave results remain in `TEST_MATRIX.md` and each `WAVE_*.md`.
-
-## Integration status
+## Final status
 
 | Area | Result |
 |---|---|
-| Start develop SHA | `d91c84f1d784fd3391bf132a54134faef44e63c9` current head before this integration; original task base `f61919bad12be5f328cb9db3fee3c8de8563fa5b` |
-| Last source integration SHA | `0ece0ad8fb52f028e9acf23bdc792dc6fd266fc0` |
-| Jobs / V2 sources | `713949fb752b90601e007812ebf2bd765da5ad52` / `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` |
-| Completed waves | 00–11 |
-| Local develop merged waves | 00–11 (fast-forward) |
-| Integration source waiting to merge | None |
-| Over-500 Python files | 52 initially; 0 finally |
-| WAVE 11 changed Python paths / added application modules | 163 / 36 |
-| VM acceptance counts to date | Ubuntu portable 2,639 pass / 0 assertion failures / 206 skip; Windows targeted 126 pass; architecture 7 pass. Separate runs may overlap. |
-| Windows acceptance | Full portable run pending; focused wx/Qt passed |
-| Ubuntu acceptance | Architecture and quality PASS; portable suite BLOCKED_ENVIRONMENT for wxPython; package not built |
-| GitHub Actions | NOT RUN |
+| Starting develop reference / actual pre-merge SHA | `f61919bad12be5f328cb9db3fee3c8de8563fa5b` / `d91c84f1d784fd3391bf132a54134faef44e63c9` |
+| Final integrated source SHA | `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913` |
+| Jobs / V2 source SHAs | `713949fb752b90601e007812ebf2bd765da5ad52` / `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` |
+| Completed waves | 00–11 complete; WAVE 12 code complete, acceptance blocked |
+| Local develop | All integration code fast-forwarded; docs-only checkpoint follows |
+| Unmerged integration code | None |
+| Python files over 500 lines | 52 initially; 0 finally |
+| Changed Python paths / added Python files | 376 / 238 |
+| Added application modules | 142 |
+| Jobs behavior retained | Persistent records/history, old completed-job reopening, job/profile identity, workspace selection, Details/Files/Outputs context, targeted Details deletion, async job routing, and reconnect context covered by the wave regression suites |
+| Ubuntu acceptance | `BLOCKED_ENVIRONMENT`: wxPython unavailable; full runner exit 5 |
+| Windows acceptance | `BLOCKED_TIMEOUT` with unresolved SFTP and terminal-bridge results |
+| CI / release artifacts | GitHub Actions NOT RUN; no source-matched release artifact built |
 | Final verdict | `INTEGRATION_CODE_COMPLETE_ACCEPTANCE_BLOCKED` |
 
-The integration commits are local only. No remote push, GitHub PR, or GitHub Release was performed.
+All WAVE 00–12 source commits listed in the wave records are local and integrated into `develop` through the source checkpoint. The report checkpoint is a separate local documentation commit. No commit was pushed.

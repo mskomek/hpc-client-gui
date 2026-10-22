@@ -81,9 +81,9 @@
 
 The first `py -m pytest` attempt used the global Python 3.14 installation, which has no pytest module; the WAVE 00 suite was rerun with the project `.venv` and passed 5/5. During Wave 01 source selection, one exploratory suite invocation had 44 passes and one failure because a later Jobs Wave 02 test rewrite patched an extracted module not yet present. That test-only rewrite was excluded from Wave 01; the final WAVE 01 suites passed 45/45 with the existing test retained and provenance assertions added. This diagnostic failure is source incompatibility, not an unresolved product failure.
 
-## Pending suites
+## Remaining acceptance blockers
 
-Focused suites will be added as waves land. Local and GitHub Actions results remain separate. Unrun suites must remain `NOT RUN`; skipped tests and environmental blockers are recorded individually and never counted as PASS. WAVE 08 command output is retained under `.tmp/wave08-*.log` in the integration worktree.
+All wave-focused suites are recorded above. Remaining release blockers are Ubuntu wxPython availability, unresolved Windows full-suite/SFTP/terminal-bridge results, release artifact validation, and hosted GitHub Actions. Unrun checks remain `NOT RUN`; skipped tests and environmental blockers are not counted as PASS. Local VM results and hosted CI are tracked separately.
 
 ## WAVE 11 VM evidence
 
@@ -94,9 +94,36 @@ Focused suites will be added as waves land. Local and GitHub Actions results rem
 | Windows focused wx/Qt/Jobs batch | Windows11 interactive r27 | 114 passed | 0 | PASS |
 | Windows plugin manager dialog | Windows11 interactive r28, source manifest hash matched | 12 passed | 0 | PASS |
 | Ubuntu portable release runner | Ubuntu-Test r28, `QT_QPA_PLATFORM=offscreen` | 2,639 passed, 206 skipped, 61 deselected, 29 subtests passed; no assertion failures; 101 wx-only isolated partitions exit 5 because `wx` is unavailable | 5 | BLOCKED_ENVIRONMENT; do not count runner as PASS |
-| Windows portable release runner | Windows11 interactive r28 | Running; result recorded in WAVE 12 | — | Pending |
+| Windows portable release runner | Windows11 interactive r28 | Timed out after 2,700 seconds; exit -1; owned process tree stopped | -1 | BLOCKED_TIMEOUT |
 
 The r28 source manifest fingerprint is `80a17499530c55331e684d984c9fe4971a9b534cb3ad5c2379195ef91329ad57`; manifest SHA-256 is `49c83e66f42317492d3d8705a2f84e0f971b1046e6a92545ee887f243c5da12e`. GitHub Actions has not run.
 
 | Final architecture recheck | Ubuntu-Test VM snapshot r29; baseline deleted, global full mode | PASS: 1,015 Python files, 0 over limit, 0 dependency errors, 0 cycles, 0 API errors; shared LOC scan 1,041 files | 0 | PASS |
 | Architecture regression rerun | `pytest -q tests/test_source_architecture_gate.py` on r29 | 7 passed | 0 | PASS |
+| Ubuntu wheel packaging | `pytest -q --tb=short tests/test_wheel_packaging.py -m packaging` on r29 after installing missing `build` into VM venv | 1 passed, 3 deselected; wheel asset and dependency metadata assertions passed | 0 | PASS |
+| Linux release package plan | `scripts/release_linux.py --json` on r29 | version 1.5.9 and AppImage/deb/Flatpak stages validated; dry run only | 0 | PASS (plan validation, no package artifact) |
+| Ubuntu wheel test environment setup | First `pytest ... -m packaging` attempt before installing `build` | 1 failed because VM venv lacked executable `build.__main__`; no assertion failure | 1 | ENVIRONMENT; dependency installed and exact test rerun passed 1/1 |
+| Qt editor under Xvfb/xcb | `tests/test_editor_flow.py` on Ubuntu-Test r28 | 3 focus assertions failed under the Xvfb/xcb backend; offscreen backend rerun passed 14/14 | 1 then 0 | DISPLAY/backend limitation; retained as a failed exploratory run, not counted as PASS |
+
+## WAVE 12 VM evidence — source `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913`
+
+Source tree: `450c1d0ddb079122d5aa3efc90516bead03f0797`; source fingerprint: `bbfbbfad02d5d3b0a2ae7acd143c49ae62349b8136b1bf766c7bd85f729bdbef`.
+
+| Area | VM command/run | Result | Exit | Classification |
+|---|---|---:|---:|---|
+| Global architecture | Ubuntu-Test r33, `scripts/check_source_architecture.py --mode full` | 1,015 files; 0 LOC, dependency, cycle, or API errors; shared LOC 1,041 entries / 0 over-limit | 0 | PASS |
+| Quality gates | Ubuntu-Test r33, Ruff `src scripts tests tools`, compileall, i18n | All passed | 0 | PASS |
+| Focused architecture/docs/Qt/provenance tests | Ubuntu-Test r33 | 41 passed | 0 | PASS |
+| Final report docs references | Ubuntu-Test r30, after copying final reports | 2 passed; initial attempt failed before assertion because task PATH did not include bundled Git; exact rerun with `PATH`/`GIT_EXEC_PATH` configured passed | 0 (rerun) | PASS on rerun; environment failure recorded |
+| Full acceptance runner | Ubuntu-Test r30, `scripts/release_test_suite.py --scope acceptance` | 2,639 passed, 0 failed assertions, 210 skipped, 61 deselected, 29 subtests passed; 105 wx-only partitions had no runnable tests | 5 | BLOCKED_ENVIRONMENT; not PASS |
+| Ubuntu SFTP cancel/resume tests | Ubuntu-Test r30, `tests/test_download_cancel_wire.py` | 4 passed | 0 | PASS |
+| Windows W15 startup/connection | Windows11 r33, `tests/test_w15_fresh_user_startup.py` | 11 passed | 0 | PASS |
+| Windows full portable runner | Windows11 r28 run `7ad295fc24b14163adf32c241c49eed1` | 2,700-second timeout; partial results include 2 SFTP failures and 2 prior localization assertion failures; PowerShell/Git resolution errors | -1 | BLOCKED_TIMEOUT / ENVIRONMENT ERRORS |
+| Windows focused terminal bridge | Windows11 run `e404c71b7f3c40069b7efb5d2d984006`; matching manifest SHA `72d5333de0d59dd6a5bc4f0d2e7036d359d8bb24a06d96acc516e8fd1315d86a` | 600-second timeout; stdout `.F`; pytest traceback and final summary absent; owned process tree stopped | -1 | BLOCKED_TIMEOUT; at least one failure marker, unresolved |
+| Windows direct SFTP attempt | Windows11 isolated task | Did not collect because the task environment lacked PySide6 | 2 | BLOCKED_ENVIRONMENT; does not resolve the full-run failures |
+| Ubuntu wheel packaging | Ubuntu-Test r30, packaging marker | 1 passed, 3 deselected | 0 | PASS |
+| Linux package plan | Ubuntu-Test r30, release-plan dry run | AppImage/deb/Flatpak stages validated; no artifact built | 0 | PASS (plan only) |
+| Windows/Linux release artifacts | Not run | No source-matched artifact produced | — | NOT RUN |
+| GitHub Actions | Not run | No hosted workflow result | — | NOT RUN |
+
+Windows terminal bridge host/guest hashes matched: `src/hpc_gui/wx_terminal_webview_bridge.py` `06cf09a766920819425555e5cc8fbafd0d40ad21c4b3aed9f6baa2d7e90585f7`, test `eedc26252adfc8b18a24bc8c2c665c2ed73d5949ab02b88f835b59048fe9f6af`, manifest `72d5333de0d59dd6a5bc4f0d2e7036d359d8bb24a06d96acc516e8fd1315d86a`. The Windows guest result is at `C:\Users\home\AppData\Local\CodexGuestRuns\e404c71b7f3c40069b7efb5d2d984006\result.json`; host runner trace and result are under `D:\Projeler\.tmp\hpc-client-gui\e404c71b7f3c40069b7efb5d2d984006.*`.

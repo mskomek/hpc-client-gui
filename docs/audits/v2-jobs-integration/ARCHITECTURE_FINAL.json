@@ -3263,8 +3263,8 @@
       "sha256": "f4270799a5a0fa633b37d7a4e8e0f121c6aee1af8de45521ebd4b82a4202e98c"
     },
     "tests/test_w15_fresh_user_startup.py": {
-      "loc": 429,
-      "sha256": "62ff15c18bb85fc7b1b6e3eb38559948e0620a781a8dea617037403f6fb03565"
+      "loc": 435,
+      "sha256": "d9511a924bc76601b4a63baafe4f5aa02361758a4c6e13be13152363593b38e6"
     },
     "tests/test_w18_auth_hostkey.py": {
       "loc": 364,
@@ -4063,8 +4063,8 @@
       "sha256": "0e46570377421daba3e1df454800a422880b1d1ade1d8b174aab3090780a7a5c"
     },
     "tools/gen_updater_screenshots.py": {
-      "loc": 248,
-      "sha256": "dd4891d565c5dc1946614358ea78d024d9be5f0a468ab704169222dc6fc0c0af"
+      "loc": 240,
+      "sha256": "8d575025c6efca883a9f81660ddaa84c39d27969c9fbe9bc94728affb67408de"
     }
   },
   "loc_gate": {
@@ -4092,7 +4092,7 @@
     "exit_code": 0,
     "over_limit": [],
     "over_limit_count": 0,
-    "root": "/tmp/hpc-client-gui-v2jobs-r29",
+    "root": "/tmp/hpc-client-gui-v2jobs-r30",
     "scope": "project",
     "source_count": 1041,
     "status": "PASS",
@@ -4363,7 +4363,7 @@
         "path": "tests/test_w12_sftp_semantics.py"
       },
       {
-        "loc": 429,
+        "loc": 435,
         "path": "tests/test_w15_fresh_user_startup.py"
       },
       {
@@ -4470,16 +4470,11 @@
   "over_limit_python_count": 0,
   "schema_version": 1,
   "shared_loc_passed": true,
-  "source_commit": "cfb7f9a4e299c23df12b4a3cf1a918605febdeff",
-  "status": "PASS",
-  "verification_identity": {
-    "integration_source_commit": "0ece0ad8fb52f028e9acf23bdc792dc6fd266fc0",
-    "integration_branch": "codex/integration/v2-jobs-staged-20261021",
-    "vm_snapshot": "Ubuntu-Test r29",
-    "vm_snapshot_fingerprint_sha256": "a2aae9badd57dc929844606342be468ffa62bdb0d604fd9501add61759fe4007",
-    "vm_manifest_sha256": "af3d75bc8538b8d494d79bd80910816fe11feea802e8209c8f99fb1f925bcc1b",
-    "vm_archive_sha256": "b36380f1c806aa54eb11d5e80c74c842ee78c0f212fc10aca8a1005ab1bdd2dc",
-    "synthetic_git_commit": "cfb7f9a4e299c23df12b4a3cf1a918605febdeff",
-    "git_inventory_adapter": "temporary VM shim enumerated all physical source files; only architecture scan was executed in full mode"
-  }
+  "source_commit": "0ad0542918b49a4039db41c27ff62e2ab4c86ea1",
+  "status": "PASS"
+,
+  "integration_source_commit": "f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913",
+  "integration_source_tree_sha": "450c1d0ddb079122d5aa3efc90516bead03f0797",
+  "integration_source_fingerprint_sha256": "bbfbbfad02d5d3b0a2ae7acd143c49ae62349b8136b1bf766c7bd85f729bdbef",
+  "vm_snapshot_commit": "0ad0542918b49a4039db41c27ff62e2ab4c86ea1"
 }

@@ -1,6 +1,6 @@
 # Architecture Baseline
 
-Baseline source commit: `f61919bad12be5f328cb9db3fee3c8de8563fa5b` (the clean local `develop` head at task start). The full source report is in [ARCHITECTURE_BASELINE.json](ARCHITECTURE_BASELINE.json), and the Python source hashes/counts are recorded in [`docs/architecture/source-loc-baseline.json`](../../architecture/source-loc-baseline.json).
+Baseline source commit: `f61919bad12be5f328cb9db3fee3c8de8563fa5b` (the clean local `develop` head at task start). The full source report, hashes, and counts are preserved in [ARCHITECTURE_BASELINE.json](ARCHITECTURE_BASELINE.json). The transitional LOC baseline was removed after WAVE 11 reached the zero-violation architecture gate.
 
 The shared Agent Core validator at `mskomek/.agents-core` commit `2dfa726973194305f63b62477a286037f5c0642d` was run in `project` scope. It reported **803 source files, 60 files in the 400–500 warning range, and 52 files over 500 physical lines**. Its exit code was 1 because the 52 existing violations are the staged baseline. The independent project dependency scan found **2 unresolved internal symbol imports** and **8 existing import-cycle groups**.
 

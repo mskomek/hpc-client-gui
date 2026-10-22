@@ -1,50 +1,50 @@
 # WAVE 12 — Final Acceptance
 
-Status: **IN_PROGRESS; acceptance is not complete**. The source architecture and dependency gates passed on a final Ubuntu-Test r29 snapshot. Linux wx coverage is blocked by the VM environment. A full Windows11 portable release test is still running; release packaging and artifact acceptance have not been performed.
+Status: **WAVE_BLOCKED**. Code and global architecture work are complete and locally integrated through source commit `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913`. Release acceptance remains blocked by Ubuntu wxPython absence and unresolved Windows portable/UI/SFTP results. Terminal verdict: **INTEGRATION_CODE_COMPLETE_ACCEPTANCE_BLOCKED**.
 
 ## Source identity
 
-- Integrated source commit: `0ece0ad8fb52f028e9acf23bdc792dc6fd266fc0` on `codex/integration/v2-jobs-staged-20261021`.
-- Local `develop` was fast-forwarded from `d91c84f1d784fd3391bf132a54134faef44e63c9` to this source commit with no conflicts. No remote mutation occurred.
-- Ubuntu-Test r29 manifest fingerprint: `a2aae9badd57dc929844606342be468ffa62bdb0d604fd9501add61759fe4007`; manifest SHA-256: `af3d75bc8538b8d494d79bd80910816fe11feea802e8209c8f99fb1f925bcc1b`; archive SHA-256: `b36380f1c806aa54eb11d5e80c74c842ee78c0f212fc10aca8a1005ab1bdd2dc`.
-- The VM lacked a Git executable. A temporary outside-repository adapter supplied a complete physical file inventory and a synthetic VM commit for the full-mode architecture scan. Its use is disclosed in `ARCHITECTURE_FINAL.json`; no source files were excluded through the adapter.
+- Jobs source SHA: `713949fb752b90601e007812ebf2bd765da5ad52`.
+- V2 source SHA: `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240`.
+- Integrated source commit/tree: `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913` / `450c1d0ddb079122d5aa3efc90516bead03f0797`.
+- Source fingerprint SHA-256: `bbfbbfad02d5d3b0a2ae7acd143c49ae62349b8136b1bf766c7bd85f729bdbef`, covering 1,516 tracked files (23,440,549 bytes).
+- Ubuntu-Test r33 Git snapshot commit: `0ad0542918b49a4039db41c27ff62e2ab4c86ea1`. The final architecture JSON preserves the VM `source_commit` and records the corresponding local integration SHA/tree/fingerprint separately.
+- Windows W15 source manifest SHA-256: `72d5333de0d59dd6a5bc4f0d2e7036d359d8bb24a06d96acc516e8fd1315d86a`; test file SHA-256 `d9511a924bc76601b4a63baafe4f5aa02361758a4c6e13be13152363593b38e6`.
+- Windows terminal bridge run `e404c71b7f3c40069b7efb5d2d984006` used the same source manifest SHA-256. Its source hashes were verified equal between host and guest before launch.
+- WAVE 12 code commits: `e888745396bab2a9c3f1be8e4333fab729ede79f` (localized connection status assertions) and `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913` (remove unused screenshot DC objects).
 
-## Acceptance matrix
+## Final gates
 
-| Gate | Status | Evidence / limitation |
+| Gate | Result | Evidence / limit |
 |---|---|---|
-| Git source identity | PASS | Integration commit and VM manifest/archive hashes recorded above |
-| Global 500-line architecture | PASS | Ubuntu-Test r29: 1,015 Python files, 0 over 500 |
-| Imports, dependencies, public API, cycles | PASS | 0 errors across all four gates |
-| Ruff | PASS | Ubuntu-Test r28, all `src scripts tests`; source Python unchanged in r29 |
-| Python compileall | PASS | Ubuntu-Test r28, `src/hpc_gui scripts tests`; source Python unchanged in r29 |
-| i18n | PASS | Ubuntu-Test r28: key, reference, and hardcoded UI text checks all passed |
-| CLI / config / SSH / Jobs / Files / Outputs / plugin contracts | PARTIALLY VERIFIED | Covered by portable release main suite and earlier focused wave suites; see `TEST_MATRIX.md`. Windows native targeted batch passed 114 tests; plugin manager UI passed 12. |
-| Qt GUI | PARTIALLY VERIFIED | Linux offscreen portable suite and Windows plugin UI batch passed; full cross-platform acceptance remains pending |
-| wx GUI | BLOCKED_ENVIRONMENT on Ubuntu | `wxPython` unavailable; 101 isolated wx modules contained only skips and returned pytest exit 5. Windows11 targeted wx batch passed 114 tests; full portable result pending. |
-| FTP transfer | PARTIALLY VERIFIED | Fake/mocked and portable tests ran; no destructive remote operations; complete release acceptance pending |
-| Security regressions | PARTIALLY VERIFIED | Focused Windows connection/auth/host-key batch passed; full release acceptance pending |
-| Release test runner | BLOCKED_ENVIRONMENT on Ubuntu; Windows pending | Ubuntu r28 combined counts: 2,639 passed, 206 skipped, 61 deselected, 29 subtests passed; no assertion failures; runner exit 5 because wx-only partitions could not collect runnable tests. Windows11 full portable run is running under interactive task `7ad295fc24b14163adf32c241c49eed1`. |
-| Windows build and smoke | NOT RUN | No Windows artifact built from this source commit |
-| Ubuntu/Linux package | NOT RUN | No Linux package built from this source commit |
-| Artifact/source SHA match | SNAPSHOT VERIFIED; RELEASE ARTIFACT NOT VERIFIED | VM source archive and manifest hashes match; no release artifact exists to accept |
-| GitHub Actions | NOT RUN | Local CI configuration updated, but hosted workflow has not executed |
-| Final report and audit | IN PROGRESS | Architecture report and matrix are written; Windows run result still required |
+| Source identity | PASS | Source commit/tree/fingerprint above; Jobs/V2 SHAs recorded |
+| Global architecture | PASS | Ubuntu-Test r33: 1,015 Python files, 0 over 500, 0 dependency errors, 0 cycles, 0 public API errors |
+| Shared LOC gate | PASS | 1,041 source entries; 0 over-limit; 91 warning-band entries; baseline removed |
+| Ruff | PASS | Ubuntu-Test r33: `ruff check src scripts tests tools`, exit 0 |
+| Compileall | PASS | Ubuntu-Test r33: `compileall -q src/hpc_gui scripts tests tools`, exit 0 |
+| i18n | PASS | Ubuntu-Test r33 check, exit 0 |
+| Focused architecture/docs/Qt/provenance regressions | PASS | Ubuntu-Test r33: 41 passed, exit 0 |
+| Ubuntu acceptance runner | BLOCKED_ENVIRONMENT | 2,639 passed, 0 failed assertions, 210 skipped, 61 deselected, 29 subtests passed; exit 5 because 105 wx-only partitions had no runnable tests without wxPython |
+| Ubuntu wheel packaging | PASS | 1 passed, 3 deselected, exit 0 after installing the missing `build` dependency in the VM venv |
+| Linux release package plan | PASS (plan only) | AppImage/deb/Flatpak dry-run validation; no artifact built |
+| Windows W15 connection/startup | PASS | Windows11 r33: 11 passed, exit 0; assertions now verify controller state and exact localized status |
+| Windows full portable suite | BLOCKED_TIMEOUT | Windows11 r28 run `7ad295fc24b14163adf32c241c49eed1`, 2,700-second timeout, exit `-1`, owned process tree stopped |
+| Windows download-cancel SFTP | FAIL / unresolved | Full run isolated suite reported 2 passed / 2 failed: resume observed a dropped Paramiko connection; skip saw no progress. Ubuntu r30 same file passed 4/4. Later Windows attempt did not collect because its task environment lacked PySide6 |
+| Windows terminal bridge | BLOCKED_TIMEOUT / unresolved | Windows11 run `e404c71b7f3c40069b7efb5d2d984006`, 600-second timeout, exit `-1`, owned process tree stopped. Guest stdout contained `.F` but no pytest summary or failure traceback; one pass and one failure marker were emitted before hang. Do not count this as a passing run |
+| Windows task executable resolution | ENVIRONMENT ERROR | Full portable task could not resolve `powershell.exe` for updater test and `git` for docs/Qt-removal tests; no full retry with corrected task PATH was completed |
+| Windows/Linux release artifacts | NOT RUN | No source-matched release package/artifact built |
+| GitHub Actions | NOT RUN | No hosted workflow result |
 
-Local VM results and GitHub Actions results are kept separate. No GitHub Actions check is marked PASS.
+## VM test execution
 
-## Test execution summary to date
+- Ubuntu-Test r30 ran `scripts/release_test_suite.py --scope acceptance` to completion. The aggregate run reported 2,639 passed, 0 failed assertions, 210 skipped, 61 deselected, and 29 passed subtests. Its exit code was 5 because wx-only partitions skipped without wxPython; this run is not PASS.
+- Ubuntu-Test r30 ran `tests/test_download_cancel_wire.py`: 4 passed, exit 0. No real HPC job or remote file deletion was used.
+- Ubuntu-Test r33 ran the full architecture validator, Ruff, compileall, i18n, and 41 focused regressions on the updated source snapshot; each completed command exited 0. After the final report files were copied to the VM, `tests/test_docs_references.py` passed 2/2 with exit 0 after restoring the VM Git executable to `PATH` and setting `GIT_EXEC_PATH`. The first attempt failed before assertions because Git was not on that task PATH (exit 1).
+- Windows11 r33 ran `tests/test_w15_fresh_user_startup.py`: 11 passed, exit 0. The earlier two failures were English-only assertions against correct Turkish text; the test now verifies exact translation and controller state.
+- Windows11 r28 full portable acceptance timed out after 2,700 seconds. It included 2 SFTP failures, 2 old localization assertion failures, executable-resolution errors, and an incomplete terminal bridge partition result. The localization test failures were fixed and the targeted suite passed; the SFTP and bridge results remain unresolved.
+- Windows11 r36 focused terminal bridge run timed out at 600 seconds after printing `.F`; no traceback or final pytest summary was captured. Host and guest source manifest and focused source hashes matched.
+- A separate Windows SFTP invocation exited 2 before collection because that task environment lacked PySide6; it is an environment diagnostic and does not clear the SFTP failures.
+- Qt editor tests under Ubuntu Xvfb/xcb had 3 focus assertion failures; rerunning with offscreen backend passed 14/14. The exploratory failures remain classified as backend-specific and are not counted as PASS.
+- Expanded Ruff initially found three unused items in `tools/gen_updater_screenshots.py`. The unused import and unused DC objects were removed; final Ruff passed. The screenshot generator itself was not executed because it writes documentation images.
 
-- Ubuntu-Test r29 full architecture validator: exit 0; 1,015 Python files; 0 LOC/import/API/cycle violations.
-- Ubuntu-Test r29 architecture regressions: 7 passed, exit 0.
-- Ubuntu-Test r28 quality: Ruff, compileall, and i18n each exit 0.
-- Windows11 r27 focused wx/Qt/Jobs/Files batch: 114 passed, exit 0.
-- Windows11 r28 plugin manager UI: 12 passed, exit 0; host and guest file hashes matched.
-- Ubuntu-Test r28 portable release runner: 2,639 passed, 0 assertion failures, 206 skipped, 61 deselected, 29 subtests passed; overall exit 5 because 101 wx-only isolated partitions skipped for missing wxPython.
-- Windows11 full portable release runner: pending.
-
-The displayed counts are executed test results across separate runs, not deduplicated test cases. A skipped wx-only process is not counted as a pass. No failing assertion is hidden.
-
-## Verdict
-
-Current verdict: **INTEGRATION_CODE_COMPLETE_ACCEPTANCE_BLOCKED**. The source code and global architecture gate are complete and integrated locally. Full release acceptance cannot be claimed while the Windows full suite is pending, Ubuntu wxPython is unavailable, and new Windows/Linux release artifacts and GitHub Actions have not been verified.
+No Linux or Windows release artifact was built. GitHub Actions was not run. No remote branch, PR, or release was changed. Full release acceptance is not established.
