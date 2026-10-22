@@ -7,7 +7,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import wx
-from hpc_gui import __version__
 from hpc_gui.services.app_updater import UpdateRelease
 from hpc_gui.wx_updater_view import WxUpdateDialog, _format_bytes
 from hpc_gui.wx_updater_view import show_installing_splash
@@ -25,16 +24,9 @@ def _save_window(win, name):
     wx.GetApp().ProcessPendingEvents()
     wx.MilliSleep(200)
     wx.GetApp().ProcessPendingEvents()
-    # Get size and create bitmap
+    # Keep a blank bitmap as a fallback if screen capture fails.
     sz = win.GetSize()
     bmp = wx.Bitmap(sz.width, sz.height)
-    dc = wx.MemoryDC(bmp)
-    # Use window's DC
-    win_dc = wx.WindowDC(win)
-    # Alternative: use ClientDC?
-    # Simple: blit from window
-    # On msw, WindowDC should capture
-    # We'll use wx.ClientDC and Blit
     try:
         # Use PrintWindow via wx
         # Fallback: create bitmap from window
