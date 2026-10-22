@@ -77,7 +77,11 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                         pass
                 if iid not in state["failed_map"]:
                     state["failed_map"][iid] = item
-                    add_row(state, failed_list, item, "Failed", "")
+                    error = str(getattr(item, "error_message", "") or "").strip()
+                    failed_status = t("transfer.failed_tab")
+                    if error:
+                        failed_status = f"{failed_status}: {error}"
+                    add_row(state, failed_list, item, failed_status, "")
             update_tab_counts(notebook, state)
             update_button_state(host, state, controls, True)
         except RuntimeError:
