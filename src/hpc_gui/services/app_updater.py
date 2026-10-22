@@ -218,7 +218,7 @@ def get_latest_release(timeout: float = 30.0) -> UpdateRelease:
                 security_status = parse_release_security(
                     json.loads(response.read().decode("utf-8", errors="replace"))
                 )
-        except OSError, ValueError, RuntimeError:
+        except (OSError, ValueError, RuntimeError):
             security_status = SECURITY_UNKNOWN
 
     size = asset_sizes.get(expected_zip) or None

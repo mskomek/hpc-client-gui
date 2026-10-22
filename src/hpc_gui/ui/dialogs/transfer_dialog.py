@@ -196,7 +196,7 @@ class TransferDialog(_TransferDialogViews, _TransferDialogExecution, _TransferDi
         )
         try:
             self._run_item_accepts_progress = len(inspect.signature(run_item).parameters) >= 2
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             self._run_item_accepts_progress = False
         self._max_parallel_limit = max(1, min(10, int(max_parallel_limit or 1)))
         self._parallel_limit = 1
