@@ -149,9 +149,11 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             with lock:
                 if state["closed"]:
                     return
-            if wx.GetApp() is None:
-                return
-            wx.CallAfter(callback, *args)
+                if wx.GetApp() is None:
+                    return
+                # Keep teardown and cross-thread event posting serialized so
+                # no worker calls wx after this view or its app is destroyed.
+                wx.CallAfter(callback, *args)
         except BaseException:
             return
 

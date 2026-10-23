@@ -15,6 +15,7 @@ def install_lifecycle(view):
     refresh_labels = view.refresh_labels
     state = view.state
     tabs = view.tabs
+    threading_lock = view.threading_lock
     wx = view.wx
 
     def on_page_changed(event):
@@ -148,12 +149,24 @@ def install_lifecycle(view):
             except Exception:
                 pass
 
+    def _mark_closed():
+        with threading_lock:
+            state["closed"] = True
+            for te in tabs:
+                te["closed"] = True
+
     def close(event):
-        state["closed"] = True
-        for te in tabs:
-            te["closed"] = True
+        _mark_closed()
         unsubscribe_language_change(refresh_labels)
         event.Skip()
+
+    def on_host_destroy(event):
+        if event.GetEventObject() is host:
+            _mark_closed()
+            unsubscribe_language_change(refresh_labels)
+        event.Skip()
+
+    host.Bind(wx.EVT_WINDOW_DESTROY, on_host_destroy)
 
     view.on_page_changed = on_page_changed
     view._patched_set = _patched_set

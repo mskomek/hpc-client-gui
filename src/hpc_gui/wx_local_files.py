@@ -81,9 +81,13 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
 
     def safe_call_after(callback, *args):
         try:
-            if wx.GetApp() is None:
-                return
-            wx.CallAfter(callback, *args)
+            # Serialize event posting with close/destroy. A worker can finish
+            # after the window starts shutting down; wx.CallAfter from that
+            # late worker can crash native wx builds during app teardown.
+            with threading_lock:
+                if state["closed"] or wx.GetApp() is None:
+                    return
+                wx.CallAfter(callback, *args)
         except BaseException:
             return
 

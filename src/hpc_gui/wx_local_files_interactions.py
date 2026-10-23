@@ -128,7 +128,8 @@ def install_interactions(view):
             return
         if event.ControlDown() and event.GetKeyCode() == ord("A"):
             for index in range(listing.GetItemCount()):
-                listing.Select(index)
+                entry = tstate["entries"][index]
+                listing.Select(index, not is_parent_entry(entry, tstate))
             return
         # REMOVED: Backspace parent navigation for local (per contract)
         actions = {wx.WXK_F2: "rename", wx.WXK_DELETE: "delete", wx.WXK_F5: "refresh"}

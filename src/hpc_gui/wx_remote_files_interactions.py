@@ -40,6 +40,10 @@ def install_interactions(view):
         parent = PurePosixPath(tstate["path"]).parent
         return parent != PurePosixPath(tstate["path"]) and entry.path == str(parent)
 
+    def is_parent_entry(entry, tstate):
+        parent = PurePosixPath(tstate["path"]).parent
+        return parent != PurePosixPath(tstate["path"]) and entry.path == str(parent)
+
     def key_down(event):
         tstate = active_tab_state()
         if not tstate:
@@ -47,8 +51,8 @@ def install_interactions(view):
             return
         listing = tstate["listing"]
         if event.ControlDown() and event.GetKeyCode() == ord("A"):
-            for index in range(listing.GetItemCount()):
-                listing.Select(index)
+            for index, entry in enumerate(tstate["entries"]):
+                listing.Select(index, not is_parent_entry(entry, tstate))
             return
         selected = tuple(entry.path for index, entry in enumerate(tstate["entries"]) if listing.IsSelected(index) and not is_parent_entry(entry, tstate))
         if event.ControlDown() and event.GetKeyCode() in (ord("C"), ord("X"), ord("V")):

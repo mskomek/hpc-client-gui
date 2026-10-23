@@ -166,6 +166,8 @@ class ReleaseTestSuiteTests(unittest.TestCase):
             "tests/test_jobs_auto_refresh_toggle.py",
             "tests/test_wx_connection_progress.py",
             "tests/test_wx_shell_layout.py",
+            "tests/test_wx_terminal_parity_evidence.py",
+            "tests/test_wx_terminal_parity_evidence_input_resize.py",
             "tests/test_wx_terminal_webview_lifecycle.py",
             "tests/test_remote_accordion.py",
             "tests/test_startup_changelog.py",
@@ -309,6 +311,10 @@ def test_native_gui_discovery_handles_pytest_aliases(tmp_path):
         'import pytest\nwx = pytest.importorskip("wx")\ndef test_optional_window(): pass\n',
         encoding="utf-8",
     )
+    (tests_dir / "test_project_wx_import.py").write_text(
+        "from hpc_gui.wx_terminal_webview import WebView\ndef test_terminal(): pass\n",
+        encoding="utf-8",
+    )
     (tests_dir / "test_helper_wx_import.py").write_text(
         "from gui_test_support import wx\ndef test_helper_window(): pass\n",
         encoding="utf-8",
@@ -322,6 +328,7 @@ def test_native_gui_discovery_handles_pytest_aliases(tmp_path):
         "tests/test_helper_wx_import.py",
         "tests/test_native_wx_import.py",
         "tests/test_optional_wx_import.py",
+        "tests/test_project_wx_import.py",
         "tests/test_qt.py",
     )
 

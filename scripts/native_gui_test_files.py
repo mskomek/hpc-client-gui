@@ -9,6 +9,12 @@ _NATIVE_GUI_MARKERS = frozenset({"gui", "wx", "qt"})
 _NATIVE_GUI_MODULES = frozenset({"wx", "PySide6", "PyQt5", "PyQt6"})
 
 
+def _is_native_gui_module(module: str) -> bool:
+    return module.split(".", 1)[0] in _NATIVE_GUI_MODULES or module.startswith(
+        "hpc_gui.wx_"
+    )
+
+
 class _NativeGuiMarkerVisitor(ast.NodeVisitor):
     def __init__(self) -> None:
         self.pytest_aliases = {"pytest"}
@@ -19,11 +25,11 @@ class _NativeGuiMarkerVisitor(ast.NodeVisitor):
         for alias in node.names:
             if alias.name == "pytest":
                 self.pytest_aliases.add(alias.asname or "pytest")
-            if alias.name.split(".", 1)[0] in _NATIVE_GUI_MODULES:
+            if _is_native_gui_module(alias.name):
                 self.found = True
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-        if (node.module or "").split(".", 1)[0] in _NATIVE_GUI_MODULES:
+        if _is_native_gui_module(node.module or ""):
             self.found = True
         if any(alias.name == "wx" for alias in node.names):
             self.found = True
@@ -44,7 +50,7 @@ class _NativeGuiMarkerVisitor(ast.NodeVisitor):
             and node.args
             and isinstance(node.args[0], ast.Constant)
             and isinstance(node.args[0].value, str)
-            and node.args[0].value.split(".", 1)[0] in _NATIVE_GUI_MODULES
+            and _is_native_gui_module(node.args[0].value)
         ):
             self.found = True
         self.generic_visit(node)

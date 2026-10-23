@@ -23,10 +23,12 @@ def test_wx_shell_uses_shared_commands_and_responsive_start_size():
 
 @pytest.mark.audit
 def test_wx_shell_dispatches_core_views():
-    source = "".join(path.read_text(encoding="utf-8") for path in Path("src/hpc_gui").glob("wx_shell*.py"))
+    source_paths = list(Path("src/hpc_gui").glob("wx_shell*.py"))
+    source_paths.append(Path("src/hpc_gui/wx_directories_view.py"))
+    source = "".join(path.read_text(encoding="utf-8") for path in source_paths)
     assert 'command_id == "NAV-FILES"' in source
     assert '"open_editor_new_window": lambda path: open_local(path, True)' in source
-    assert "Path(path).read_text" in source and "manager.open_primary" in source
+    assert "decode_text_with_encoding(Path(path).read_bytes()" in source and "manager.open_primary" in source
     assert '"upload": upload_local' in source and "_start_file_transfers" in source
     assert "_editor_action_factory" in source and "current.is_local" in source
     assert 'command_id == "NAV-EDITOR"' in source
@@ -56,7 +58,7 @@ def test_wx_shell_dispatches_core_views():
 @pytest.mark.wx
 @pytest.mark.semantic
 def test_directories_default_download_uses_transfer_queue(monkeypatch, tmp_path):
-    from hpc_gui import wx_directories_view, wx_remote_files_view, wx_shell
+    from hpc_gui import wx_directories_view, wx_remote_files_view, wx_shell_file_transfer
 
     app = wx.GetApp() or wx.App(False)
     frame = wx.Frame(None)
@@ -74,7 +76,7 @@ def test_directories_default_download_uses_transfer_queue(monkeypatch, tmp_path)
 
     started = []
     monkeypatch.setattr(wx_remote_files_view, "build_remote_files_panel", fake_remote_panel)
-    monkeypatch.setattr(wx_shell, "_start_file_transfers", lambda *args, **kwargs: started.append((args, kwargs)))
+    monkeypatch.setattr(wx_shell_file_transfer, "_start_file_transfers", lambda *args, **kwargs: started.append((args, kwargs)))
 
     try:
         wx_directories_view.build_directories_panel(frame, session_state=state)
