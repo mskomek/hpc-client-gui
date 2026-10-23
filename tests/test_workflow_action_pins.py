@@ -92,6 +92,10 @@ def test_windows_and_linux_release_tests_use_pinned_legacy_qt_lock():
 
     assert workflow.count("pip install -r requirements-legacy-qt-test.lock") == 2
     assert workflow.count("pip uninstall --yes PySide6 PySide6_Addons PySide6_Essentials shiboken6") == 2
+    linux_workflow, windows_and_later = workflow.split("  build-windows:", maxsplit=1)
+    windows_workflow = windows_and_later.split("\n  build-macos-arm64:", maxsplit=1)[0]
+    assert linux_workflow.rfind("Remove legacy Qt test-only packages") > linux_workflow.index("wx_packaged_smoke.py")
+    assert windows_workflow.index("Remove legacy Qt test-only packages") > windows_workflow.index("scripts/release.ps1")
     assert "PySide6" not in release_lock
     assert set(qt_lock.splitlines()) == {
         "PySide6==6.11.2",

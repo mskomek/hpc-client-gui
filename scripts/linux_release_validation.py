@@ -11,6 +11,9 @@ class PackagingError(RuntimeError):
     """An actionable Linux packaging failure."""
 
 
+MINIMUM_GNOME_WEBKIT_RUNTIME = 51
+
+
 def validate_desktop_entry(path: Path) -> None:
     """Validate the static AppImage .desktop entry."""
     if not path.is_file():
@@ -59,6 +62,16 @@ def validate_flatpak_manifest(path: Path) -> None:
             raise PackagingError(f"Flatpak manifest has no {key} key: {path}")
     if not isinstance(data.get("modules"), list) or not data["modules"]:
         raise PackagingError(f"Flatpak manifest modules must be a non-empty list: {path}")
+    if data["runtime"] != "org.gnome.Platform" or data["sdk"] != "org.gnome.Sdk":
+        raise PackagingError("Flatpak runtime must be GNOME to provide the Linux WebKitGTK dependency.")
+    try:
+        runtime_major = int(str(data.get("runtime-version", "")).split(".", 1)[0])
+    except ValueError as exc:
+        raise PackagingError("Flatpak GNOME runtime-version must be numeric.") from exc
+    if runtime_major < MINIMUM_GNOME_WEBKIT_RUNTIME:
+        raise PackagingError(
+            f"Flatpak GNOME runtime {MINIMUM_GNOME_WEBKIT_RUNTIME}+ is required for WebKitGTK 4.1."
+        )
 
 
 def validate_pip_metadata(pyproject: Path, entry: Path) -> None:

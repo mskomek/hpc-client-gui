@@ -1,8 +1,8 @@
 {
   "app-id": "io.github.mskomek.HpcClientGui",
-  "runtime": "org.freedesktop.Platform",
-  "runtime-version": "24.08",
-  "sdk": "org.freedesktop.Sdk",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "51",
+  "sdk": "org.gnome.Sdk",
   "command": "hpc-client-gui",
   "finish-args": [
     "--share=network",

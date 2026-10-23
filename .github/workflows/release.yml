@@ -71,15 +71,13 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           HPC_GUI_DISABLE_WEBENGINE: "1"
         run: python scripts/ci.py release
-      - name: Remove legacy Qt test-only packages
-        run: python -m pip uninstall --yes PySide6 PySide6_Addons PySide6_Essentials shiboken6
       - name: Validate Linux packaging plan
         run: |
           python scripts/release_linux.py --version "${{ github.event.inputs.version }}" --json
       - name: Install Flatpak runtime
         run: |
           flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user --noninteractive --assumeyes flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+          flatpak install --user --noninteractive --assumeyes flathub org.gnome.Platform//51 org.gnome.Sdk//51
       - name: Install AppImage tool
         run: |
           if [ ! -f /tmp/appimagetool.AppImage ]; then curl --fail --location --retry 3 --output /tmp/appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage; fi
@@ -96,6 +94,17 @@ jobs:
       - name: Packaged wx GUI/runtime smoke (Xvfb + D-Bus)
         run: |
           dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' python scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui --platform linux --output dist/releases/v${{ github.event.inputs.version }}/linux-wx-packaged-smoke.json --timeout 45
+      - name: Install and smoke Flatpak bundle
+        run: |
+          flatpak install --user --noninteractive --assumeyes "dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui-${{ github.event.inputs.version }}.flatpak"
+          cat > "$RUNNER_TEMP/hpc-client-gui-flatpak" <<'EOF'
+          #!/usr/bin/env sh
+          exec flatpak run --user --command=hpc-client-gui io.github.mskomek.HpcClientGui "$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/hpc-client-gui-flatpak"
+          xvfb-run -a dbus-run-session -- python scripts/linux_release_smoke.py --binary "$RUNNER_TEMP/hpc-client-gui-flatpak" --gui
+      - name: Remove legacy Qt test-only packages
+        run: python -m pip uninstall --yes PySide6 PySide6_Addons PySide6_Essentials shiboken6
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -127,12 +136,12 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           HPC_GUI_DISABLE_WEBENGINE: "1"
         run: python scripts/ci.py release
-      - name: Remove legacy Qt test-only packages
-        shell: pwsh
-        run: python -m pip uninstall --yes PySide6 PySide6_Addons PySide6_Essentials shiboken6
       - name: Build release artifacts
         shell: pwsh
         run: ./scripts/release.ps1 -Version "${{ github.event.inputs.version }}"
+      - name: Remove legacy Qt test-only packages
+        shell: pwsh
+        run: python -m pip uninstall --yes PySide6 PySide6_Addons PySide6_Essentials shiboken6
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

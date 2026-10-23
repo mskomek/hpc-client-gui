@@ -36,13 +36,14 @@ if [ ! -x /cache/appimagetool/appimagetool-x86_64.AppImage ]; then
 fi
 if [ ! -x /cache/venv/bin/python ]; then python3 -m venv /cache/venv; fi
 /cache/venv/bin/pip install -r requirements-release.lock
+/cache/venv/bin/pip install -r requirements-legacy-qt-test.lock
 /cache/venv/bin/pip install -e . --no-deps
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 if [ "$RELEASE_OFFLINE" = "1" ]; then
-  flatpak info org.freedesktop.Platform//24.08 >/dev/null 2>&1 || { echo "Flatpak runtime is not cached" >&2; exit 2; }
-  flatpak info org.freedesktop.Sdk//24.08 >/dev/null 2>&1 || { echo "Flatpak SDK is not cached" >&2; exit 2; }
+  flatpak info org.gnome.Platform//51 >/dev/null 2>&1 || { echo "Flatpak runtime is not cached" >&2; exit 2; }
+  flatpak info org.gnome.Sdk//51 >/dev/null 2>&1 || { echo "Flatpak SDK is not cached" >&2; exit 2; }
 else
-  flatpak install -y flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+  flatpak install -y flathub org.gnome.Platform//51 org.gnome.Sdk//51
 fi
 /cache/venv/bin/pyinstaller -y --clean build/linux/hpc-client-gui-linux.spec
 cd /tmp
