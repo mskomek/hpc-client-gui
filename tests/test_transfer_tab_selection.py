@@ -10,6 +10,7 @@ import pytest
 from PySide6.QtWidgets import QApplication
 
 from hpc_gui.services.transfer_conflict_policy import clear_session_conflict_action
+from hpc_gui.core.i18n import load_language
 from hpc_gui.ui.dialogs.transfer_conflict_dialog import (
     TransferConflictDecision,
     TransferConflictInfo,
@@ -22,6 +23,7 @@ from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
 @pytest.mark.gui
 @pytest.mark.qt
 def test_transfer_activity_events_preserve_user_selected_tab():
+    load_language("en")
     app = QApplication.instance() or QApplication([])
     panel = TransferActivityPanel()
     item = SimpleNamespace(op="upload", src="local.txt", dst="/remote/local.txt")
