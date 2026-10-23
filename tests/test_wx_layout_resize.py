@@ -37,11 +37,14 @@ def _record(name: str, executed: int, required: int) -> None:
     assert executed >= required, f"{name}: executed {executed}, required {required}"
 
 
-def _pump(app, rounds: int = 2) -> None:
+def _pump(app, rounds: int = 3) -> None:
     for _ in range(rounds):
         app.ProcessPendingEvents()
-        wx.MilliSleep(1)
-    app.ProcessPendingEvents()
+        # GTK delivers native size notifications through the event loop. A
+        # brief native event-loop interval lets the updated child allocation
+        # arrive before the geometry assertions sample it.
+        wx.Yield()
+        wx.MilliSleep(5)
 
 
 def _close(app, frame, lifecycle):

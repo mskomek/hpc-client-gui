@@ -49,6 +49,7 @@ def test_wx_terminal_accessible_label_tracks_live_language_changes():
     class Harness(TerminalBridgeMixin):
         def __init__(self):
             self._webview = FakeWebView()
+            self._page_loaded = False
 
     previous = current_language()
     try:
@@ -56,6 +57,10 @@ def test_wx_terminal_accessible_label_tracks_live_language_changes():
         load_language("en")
         harness._update_accessibility_label()
         assert harness._webview.name == "Remote terminal"
+        assert harness._webview.script == ""
+
+        harness._page_loaded = True
+        harness._update_accessibility_label()
         assert "Remote terminal" in harness._webview.script
 
         load_language("tr")

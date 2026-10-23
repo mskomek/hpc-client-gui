@@ -45,9 +45,12 @@ def _isolated_storage(monkeypatch):
 
 def _seed_master_dpapi_cache(monkeypatch, master_password):
     """Pre-seed the DPAPI master-password cache so _master_ask_factory returns
-    the master without opening a wx dialog.
+    the master without opening a wx dialog. Simulate the credential-store
+    capability too, since Linux deliberately has no DPAPI implementation.
     """
     import hpc_gui.config.storage as cfg_storage
+    import hpc_gui.core.secret_store as secret_store
+
     fake_token = f"dpapi-{master_password}"
 
     def fake_load_settings():
@@ -59,6 +62,7 @@ def _seed_master_dpapi_cache(monkeypatch, master_password):
         raise ValueError("decrypt failed")
 
     monkeypatch.setattr(cfg_storage, "load_settings", fake_load_settings)
+    monkeypatch.setattr(secret_store, "is_available", lambda: True)
     monkeypatch.setattr("hpc_gui.core.secret_store.unprotect_secret", fake_unprotect)
     monkeypatch.setattr("hpc_gui.services.connection_profile_service.unprotect_secret", fake_unprotect)
 
@@ -252,7 +256,8 @@ def test_wrong_master_password_fails_closed(monkeypatch):
         wx.Yield()
 
         btn = host._wx_connection_controls["connect"]
-        with mock.patch("wx.MessageBox") as MockBox:
+        with mock.patch.object(wx.Dialog, "ShowModal", return_value=wx.ID_CANCEL), \
+             mock.patch("wx.MessageBox") as MockBox:
             evt2 = wx.CommandEvent(wx.EVT_BUTTON.typeId, btn.GetId())
             btn.GetEventHandler().ProcessEvent(evt2)
             for _ in range(50):

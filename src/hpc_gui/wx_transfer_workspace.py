@@ -25,7 +25,11 @@ def _build_transfers(parent, controller=None, embedded=False):
         notebook = wx.Notebook(panel)
 
         def _make_list():
-            lst = wx.ListCtrl(notebook, style=wx.LC_REPORT | wx.BORDER_SUNKEN)
+            page = wx.Panel(notebook)
+            lst = wx.ListCtrl(page, style=wx.LC_REPORT | wx.BORDER_SUNKEN)
+            # Leave enough room for the header and a couple of rows when the
+            # embedded transfer pane is at the shell's minimum height.
+            lst.SetMinSize(wx.Size(-1, 80))
             cols = [
                 (t("transfer.col_local"), 170),
                 (t("transfer.col_direction"), 80),
@@ -37,14 +41,17 @@ def _build_transfers(parent, controller=None, embedded=False):
             ]
             for idx, (label, width) in enumerate(cols):
                 lst.InsertColumn(idx, label, width=width)
-            return lst
+            page_sizer = wx.BoxSizer(wx.VERTICAL)
+            page_sizer.Add(lst, 1, wx.EXPAND)
+            page.SetSizer(page_sizer)
+            return page, lst
 
-        queue_list = _make_list()
-        failed_list = _make_list()
-        completed_list = _make_list()
-        notebook.AddPage(queue_list, f"{t('transfer.queue_tab')} (0)")
-        notebook.AddPage(failed_list, f"{t('transfer.failed_tab')} (0)")
-        notebook.AddPage(completed_list, f"{t('transfer.completed_tab')} (0)")
+        queue_page, queue_list = _make_list()
+        failed_page, failed_list = _make_list()
+        completed_page, completed_list = _make_list()
+        notebook.AddPage(queue_page, f"{t('transfer.queue_tab')} (0)")
+        notebook.AddPage(failed_page, f"{t('transfer.failed_tab')} (0)")
+        notebook.AddPage(completed_page, f"{t('transfer.completed_tab')} (0)")
         btn_stop = wx.Button(panel, label=t("transfer.stop"))
         btn_cancel = wx.Button(panel, label=t("transfer.cancel"))
         btn_clear = wx.Button(panel, label=t("transfer.clear_pending"))

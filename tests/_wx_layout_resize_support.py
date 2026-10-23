@@ -20,6 +20,14 @@ def _is_visible_on_screen(window) -> bool:
         return False
 
 
+def _is_same_window(first, second) -> bool:
+    """Compare wx windows by their native identity, not Python wrapper identity."""
+    try:
+        return first.GetHandle() == second.GetHandle()
+    except Exception:
+        return first is second
+
+
 def _find_splitters(win):
     splitters = []
     try:
@@ -282,7 +290,25 @@ def _measure_invariants(frame, required_controls, invariants: Counter) -> None:
                     pos = ctrl.GetPosition()
                     # Only check if parent is shown and has valid client size
                     if _is_visible_on_screen(parent) and pclient.width > 0 and pclient.height > 0:
-                        if pos.x < 0 or pos.y < 0 or pos.x + sz.width > pclient.width or pos.y + sz.height > pclient.height:
+                        selected_notebook_page = (
+                            isinstance(parent, wx.Notebook)
+                            and parent.GetSelection() >= 0
+                            and _is_same_window(
+                                parent.GetPage(parent.GetSelection()), ctrl
+                            )
+                        )
+                        if selected_notebook_page:
+                            # GTK reports notebook pages at the tab-area offset;
+                            # their size, not that offset, is compared with the
+                            # notebook client rectangle.
+                            clipped = sz.width > pclient.width or sz.height > pclient.height
+                        else:
+                            clipped = (
+                                pos.x < 0 or pos.y < 0
+                                or pos.x + sz.width > pclient.width
+                                or pos.y + sz.height > pclient.height
+                            )
+                        if clipped:
                             # Check if control is inside a scrolled area? For now count
                             # Avoid counting notebooks themselves which correctly fill parent
                             # But for required controls, any extending past parent is clipping

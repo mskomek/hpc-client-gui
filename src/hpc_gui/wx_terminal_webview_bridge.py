@@ -51,13 +51,30 @@ class TerminalBridgeMixin:
             webview.SetAccessibleName(label)
         except Exception:
             pass
+        if not getattr(self, "_page_loaded", True):
+            return
+        script = (
+            "const terminal = document.getElementById('terminal');"
+            f"if (terminal) terminal.setAttribute('aria-label', {json.dumps(label, ensure_ascii=False)});"
+        )
+
+        def update_dom_label() -> None:
+            if getattr(self, "_closed", False) or getattr(self, "_webview", webview) is not webview:
+                return
+            try:
+                webview.RunScript(script)
+            except Exception:
+                pass
+
         try:
-            webview.RunScript(
-                "const terminal = document.getElementById('terminal');"
-                f"if (terminal) terminal.setAttribute('aria-label', {json.dumps(label, ensure_ascii=False)});"
-            )
+            import wx
+
+            if wx.GetApp() is not None and isinstance(webview, wx.Window):
+                wx.CallAfter(update_dom_label)
+                return
         except Exception:
             pass
+        update_dom_label()
 
     def _on_error(self, event):
         # Page load failed

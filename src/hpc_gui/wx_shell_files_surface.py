@@ -65,7 +65,7 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
     files_header.AddStretchSpacer(1)
     files_sizer.Add(files_header, 0, wx.EXPAND | wx.ALL, 4)
     transfer_splitter = wx.SplitterWindow(files_page)
-    transfer_splitter.SetMinimumPaneSize(140)
+    transfer_splitter.SetMinimumPaneSize(240)
     session_state["_embedded_files_transfer_splitter"] = transfer_splitter
     top_splitter = wx.SplitterWindow(transfer_splitter)
     _local = _local_files_callbacks(session_state, frame, lifecycle)
@@ -89,8 +89,8 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
     transfers_panel = build_transfers_panel(transfer_splitter)
     # store for routing in _start_file_transfers
     session_state["embedded_transfers_panel"] = transfers_panel
-    # Give the transfers list room for its column headers, and let a taller
-    # window grow the browsers rather than the transfers area.
+    # Preserve enough room for the transfer panel's status, tabs, list, and
+    # controls while the browser pane continues to grow with taller windows.
     transfer_splitter.SplitHorizontally(top_splitter, transfers_panel, -220)
     files_sizer.Add(transfer_splitter, 1, wx.EXPAND)
     files_page.SetSizer(files_sizer)
