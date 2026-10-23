@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 import hashlib
 import re
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -23,6 +24,18 @@ from hpc_gui.plugins.loader import load_installed_plugins
 from hpc_gui.plugins.trusted_tools import is_approved_trusted_tool
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _without_bytecode_writes():
+    """Keep lazy imports from writing generated files into immutable packages."""
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        yield
+    finally:
+        sys.dont_write_bytecode = previous
+
 
 def _tool_module_name(installed) -> str:
     """Return a private namespace for this immutable installed tool."""
@@ -78,33 +91,34 @@ def load_tool_for_plugin(installed) -> LinterTool:
     if not init_path.is_file():
         raise ToolLoadError("Trusted tool engine is missing.")
     module_name = _tool_module_name(installed)
-    previous_dont_write_bytecode = sys.dont_write_bytecode
     try:
-        spec = importlib.util.spec_from_file_location(
-            module_name, init_path, submodule_search_locations=[str(init_path.parent)]
-        )
-        if spec is None or spec.loader is None:
-            raise ToolLoadError("Trusted tool engine cannot be loaded.")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        sys.dont_write_bytecode = True
-        try:
+        with _without_bytecode_writes():
+            spec = importlib.util.spec_from_file_location(
+                module_name, init_path, submodule_search_locations=[str(init_path.parent)]
+            )
+            if spec is None or spec.loader is None:
+                raise ToolLoadError("Trusted tool engine cannot be loaded.")
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
             spec.loader.exec_module(module)
-        finally:
-            sys.dont_write_bytecode = previous_dont_write_bytecode
-        descriptor = module.create_plugin()
+            descriptor = module.create_plugin()
+        raw_page_factory = descriptor["page_factory"]
+
+        def page_factory(*args, **kwargs):
+            with _without_bytecode_writes():
+                return raw_page_factory(*args, **kwargs)
+
         return LinterTool(
             plugin_id=installed.manifest.id,
             version=installed.manifest.version,
             title=str(descriptor["title"]),
             description=str(descriptor.get("description", "")),
-            page_factory=descriptor["page_factory"],
+            page_factory=page_factory,
             module_name=module_name,
         )
     except ToolLoadError:
         raise
     except Exception as exc:
-        sys.dont_write_bytecode = previous_dont_write_bytecode
         _remove_module_namespace(module_name)
         raise ToolLoadError(f"Trusted tool failed to load: {exc}") from exc
 
@@ -154,13 +168,14 @@ def tool_supported_suffixes(tool: LinterTool) -> frozenset[str]:
     back to importing that sibling when the attribute is absent.
     """
     module = _engine_module(tool)
-    suffixes = getattr(module, "SUPPORTED_SUFFIXES", None)
-    if suffixes is None:
-        try:
-            api = sys.modules.get(f"{module.__name__}.api") or importlib.import_module(f"{module.__name__}.api")
-            suffixes = api.SUPPORTED_SUFFIXES
-        except (AttributeError, ImportError):
-            return frozenset()
+    with _without_bytecode_writes():
+        suffixes = getattr(module, "SUPPORTED_SUFFIXES", None)
+        if suffixes is None:
+            try:
+                api = sys.modules.get(f"{module.__name__}.api") or importlib.import_module(f"{module.__name__}.api")
+                suffixes = api.SUPPORTED_SUFFIXES
+            except (AttributeError, ImportError):
+                return frozenset()
     return frozenset(str(value).lower() for value in suffixes)
 
 
@@ -224,28 +239,31 @@ def remove_temp_copy(path) -> None:
 
 def lint_paths_with_tool(paths, options=None):
     """Run the installed engine over files/folders; returns its run result."""
-    module = _engine_module(first_linter_tool())
-    if options is None:
-        return module.lint_paths(paths)
-    return module.lint_paths(paths, options)
+    with _without_bytecode_writes():
+        module = _engine_module(first_linter_tool())
+        if options is None:
+            return module.lint_paths(paths)
+        return module.lint_paths(paths, options)
 
 
 def lint_text_with_tool(text: str, *, file_name: str = "", options=None):
     """Run the installed engine over in-memory content."""
-    module = _engine_module(first_linter_tool())
-    if options is None:
-        return module.lint_text(text, file_name=file_name)
-    return module.lint_text(text, file_name=file_name, options=options)
+    with _without_bytecode_writes():
+        module = _engine_module(first_linter_tool())
+        if options is None:
+            return module.lint_text(text, file_name=file_name)
+        return module.lint_text(text, file_name=file_name, options=options)
 
 
 def lint_text_with_tool_for(
     tool: LinterTool, text: str, *, file_name: str = "", options=None
 ):
     """Run a specific installed engine over in-memory content."""
-    module = _engine_module(tool)
-    if options is None:
-        return module.lint_text(text, file_name=file_name)
-    return module.lint_text(text, file_name=file_name, options=options)
+    with _without_bytecode_writes():
+        module = _engine_module(tool)
+        if options is None:
+            return module.lint_text(text, file_name=file_name)
+        return module.lint_text(text, file_name=file_name, options=options)
 
 
 def tools_supporting_all_suffixes(

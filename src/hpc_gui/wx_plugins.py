@@ -251,6 +251,13 @@ class WxPluginManagerModel:
         self.other_versions = others_by_id
         return self.cards
 
+    def refresh_installed_state(self) -> tuple[PluginCard, ...]:
+        """Rebuild current cards from registry metadata and live install state."""
+        registry = {"plugins": [dict(entry) for entry in self.registry_entries.values()]}
+        return self.build_cards_from_registry(
+            registry, self.registry_source, root=self.root
+        )
+
     def filtered_cards(self, view: str = "discover", needle: str = "") -> tuple[PluginCard, ...]:
         """Distinct Browse/Manage/Updates states plus a truthful search filter."""
         normalized = str(view or "discover").strip().lower()
@@ -304,6 +311,29 @@ class WxPluginManagerModel:
 
     def rollback(self, plugin_id: str, version: str) -> None:
         activate_version(plugin_id, version, root=self.root)
+
+    def rollback_versions(self, plugin_id: str) -> tuple[str, ...]:
+        """Return installed older versions that are safe rollback targets."""
+        from hpc_gui.plugins.state import read_installed_state
+        from hpc_gui.plugins.storage import read_active_versions
+
+        active = read_active_versions(self.root).get(plugin_id)
+        if not active:
+            return ()
+        active_version = _parse_version(active)
+        if active_version is None:
+            return ()
+        state = read_installed_state(self.root).get(plugin_id, {})
+        older = [
+            str(version)
+            for version in state.get("versions", ())
+            if isinstance(version, str)
+            and (parsed := _parse_version(version)) is not None
+            and parsed < active_version
+        ]
+        return tuple(
+            sorted(set(older), key=lambda value: _parse_version(value), reverse=True)
+        )
 
     def set_enabled(self, plugin_id: str, enabled: bool) -> None:
         set_plugin_disabled(plugin_id, not enabled, root=self.root)

@@ -26,3 +26,7 @@ class PluginMenuHost(Protocol):
     def open_trusted_tool(self, plugin: InstalledPlugin) -> bool:
         """Open the approved trusted tool for the plugin."""
         ...
+
+    def open_journal_studio(self, plugin: InstalledPlugin, action: str) -> bool:
+        """Open the host-owned Journal Studio workspace or one of its flows."""
+        ...

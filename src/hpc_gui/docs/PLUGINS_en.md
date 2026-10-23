@@ -52,6 +52,24 @@ registry, and activates atomically. If the network is unavailable, the last
 known-good registry catalog is shown as **Cached**; without any cache the
 manager shows an **Offline** state and the app keeps working normally.
 
+## Test-only local catalog (QA, not for users)
+
+For offline acceptance tests only, the registry and payloads can be read from
+a local directory instead of the official registry. The override is **off by
+default** and needs BOTH variables at process start:
+
+- `HPC_GUI_TEST_MODE=1`
+- `HPC_GUI_PLUGIN_TEST_CATALOG=file:///C:/path/to/catalog` (or an absolute local directory)
+
+The directory mirrors the registry layout: `registry.json` plus manifest and
+payload files at the paths the registry names. While active, the Plugin Manager
+title shows **TEST CATALOG**, a warning is logged, and no network request is made.
+Only `file://` URLs without a host and absolute local directories are accepted;
+UNC/network paths, relative paths, `..` segments, escaping symlinks or junctions,
+and registries naming foreign locations are refused. Payloads keep the same
+SHA-256 and size checks as the official registry. Do not set these variables in
+normal use.
+
 ## Security model
 
 - Installing never executes plugin content.

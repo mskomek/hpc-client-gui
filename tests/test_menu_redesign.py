@@ -101,7 +101,10 @@ def test_no_hardcoded_ansys_truba_ids():
     assert "org.hpcclient.fluent" not in action_src
     assert "org.hpcclient.truba" not in action_src
     # Check ui_contributions
-    contrib_src = pathlib.Path("src/hpc_gui/plugins/ui_contributions.py").read_text(encoding="utf-8")
+    contrib_src = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted(pathlib.Path("src/hpc_gui/plugins").glob("ui_contributions*.py"))
+    )
     assert "org.hpcclient.fluent" not in contrib_src
 
 

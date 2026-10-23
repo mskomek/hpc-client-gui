@@ -31,3 +31,22 @@ def retry_connection(
             )
             time.sleep(delay_seconds)
     raise RuntimeError("unreachable SSH retry state")
+
+
+def retry_ssh_connection(operation: Callable[[], T], *, on_retry: Callable[[str], None]) -> T:
+    """Apply SSH settings and avoid retries for deterministic auth/policy errors."""
+    from hpc_gui.config.storage import get_ssh_connection_attempts
+    from hpc_gui.ssh.host_keys import HostKeyChangedError, HostKeyRejectedError
+    from hpc_gui.ssh.jump import JumpAuthenticationError, JumpForwardingDeniedError
+
+    return retry_connection(
+        operation,
+        attempts=get_ssh_connection_attempts(),
+        on_retry=on_retry,
+        non_retryable=(
+            HostKeyChangedError,
+            HostKeyRejectedError,
+            JumpAuthenticationError,
+            JumpForwardingDeniedError,
+        ),
+    )

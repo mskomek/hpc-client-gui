@@ -1,0 +1,301 @@
+{
+  "limit": 500,
+  "generated": "2026-10-23",
+  "policy": "Repository-owned allowlist for the first-party 500-line limit (user global rules, sections 1 and 14). Each entry is a time-boxed exception; scripts/check_line_limits.py fails on unlisted, stale, grown or expired entries.",
+  "entries": [
+    {
+      "path": "scripts/ftp_transfer_stress.py",
+      "loc": 508,
+      "reason": "Pre-existing oversized module; not part of the plugin-contribution split. Split by responsibility in a dedicated refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "scripts/ftp_stress/: scenarios.py, runner.py, report_io.py; script keeps the CLI entrypoint"
+    },
+    {
+      "path": "src/hpc_gui/cli/main.py",
+      "loc": 1023,
+      "reason": "Pre-existing oversized module; not part of the plugin-contribution split. Split by responsibility in a dedicated refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "cli/command_registry.py, cli/parser_builder.py, cli/command_handlers.py; main.py keeps the entrypoint only"
+    },
+    {
+      "path": "src/hpc_gui/config/storage.py",
+      "loc": 832,
+      "reason": "Pre-existing oversized module; not part of the plugin-contribution split. Split by responsibility in a dedicated refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "profile_store.py, secret_refs.py, settings_io.py; storage.py keeps the public functions"
+    },
+    {
+      "path": "src/hpc_gui/services/app_updater.py",
+      "loc": 664,
+      "reason": "Pre-existing oversized module; not part of the plugin-contribution split. Split by responsibility in a dedicated refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "update_manifest.py, download_verify.py, install_apply.py; app_updater.py keeps the facade"
+    },
+    {
+      "path": "src/hpc_gui/ui/dialogs/connection_dialog.py",
+      "loc": 1031,
+      "reason": "Pre-existing oversized module; not part of the plugin-contribution split. Split by responsibility in a dedicated refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "connection_form.py, connection_validation.py, connection_test_actions.py; dialog facade"
+    },
+    {
+      "path": "src/hpc_gui/ui/dialogs/plugin_manager_dialog.py",
+      "loc": 1013,
+      "reason": "Pre-existing oversized module; not part of the plugin-contribution split. Split by responsibility in a dedicated refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "plugin_list_model.py, plugin_detail_panel.py, plugin_manager_actions.py; dialog facade"
+    },
+    {
+      "path": "src/hpc_gui/ui/dialogs/settings_dialog.py",
+      "loc": 529,
+      "reason": "Pre-existing oversized module; not part of the plugin-contribution split. Split by responsibility in a dedicated refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "settings_pages.py (per-tab builders), settings_model.py (load/save); dialog facade"
+    },
+    {
+      "path": "src/hpc_gui/ui/dialogs/transfer_dialog.py",
+      "loc": 805,
+      "reason": "Uncommitted edits from the in-flight branch codex/log-repeat-groups in the main checkout (D:\\Projeler\\hpc-client-gui) touch this file; splitting here would create unmergeable conflicts. Split after that branch merges.",
+      "expiry": "2026-12-31",
+      "migration_target": "transfer_options_form.py, transfer_progress_view.py; dialog facade"
+    },
+    {
+      "path": "src/hpc_gui/ui/main_window.py",
+      "loc": 1277,
+      "reason": "Uncommitted edits from the in-flight branch codex/log-repeat-groups in the main checkout (D:\\Projeler\\hpc-client-gui) touch this file; splitting here would create unmergeable conflicts. Split after that branch merges.",
+      "expiry": "2026-12-31",
+      "migration_target": "menu_builder.py, plugin_menu_bridge.py, window_layout.py, status_bar.py; main_window.py keeps composition only"
+    },
+    {
+      "path": "src/hpc_gui/ui/widgets/ftp_widget.py",
+      "loc": 1783,
+      "reason": "Uncommitted edits from the in-flight branch codex/log-repeat-groups in the main checkout (D:\\Projeler\\hpc-client-gui) touch this file; splitting here would create unmergeable conflicts. Split after that branch merges.",
+      "expiry": "2026-12-31",
+      "migration_target": "ftp_connection_panel.py, ftp_transfer_queue.py, ftp_browser_view.py; widget facade"
+    },
+    {
+      "path": "src/hpc_gui/ui/widgets/jobs_outputs_widget.py",
+      "loc": 1895,
+      "reason": "Uncommitted edits from the in-flight branch codex/log-repeat-groups in the main checkout (D:\\Projeler\\hpc-client-gui) touch this file; splitting here would create unmergeable conflicts. Split after that branch merges.",
+      "expiry": "2026-12-31",
+      "migration_target": "outputs_list_model.py, output_viewer.py, output_actions.py (download/open/follow); widget facade"
+    },
+    {
+      "path": "src/hpc_gui/ui/widgets/local_dir_panel.py",
+      "loc": 1169,
+      "reason": "Uncommitted edits from the in-flight branch codex/log-repeat-groups in the main checkout (D:\\Projeler\\hpc-client-gui) touch this file; splitting here would create unmergeable conflicts. Split after that branch merges.",
+      "expiry": "2026-12-31",
+      "migration_target": "local_listing_model.py, local_panel_view.py, local_actions.py; facade"
+    },
+    {
+      "path": "src/hpc_gui/ui/widgets/login_widget.py",
+      "loc": 1704,
+      "reason": "Uncommitted edits from the in-flight branch codex/log-repeat-groups in the main checkout (D:\\Projeler\\hpc-client-gui) touch this file; splitting here would create unmergeable conflicts. Split after that branch merges.",
+      "expiry": "2026-12-31",
+      "migration_target": "credential_form.py, profile_selector.py, login_validation.py, login_actions.py; widget facade"
+    },
+    {
+      "path": "src/hpc_gui/ui/widgets/remote_dir_panel.py",
+      "loc": 4624,
+      "reason": "Uncommitted edits from the in-flight branch codex/log-repeat-groups in the main checkout (D:\\Projeler\\hpc-client-gui) touch this file; splitting here would create unmergeable conflicts. Split after that branch merges.",
+      "expiry": "2026-12-31",
+      "migration_target": "ui/widgets/remote_dir/: listing_model.py (rows, sort, filter), navigation.py (path history), transfer_actions.py; panel.py keeps the widget facade"
+    },
+    {
+      "path": "src/hpc_gui/wx_connection.py",
+      "loc": 1434,
+      "reason": "Uncommitted edits from the in-flight branch codex/log-repeat-groups in the main checkout (D:\\Projeler\\hpc-client-gui) touch this file; splitting here would create unmergeable conflicts. Split after that branch merges.",
+      "expiry": "2026-12-31",
+      "migration_target": "connection_state.py, connection_actions.py (connect/disconnect/test), connection_view.py; facade"
+    },
+    {
+      "path": "src/hpc_gui/wx_editor_view.py",
+      "loc": 1005,
+      "reason": "Uncommitted edits from the in-flight branch codex/log-repeat-groups in the main checkout (D:\\Projeler\\hpc-client-gui) touch this file; splitting here would create unmergeable conflicts. Split after that branch merges.",
+      "expiry": "2026-12-31",
+      "migration_target": "editor_tabs.py, editor_actions.py, editor_status.py; view facade"
+    },
+    {
+      "path": "src/hpc_gui/wx_jobs.py",
+      "loc": 3222,
+      "reason": "Uncommitted edits from the in-flight branch codex/log-repeat-groups in the main checkout (D:\\Projeler\\hpc-client-gui) touch this file; splitting here would create unmergeable conflicts. Split after that branch merges.",
+      "expiry": "2026-12-31",
+      "migration_target": "wx_jobs/ package: jobs_list_model.py, job_detail_view.py, job_actions.py (submit/cancel/refresh), outputs_bridge.py; wx_jobs.py keeps the facade"
+    },
+    {
+      "path": "src/hpc_gui/wx_transfer_workspace.py",
+      "loc": 983,
+      "reason": "Uncommitted edits from the in-flight branch codex/log-repeat-groups in the main checkout (D:\\Projeler\\hpc-client-gui) touch this file; splitting here would create unmergeable conflicts. Split after that branch merges.",
+      "expiry": "2026-12-31",
+      "migration_target": "transfer_queue_model.py, transfer_panels.py, transfer_actions.py; workspace facade"
+    },
+    {
+      "path": "src/hpc_gui/wx_updater_view.py",
+      "loc": 1204,
+      "reason": "Uncommitted edits from the in-flight branch codex/log-repeat-groups in the main checkout (D:\\Projeler\\hpc-client-gui) touch this file; splitting here would create unmergeable conflicts. Split after that branch merges.",
+      "expiry": "2026-12-31",
+      "migration_target": "update_check_model.py, update_dialog_view.py, update_actions.py; facade"
+    },
+    {
+      "path": "tests/test_jobs_outputs_scroll.py",
+      "loc": 606,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by scroll position, buffer, and rendering"
+    },
+    {
+      "path": "tests/test_luna_fm_integration.py",
+      "loc": 541,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by integration area"
+    },
+    {
+      "path": "tests/test_plugin_manager_ui.py",
+      "loc": 1192,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by Plugin Manager tab (discover, installed, updates) and action group"
+    },
+    {
+      "path": "tests/test_ssh_credential_flow.py",
+      "loc": 673,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by credential entry, storage, and redaction"
+    },
+    {
+      "path": "tests/test_ssh_jump_host.py",
+      "loc": 538,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by jump-host configuration, connect, and failure path"
+    },
+    {
+      "path": "tests/test_w33_lifecycle_isolation.py",
+      "loc": 550,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by lifecycle stage (install, enable, disable, remove)"
+    },
+    {
+      "path": "tests/test_wave0_unicode_baseline.py",
+      "loc": 542,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by unicode fixture family"
+    },
+    {
+      "path": "tests/test_wave2_directories_local_files.py",
+      "loc": 1025,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split into directories tests and local-files tests"
+    },
+    {
+      "path": "tests/test_wave79_provider_contract.py",
+      "loc": 592,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by provider contract area"
+    },
+    {
+      "path": "tests/test_wave80_files_outputs.py",
+      "loc": 609,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split into files-tab and outputs-tab modules"
+    },
+    {
+      "path": "tests/test_wx_65a_stress.py",
+      "loc": 540,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by stress scenario"
+    },
+    {
+      "path": "tests/test_wx_connection_71_2.py",
+      "loc": 519,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by scenario group of the 71.2 connection suite"
+    },
+    {
+      "path": "tests/test_wx_connection_71_3.py",
+      "loc": 662,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by scenario group of the 71.3 connection suite"
+    },
+    {
+      "path": "tests/test_wx_connection_71_4.py",
+      "loc": 660,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by scenario group of the 71.4 connection suite"
+    },
+    {
+      "path": "tests/test_wx_connection_71_5.py",
+      "loc": 649,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by scenario group of the 71.5 connection suite"
+    },
+    {
+      "path": "tests/test_wx_connection_hardening.py",
+      "loc": 992,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by hardening concern (auth, timeouts, error display)"
+    },
+    {
+      "path": "tests/test_wx_connection_profiles.py",
+      "loc": 1175,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by profile CRUD, validation, and persistence"
+    },
+    {
+      "path": "tests/test_wx_file003_final_stress.py",
+      "loc": 1489,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by stress scenario (listing, transfer, cancel) into separate modules"
+    },
+    {
+      "path": "tests/test_wx_file_transfer_integration.py",
+      "loc": 523,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by transfer direction and error path"
+    },
+    {
+      "path": "tests/test_wx_jobs_files_outputs.py",
+      "loc": 673,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by jobs list, job files, and outputs groups"
+    },
+    {
+      "path": "tests/test_wx_remote_file_actions_behavior.py",
+      "loc": 555,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by action (open, rename, delete, transfer)"
+    },
+    {
+      "path": "tests/test_wx_terminal_parity_evidence.py",
+      "loc": 580,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by parity evidence category"
+    },
+    {
+      "path": "tests/test_wx_updater_spec.py",
+      "loc": 684,
+      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
+      "expiry": "2026-12-31",
+      "migration_target": "split by update check, download, and dialog spec"
+    }
+  ]
+}

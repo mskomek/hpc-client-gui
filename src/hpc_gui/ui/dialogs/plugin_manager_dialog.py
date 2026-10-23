@@ -47,26 +47,11 @@ from hpc_gui.plugins.registry_client import (
 from hpc_gui.plugins.state import remove_plugin, set_plugin_disabled
 from hpc_gui.plugins.storage import read_active_versions, read_disabled_ids
 from hpc_gui.services.plugin_request import PLUGIN_REQUEST_URL
+from hpc_gui.plugins.test_catalog import mark_test_catalog_title
 from hpc_gui.ui.async_call import AsyncCall
+from hpc_gui.ui.dialogs.plugin_capability_labels import capability_label
 
 logger = logging.getLogger(__name__)
-
-# Human-readable labels for Plugin API v1/v2 capability identifiers. Raw
-# identifiers must never appear as primary UI text.
-_CAPABILITY_LABEL_KEYS = {
-    "cluster-profile": "plugins.capability_cluster_profile",
-    "lint-rules": "plugins.capability_lint_rules",
-    "job-template": "plugins.capability_job_templates",
-    "application-tools": "plugins.capability_application_tools",
-    "linter-tool": "plugins.capability_linter_tool",
-}
-
-
-def capability_label(capability: str) -> str:
-    """Translated, user-facing label for a capability identifier."""
-    key = _CAPABILITY_LABEL_KEYS.get(str(capability or "").strip())
-    return t(key) if key else str(capability or "")
-
 
 _INITIAL_TAB_MAP = {"discover": 0, "installed": 1, "updates": 2}
 
@@ -86,14 +71,14 @@ class PluginManagerDialog(QDialog):
         self._auto_refresh_started = False
         self._last_install_result = None
 
-        self.setWindowTitle(t("plugins.dialog_title"))
+        self.setWindowTitle(mark_test_catalog_title(t("plugins.dialog_title"), t("plugins.test_catalog_badge")))
         self.resize(950, 620)
         self.setMinimumWidth(850)
 
         layout = QVBoxLayout(self)
 
         header = QHBoxLayout()
-        title = QLabel(t("plugins.dialog_title"))
+        title = QLabel(mark_test_catalog_title(t("plugins.dialog_title"), t("plugins.test_catalog_badge")))
         title.setStyleSheet("font-weight: 600; font-size: 14px;")
         header.addWidget(title)
         header.addStretch(1)

@@ -197,7 +197,7 @@ def _deb_commands(version: str) -> List[List[str]]:
             "-c",
             f"sed 's/<VERSION>/{version}/g' '{control}' > 'dist/deb/DEBIAN/control'",
         ],
-        ["dpkg-deb", "--build", "dist/deb", f"dist/{artifact}"],
+        ["dpkg-deb", "--root-owner-group", "--build", "dist/deb", f"dist/{artifact}"],
     ]
 
 
@@ -309,7 +309,8 @@ def _build_deb(version: str, output_dir: Path) -> Path:
     shutil.copy2(APPIMAGE_DEF_DIR / DESKTOP_ENTRY_NAME, staging / "usr" / "share" / "applications" / DESKTOP_ENTRY_NAME)
     _stage_common_release_files(staging / "usr" / "share" / "doc" / "hpc-client-gui")
     artifact = output_dir / deb_artifact_name(version)
-    _run(["dpkg-deb", "--build", str(staging), str(artifact)])
+    # Non-root builds would otherwise ship files owned by the build user (Ubuntu-Test 2026-10-22).
+    _run(["dpkg-deb", "--root-owner-group", "--build", str(staging), str(artifact)])
     return artifact
 
 

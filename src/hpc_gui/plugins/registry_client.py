@@ -24,6 +24,11 @@ from packaging.version import InvalidVersion, Version
 from hpc_gui import __version__
 from hpc_gui.plugins.compatibility import entry_is_app_compatible
 from hpc_gui.plugins.storage import plugins_root
+from hpc_gui.plugins.test_catalog import (
+    CatalogRefusedError,
+    active_catalog_root,
+    read_catalog_url,
+)
 from hpc_gui.plugins.validator import validate_registry_dict
 
 OFFICIAL_REGISTRY_URL = (
@@ -63,7 +68,17 @@ def _final_url_is_allowed(final_url: object) -> bool:
 
 
 def default_fetcher(url: str, max_bytes: int) -> bytes:
-    """Fetch ``url`` over HTTPS with a hard response-size cap."""
+    """Fetch ``url`` over HTTPS with a hard response-size cap.
+
+    Test-only: with HPC_GUI_TEST_MODE=1 and HPC_GUI_PLUGIN_TEST_CATALOG set,
+    catalog URLs are served from a local directory and no socket is opened.
+    """
+    try:
+        catalog = active_catalog_root()
+        if catalog is not None:
+            return read_catalog_url(catalog, url, OFFICIAL_RAW_BASE, max_bytes)
+    except CatalogRefusedError as exc:
+        raise RegistryError(f"Plugin test catalog refused the request: {exc}") from exc
     request = urllib.request.Request(
         url,
         headers={"User-Agent": f"HPC-Client-GUI/{__version__}"},

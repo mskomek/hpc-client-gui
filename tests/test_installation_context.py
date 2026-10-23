@@ -23,6 +23,20 @@ def test_windows_frozen_uses_explicit_portable_strategy(monkeypatch, tmp_path: P
     assert installation_context.detect_installation().capability == "windows-portable"
 
 
+def test_windows_frozen_protected_install_requires_manual_admin_update(monkeypatch, tmp_path: Path):
+    executable = tmp_path / "Program Files" / "HPC Client GUI" / "hpc-client-gui.exe"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"")
+    _platform(monkeypatch, "windows", executable)
+    monkeypatch.setattr(installation_context.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(installation_context.os, "access", lambda *_args: False)
+
+    context = installation_context.detect_installation()
+
+    assert context.capability == "unsupported"
+    assert "administrator-run installer" in context.reason
+
+
 def test_linux_installation_strategies_are_evidence_based(monkeypatch, tmp_path: Path):
     executable = tmp_path / "client.AppImage"
     executable.write_bytes(b"image")

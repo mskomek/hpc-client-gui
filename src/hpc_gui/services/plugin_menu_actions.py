@@ -23,6 +23,10 @@ ALLOWED_ACTIONS = frozenset(
         "editor.lint_current",
         "editor.new_from_plugin_templates",
         "plugin.open_trusted_tool",
+        "journal_studio.open",
+        "journal_studio.new",
+        "journal_studio.open_journal",
+        "journal_studio.settings",
     }
 )
 
@@ -31,6 +35,10 @@ ACTION_CAPABILITIES: dict[str, tuple[str, ...]] = {
     "editor.lint_current": ("lint-rules", "linter-tool"),
     "editor.new_from_plugin_templates": ("job-template",),
     "plugin.open_trusted_tool": ("linter-tool",),
+    "journal_studio.open": ("application-tools",),
+    "journal_studio.new": ("application-tools",),
+    "journal_studio.open_journal": ("application-tools",),
+    "journal_studio.settings": ("application-tools",),
 }
 
 
@@ -44,6 +52,8 @@ def can_execute_action(action: str, plugin: InstalledPlugin) -> tuple[bool, str]
         return False, f"unknown action {action!r}"
     if plugin is None or getattr(plugin, "manifest", None) is None:
         return False, "plugin is not installed or missing manifest"
+    if action.startswith("journal_studio.") and plugin.manifest.id != "org.hpcclient.ansysjournalstudio":
+        return False, "Journal Studio actions are reserved for org.hpcclient.ansysjournalstudio"
     # Capability guard
     required = ACTION_CAPABILITIES.get(action, ())
     if required:
@@ -90,6 +100,8 @@ def dispatch_plugin_menu_action(
                 return bool(host.open_plugin_templates(plugin.manifest.id))
             if action == "plugin.open_trusted_tool":
                 return bool(host.open_trusted_tool(plugin))
+            if action.startswith("journal_studio."):
+                return bool(host.open_journal_studio(plugin, action.rsplit(".", 1)[-1]))
         except Exception as exc:
             logger.warning("Plugin menu action %r failed for %s: %s", action, plugin.manifest.id, exc, exc_info=exc)
             return False

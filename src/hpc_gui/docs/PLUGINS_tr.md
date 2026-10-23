@@ -52,6 +52,23 @@ olarak etkinleştirir. Ağ erişimi yoksa bilinen son iyi katalog **Önbellek**
 durumunda gösterilir; önbellek hiç yoksa yönetici **Çevrimdışı** durumunu
 gösterir ve uygulama normal çalışmaya devam eder.
 
+## Yalnızca test için yerel katalog (QA, kullanıcılar için değil)
+
+Çevrimdışı kabul testleri için kayıt defteri ve dosyalar resmi kayıt yerine
+yerel bir dizinden okunabilir. Geçersiz kılma **varsayılan olarak kapalıdır**
+ve işlem başlarken İKİ değişken birden gerekir:
+
+- `HPC_GUI_TEST_MODE=1`
+- `HPC_GUI_PLUGIN_TEST_CATALOG=file:///C:/yol/katalog` (veya mutlak yerel dizin)
+
+Dizin kayıt düzenini izler: `registry.json` ile kayıtta adı geçen manifest ve
+payload dosyaları. Etkinken Eklenti Yöneticisi başlığında **TEST KATALOĞU**
+görünür, bir uyarı kaydedilir ve hiçbir ağ isteği yapılmaz. Yalnızca ana bilgisayar adı içermeyen
+`file://` URL'leri ve mutlak yerel dizinler kabul edilir; UNC/ağ yolları, göreli
+yollar, `..` segmentleri, katalog dışına çıkan sembolik bağlantı veya junction'lar
+ve başka yerleri gösteren kayıtlar reddedilir. Payload'lar resmi kayıtla aynı
+SHA-256 ve boyut denetimlerinden geçer. Normal kullanımda bu değişkenleri ayarlamayın.
+
 ## Güvenlik modeli
 
 - Kurulum asla eklenti içeriğini çalıştırmaz.

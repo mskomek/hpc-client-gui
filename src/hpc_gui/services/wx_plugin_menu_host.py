@@ -12,8 +12,10 @@ logger = logging.getLogger(__name__)
 class WxPluginMenuHost:
     """wx implementation – routes only where a real wx path exists."""
 
-    def __init__(self, editor_page=None):
+    def __init__(self, editor_page=None, frame=None, session_state=None):
         self._editor = editor_page
+        self._frame = frame
+        self._session_state = session_state
 
     def run_editor_lint(self, plugin_id: str) -> bool:
         # No verified wx lint pipeline – explicitly unsupported
@@ -51,3 +53,12 @@ class WxPluginMenuHost:
         # wx has no Qt dialog – explicitly unsupported, do not fabricate
         logger.info("wx open_trusted_tool not supported for %s", plugin.manifest.id)
         return False
+
+    def open_journal_studio(self, plugin: InstalledPlugin, action: str) -> bool:
+        if plugin.manifest.id != "org.hpcclient.ansysjournalstudio" or self._frame is None:
+            return False
+        from hpc_gui.wx_journal_studio import dispatch_journal_studio_action
+
+        return dispatch_journal_studio_action(
+            self._frame, self._session_state or {}, plugin, action
+        )

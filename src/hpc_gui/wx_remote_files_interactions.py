@@ -167,10 +167,27 @@ def install_interactions(view):
             allowed = tuple(action for action in allowed if action != "favorite")
         actions = tuple(action for action in candidate_actions if action in allowed)
         labels = FILE_CONTEXT_LABEL_KEYS
+        target_dir = clicked.path if clicked and clicked.is_dir else tstate["path"]
         for action in actions:
             item = menu.Append(wx.ID_ANY, t(labels.get(action, f"dirs.{action}")))
-            target_dir = clicked.path if clicked and clicked.is_dir else tstate["path"]
             listing.Bind(wx.EVT_MENU, lambda _event, action=action, target=target_dir: run_action(action, selected, target), item)
+        try:
+            from hpc_gui.wx_journal_context_menu import append_context_actions
+
+            frame = wx.GetTopLevelParent(listing)
+            session_state = getattr(frame, "_wx_shell_session_state", {})
+            context_path = clicked.path if clicked else tstate["path"]
+            text_action = None
+            if len(selected_entries) == 1 and not selected_entries[0].is_dir:
+                def text_action():
+                    run_action("edit", selected, target_dir)
+            append_context_actions(
+                wx, menu, listing, frame=frame, session_state=session_state,
+                path=context_path, is_dir=clicked.is_dir if clicked else True,
+                remote=True, run_text_action=text_action,
+            )
+        except Exception:
+            pass
         listing.PopupMenu(menu)
         menu.Destroy()
 

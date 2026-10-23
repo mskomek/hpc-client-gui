@@ -5,7 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from hpc_gui.plugins.linter_tools import LinterTool, ToolLoadError, tool_supported_suffixes
+from hpc_gui.plugins.linter_tools import (
+    LinterTool,
+    ToolLoadError,
+    lint_text_with_tool_for,
+    tool_supported_suffixes,
+)
 from hpc_gui.plugins.trusted_tools import is_approved_trusted_tool
 
 
@@ -37,8 +42,9 @@ class AnsysToolPresentation:
 
     def run(self, text: str, file_name: str = "") -> ToolRunState:
         try:
-            module = __import__(self.tool.module_name, fromlist=["lint_text"])
-            diagnostics = tuple(module.lint_text(text, file_name=file_name))
+            diagnostics = tuple(
+                lint_text_with_tool_for(self.tool, text, file_name=file_name)
+            )
             return ToolRunState("completed", diagnostics)
         except Exception as exc:
             return ToolRunState("failed", error=str(exc))

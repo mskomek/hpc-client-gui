@@ -248,7 +248,7 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
                 editor_page = page_controls.get("NAV-EDITOR", {}).get("page")
             except Exception:
                 pass
-            host = WxPluginMenuHost(editor_page=editor_page)
+            host = WxPluginMenuHost(editor_page=editor_page, frame=frame, session_state=session_state)
             dispatch_plugin_menu_action(action, plugin, host)
         except Exception as exc:
             # W04 FIX-W04-A (DEF-W04-001): a log-only failure left the UI in

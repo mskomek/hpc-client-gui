@@ -43,7 +43,7 @@ from hpc_gui.ssh.sftp_channels import (
     _SFTP_LISTING_TIMEOUT_SECONDS,  # noqa: F401  (re-exported facade constant)
     _SFTP_TRANSFER_TIMEOUT_SECONDS,  # noqa: F401  (re-exported facade constant)
 )
-from hpc_gui.ssh.retry import retry_connection
+from hpc_gui.ssh.retry import retry_ssh_connection
 from hpc_gui.ssh.shell_session import InteractiveShellSession, _sanitize_terminal_text
 from hpc_gui.ssh.text import decode_remote_text as _decode_remote_text
 
@@ -165,13 +165,9 @@ class SSHClientWrapper:
         *,
         shell_size: Optional[Tuple[int, int]] = None,
     ) -> None:
-        from hpc_gui.config.storage import get_ssh_connection_attempts
-
-        retry_connection(
+        retry_ssh_connection(
             lambda: self._connect_once(info, shell_size=shell_size),
-            attempts=get_ssh_connection_attempts(),
             on_retry=self.log,
-            non_retryable=(HostKeyChangedError, HostKeyRejectedError),
         )
 
     def _connect_once(

@@ -25,8 +25,8 @@ from hpc_gui.ssh.client import (  # noqa: E402
     HostKeyInfo,
     SSHClientWrapper,
     SSHConnInfo,
-    _KnownHostsPolicy,
 )
+from hpc_gui.ssh.host_keys import _KnownHostsPolicy  # noqa: E402
 from hpc_gui.ssh.jump import (  # noqa: E402
     JumpAuthenticationError,
     JumpConnection,

@@ -108,5 +108,7 @@ def detect_installation() -> InstallationContext:
             return InstallationContext("macos-bundle", "Info.plist", executable, identity, str(info.get("CFBundleShortVersionString") or ""), architecture, capability, "Writable application bundle identified." if capability == "macos-bundle" else "Bundle identity or location is not supported.")
 
     if os_key == "windows" and getattr(sys, "frozen", False):
-        return InstallationContext("windows", "frozen executable", executable, "hpc-client-gui", "", architecture, "windows-portable", "Windows portable updater is supported.")
+        if os.access(executable.parent, os.W_OK):
+            return InstallationContext("windows", "writable frozen executable", executable, "hpc-client-gui", "", architecture, "windows-portable", "The application folder is writable; the Windows portable updater is supported.")
+        return InstallationContext("windows", "protected frozen executable", executable, "hpc-client-gui", "", architecture, "unsupported", "The application folder is not writable; update this installation with an administrator-run installer.")
     return InstallationContext("unknown", "insufficient installation evidence", executable, "", "", architecture, "unsupported", "Installation type could not be identified safely.")

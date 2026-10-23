@@ -48,6 +48,7 @@ KNOWN_FILE_ROLES = frozenset(
         "template-index",
         "template-content",
         "documentation",
+        "journal-data",
         "linter-data",
         "linter-engine",
     }

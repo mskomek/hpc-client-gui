@@ -29,7 +29,7 @@ from hpc_gui.plugins.storage import (
     plugins_root,
     write_active_versions,
 )
-from test_plugin_installer import make_fetcher, make_plugin_files, make_registry_entry
+from plugin_installer_test_support import make_fetcher, make_plugin_files, make_registry_entry
 
 
 def install(tmp_path: Path, plugin_id: str = "org.hpcclient.truba", version: str = "1.0.0"):

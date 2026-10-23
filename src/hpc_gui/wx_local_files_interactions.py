@@ -105,6 +105,20 @@ def install_interactions(view):
         for action in actions:
             item = menu.Append(wx.ID_ANY, t(labels.get(action, "help.help_title")))
             listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action), item)
+        clicked_path = str(entry.path) if entry else str(tstate["path"])
+        try:
+            from hpc_gui.wx_journal_context_menu import append_context_actions
+
+            frame = wx.GetTopLevelParent(listing)
+            session_state = getattr(frame, "_wx_shell_session_state", {})
+            text_action = (lambda: run_action("edit")) if len(selected) == 1 and not (selected[0].is_dir) else None
+            append_context_actions(
+                wx, menu, listing, frame=frame, session_state=session_state,
+                path=clicked_path, is_dir=entry.is_dir if entry else True,
+                remote=False, run_text_action=text_action,
+            )
+        except Exception:
+            pass
         listing.PopupMenu(menu)
         menu.Destroy()
 

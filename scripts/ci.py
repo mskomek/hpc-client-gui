@@ -48,7 +48,9 @@ def quick() -> int:
 
 
 def lint() -> int:
-    return _run("ruff", _python("-m", "ruff", "check", "src", "scripts", "tests"))
+    if _run("ruff", _python("-m", "ruff", "check", "src", "scripts", "tests")):
+        return 1
+    return _run("line limit", _python("scripts/check_line_limits.py"))
 
 
 def docs() -> int:
