@@ -119,6 +119,7 @@ def run_terminal(ssh_port: int) -> None:
     )
     try:
         client.connect(shell_size=(80, 24))
+        client.activate_shell_output()
         assert client.send_shell_text("sh -c 'echo virtual-shell-ok'")
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline and "virtual-shell-ok" not in "".join(output):

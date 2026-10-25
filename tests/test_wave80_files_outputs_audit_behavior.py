@@ -242,8 +242,7 @@ class TestWave80Audit:
             for w in list(wx.GetTopLevelWindows()):
                 try:
                     if hasattr(w, "_wx_jobs_state"):
-                        w.Hide()
-                        w.Destroy()
+                        w.Close(True)
                 except Exception:
                     pass
             for _ in range(3):

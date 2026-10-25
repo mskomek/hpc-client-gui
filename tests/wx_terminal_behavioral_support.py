@@ -35,25 +35,10 @@ def _run(code, timeout=60):
 
 
 _READY_PUMP = textwrap.dedent("""\
-    import wx, time
-    loop = wx.GUIEventLoop()
-    prev = wx.EventLoop.GetActive()
-    wx.EventLoop.SetActive(loop)
-    start = time.monotonic()
-    while time.monotonic() - start < 6:
-        if panel._ready:
-            break
-        try:
-            while loop.Pending():
-                loop.Dispatch()
-        except Exception:
-            pass
-        try:
-            wx.Yield()
-        except Exception:
-            pass
-        time.sleep(0.05)
-    wx.EventLoop.SetActive(prev)
+    import sys
+    sys.path.insert(0, "tests/support")
+    from wx_webview_probe import wait_until_ready
+    wait_until_ready(wx, lambda: panel._ready, timeout=6)
 """)
 
 _SETUP = textwrap.dedent("""\
@@ -91,9 +76,7 @@ _SETUP = textwrap.dedent("""\
 
 def _mk_script(code_body):
     """Build a full subprocess script: imports + ready pump + body."""
-    return _SETUP + _READY_PUMP + textwrap.dedent("""\
-    wx.EventLoop.SetActive(prev)
-""") + code_body
+    return _SETUP + _READY_PUMP + code_body
 
 
 class MockScriptEvent:

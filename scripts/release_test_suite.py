@@ -162,6 +162,12 @@ ISOLATED_NODE_SELECTORS = tuple(
     for nodeid in ISOLATED_TEST_NODES
     if nodeid.split("::", 1)[0] not in ISOLATED_FILES
 )
+PACKAGING_MARKER_FILES = frozenset({"tests/test_wx_packaged_smoke.py"})
+W31_PACKAGE_TEST = (
+    "tests/test_w31_race_lifecycle.py::"
+    "test_w31_package_artifact_contains_provider_parser_resources"
+)
+W31_PACKAGE_WHEEL_ENV = "HPC_GUI_W31_PACKAGE_WHEEL"
 EVIDENCE_GATED_TESTS = {
     "tests/test_w04_support_freeze.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
     "tests/test_w04_menu_actions.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
@@ -287,7 +293,18 @@ def build_commands(*, coverage: bool, scope: str = "portable") -> list[tuple[str
         coverage_args = COVERAGE_APPEND_ARGS if coverage else ()
         if coverage and index == len(isolated_selectors) - 1:
             coverage_args += (f"--cov-fail-under={COVERAGE_FAIL_UNDER}",)
-        commands.append(PYTEST_BASE[:-1] + (selector,) + coverage_args)
+        if selector in PACKAGING_MARKER_FILES:
+            # Package smoke contract tests carry the packaging marker. Run
+            # this isolated contract file without the source-only marker.
+            command = PYTEST_BASE[:6] + (selector,)
+        else:
+            command = PYTEST_BASE[:-1] + (selector,)
+        commands.append(command + coverage_args)
+    if scope == "acceptance":
+        # This assertion inspects the wheel built by this exact acceptance run.
+        # It is excluded from portable and general acceptance partitions so a
+        # stale .tmp artifact can never make the package contract pass.
+        commands.append(PYTEST_BASE[:6] + (W31_PACKAGE_TEST,))
     return commands
 
 
@@ -332,6 +349,7 @@ def main(argv: list[str] | None = None) -> int:
     temp_root.mkdir(parents=True, exist_ok=True)
     failed_test_partition = 0
     package_temp: tempfile.TemporaryDirectory[str] | None = None
+    candidate_wheel: Path | None = None
     try:
         if args.scope == "acceptance":
             package_temp = tempfile.TemporaryDirectory(
@@ -357,6 +375,16 @@ def main(argv: list[str] | None = None) -> int:
                     file=sys.stderr,
                 )
                 return result.returncode
+            candidate_wheels = tuple(Path(package_temp.name).glob("*.whl"))
+            if len(candidate_wheels) != 1:
+                print(
+                    "[release-test-suite] expected exactly one candidate wheel, "
+                    f"found {len(candidate_wheels)} in {package_temp.name}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                return 1
+            candidate_wheel = candidate_wheels[0]
 
         with tempfile.TemporaryDirectory(
             prefix="release-test-config-", dir=temp_root
@@ -369,8 +397,11 @@ def main(argv: list[str] | None = None) -> int:
                 for index, command in enumerate(commands):
                     printable = " ".join(str(part) for part in command)
                     print(f"[release-test-suite] {printable}", flush=True)
+                    environment = _test_environment()
+                    if candidate_wheel is not None:
+                        environment[W31_PACKAGE_WHEEL_ENV] = str(candidate_wheel)
                     result = subprocess.run(
-                        command, cwd=REPO_ROOT, env=_test_environment()
+                        command, cwd=REPO_ROOT, env=environment
                     )
                     if result.returncode:
                         print(

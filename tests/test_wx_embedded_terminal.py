@@ -73,6 +73,12 @@ def test_embedded_terminal_find_button_selects_match():
         # output should have selection at position of world
         out = ctrls["output"]
         sel = out.GetSelection()
+        for _ in range(10):
+            if sel[1] > sel[0]:
+                break
+            wx.Yield()
+            wx.MilliSleep(10)
+            sel = out.GetSelection()
         # wx TextCtrl GetSelection returns tuple (from, to)
         assert sel[0] >= 0 and sel[1] > sel[0]
         assert model.find("world") >= 0

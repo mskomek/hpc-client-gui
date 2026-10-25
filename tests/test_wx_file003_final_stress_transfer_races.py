@@ -34,12 +34,19 @@ def _pump(app, predicate, timeout: float = 5.0) -> None:
     app.ProcessPendingEvents()
     assert predicate()
 
-def _settle(app, rounds: int = 6) -> None:
+def _settle(app, window=None, rounds: int = 6) -> None:
+    if window is not None:
+        window.SetSize(wx.Size(1100, 760))
+        window.Show()
+        window.Layout()
+        window.SendSizeEvent()
     for _ in range(rounds):
         app.ProcessPendingEvents()
         # wx frees closed frames during idle processing, so a loop that only
         # pumps pending events keeps them in GetTopLevelWindows() forever.
         wx.SafeYield()
+        if window is not None:
+            window.Layout()
         wx.MilliSleep(2)
     app.ProcessPendingEvents()
     wx.SafeYield()
@@ -76,6 +83,7 @@ def _local_frame(app, path):
     show_local_files(path=path)
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_local_controls")][-1]
     _pump(app, lambda: frame._wx_local_controls["listing"].GetItemCount() >= 0)
+    _settle(app, frame, rounds=3)
     return frame
 
 def _remote_frame(app, backend, path="/work", loader=None):
@@ -86,6 +94,7 @@ def _remote_frame(app, backend, path="/work", loader=None):
     )
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
     _pump(app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
+    _settle(app, frame, rounds=3)
     return frame
 
 class DestroyedControlProbe:
@@ -239,12 +248,12 @@ def test_stress_g_blocked_close_in_flight(wx_app, tmp_path, monkeypatch):
         listing = frame._wx_remote_controls["listing"]
         probe.watch(listing)
         _enter_path(frame, "/slow")
-        _settle(wx_app, 2)
+        _settle(wx_app, rounds=2)
         probe.mark_destroyed()
         frame.Close(True)
-        _settle(wx_app, 4)
+        _settle(wx_app, rounds=4)
         release.set()
-        _settle(wx_app, 10)
+        _settle(wx_app, rounds=10)
         executed += 1
 
     # --- local listing in flight, frame closed (5) ---
@@ -265,12 +274,12 @@ def test_stress_g_blocked_close_in_flight(wx_app, tmp_path, monkeypatch):
         probe.watch(listing)
         _pump(wx_app, lambda: slow.name in _rows(listing))
         _activate(listing, _rows(listing).index(slow.name))
-        _settle(wx_app, 2)
+        _settle(wx_app, rounds=2)
         probe.mark_destroyed()
         frame.Close(True)
-        _settle(wx_app, 4)
+        _settle(wx_app, rounds=4)
         release.set()
-        _settle(wx_app, 10)
+        _settle(wx_app, rounds=10)
         executed += 1
     monkeypatch.undo()
     monkeypatch.setattr(wx, "MessageBox", record_message_box)
@@ -293,13 +302,13 @@ def test_stress_g_blocked_close_in_flight(wx_app, tmp_path, monkeypatch):
         listing = frame._wx_remote_controls["listing"]
         probe.watch(listing)
         frame._wx_remote_run_action("delete", ("/scratch/gone.txt",), "/scratch")
-        _settle(wx_app, 2)
+        _settle(wx_app, rounds=2)
         _close_first_tab(frame._wx_remote_notebook)
-        _settle(wx_app, 4)
+        _settle(wx_app, rounds=4)
         release.set()
-        _settle(wx_app, 10)
+        _settle(wx_app, rounds=10)
         frame.Destroy()
-        _settle(wx_app, 4)
+        _settle(wx_app, rounds=4)
         executed += 1
 
     # --- local mutation in flight, frame closed (5) ---
@@ -319,12 +328,12 @@ def test_stress_g_blocked_close_in_flight(wx_app, tmp_path, monkeypatch):
         _pump(wx_app, lambda: target.name in _rows(listing))
         _select_only(listing, _rows(listing).index(target.name))
         _key(listing, wx.WXK_DELETE)
-        _settle(wx_app, 2)
+        _settle(wx_app, rounds=2)
         probe.mark_destroyed()
         frame.Close(True)
-        _settle(wx_app, 4)
+        _settle(wx_app, rounds=4)
         release.set()
-        _settle(wx_app, 10)
+        _settle(wx_app, rounds=10)
         target.unlink(missing_ok=True)
         executed += 1
 
@@ -343,16 +352,16 @@ def test_stress_g_blocked_close_in_flight(wx_app, tmp_path, monkeypatch):
         assert files.started.wait(3)
         window = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_transfer_controls")][-1]
         window.Close(True)
-        _settle(wx_app, 4)
+        _settle(wx_app, rounds=4)
         files.release.set()
         assert controller.engine.wait(3)
         deadline = time.monotonic() + 2
         while time.monotonic() < deadline and state.get("transfer_sessions"):
-            _settle(wx_app, 2)
+            _settle(wx_app, rounds=2)
         if state.get("transfer_sessions"):
             METRICS["leaked_transfer_sessions"] += len(state["transfer_sessions"])
         parent.Destroy()
-        _settle(wx_app, 4)
+        _settle(wx_app, rounds=4)
         executed += 1
 
     for window in _file_browser_windows():
@@ -360,11 +369,11 @@ def test_stress_g_blocked_close_in_flight(wx_app, tmp_path, monkeypatch):
             continue
         METRICS["leaked_wx_windows"] += 1
         window.Destroy()
-    _settle(wx_app, 6)
+    _settle(wx_app, rounds=6)
 
     deadline = time.monotonic() + 3
     while time.monotonic() < deadline and (set(threading.enumerate()) - baseline_threads):
-        _settle(wx_app, 4)
+        _settle(wx_app, rounds=4)
     METRICS["leaked_file_workers"] += len(set(threading.enumerate()) - baseline_threads)
 
     _record("blocked close-in-flight", executed, 25)

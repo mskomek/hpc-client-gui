@@ -42,14 +42,33 @@ def shell():
     if app is None:
         app = wx.App(False)
     tray = Tray(None)
-    frame, lifecycle, session = create_shell_frame(app, tray_factory=lambda _parent: tray)
+    frame, lifecycle, session = create_shell_frame(
+        app,
+        tray_factory=lambda _parent: tray,
+        defer_terminal_webview=True,
+    )
     frame.Show()
     yield app, frame, lifecycle, session, tray
-    if frame:
-        frame.Destroy()
-    for window in wx.GetTopLevelWindows():
+    try:
+        if frame and not frame.IsBeingDeleted():
+            frame.Close()
+    except RuntimeError:
+        pass
+    if not lifecycle.shutdown_started:
+        lifecycle.shutdown()
+    for window in list(wx.GetTopLevelWindows()):
         if window:
-            window.Destroy()
+            try:
+                if not window.IsBeingDeleted():
+                    window.Close()
+            except RuntimeError:
+                pass
+    for window in list(wx.GetTopLevelWindows()):
+        if window:
+            try:
+                window.Destroy()
+            except RuntimeError:
+                pass
     app.ProcessPendingEvents()
     wx.SafeYield()
     app.Destroy()
@@ -200,8 +219,13 @@ def test_wx_shell_reconnect_ignores_old_session_completion(shell):
 @pytest.mark.gui
 def test_wx_shell_tray_unavailable_keeps_job_tracking(shell):
     app, frame, lifecycle, _session, _tray = shell
-    frame.Destroy()
-    frame, lifecycle, _session = create_shell_frame(app, tray_factory=lambda _parent: None)
+    frame.Close()
+    _pump(app, lambda: lifecycle.shutdown_started)
+    frame, lifecycle, _session = create_shell_frame(
+        app,
+        tray_factory=lambda _parent: None,
+        defer_terminal_webview=True,
+    )
     jobs, _calls = _open_jobs(app, frame, lifecycle, [[{"id": "100", "state": "RUNNING"}]])
     assert jobs._wx_jobs_controls["jobs"].GetItemCount() == 1
     assert not lifecycle.notify_job("ignored", job_id="100")

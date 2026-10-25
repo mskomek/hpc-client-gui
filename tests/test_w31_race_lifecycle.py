@@ -18,6 +18,7 @@ Covers the W31-owned deltas plus requirement-to-owner traceability:
 from __future__ import annotations
 
 import hashlib
+import os
 import threading
 import time
 import zipfile
@@ -189,10 +190,13 @@ def test_w31_real_slurm_lifecycle_shapes_parse():
 # --- TASK-009/STOP: packaged artifact carries provider/parser resources ---
 
 
+@pytest.mark.artifact_dependent
 def test_w31_package_artifact_contains_provider_parser_resources():
-    """Exact packaged artifact under acceptance holds the required modules."""
-    wheel = Path(".tmp/w31-package/hpc_client_gui-1.5.9-py3-none-any.whl")
-    assert wheel.is_file(), "candidate-built wheel missing under .tmp/w31-package/"
+    """The exact wheel built by this acceptance run holds the required modules."""
+    wheel_value = os.environ.get("HPC_GUI_W31_PACKAGE_WHEEL")
+    assert wheel_value, "acceptance runner did not provide its candidate wheel path"
+    wheel = Path(wheel_value)
+    assert wheel.is_file(), f"candidate-built wheel missing: {wheel}"
     digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
     assert len(digest) == 64 and digest.strip() == digest
     with zipfile.ZipFile(wheel) as archive:
@@ -265,7 +269,10 @@ def wx_app():
         for window in list(wx.GetTopLevelWindows()):
             try:
                 if window:
-                    window.Destroy()
+                    if hasattr(window, "_wx_jobs_state"):
+                        window.Close(True)
+                    else:
+                        window.Destroy()
             except Exception:
                 pass
         for _ in range(5):

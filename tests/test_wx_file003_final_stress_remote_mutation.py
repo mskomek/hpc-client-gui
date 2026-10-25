@@ -19,6 +19,7 @@ from hpc_gui.wx_remote_files_view import show_remote_files
 from mock_hpc_files import MockRemoteFilesBackend
 
 from support.wx_file003_stress import METRICS, _record
+from support.wx_event_coords import context_menu_screen_point
 
 def _pump(app, predicate, timeout: float = 5.0) -> None:
     deadline = time.monotonic() + timeout
@@ -30,12 +31,19 @@ def _pump(app, predicate, timeout: float = 5.0) -> None:
     app.ProcessPendingEvents()
     assert predicate()
 
-def _settle(app, rounds: int = 6) -> None:
+def _settle(app, window=None, rounds: int = 6) -> None:
+    if window is not None:
+        window.SetSize(wx.Size(1100, 760))
+        window.Show()
+        window.Layout()
+        window.SendSizeEvent()
     for _ in range(rounds):
         app.ProcessPendingEvents()
         # wx frees closed frames during idle processing, so a loop that only
         # pumps pending events keeps them in GetTopLevelWindows() forever.
         wx.SafeYield()
+        if window is not None:
+            window.Layout()
         wx.MilliSleep(2)
     app.ProcessPendingEvents()
     wx.SafeYield()
@@ -76,6 +84,7 @@ def _remote_frame(app, backend, path="/work", loader=None):
     )
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
     _pump(app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
+    _settle(app, frame, rounds=3)
     return frame
 
 class ConcurrencyProbe:
@@ -105,8 +114,7 @@ def _context_event(listing, position):
     return event
 
 def _row_position(listing, row):
-    rect = listing.GetItemRect(row)
-    return listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
+    return context_menu_screen_point(listing, row, wx)
 
 def _key(listing, code, *, ctrl=False, shift=False):
     event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)

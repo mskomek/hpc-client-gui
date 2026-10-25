@@ -259,7 +259,10 @@ def wx_app():
         for window in list(wx.GetTopLevelWindows()):
             try:
                 if window:
-                    window.Destroy()
+                    if hasattr(window, "_wx_jobs_state"):
+                        window.Close(True)
+                    else:
+                        window.Destroy()
             except Exception:
                 pass
         for _ in range(5):

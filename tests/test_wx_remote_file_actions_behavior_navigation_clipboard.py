@@ -50,7 +50,12 @@ def wx_app():
 def _browser(app, backend, model=None, operation=None):
     show_remote_files(model=model, loader=backend.iterdir_entries, operation=operation or backend.operation)
     frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
+    frame.SetSize(wx.Size(1100, 760))
+    frame.Show()
+    frame.Layout()
+    frame.SendSizeEvent()
     _pump(app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
+    frame.Layout()
     return frame
 
 def test_wx_remote_keyboard_copy_and_paste_use_shared_clipboard(wx_app):
@@ -90,7 +95,12 @@ def test_wx_remote_ctrl_a_selects_all_rows(wx_app):
     event.SetKeyCode(ord("A"))
     event.SetControlDown(True)
     listing.ProcessEvent(event)
-    assert all(listing.IsSelected(index) for index in range(listing.GetItemCount()))
+    parent_rows = [index for index in range(listing.GetItemCount()) if listing.GetItemText(index) == ".."]
+    selectable_rows = [index for index in range(listing.GetItemCount()) if index not in parent_rows]
+    assert len(parent_rows) == 1
+    assert all(not listing.IsSelected(index) for index in parent_rows)
+    assert selectable_rows
+    assert all(listing.IsSelected(index) for index in selectable_rows)
 
 def test_wx_remote_copy_path_uses_system_clipboard_without_backend(wx_app):
     backend = MockRemoteFilesBackend()

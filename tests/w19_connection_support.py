@@ -89,27 +89,16 @@ def wx_app():
             window.Close()
         except Exception:
             pass
-    for _ in range(5):
-        try:
-            wx.Yield()
-        except Exception:
-            app.ProcessPendingEvents()
     for window in wx.GetTopLevelWindows():
         try:
             if not window.IsBeingDeleted():
                 window.Destroy()
         except Exception:
             pass
-    for _ in range(5):
-        try:
-            wx.Yield()
-        except Exception:
-            app.ProcessPendingEvents()
     # NOTE: no app.Destroy() here on purpose. Destroying the shared wx.App
-    # while shell frames with WebView-backed terminal panels are still
-    # draining their deferred deletes crashes the interpreter on shutdown
-    # (0xC0000374) after an otherwise green run. Windows are closed and
-    # destroyed above; the process exit reclaims the app.
+    # while WebView-backed controls are draining deferred deletes can crash the
+    # interpreter during wx event pumping. Windows are closed and destroyed;
+    # process exit reclaims the app without re-entering native teardown.
 
 
 def _profiles():

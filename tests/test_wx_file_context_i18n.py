@@ -10,6 +10,10 @@ from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 from hpc_gui.wx_local_files import show_local_files
 from mock_hpc_files import MockRemoteFilesBackend
+from support.wx_event_coords import (
+    context_menu_screen_point,
+    notebook_context_screen_point,
+)
 
 
 def _pump(app, predicate):
@@ -21,6 +25,22 @@ def _pump(app, predicate):
         wx.MilliSleep(5)
     app.ProcessPendingEvents()
     assert predicate()
+
+
+def _settle(app, window=None):
+    """Let GTK apply native window and notebook geometry before hit testing."""
+    if window is not None:
+        window.SetSize(wx.Size(1100, 760))
+        window.Show()
+        window.Layout()
+        window.SendSizeEvent()
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        wx.SafeYield()
+        if window is not None:
+            window.Layout()
+        wx.MilliSleep(2)
+    app.ProcessPendingEvents()
 
 
 def _first_context_target(listing):
@@ -62,12 +82,12 @@ def test_wx_remote_context_menu_reopens_with_turkish_labels(wx_app):
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
     listing = frame._wx_remote_controls["listing"]
     _pump(wx_app, lambda: listing.GetItemCount() > 0)
+    _settle(wx_app, frame)
     target_index = _first_context_target(listing)
     listing.Select(target_index)
     labels = []
     listing.PopupMenu = lambda menu: labels.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
-    rect = listing.GetItemRect(target_index)
-    position = listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
+    position = context_menu_screen_point(listing, target_index, wx)
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(position)
 
@@ -91,10 +111,10 @@ def test_wx_local_context_menu_reopens_with_turkish_labels(wx_app, tmp_path: Pat
     labels = []
     listing.PopupMenu = lambda menu: labels.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
     _pump(wx_app, lambda: listing.GetItemCount() > 0)
+    _settle(wx_app, frame)
     target_index = _first_context_target(listing)
     listing.Select(target_index)
-    rect = listing.GetItemRect(target_index)
-    position = listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
+    position = context_menu_screen_point(listing, target_index, wx)
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(position)
 
@@ -116,7 +136,8 @@ def _tab_close_labels(app, frame, notebook):
     )
     try:
         event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, notebook.GetId())
-        event.SetPosition(notebook.ClientToScreen(wx.Point(5, 5)))
+        page = max(0, notebook.GetSelection())
+        event.SetPosition(notebook_context_screen_point(notebook, page, wx))
         notebook.ProcessEvent(event)
     finally:
         notebook.PopupMenu = original
@@ -137,6 +158,7 @@ def test_wx_remote_tab_close_label_follows_runtime_language(wx_app):
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
     notebook = frame._wx_remote_notebook
     _pump(wx_app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
+    _settle(wx_app, frame)
 
     assert "Close" in _tab_close_labels(wx_app, frame, notebook)
     load_language("tr")
@@ -154,6 +176,7 @@ def test_wx_local_tab_close_label_follows_runtime_language(wx_app, tmp_path: Pat
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_local_controls")][-1]
     notebook = frame._wx_local_notebook
     _pump(wx_app, lambda: frame._wx_local_controls["listing"].GetItemCount() >= 1)
+    _settle(wx_app, frame)
 
     assert "Close" in _tab_close_labels(wx_app, frame, notebook)
     load_language("tr")

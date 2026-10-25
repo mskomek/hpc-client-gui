@@ -10,6 +10,7 @@ wx = pytest.importorskip("wx")
 from hpc_gui import wx_local_files
 from hpc_gui.wx_local_files import show_local_files
 from hpc_gui.core.i18n import load_language
+from support.wx_event_coords import context_menu_screen_point
 
 
 def _pump(app, predicate, timeout=2):
@@ -42,7 +43,12 @@ def wx_app():
 def _browser(wx_app, path, **callbacks):
     show_local_files(path=path, **callbacks)
     frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_local_controls")][-1]
+    frame.SetSize(wx.Size(1100, 760))
+    frame.Show()
+    frame.Layout()
+    frame.SendSizeEvent()
     wx_app.ProcessPendingEvents()
+    frame.Layout()
     return frame
 
 
@@ -78,7 +84,7 @@ def test_local_context_event_targets_unselected_row_without_dropping_target(wx_a
     seen = []
     listing.PopupMenu = lambda menu: seen.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
     index = 1
-    point = listing.ClientToScreen(wx.Point(5, listing.GetItemRect(index).y + 2))
+    point = context_menu_screen_point(listing, index, wx)
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(point)
     listing.ProcessEvent(event)

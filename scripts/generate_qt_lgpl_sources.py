@@ -5,10 +5,15 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import time
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 COMPONENTS = ("PySide6", "Shiboken6", "PySide6-Essentials", "PySide6-Addons")
+URL_VERIFY_ATTEMPTS = 3
+URL_VERIFY_RETRY_DELAY_SECONDS = 0.5
+TRANSIENT_HTTP_STATUS_CODES = {408, 425, 429, 500, 502, 503, 504}
 
 
 def read_versions(path: Path) -> dict[str, str]:
@@ -27,11 +32,19 @@ def read_versions(path: Path) -> dict[str, str]:
 
 def verify_url(url: str) -> None:
     request = Request(url, method="GET", headers={"User-Agent": "hpc-client-gui-release/1"})
-    try:
-        with urlopen(request, timeout=20) as response:
-            response.read(1)
-    except OSError as exc:
-        raise RuntimeError(f"Unable to verify source URL: {url}") from exc
+    last_error: OSError | None = None
+    for attempt in range(1, URL_VERIFY_ATTEMPTS + 1):
+        try:
+            with urlopen(request, timeout=20) as response:
+                response.read(1)
+            return
+        except OSError as exc:
+            last_error = exc
+            if isinstance(exc, HTTPError) and exc.code not in TRANSIENT_HTTP_STATUS_CODES:
+                break
+            if attempt < URL_VERIFY_ATTEMPTS:
+                time.sleep(URL_VERIFY_RETRY_DELAY_SECONDS * attempt)
+    raise RuntimeError(f"Unable to verify source URL: {url}") from last_error
 
 
 def write_sources(versions_path: Path, output: Path) -> None:

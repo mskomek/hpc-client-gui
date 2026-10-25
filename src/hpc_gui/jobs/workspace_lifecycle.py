@@ -81,8 +81,8 @@ class JobsWorkspaceLifecycle:
                 return
             bindings.state["closed"] = True
             bindings.state["outputs_pending_generations"].clear()
-        self._close_files_browser()
         bindings.timer.Stop()
+        self._close_files_browser()
         unsubscribe_language_change(bindings.refresh_labels)
         # Embedded pages belong to the parent notebook. Standalone windows own
         # their destruction; destroying an embedded page leaves stale wx refs.
@@ -92,14 +92,15 @@ class JobsWorkspaceLifecycle:
 
     def on_destroy(self, event) -> None:
         bindings = self.bindings
-        if event.GetEventObject() is not bindings.host:
+        event_window = event.GetEventObject()
+        if not _is_same_window(event_window, bindings.host):
             event.Skip()
             return
         with bindings.state_lock:
             bindings.state["closed"] = True
             bindings.state["outputs_pending_generations"].clear()
-        self._close_files_browser()
         bindings.timer.Stop()
+        self._close_files_browser()
         for follower in bindings.state.get("followers", {}).values():
             follower.close()
         unsubscribe_language_change(bindings.refresh_labels)
@@ -192,7 +193,6 @@ class JobsWorkspaceLifecycle:
         if not bindings.state["minimized"]:
             bindings.actions.refresh_jobs()
         event.Skip()
-
     def on_page_changed(self, event) -> None:
         bindings = self.bindings
         actions, model, state = bindings.actions, bindings.model, bindings.state
@@ -275,3 +275,20 @@ class JobsWorkspaceLifecycle:
                     actions.refresh_outputs_tab(event)
         except Exception:
             pass
+
+
+def _is_same_window(left: Any, right: Any) -> bool:
+    """Compare wx window wrappers by their native handle when available."""
+    if left is right:
+        return True
+    try:
+        left_handle = left.GetHandle()
+        right_handle = right.GetHandle()
+        if left_handle is not None and right_handle is not None:
+            return left_handle == right_handle
+    except Exception:
+        pass
+    try:
+        return bool(left == right)
+    except Exception:
+        return False

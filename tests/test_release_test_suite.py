@@ -21,6 +21,7 @@ from scripts.release_test_suite import (
     _discover_ftp_widget_splits,
     _evidence_failures,
     _test_environment,
+    W31_PACKAGE_TEST,
     build_commands,
     main,
 )
@@ -81,6 +82,16 @@ class ReleaseTestSuiteTests(unittest.TestCase):
 
     @pytest.mark.unit
     @pytest.mark.semantic
+    def test_packaged_smoke_partition_avoids_source_marker_filter(self):
+        path = "tests/test_wx_packaged_smoke.py"
+        for scope in ("portable", "acceptance"):
+            commands = build_commands(coverage=False, scope=scope)
+            isolated = [command for command in commands if command[-1] == path]
+            self.assertEqual(len(isolated), 1)
+            self.assertNotIn("not packaging and not artifact_dependent", isolated[0])
+
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_evidence_hash_validation_uses_raw_file_bytes(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -105,18 +116,48 @@ class ReleaseTestSuiteTests(unittest.TestCase):
     @pytest.mark.semantic
     def test_acceptance_builds_wheel_before_preflight_commands(self):
         with tempfile.TemporaryDirectory() as temp_dir:
+            def run(command, *, cwd, env):
+                if command[1:4] == ("-m", "build", "--wheel"):
+                    output_dir = Path(command[5])
+                    output_dir.mkdir(parents=True, exist_ok=True)
+                    (output_dir / "candidate.whl").write_bytes(b"wheel")
+                return SimpleNamespace(returncode=0)
+
             with (
                 patch("scripts.release_test_suite.REPO_ROOT", Path(temp_dir)),
                 patch("scripts.release_test_suite._evidence_failures", return_value=()),
-                patch("scripts.release_test_suite.build_commands", return_value=[]),
-                patch("scripts.release_test_suite.subprocess.run") as run,
+                patch(
+                    "scripts.release_test_suite.build_commands",
+                    return_value=[("pytest", "candidate-test")],
+                ),
+                patch("scripts.release_test_suite.subprocess.run", side_effect=run) as run_mock,
                 redirect_stdout(StringIO()),
                 redirect_stderr(StringIO()),
             ):
-                run.return_value = SimpleNamespace(returncode=0)
                 result = main(["--scope", "acceptance"])
         self.assertEqual(result, 0)
-        self.assertEqual(run.call_args.args[0][1:4], ("-m", "build", "--wheel"))
+        self.assertEqual(
+            run_mock.call_args_list[0].args[0][1:4], ("-m", "build", "--wheel")
+        )
+        candidate_environment = run_mock.call_args_list[1].kwargs["env"]
+        candidate_wheel = Path(candidate_environment["HPC_GUI_W31_PACKAGE_WHEEL"])
+        self.assertEqual(candidate_wheel.name, "candidate.whl")
+        self.assertFalse(candidate_wheel.exists())
+
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    def test_acceptance_runs_the_candidate_wheel_contract_unfiltered(self):
+        acceptance = build_commands(coverage=False, scope="acceptance")
+        portable = build_commands(coverage=False, scope="portable")
+        acceptance_contracts = [
+            command for command in acceptance if W31_PACKAGE_TEST in command
+        ]
+        portable_contracts = [
+            command for command in portable if W31_PACKAGE_TEST in command
+        ]
+        self.assertEqual(len(acceptance_contracts), 1)
+        self.assertFalse(any("not artifact_dependent" in arg for arg in acceptance_contracts[0]))
+        self.assertEqual(portable_contracts, [])
 
     @pytest.mark.unit
     @pytest.mark.semantic

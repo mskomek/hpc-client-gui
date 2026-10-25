@@ -78,6 +78,7 @@ class FakeSSH:
 app = wx.App.Get()
 if app is None:
     app = wx.App(False)
+wx.Log.SetActiveTarget(wx.LogStderr())
 """
 
 
@@ -183,49 +184,29 @@ frame = wx.Frame(None, size=(900, 600))
 panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH("u1", "h1"))
 frame.Show()
 import time
-deadline = time.monotonic() + 15
-failures = []
-
-def finish(error=None):
-    if error:
-        failures.append(error)
-    panel.close()
-    frame.Destroy()
-    wx.CallAfter(app.ExitMainLoop)
-
-def exercise_reconnect():
-    if not panel._ready:
-        if time.monotonic() < deadline:
-            wx.CallLater(25, exercise_reconnect)
-            return
-        finish(
-            "WebView2 did not become ready before reconnect: "
-            f"stage={panel._webview_failure_stage} "
-            f"attempts={panel._webview_create_attempts}"
-        )
-        return
-    try:
-        assert "u1@h1" in panel._identity_label.GetLabel(), panel._identity_label.GetLabel()
-        gen_before = panel._generation
-        # Disconnect: write path neutralized, status + identity cleared visibly.
-        panel.set_ssh(None)
-        assert panel._status_label.GetLabel() != "", "disconnect must stay visible"
-        assert panel._identity_label.GetLabel() == "", "identity must clear on disconnect"
-        assert panel._handle_input("echo nowhere") is False
-        # Reconnect: fresh generation (stale callbacks rejected) + new identity.
-        panel.set_ssh(FakeSSH("u2", "h2"))
-        assert panel._generation != gen_before, "reconnect must mint a fresh generation"
-        assert "u2@h2" in panel._identity_label.GetLabel(), panel._identity_label.GetLabel()
-        assert panel._handle_input("echo back") is True
-    except Exception as exc:
-        finish(f"{type(exc).__name__}: {exc}")
-    else:
-        finish()
-
-wx.CallAfter(exercise_reconnect)
-app.MainLoop()
-if failures:
-    raise AssertionError(failures[0])
+sys.path.insert(0, "tests/support")
+from wx_webview_probe import wait_until_ready
+wait_until_ready(wx, lambda: panel._ready, timeout=15)
+assert panel._ready, (
+    "WebView2 did not become ready before reconnect: "
+    f"stage={panel._webview_failure_stage} "
+    f"attempts={panel._webview_create_attempts}"
+)
+assert "u1@h1" in panel._identity_label.GetLabel(), panel._identity_label.GetLabel()
+gen_before = panel._generation
+# Disconnect: write path neutralized, status + identity cleared visibly.
+panel.set_ssh(None)
+assert panel._status_label.GetLabel() != "", "disconnect must stay visible"
+assert panel._identity_label.GetLabel() == "", "identity must clear on disconnect"
+assert panel._handle_input("echo nowhere") is False
+# Reconnect: fresh generation (stale callbacks rejected) + new identity.
+panel.set_ssh(FakeSSH("u2", "h2"))
+assert panel._generation != gen_before, "reconnect must mint a fresh generation"
+assert "u2@h2" in panel._identity_label.GetLabel(), panel._identity_label.GetLabel()
+assert panel._handle_input("echo back") is True
+panel.close()
+frame.Destroy()
+wx.YieldIfNeeded()
 app.Destroy()
 """
     result = _run_subprocess_test(code)

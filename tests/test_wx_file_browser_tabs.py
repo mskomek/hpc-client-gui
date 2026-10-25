@@ -9,6 +9,11 @@ import pytest
 wx = pytest.importorskip("wx")
 
 from hpc_gui.wx_local_files import LocalBrowserModel, LocalEntry, show_local_files
+from support.wx_event_coords import (
+    context_menu_screen_point,
+    notebook_context_screen_point,
+    prepare_visible_frame,
+)
 
 def _pump(app, pred, timeout=5):
     deadline = time.monotonic() + timeout
@@ -39,6 +44,7 @@ def wx_app():
 def _local(app, path):
     show_local_files(path=path)
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_local_controls")][-1]
+    prepare_visible_frame(app, frame, wx)
     _pump(app, lambda: frame._wx_local_controls["listing"].GetItemCount() >= 0)
     return frame
 
@@ -117,8 +123,6 @@ def test_wx_local_close_active_tab_selects_remaining_tab(wx_app, tmp_path: Path)
     frame._wx_local_run_action("new_tab")
     _pump(wx_app, lambda: nb.GetPageCount() == 2)
     assert nb.GetSelection() == 1
-    orig_hit = nb.HitTest
-    nb.HitTest = lambda pt: (1, 0)
     orig_popup = nb.PopupMenu
     def capture(menu):
         for item in menu.GetMenuItems():
@@ -127,10 +131,9 @@ def test_wx_local_close_active_tab_selects_remaining_tab(wx_app, tmp_path: Path)
                 break
     nb.PopupMenu = capture
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, nb.GetId())
-    event.SetPosition(nb.ClientToScreen(wx.Point(80, 10)))
+    event.SetPosition(notebook_context_screen_point(nb, 1, wx))
     nb.ProcessEvent(event)
     nb.PopupMenu = orig_popup
-    nb.HitTest = orig_hit
     _pump(wx_app, lambda: nb.GetPageCount() == 1)
     assert nb.GetPageCount() == 1
     assert nb.GetSelection() == 0
@@ -155,18 +158,12 @@ def test_wx_local_close_inactive_tab_preserves_active_tab(wx_app, tmp_path: Path
     def capture(menu):
         for item in menu.GetMenuItems():
             if item.GetItemLabelText() == "Close":
-                # HitTest for tab 0: we need to ensure do_close targets 0, not active
-                # Our notebook_context determines idx via HitTest; we need to fake HitTest to return 0
-                # Monkey patch HitTest temporarily
-                orig_hit = nb.HitTest
-                nb.HitTest = lambda pt: (0, 0)
                 nb.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
-                nb.HitTest = orig_hit
                 captured.append(item)
                 break
     nb.PopupMenu = capture
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, nb.GetId())
-    event.SetPosition(nb.ClientToScreen(wx.Point(5, 5)))
+    event.SetPosition(notebook_context_screen_point(nb, 0, wx))
     nb.ProcessEvent(event)
     nb.PopupMenu = orig_popup
     _pump(wx_app, lambda: nb.GetPageCount() == 1)
@@ -197,8 +194,6 @@ def test_wx_local_closed_tab_ignores_listing_completion(wx_app, tmp_path: Path, 
     listing.Select(idx)
     frame._wx_local_run_action("new_tab")
     assert started.wait(2)
-    orig_hit = nb.HitTest
-    nb.HitTest = lambda pt: (1, 0)
     orig_popup = nb.PopupMenu
     def capture(menu):
         for item in menu.GetMenuItems():
@@ -207,10 +202,9 @@ def test_wx_local_closed_tab_ignores_listing_completion(wx_app, tmp_path: Path, 
                 break
     nb.PopupMenu = capture
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, nb.GetId())
-    event.SetPosition(nb.ClientToScreen(wx.Point(30, 10)))
+    event.SetPosition(notebook_context_screen_point(nb, 1, wx))
     nb.ProcessEvent(event)
     nb.PopupMenu = orig_popup
-    nb.HitTest = orig_hit
     release.set()
     wx_app.ProcessPendingEvents()
     wx.MilliSleep(100)
@@ -242,6 +236,7 @@ def test_wx_local_stale_listing_cannot_render_into_other_tab(wx_app, tmp_path: P
     monkeypatch.setattr(LocalBrowserModel, "list_entries", loader)
     show_local_files(path=first)
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_local_controls")][-1]
+    prepare_visible_frame(wx_app, frame, wx)
     nb = frame._wx_local_notebook
     listing = frame._wx_local_controls["listing"]
     _pump(wx_app, lambda: any(listing.GetItemText(i)=="second" for i in range(listing.GetItemCount())))
@@ -273,8 +268,8 @@ def test_wx_local_middle_click_directory_opens_tab(wx_app, tmp_path: Path):
     listing = frame._wx_local_controls["listing"]
     _pump(wx_app, lambda: listing.GetItemCount()>=1)
     idx = next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="B")
-    rect = listing.GetItemRect(idx)
-    pos = wx.Point(rect.x+2, rect.y+2)
+    screen_pos = context_menu_screen_point(listing, idx, wx)
+    pos = listing.ScreenToClient(screen_pos)
     event = wx.MouseEvent(wx.wxEVT_MIDDLE_DOWN)
     event.SetPosition(pos)
     listing.ProcessEvent(event)
@@ -290,9 +285,10 @@ def test_wx_local_middle_click_file_noop(wx_app, tmp_path: Path):
     listing = frame._wx_local_controls["listing"]
     _pump(wx_app, lambda: listing.GetItemCount()>=1)
     idx = next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="file.txt")
-    rect = listing.GetItemRect(idx)
     event = wx.MouseEvent(wx.wxEVT_MIDDLE_DOWN)
-    event.SetPosition(wx.Point(rect.x+2, rect.y+2))
+    event.SetPosition(
+        listing.ScreenToClient(context_menu_screen_point(listing, idx, wx))
+    )
     listing.ProcessEvent(event)
     wx_app.ProcessPendingEvents()
     assert nb.GetPageCount()==1
@@ -332,7 +328,7 @@ def test_wx_local_user_close_tab_closes_visible_tab(wx_app, tmp_path: Path):
                 break
     nb.PopupMenu = capture
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, nb.GetId())
-    event.SetPosition(nb.ClientToScreen(wx.Point(10,10)))
+    event.SetPosition(notebook_context_screen_point(nb, 1, wx))
     nb.ProcessEvent(event)
     nb.PopupMenu = orig_popup
     _pump(wx_app, lambda: nb.GetPageCount()==1)
@@ -352,7 +348,7 @@ def test_wx_local_user_cannot_close_last_tab(wx_app, tmp_path: Path):
                 break
     nb.PopupMenu = capture
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, nb.GetId())
-    event.SetPosition(nb.ClientToScreen(wx.Point(10,10)))
+    event.SetPosition(notebook_context_screen_point(nb, 0, wx))
     nb.ProcessEvent(event)
     nb.PopupMenu = orig_popup
     assert captured[0] is False
@@ -380,8 +376,6 @@ def test_wx_local_user_close_inflight_tab_ignores_completion(wx_app, tmp_path: P
     listing.Select(idx)
     frame._wx_local_run_action("new_tab")
     assert started.wait(2)
-    orig_hit = nb.HitTest
-    nb.HitTest = lambda pt: (1, 0)
     orig_popup = nb.PopupMenu
     def capture(menu):
         for item in menu.GetMenuItems():
@@ -390,10 +384,9 @@ def test_wx_local_user_close_inflight_tab_ignores_completion(wx_app, tmp_path: P
                 break
     nb.PopupMenu = capture
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, nb.GetId())
-    event.SetPosition(nb.ClientToScreen(wx.Point(30,10)))
+    event.SetPosition(notebook_context_screen_point(nb, 1, wx))
     nb.ProcessEvent(event)
     nb.PopupMenu = orig_popup
-    nb.HitTest = orig_hit
     release.set()
     wx_app.ProcessPendingEvents()
     wx.MilliSleep(100)

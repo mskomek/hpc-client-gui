@@ -38,12 +38,19 @@ def _pump(app, predicate, timeout: float = 5.0) -> None:
     app.ProcessPendingEvents()
     assert predicate()
 
-def _settle(app, rounds: int = 6) -> None:
+def _settle(app, window=None, rounds: int = 6) -> None:
+    if window is not None:
+        window.SetSize(wx.Size(1100, 760))
+        window.Show()
+        window.Layout()
+        window.SendSizeEvent()
     for _ in range(rounds):
         app.ProcessPendingEvents()
         # wx frees closed frames during idle processing, so a loop that only
         # pumps pending events keeps them in GetTopLevelWindows() forever.
         wx.SafeYield()
+        if window is not None:
+            window.Layout()
         wx.MilliSleep(2)
     app.ProcessPendingEvents()
     wx.SafeYield()
@@ -80,6 +87,7 @@ def _local_frame(app, path):
     show_local_files(path=path)
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_local_controls")][-1]
     _pump(app, lambda: frame._wx_local_controls["listing"].GetItemCount() >= 0)
+    _settle(app, frame, rounds=3)
     return frame
 
 def _remote_frame(app, backend, path="/work", loader=None):
@@ -90,6 +98,7 @@ def _remote_frame(app, backend, path="/work", loader=None):
     )
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
     _pump(app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
+    _settle(app, frame, rounds=3)
     return frame
 
 def _key(listing, code, *, ctrl=False, shift=False):

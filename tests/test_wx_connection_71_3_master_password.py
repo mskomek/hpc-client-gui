@@ -176,8 +176,10 @@ def test_master_password_cached_path(monkeypatch):
         })
         # Seed DPAPI cache
         import hpc_gui.config.storage as cfg_storage
+        import hpc_gui.core.secret_store as secret_store
         fake_token = "dpapi-cache-test"
         monkeypatch.setattr(cfg_storage, "load_settings", lambda: {"master_password_dpapi": fake_token})
+        monkeypatch.setattr(secret_store, "is_available", lambda: True)
         monkeypatch.setattr("hpc_gui.core.secret_store.unprotect_secret", lambda t: "master123" if t == fake_token else (_ for _ in ()).throw(ValueError()))
         monkeypatch.setattr("hpc_gui.services.connection_profile_service.unprotect_secret", lambda t: "master123" if t == fake_token else (_ for _ in ()).throw(ValueError()))
 

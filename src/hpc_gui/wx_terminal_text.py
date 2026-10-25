@@ -64,13 +64,24 @@ def build_text_terminal_panel(
         query = find_ctrl.GetValue()
         pos = model.find(query)
         if pos >= 0:
-            text.SetInsertionPoint(pos)
-            try:
-                text.SetSelection(pos, pos + len(query))
-            except Exception:
-                pass
             text.SetFocus()
-            text.ShowPosition(pos)
+            text.SetInsertionPoint(pos)
+
+            def select_match():
+                try:
+                    if text.IsBeingDeleted():
+                        return
+                    if text.GetValue()[pos:pos + len(query)] != query:
+                        return
+                    # GTK can deliver a delayed focus event that collapses a
+                    # synchronous selection. Apply scrolling and selection
+                    # after the native focus transition has settled.
+                    text.ShowPosition(pos)
+                    text.SetSelection(pos, pos + len(query))
+                except Exception:
+                    pass
+
+            wx.CallAfter(select_match)
 
     def do_clear(_evt=None):
         model.clear()

@@ -22,7 +22,7 @@ $initMatch = [regex]::Match($init, '__version__\s*=\s*''([^'']+)''')
 if (-not $initMatch.Success) { throw "__version__ declaration not found." }
 $versions += $initMatch.Groups[1].Value
 
-$cli = Get-Content -Raw (Join-Path $Root "src/hpc_gui/cli/main.py")
+$cli = Get-Content -Raw (Join-Path $Root "src/hpc_gui/cli/_contracts.py")
 $cliMatch = [regex]::Match($cli, 'CLI_VERSION\s*=\s*"([^"]+)"')
 if (-not $cliMatch.Success) { throw "CLI_VERSION declaration not found." }
 $versions += $cliMatch.Groups[1].Value

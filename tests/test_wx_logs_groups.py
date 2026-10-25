@@ -272,7 +272,9 @@ def test_wx_tree_group_click_refresh_copy_and_normal_view(tmp_path, wx_app, engl
     assert wx.TheClipboard.Open()
     try:
         assert wx.TheClipboard.GetData(copied)
-        assert copied.GetText() == host._wx_logs_model.text
+        clipboard_text = copied.GetText()
+        normalized_clipboard = clipboard_text.replace("\r\n", "\n").replace("\r", "\n")
+        assert normalized_clipboard == host._wx_logs_model.text
     finally:
         wx.TheClipboard.Close()
 

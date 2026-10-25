@@ -36,6 +36,10 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     model = model or WxRemoteDirectoryModel()
     host, finish = make_host(parent, title=t("tabs.ftp"), size=(920, 620), embedded=embedded)
     panel = wx.Panel(host)
+    if not embedded:
+        frame_sizer = wx.BoxSizer(wx.VERTICAL)
+        frame_sizer.Add(panel, 1, wx.EXPAND)
+        host.SetSizer(frame_sizer)
     root = wx.BoxSizer(wx.VERTICAL)
     # --- toolbar (Qt parity). Only keys existing in both en/tr instantiated.
     # Existing: dirs.new_folder, new_file, upload, download_selected, delete, undo, favorites, history, refresh

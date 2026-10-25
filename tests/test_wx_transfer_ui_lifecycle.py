@@ -9,6 +9,7 @@ from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.wx_shell import _start_file_transfers
 from hpc_gui.wx_transfer_workspace import create_transfer_progress
 from hpc_gui.core.i18n import load_language, set_language, t
+from support.wx_event_coords import context_menu_screen_point
 
 @pytest.fixture
 def wx_app():
@@ -339,7 +340,7 @@ def test_wx_local_browser_upload_reaches_visible_transfer_and_backend(wx_app, tm
                 listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
                 break
     listing.PopupMenu=choose
-    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(idx).y+2))
+    point=context_menu_screen_point(listing, idx, wx)
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId()); event.SetPosition(point)
     listing.ProcessEvent(event)
     listing.PopupMenu=orig
@@ -368,7 +369,8 @@ def test_wx_remote_browser_download_reaches_visible_transfer_and_backend(wx_app,
     from hpc_gui.wx_remote_files_view import show_remote_files
     from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
     from mock_hpc_files import MockRemoteFilesBackend
-    parent=wx.Frame(None)
+    parent=wx.Frame(None, size=(900, 600))
+    parent.Show()
     backend=MockRemoteFilesBackend()
     backend.entries["/work/download.txt"]=False
     files=_Files()
@@ -382,8 +384,14 @@ def test_wx_remote_browser_download_reaches_visible_transfer_and_backend(wx_app,
         return backend.operation(action, paths, destination)
     show_remote_files(parent=parent, model=WxRemoteDirectoryModel("/work"), loader=backend.iterdir_entries, operation=operation)
     frame=[w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
+    frame.SetSize(wx.Size(1100, 760))
+    frame.Show()
+    frame.Layout()
+    frame.SendSizeEvent()
     for _ in range(20):
         wx_app.ProcessPendingEvents()
+        wx.SafeYield()
+        frame.Layout()
         wx.MilliSleep(10)
     listing=frame._wx_remote_controls["listing"]
     idx=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="download.txt")
@@ -397,7 +405,7 @@ def test_wx_remote_browser_download_reaches_visible_transfer_and_backend(wx_app,
                 listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
                 break
     listing.PopupMenu=choose
-    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(idx).y+2))
+    point=context_menu_screen_point(listing, idx, wx)
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId()); event.SetPosition(point)
     listing.ProcessEvent(event)
     listing.PopupMenu=orig

@@ -11,6 +11,11 @@ from hpc_gui.wx_remote_files import RemoteEntry, WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 
 from mock_hpc_files import MockRemoteFilesBackend
+from support.wx_event_coords import (
+    context_menu_screen_point,
+    notebook_context_screen_point,
+    prepare_visible_frame,
+)
 
 def _pump(app, pred, timeout=5):
     deadline = time.monotonic() + timeout
@@ -41,6 +46,7 @@ def wx_app():
 def _remote(app, backend, path="/work"):
     show_remote_files(model=WxRemoteDirectoryModel(path), loader=backend.iterdir_entries, operation=backend.operation)
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
+    prepare_visible_frame(app, frame, wx)
     _pump(app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
     return frame
 
@@ -91,6 +97,7 @@ def test_wx_remote_closed_tab_ignores_late_listing_completion(wx_app):
         return (RemoteEntry("/scratch/new.txt"),)
     frame = show_remote_files(model=WxRemoteDirectoryModel("/work"), loader=loader, operation=lambda *_a: None) or None
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
+    prepare_visible_frame(wx_app, frame, wx)
     nb = frame._wx_remote_notebook
     assert started.wait(2)
     # create second tab via production New Tab to allow closing first
@@ -102,14 +109,11 @@ def test_wx_remote_closed_tab_ignores_late_listing_completion(wx_app):
         for item in menu.GetMenuItems():
             if item.GetItemLabelText() == "Close":
                 # need to target tab 0
-                orig_hit = nb.HitTest
-                nb.HitTest = lambda pt: (0, 0)
                 nb.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
-                nb.HitTest = orig_hit
                 break
     nb.PopupMenu = capture
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, nb.GetId())
-    event.SetPosition(nb.ClientToScreen(wx.Point(5, 5)))
+    event.SetPosition(notebook_context_screen_point(nb, 0, wx))
     nb.ProcessEvent(event)
     nb.PopupMenu = orig_popup
     release.set()
@@ -131,6 +135,7 @@ def test_wx_remote_stale_listing_cannot_cross_tab_boundary(wx_app):
         return (RemoteEntry("/scratch/new.txt"),)
     show_remote_files(model=WxRemoteDirectoryModel("/work"), loader=loader, operation=lambda *_a: None)
     frame=[w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
+    prepare_visible_frame(wx_app, frame, wx)
     nb=frame._wx_remote_notebook
     assert started.wait(2)
     frame._wx_remote_run_action("new_tab", ("/scratch",), "/scratch")
@@ -171,6 +176,7 @@ def test_wx_remote_listing_worker_uses_captured_tab_path(wx_app):
         return (RemoteEntry("/scratch/scratch.txt"),)
     show_remote_files(model=WxRemoteDirectoryModel("/work"), loader=loader, operation=lambda *_a: None)
     frame=[w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
+    prepare_visible_frame(wx_app, frame, wx)
     nb=frame._wx_remote_notebook
     assert started_work.wait(2)
     # open second tab via production New Tab
@@ -201,9 +207,10 @@ def test_wx_remote_middle_click_directory_opens_tab(wx_app):
     _pump(wx_app, lambda: listing.GetItemCount()>=1)
     idx = next((i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="folder"), None)
     assert idx is not None
-    rect = listing.GetItemRect(idx)
     event = wx.MouseEvent(wx.wxEVT_MIDDLE_DOWN)
-    event.SetPosition(wx.Point(rect.x+2, rect.y+2))
+    event.SetPosition(
+        listing.ScreenToClient(context_menu_screen_point(listing, idx, wx))
+    )
     listing.ProcessEvent(event)
     _pump(wx_app, lambda: nb.GetPageCount()==2)
 
@@ -214,9 +221,10 @@ def test_wx_remote_middle_click_file_noop(wx_app):
     listing = frame._wx_remote_controls["listing"]
     _pump(wx_app, lambda: listing.GetItemCount()>=1)
     idx = next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="a.txt")
-    rect = listing.GetItemRect(idx)
     event = wx.MouseEvent(wx.wxEVT_MIDDLE_DOWN)
-    event.SetPosition(wx.Point(rect.x+2, rect.y+2))
+    event.SetPosition(
+        listing.ScreenToClient(context_menu_screen_point(listing, idx, wx))
+    )
     listing.ProcessEvent(event)
     wx_app.ProcessPendingEvents()
     assert nb.GetPageCount()==1
@@ -247,7 +255,7 @@ def test_wx_remote_user_close_tab_closes_visible_tab(wx_app):
                 break
     nb.PopupMenu = capture
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, nb.GetId())
-    event.SetPosition(nb.ClientToScreen(wx.Point(10,10)))
+    event.SetPosition(notebook_context_screen_point(nb, 1, wx))
     nb.ProcessEvent(event)
     nb.PopupMenu = orig_popup
     _pump(wx_app, lambda: nb.GetPageCount()==1)
@@ -266,7 +274,7 @@ def test_wx_remote_user_cannot_close_last_tab(wx_app):
                 break
     nb.PopupMenu = capture
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, nb.GetId())
-    event.SetPosition(nb.ClientToScreen(wx.Point(10,10)))
+    event.SetPosition(notebook_context_screen_point(nb, 0, wx))
     nb.ProcessEvent(event)
     nb.PopupMenu = orig_popup
     assert captured[0] is False
@@ -282,6 +290,7 @@ def test_wx_remote_user_close_inflight_tab_ignores_completion(wx_app):
         return (RemoteEntry("/scratch/ok.txt"),)
     show_remote_files(model=WxRemoteDirectoryModel("/work"), loader=loader, operation=lambda *_a: None)
     frame=[w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
+    prepare_visible_frame(wx_app, frame, wx)
     nb=frame._wx_remote_notebook
     assert started.wait(2)
     frame._wx_remote_run_action("new_tab", ("/scratch",), "/scratch")
@@ -291,14 +300,11 @@ def test_wx_remote_user_close_inflight_tab_ignores_completion(wx_app):
     def capture(menu):
         for item in menu.GetMenuItems():
             if item.GetItemLabelText()=="Close":
-                orig_hit = nb.HitTest
-                nb.HitTest = lambda pt: (0,0)
                 nb.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
-                nb.HitTest = orig_hit
                 break
     nb.PopupMenu = capture
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, nb.GetId())
-    event.SetPosition(nb.ClientToScreen(wx.Point(5,5)))
+    event.SetPosition(notebook_context_screen_point(nb, 0, wx))
     nb.ProcessEvent(event)
     nb.PopupMenu = orig_popup
     release.set()

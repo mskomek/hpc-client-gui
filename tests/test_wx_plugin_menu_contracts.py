@@ -228,7 +228,13 @@ def test_wx_separator_lifecycle_offscreen():
         p = pathlib.Path(td) / "wx_lifecycle_check.py"
         p.write_text(script, encoding="utf-8")
         # Use minimal env to avoid Qt/pytest pollution
-        keep = ["PATH", "SYSTEMROOT", "SYSTEMDRIVE", "COMSPEC", "TEMP", "TMP", "PYTHONPATH", "HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA"]
+        keep = [
+            "PATH", "SYSTEMROOT", "SYSTEMDRIVE", "COMSPEC",
+            "TEMP", "TMP", "PYTHONPATH", "HOME", "USERPROFILE",
+            "APPDATA", "LOCALAPPDATA",
+            "DISPLAY", "WAYLAND_DISPLAY", "XAUTHORITY",
+            "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR",
+        ]
         env = {k: os.environ[k] for k in keep if k in os.environ}
         # Ensure src is found via cwd, not PYTHONPATH, but keep PYTHONPATH if set
         env["PYTHONPATH"] = env.get("PYTHONPATH", "")
