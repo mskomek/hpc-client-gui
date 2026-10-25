@@ -142,3 +142,21 @@ Windows terminal bridge host/guest hashes matched: `src/hpc_gui/wx_terminal_webv
 | Windows11 architecture | compileall completed; architecture could not enumerate files in the first no-.git stage; synthetic-index retry failed before launch | 1 / no target exit | NOT VERIFIED on Windows; Ubuntu full gate is authoritative |
 
 The corrected Ubuntu architecture JSON is ARCHITECTURE_FINAL.json. Commands, hashes, and the superseded 1,014-file report correction are in VM_RERUN_2026-10-22.md.
+
+
+## r17 final VM acceptance — 2026-10-24
+
+Source: base `48ac62334b398bbc95b4d14ca9ef23dc83c356f3` plus the verified 39-file overlay fingerprint `325593c807cab38278a93b45986f38ac3152c426421084780bc06ef99c201765`. The source identity manifest and archive hashes are recorded in WAVE 12.
+
+| Check | Environment / command | Result | Exit |
+|---|---|---:|---:|
+| Full architecture | Kole Ubuntu-Test, Python 3.14.9, `scripts/check_source_architecture.py --mode full` | 1,020 Python files; 0 over 500 LOC; 0 dependency/API/cycle errors | 0 |
+| Ruff | Ubuntu-Test and Windows11-New, Ruff 0.17.2 | passed | 0 |
+| Full Linux release suite | Ubuntu-Test, `scripts/ci.py release` | 3,506 passed, 0 failed, 33 skipped, 46 deselected; 244 pytest child commands | 0 |
+| Linux GUI and coverage | Ubuntu-Test under Xvfb/D-Bus, `scripts/ci.py gui` | 3,477 passed plus 29 subtests, 0 failed, 33 skipped, 46 deselected; coverage 69.56% / 65% floor | 0 |
+| Windows release acceptance | Windows11-New, Python 3.14.7, `scripts/release_test_suite.py --scope acceptance` | 3,504 passed plus 29 subtests, 0 failed, 35 skipped, 46 deselected | 0 |
+| Linux packages | Ubuntu-Test, `scripts/release_linux.py --version 1.5.9 --execute` | AppImage, Debian and Flatpak built; all sidecars and installed launcher `--help` smokes passed | 0 |
+| Windows package | Windows11-New, isolated PyInstaller package run | GUI/CLI build and smoke, guide coverage, mocked transfer gate passed | 0 |
+| GitHub Actions | Not run | No hosted result claimed | — |
+
+The Linux and Windows counts describe separate, overlapping runs and are not summed as unique tests. The detailed logs, exit files, package manifests, artifact hashes, warnings, and cleanup probes are in `VM_ACCEPTANCE_2026-10-24.md` and `.tmp/vm-verification/r17-*`. Earlier failed/time-limited attempts remain documented as historical runs and are not presented as r17 failures or passes.

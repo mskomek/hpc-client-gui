@@ -1,58 +1,48 @@
-# WAVE 12 — Final Acceptance
+# WAVE 12 — Final Acceptance and r17 Stabilization
 
-Status: **WAVE_BLOCKED**. Code and global architecture work are complete and locally integrated through source commit `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913`. Release acceptance remains blocked by Ubuntu wxPython absence and unresolved Windows portable/UI/SFTP results. Terminal verdict: **INTEGRATION_CODE_COMPLETE_ACCEPTANCE_BLOCKED**.
+Status: **WAVE_COMPLETE** for the r17 source set. VM acceptance and package gates passed on the exact verified source overlay. The isolated integration branch is ready for a safe local merge to `develop`; the `develop` worktree itself remains untouched in this checkpoint.
 
 ## Source identity
 
-- Jobs source SHA: `713949fb752b90601e007812ebf2bd765da5ad52`.
-- V2 source SHA: `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240`.
-- Integrated source commit/tree: `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913` / `450c1d0ddb079122d5aa3efc90516bead03f0797`.
-- Source fingerprint SHA-256: `bbfbbfad02d5d3b0a2ae7acd143c49ae62349b8136b1bf766c7bd85f729bdbef`, covering 1,516 tracked files (23,440,549 bytes).
-- Ubuntu-Test r33 Git snapshot commit: `0ad0542918b49a4039db41c27ff62e2ab4c86ea1`. The final architecture JSON preserves the VM `source_commit` and records the corresponding local integration SHA/tree/fingerprint separately.
-- Windows W15 source manifest SHA-256: `72d5333de0d59dd6a5bc4f0d2e7036d359d8bb24a06d96acc516e8fd1315d86a`; test file SHA-256 `d9511a924bc76601b4a63baafe4f5aa02361758a4c6e13be13152363593b38e6`.
-- Windows terminal bridge run `e404c71b7f3c40069b7efb5d2d984006` used the same source manifest SHA-256. Its source hashes were verified equal between host and guest before launch.
-- WAVE 12 code commits: `e888745396bab2a9c3f1be8e4333fab729ede79f` (localized connection status assertions) and `f6eb59c0bf20d6f5dd3015a0f7bcb258c79fd913` (remove unused screenshot DC objects).
+- Validation base: local `develop` at `48ac62334b398bbc95b4d14ca9ef23dc83c356f3`.
+- r17 overlay: 39 files; fingerprint `325593c807cab38278a93b45986f38ac3152c426421084780bc06ef99c201765`.
+- Overlay archive SHA-256: `aafce9d620856696318fd7f7438449f6c2b0cd552d35aa147c7662038fbfb986`.
+- The 39 overlay files were hash-verified against the source identity manifest in the integration worktree before commit.
+- Integration source commit/tree: `5861ec6b296e8a48236aaa72c87abe9ec59edd4f` / `de8b888771db5ba71d74278d5f3598e5481e5942`.
+- Jobs source: `713949fb752b90601e007812ebf2bd765da5ad52`; V2 source: `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240`.
+- Exact VM commands, logs, result files, and package hashes: [VM acceptance record](VM_ACCEPTANCE_2026-10-24.md), with copied evidence under `.tmp/vm-verification/r17-*`.
 
-## Final gates
+## Final VM gates
 
-| Gate | Result | Evidence / limit |
+| Gate | Result | Evidence |
 |---|---|---|
-| Source identity | PASS | Source commit/tree/fingerprint above; Jobs/V2 SHAs recorded |
-| Global architecture | PASS | Ubuntu-Test r33: 1,015 Python files, 0 over 500, 0 dependency errors, 0 cycles, 0 public API errors |
-| Shared LOC gate | PASS | 1,041 source entries; 0 over-limit; 91 warning-band entries; baseline removed |
-| Ruff | PASS | Ubuntu-Test r33: `ruff check src scripts tests tools`, exit 0 |
-| Compileall | PASS | Ubuntu-Test r33: `compileall -q src/hpc_gui scripts tests tools`, exit 0 |
-| i18n | PASS | Ubuntu-Test r33 check, exit 0 |
-| Focused architecture/docs/Qt/provenance regressions | PASS | Ubuntu-Test r33: 41 passed, exit 0 |
-| Ubuntu acceptance runner | BLOCKED_ENVIRONMENT | 2,639 passed, 0 failed assertions, 210 skipped, 61 deselected, 29 subtests passed; exit 5 because 105 wx-only partitions had no runnable tests without wxPython |
-| Ubuntu wheel packaging | PASS | 1 passed, 3 deselected, exit 0 after installing the missing `build` dependency in the VM venv |
-| Linux release package plan | PASS (plan only) | AppImage/deb/Flatpak dry-run validation; no artifact built |
-| Windows W15 connection/startup | PASS | Windows11 r33: 11 passed, exit 0; assertions now verify controller state and exact localized status |
-| Windows full portable suite | BLOCKED_TIMEOUT | Windows11 r28 run `7ad295fc24b14163adf32c241c49eed1`, 2,700-second timeout, exit `-1`, owned process tree stopped |
-| Windows download-cancel SFTP | FAIL / unresolved | Full run isolated suite reported 2 passed / 2 failed: resume observed a dropped Paramiko connection; skip saw no progress. Ubuntu r30 same file passed 4/4. Later Windows attempt did not collect because its task environment lacked PySide6 |
-| Windows terminal bridge | BLOCKED_TIMEOUT / unresolved | Windows11 run `e404c71b7f3c40069b7efb5d2d984006`, 600-second timeout, exit `-1`, owned process tree stopped. Guest stdout contained `.F` but no pytest summary or failure traceback; one pass and one failure marker were emitted before hang. Do not count this as a passing run |
-| Windows task executable resolution | ENVIRONMENT ERROR | Full portable task could not resolve `powershell.exe` for updater test and `git` for docs/Qt-removal tests; no full retry with corrected task PATH was completed |
-| Windows/Linux release artifacts | NOT RUN | No source-matched release package/artifact built |
-| GitHub Actions | NOT RUN | No hosted workflow result |
+| Global architecture | PASS | Kole Ubuntu-Test, Python 3.14.9: 1,020 Python files; 0 over 500 LOC; 0 dependency, public API, or cycle errors |
+| Ruff | PASS | Ubuntu-Test and Windows11-New, Ruff 0.17.2, exit 0 |
+| Linux release suite | PASS | `scripts/ci.py release`, exit 0; 3,506 passed, 0 failed, 33 skipped, 46 deselected; 244 pytest subprocess commands |
+| Linux GUI/Xvfb/D-Bus and coverage | PASS | `scripts/ci.py gui`, exit 0; 3,477 passed plus 29 subtests, 0 failed, 33 skipped, 46 deselected; coverage 69.56% against 65% floor |
+| Windows release acceptance | PASS | Python 3.14.7, exit 0; 3,504 passed plus 29 subtests, 0 failed, 35 skipped, 46 deselected |
+| Linux package build and launchers | PASS | AppImage, Debian, and Flatpak built; sidecars verified; installed `--help` smoke exits 0; Debian/Flatpak cleanup verified |
+| Windows package build and smoke | PASS | PyInstaller GUI/CLI, packaged CLI/GUI smoke, 36-command guide coverage, and mocked transfer gate passed |
+| GitHub Actions | NOT RUN | No hosted workflow result is claimed |
 
-## VM test execution
+Counts are per VM run and are not summed as unique tests because the GUI and release suites overlap. Skips/deselections are retained as reported by each runner. Earlier r14–r16 failures and timeouts remain in the historical sections of the VM record; r17 is the final rerun and did not hide or relabel those attempts.
 
-- Ubuntu-Test r30 ran `scripts/release_test_suite.py --scope acceptance` to completion. The aggregate run reported 2,639 passed, 0 failed assertions, 210 skipped, 61 deselected, and 29 passed subtests. Its exit code was 5 because wx-only partitions skipped without wxPython; this run is not PASS.
-- Ubuntu-Test r30 ran `tests/test_download_cancel_wire.py`: 4 passed, exit 0. No real HPC job or remote file deletion was used.
-- Ubuntu-Test r33 ran the full architecture validator, Ruff, compileall, i18n, and 41 focused regressions on the updated source snapshot; each completed command exited 0. After the final report files were copied to the VM, `tests/test_docs_references.py` passed 2/2 with exit 0 after restoring the VM Git executable to `PATH` and setting `GIT_EXEC_PATH`. The first attempt failed before assertions because Git was not on that task PATH (exit 1).
-- Windows11 r33 ran `tests/test_w15_fresh_user_startup.py`: 11 passed, exit 0. The earlier two failures were English-only assertions against correct Turkish text; the test now verifies exact translation and controller state.
-- Windows11 r28 full portable acceptance timed out after 2,700 seconds. It included 2 SFTP failures, 2 old localization assertion failures, executable-resolution errors, and an incomplete terminal bridge partition result. The localization test failures were fixed and the targeted suite passed; the SFTP and bridge results remain unresolved.
-- Windows11 r36 focused terminal bridge run timed out at 600 seconds after printing `.F`; no traceback or final pytest summary was captured. Host and guest source manifest and focused source hashes matched.
-- A separate Windows SFTP invocation exited 2 before collection because that task environment lacked PySide6; it is an environment diagnostic and does not clear the SFTP failures.
-- Qt editor tests under Ubuntu Xvfb/xcb had 3 focus assertion failures; rerunning with offscreen backend passed 14/14. The exploratory failures remain classified as backend-specific and are not counted as PASS.
-- Expanded Ruff initially found three unused items in `tools/gen_updater_screenshots.py`. The unused import and unused DC objects were removed; final Ruff passed. The screenshot generator itself was not executed because it writes documentation images.
+## Source-matched artifacts
 
-No Linux or Windows release artifact was built. GitHub Actions was not run. No remote branch, PR, or release was changed. Full release acceptance is not established.
+All packages below were built from base `48ac62334b398bbc95b4d14ca9ef23dc83c356f3` plus the r17 overlay fingerprint above.
 
-## Latest-source VM rerun - 2026-10-22
+| Platform / artifact | Size | SHA-256 |
+|---|---:|---|
+| Windows onedir ZIP | 36,453,374 bytes | `cd1de871ca0d2c53220e39329f3b65e7008d342a06817e5b4bbf85d50218503a` |
+| Linux AppImage | 198,928,888 bytes | `dd4ac4d7c460744d085593717cd09d5cd532a8e5b09b1780c44922be9827e75f` |
+| Linux Debian package | 144,702,340 bytes | `d9df05ce86b49246b2aecf54dc13d927c35db7ff96632c6ee904ce31dc1bce1b` |
+| Linux Flatpak | 122,532,624 bytes | `2f51e5812acab18ee3df5205b3da539a468d71f95b7e3121d02d827c1b1bd1d3` |
 
-Source commit 78d233dcfdb3268793817ff0fc752a4d0099b80c, tree f5f37cc26cbe18c03798ae8eb02421b2f5ea0874, tracked-source fingerprint 906dfacff5c036b30743c747d318e2b741e56868f6d4eec965142add5d6d8924. VM archive SHA-256 d0e03fdaed2ed16f6f424dde9a469317eff11cf9c8f845bb6874341a98282bb4; manifest SHA-256 15a8715536d74107a6bcce5dbe9560b2142bcdd8295ef710eae059505be8f1ce.
+The Windows build used Python 3.14.7; Linux used Python 3.14.9. The package runs used isolated build checkouts and did not contact Slurm or mutate remote files.
 
-Ubuntu-Test passed compileall, Ruff, i18n, the full architecture gate across 1,015 Python files, and 39 focused tests. One wx proof was skipped because wxPython is unavailable (pytest exit 5). Windows11 passed 24 Jobs/SFTP/transfer tests and 11 W15 startup/update tests. The terminal bridge emitted partial .F output and timed out after 180 seconds; its owned process tree was stopped. Full release acceptance remains blocked.
+## Merge checkpoint
 
-The first architecture report on this Ubuntu staging snapshot covered 1,014 indexed files because an ignored-but-tracked first-party Python file was absent from the synthetic index. The temporary VM index was corrected and the full gate rerun successfully at 1,015 files. The corrected machine report is ARCHITECTURE_FINAL.json; evidence is in VM_RERUN_2026-10-22.md.
+- The integration worktree was fast-forwarded to current local `develop` base `48ac6233` before the r17 commit.
+- r17 code commit `5861ec6b` is on `codex/integration/v2-jobs-staged-20261021`.
+- Local `develop` remains at `48ac6233`; its separate checkout contains the validation overlay and unrelated untracked `uname` files. It was not changed to avoid disturbing that worktree.
+- Status: **READY_FOR_DEVELOP_MERGE**. Nothing was pushed; no PR, release, or hosted workflow was created.

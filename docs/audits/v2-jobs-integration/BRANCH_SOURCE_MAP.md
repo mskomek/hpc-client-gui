@@ -1,15 +1,17 @@
 # Branch Source Map
 
-## Verified heads
+## Verified heads at the r17 checkpoint
 
 | Ref | Commit | Advertised remote head | Worktree state |
 |---|---|---|---|
-| local `develop` | `d91c84f1d784fd3391bf132a54134faef44e63c9` | `origin/develop` = `d91c84f1d784fd3391bf132a54134faef44e63c9` | clean; checked out in `D:\Projeler\hpc-client-gui-i18n-develop` |
-| Jobs | `713949fb752b90601e007812ebf2bd765da5ad52` | same | clean; `C:\Users\mskomek\.codex\worktrees\jobs-workspace-recovery-merge` |
-| V2 | `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` | same | 99 modified tracked, 74 untracked, 32 ignored entries |
-| integration | `codex/integration/v2-jobs-staged-20261021` at `ce598c2859b31d0abdfaaf6c071a6898eec60782` | local only | isolated worktree; synchronized with current `develop`; no remote branch |
+| local `develop` | `48ac62334b398bbc95b4d14ca9ef23dc83c356f3` | `origin/develop` = `d91c84f1d784fd3391bf132a54134faef44e63c9` | checked out in `D:\Projeler\hpc-client-gui-i18n-develop`; existing r17 overlay and unrelated untracked `uname` files preserved |
+| Jobs | `713949fb752b90601e007812ebf2bd765da5ad52` | same | clean source worktree; unchanged |
+| V2 | `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` | same | original WIP worktree and snapshot preserved |
+| integration | `codex/integration/v2-jobs-staged-20261021` at `5861ec6b296e8a48236aaa72c87abe9ec59edd4f` | local only | isolated worktree; includes verified r17 overlay commit; no remote branch |
 
-At startup, the supplied `develop` SHA was the remote-tracking head and local `develop` had one additional commit. During the run, local and remote `develop` advanced to `d91c84f1d784fd3391bf132a54134faef44e63c9` with the collapsible SSH log groups change. The isolated integration branch now contains that head through a clean no-conflict merge checkpoint `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b`. The initial source refs remain recorded below and in the manifest; Jobs and V2 source branches remain unchanged.
+The integration worktree was fast-forwarded to the current local `develop` base `48ac62334b398bbc95b4d14ca9ef23dc83c356f3` before applying r17. The validation source is that base plus a 39-file overlay with fingerprint `325593c807cab38278a93b45986f38ac3152c426421084780bc06ef99c201765`; the overlay archive SHA-256 is `aafce9d620856696318fd7f7438449f6c2b0cd552d35aa147c7662038fbfb986`. Its file hashes were verified in the integration worktree before commit `5861ec6b`.
+
+The local `develop` ref remains at `48ac6233`. Its separate checkout has dirty validation overlay files, so this turn did not move its branch pointer or alter its worktree. The integration commit is ready for a safe local merge when that checkout is available. `origin/develop` remains unchanged at `d91c84f1`; no push or remote mutation occurred. The main user checkout and the separate V2 WIP snapshot remain preserved.
 
 ## History and divergence
 
