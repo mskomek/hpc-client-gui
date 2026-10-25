@@ -1,5 +1,11 @@
 # VM Acceptance and Packaging Rerun — 2026-10-24
 
+## Final audit-reference check — integration checkpoint 3935aa02
+
+- The report checkpoint archive was verified on Kole Ubuntu-Test: SHA-256 `232fd6ae72dfb94749433890baec210366f8a9fad7e100dbdccca542c5a15dc8`.
+- Python 3.14.9 / pytest 9.1.1 ran `tests/test_docs_references.py`: **2 passed**, exit **0**.
+- Log: `.tmp/vm-verification/r17-docs/docs-references.log`, SHA-256 `471c77f65875e4c272e08d0f1104f654c2ee63bed8cefdd055594fbb60385d29`.
+
 ## Source identity
 
 - Base commit: `48ac62334b398bbc95b4d14ca9ef23dc83c356f3`.

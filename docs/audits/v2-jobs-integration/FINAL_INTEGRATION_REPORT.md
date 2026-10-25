@@ -21,6 +21,7 @@ VM release acceptance and platform package checks passed for the exact r17 sourc
 | Area | Result |
 |---|---|
 | Global architecture | PASS: 1,020 Python files; 0 over 500 lines; 0 dependency/API/cycle errors |
+| Audit report references | PASS: 2 passed on Kole Ubuntu-Test, Python 3.14.9 |
 | Ruff | PASS on Ubuntu-Test and Windows11-New |
 | Linux release suite | PASS: 3,506 passed, 0 failed, 33 skipped, 46 deselected; exit 0 |
 | Linux GUI/Xvfb/D-Bus | PASS: 3,477 passed plus 29 subtests, 0 failed; 69.56% coverage against 65% floor |

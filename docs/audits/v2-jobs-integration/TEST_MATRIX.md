@@ -160,3 +160,7 @@ Source: base `48ac62334b398bbc95b4d14ca9ef23dc83c356f3` plus the verified 39-fil
 | GitHub Actions | Not run | No hosted result claimed | — |
 
 The Linux and Windows counts describe separate, overlapping runs and are not summed as unique tests. The detailed logs, exit files, package manifests, artifact hashes, warnings, and cleanup probes are in `VM_ACCEPTANCE_2026-10-24.md` and `.tmp/vm-verification/r17-*`. Earlier failed/time-limited attempts remain documented as historical runs and are not presented as r17 failures or passes.
+
+| Check | Environment / tested source | Result | Exit |
+|---|---|---:|---:|
+| Audit report local-link references | Kole Ubuntu-Test, Python 3.14.9, `tests/test_docs_references.py`; archive from `3935aa02dffb67869d8fc05e2dd3c722d518cb62`, SHA-256 `232fd6ae72dfb94749433890baec210366f8a9fad7e100dbdccca542c5a15dc8` | 2 passed | 0 |
