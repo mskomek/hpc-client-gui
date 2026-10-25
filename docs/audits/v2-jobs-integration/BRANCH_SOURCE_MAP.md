@@ -7,7 +7,7 @@
 | local `develop` | `48ac62334b398bbc95b4d14ca9ef23dc83c356f3` | `origin/develop` = `d91c84f1d784fd3391bf132a54134faef44e63c9` | checked out in `D:\Projeler\hpc-client-gui-i18n-develop`; existing r17 overlay and unrelated untracked `uname` files preserved |
 | Jobs | `713949fb752b90601e007812ebf2bd765da5ad52` | same | clean source worktree; unchanged |
 | V2 | `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` | same | original WIP worktree and snapshot preserved |
-| integration | `codex/integration/v2-jobs-staged-20261021` at `5861ec6b296e8a48236aaa72c87abe9ec59edd4f` | local only | isolated worktree; includes verified r17 overlay commit; no remote branch |
+| integration | `codex/integration/v2-jobs-staged-20261021`; r17 code commit `5861ec6b296e8a48236aaa72c87abe9ec59edd4f` plus report checkpoints | local only | isolated worktree; includes verified r17 overlay; no remote branch |
 
 The integration worktree was fast-forwarded to the current local `develop` base `48ac62334b398bbc95b4d14ca9ef23dc83c356f3` before applying r17. The validation source is that base plus a 39-file overlay with fingerprint `325593c807cab38278a93b45986f38ac3152c426421084780bc06ef99c201765`; the overlay archive SHA-256 is `aafce9d620856696318fd7f7438449f6c2b0cd552d35aa147c7662038fbfb986`. Its file hashes were verified in the integration worktree before commit `5861ec6b`.
 
