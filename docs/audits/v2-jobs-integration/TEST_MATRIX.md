@@ -163,4 +163,4 @@ The Linux and Windows counts describe separate, overlapping runs and are not sum
 
 | Check | Environment / tested source | Result | Exit |
 |---|---|---:|---:|
-| Audit report local-link references | Kole Ubuntu-Test, Python 3.14.9, `tests/test_docs_references.py`; archive from `3935aa02dffb67869d8fc05e2dd3c722d518cb62`, SHA-256 `232fd6ae72dfb94749433890baec210366f8a9fad7e100dbdccca542c5a15dc8` | 2 passed | 0 |
+| Audit report local-link references | Kole Ubuntu-Test, Python 3.14.9, `tests/test_docs_references.py`; checkpoint `bdb38acb8ff383841cb2b97eed96e6136b1b25d6`, archive SHA-256 `97bcb1a71fbc418b9fc8cca112db1d4a43a82aa82c3a8c9c9c34f1ac6432f743` | 2 passed | 0 |

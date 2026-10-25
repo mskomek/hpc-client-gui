@@ -17,7 +17,7 @@ Status: **WAVE_COMPLETE** for the r17 source set. VM acceptance and package gate
 | Gate | Result | Evidence |
 |---|---|---|
 | Global architecture | PASS | Kole Ubuntu-Test, Python 3.14.9: 1,020 Python files; 0 over 500 LOC; 0 dependency, public API, or cycle errors |
-| Audit documentation references | PASS | Kole Ubuntu-Test, Python 3.14.9: `tests/test_docs_references.py`, 2 passed, exit 0; tested archive from checkpoint `3935aa02dffb67869d8fc05e2dd3c722d518cb62`, SHA-256 `232fd6ae72dfb94749433890baec210366f8a9fad7e100dbdccca542c5a15dc8` |
+| Audit documentation references | PASS | Kole Ubuntu-Test, Python 3.14.9: `tests/test_docs_references.py`, 2 passed, exit 0; final tested checkpoint `bdb38acb8ff383841cb2b97eed96e6136b1b25d6`, source archive SHA-256 `97bcb1a71fbc418b9fc8cca112db1d4a43a82aa82c3a8c9c9c34f1ac6432f743`; log SHA-256 `471c77f65875e4c272e08d0f1104f654c2ee63bed8cefdd055594fbb60385d29` |
 | Ruff | PASS | Ubuntu-Test and Windows11-New, Ruff 0.17.2, exit 0 |
 | Linux release suite | PASS | `scripts/ci.py release`, exit 0; 3,506 passed, 0 failed, 33 skipped, 46 deselected; 244 pytest subprocess commands |
 | Linux GUI/Xvfb/D-Bus and coverage | PASS | `scripts/ci.py gui`, exit 0; 3,477 passed plus 29 subtests, 0 failed, 33 skipped, 46 deselected; coverage 69.56% against 65% floor |

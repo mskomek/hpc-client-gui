@@ -6,6 +6,12 @@
 - Python 3.14.9 / pytest 9.1.1 ran `tests/test_docs_references.py`: **2 passed**, exit **0**.
 - Log: `.tmp/vm-verification/r17-docs/docs-references.log`, SHA-256 `471c77f65875e4c272e08d0f1104f654c2ee63bed8cefdd055594fbb60385d29`.
 
+## Final audit-reference rerun — report checkpoint bdb38acb
+
+- Exact report checkpoint: `bdb38acb8ff383841cb2b97eed96e6136b1b25d6`; source archive SHA-256 `97bcb1a71fbc418b9fc8cca112db1d4a43a82aa82c3a8c9c9c34f1ac6432f743`.
+- Kole Ubuntu-Test, Python 3.14.9 / pytest 9.1.1, `tests/test_docs_references.py`: **2 passed**, exit **0**.
+- Log: `.tmp/vm-verification/r17-docs/docs-references-final.log`, SHA-256 `471c77f65875e4c272e08d0f1104f654c2ee63bed8cefdd055594fbb60385d29`.
+
 ## Source identity
 
 - Base commit: `48ac62334b398bbc95b4d14ca9ef23dc83c356f3`.
