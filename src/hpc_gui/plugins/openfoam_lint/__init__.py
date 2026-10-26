@@ -1,6 +1,6 @@
 """OpenFOAM Linter plugin identity + trusted-tool engine facade (W65 LINT-013).
 
-Version 0.2.0-w65r1. Preserved 0.1.0 rule-ID prefixes; new W65 rules extend
+Version 0.2.0-w65r17-auditfix1. Preserved 0.1.0 rule-ID prefixes; new W65 rules extend
 the same families.
 
 Rule families: OF-DICT / OF-CASE / OF-CTRL / OF-SOLVER / OF-BC / OF-MESH /
@@ -22,7 +22,7 @@ from __future__ import annotations
 import os
 
 PLUGIN_ID = "openfoam-linter"
-PLUGIN_VERSION = "0.2.0-w65r1"
+PLUGIN_VERSION = "0.2.0-w65r17-auditfix1"
 PLUGIN_BASE = "0.1.0"
 # Preserved 0.1.0 rule-ID prefixes; new W65 rules extend the same families.
 RULE_FAMILIES = ("OF-DICT", "OF-CASE", "OF-CTRL", "OF-SOLVER", "OF-BC",
@@ -79,12 +79,10 @@ def lint_paths(paths, options=None):
                             if name.endswith(("Dict", "Properties", "FoamFile"))]
         else:
             targets.append(entry)
+    from hpc_gui.plugins.openfoam_lint.api import read_text_limited
+
     for target in targets:
-        try:
-            with open(target, encoding="utf-8", errors="replace") as handle:
-                text = handle.read()
-        except OSError as exc:
-            raise ValueError(f"cannot read '{target}': {exc}") from exc
+        text = read_text_limited(target)
         diags.extend(_core(target, text))
     return diags
 

@@ -26,11 +26,7 @@ def _lint_paths(paths: list[str]) -> list[dict]:
         else:
             targets = [path]
         for target in targets:
-            try:
-                with open(target, encoding="utf-8", errors="replace") as handle:
-                    text = handle.read()
-            except OSError as exc:
-                raise ValueError(f"cannot read '{target}': {exc}") from exc
+            text = api.read_text_limited(target)
             for diag in api.lint_text(target, text):
                 diags.append({"rule": diag.rule, "severity": diag.severity,
                               "certainty": diag.certainty, "file": diag.file,

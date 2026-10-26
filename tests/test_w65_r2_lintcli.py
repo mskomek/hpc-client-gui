@@ -69,3 +69,17 @@ def test_cli_runs_without_studio_import():
     proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
                           env={"PYTHONPATH": "src", "PATH": ""})
     assert proc.returncode == 0, proc.stderr[-500:]
+
+
+def test_linter_text_rejects_bytes_and_bounds_utf8_size(tmp_path):
+    with pytest.raises(TypeError, match="must be str"):
+        api.lint_text("system/controlDict", b"FoamFile {}")
+
+    oversized_unicode = "é" * (api.MAX_INPUT_BYTES // 2 + 1)
+    with pytest.raises(ValueError, match="exceeds"):
+        api.lint_text("system/controlDict", oversized_unicode)
+
+    oversized_file = tmp_path / "oversizedDict"
+    oversized_file.write_bytes(b"x" * (api.MAX_INPUT_BYTES + 1))
+    with pytest.raises(ValueError, match="exceeds"):
+        api.read_text_limited(str(oversized_file))

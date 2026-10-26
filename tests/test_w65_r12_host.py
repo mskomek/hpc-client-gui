@@ -56,7 +56,7 @@ LINTER_MANIFEST = {
 def _studio_plugin() -> models.InstalledPlugin:
     manifest = models.PluginManifest(
         schema_version=1, plugin_api=1, id="openfoam-case-studio",
-        name="OpenFOAM Case Studio", version="0.3.0-w65r1",
+        name="OpenFOAM Case Studio", version="0.3.0-w65r17-auditfix1",
         publisher="HPC Client GUI", license="test", description="test",
         requires_app=">=1.5.9", capabilities=("application-tools",),
         entrypoints={}, files=(),
@@ -67,7 +67,7 @@ def _studio_plugin() -> models.InstalledPlugin:
 def _linter_plugin() -> models.InstalledPlugin:
     manifest = models.PluginManifest(
         schema_version=1, plugin_api=1, id="openfoam-linter",
-        name="OpenFOAM Linter", version="0.2.0-w65r1",
+        name="OpenFOAM Linter", version="0.2.0-w65r17-auditfix1",
         publisher="HPC Client GUI", license="test", description="test",
         requires_app=">=1.5.9", capabilities=("lint-rules", "linter-tool"),
         entrypoints={}, files=(),
@@ -132,7 +132,7 @@ def _fake_openfoam_tool(tmp_path: Path, *, broken: bool = False,
         role="linter-engine"),)
     manifest = models.PluginManifest(
         schema_version=1, plugin_api=2, id=plugin_id,
-        name="OpenFOAM Linter", version="0.2.0-w65r1",
+        name="OpenFOAM Linter", version="0.2.0-w65r17-auditfix1",
         publisher="HPC Client GUI", license="test", description="test",
         requires_app=">=1.5.9", capabilities=("lint-rules", "linter-tool"),
         entrypoints={"linter_engine": rel}, files=files)
@@ -144,7 +144,7 @@ def test_engine_loads_through_approved_entrypoint(tmp_path: Path):
     installed = _fake_openfoam_tool(tmp_path)
     tool = load_tool_for_plugin(installed)
     assert tool.plugin_id == "openfoam-linter"
-    assert tool.version == "0.2.0-w65r1"
+    assert tool.version == "0.2.0-w65r17-auditfix1"
     assert tool.title == create_plugin()["title"] == "OpenFOAM Linter"
 
 
@@ -243,7 +243,7 @@ def test_file_context_rejects_spoof_and_shape(monkeypatch):
     evil = models.InstalledPlugin(
         manifest=models.PluginManifest(
             schema_version=1, plugin_api=1, id="openfoam-case-studio",
-            name="x", version="0.3.0-w65r1", publisher="Evil Corp",
+            name="x", version="0.3.0-w65r17-auditfix1", publisher="Evil Corp",
             license="test", description="test", requires_app=">=1.5.9",
             capabilities=("application-tools",), entrypoints={}, files=()),
         directory=Path("."))
@@ -259,7 +259,7 @@ def test_file_context_rejects_spoof_and_shape(monkeypatch):
     bare = models.InstalledPlugin(
         manifest=models.PluginManifest(
             schema_version=1, plugin_api=1, id="openfoam-case-studio",
-            name="x", version="0.3.0-w65r1", publisher="HPC Client GUI",
+            name="x", version="0.3.0-w65r17-auditfix1", publisher="HPC Client GUI",
             license="test", description="test", requires_app=">=1.5.9",
             capabilities=(), entrypoints={}, files=()),
         directory=Path("."))

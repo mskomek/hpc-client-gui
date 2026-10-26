@@ -45,7 +45,7 @@ from hpc_gui.wx_remote_files_interactions import (
 def _studio_plugin() -> models.InstalledPlugin:
     manifest = models.PluginManifest(
         schema_version=1, plugin_api=1, id="openfoam-case-studio",
-        name="OpenFOAM Case Studio", version="0.3.0-w65r1",
+        name="OpenFOAM Case Studio", version="0.3.0-w65r17-auditfix1",
         publisher="HPC Client GUI", license="test", description="test",
         requires_app=">=1.5.9", capabilities=("application-tools",),
         entrypoints={}, files=(),
@@ -56,7 +56,7 @@ def _studio_plugin() -> models.InstalledPlugin:
 def _linter_plugin() -> models.InstalledPlugin:
     manifest = models.PluginManifest(
         schema_version=1, plugin_api=1, id="openfoam-linter",
-        name="OpenFOAM Linter", version="0.2.0-w65r1",
+        name="OpenFOAM Linter", version="0.2.0-w65r17-auditfix1",
         publisher="HPC Client GUI", license="test", description="test",
         requires_app=">=1.5.9", capabilities=("lint-rules", "linter-tool"),
         entrypoints={}, files=(),
@@ -67,7 +67,7 @@ def _linter_plugin() -> models.InstalledPlugin:
 def _evil_plugin() -> models.InstalledPlugin:
     manifest = models.PluginManifest(
         schema_version=1, plugin_api=1, id="openfoam-case-studio",
-        name="x", version="0.3.0-w65r1", publisher="Evil Corp",
+        name="x", version="0.3.0-w65r17-auditfix1", publisher="Evil Corp",
         license="test", description="test", requires_app=">=1.5.9",
         capabilities=("application-tools",), entrypoints={}, files=(),
     )

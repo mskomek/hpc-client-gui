@@ -13,6 +13,7 @@ allowlist) but inert until plugin/host readiness is verified.
 from __future__ import annotations
 
 from . import PLUGIN_ID, PLUGIN_VERSION, REQUIRES_APP
+from hpc_gui.plugins.openfoam_lint import PLUGIN_VERSION as LINTER_PLUGIN_VERSION
 
 FILE_CONTEXT_ACTIONS = (
     {"id": "of.newCase", "label_en": "New OpenFOAM Case", "label_tr": "Yeni OpenFOAM Vakası"},
@@ -24,8 +25,8 @@ FILE_CONTEXT_ACTIONS = (
 )
 
 PLUGIN_MENU = (
-    {"id": "of.studio", "plugin": "openfoam-case-studio", "version": "0.3.0-w65r1"},
-    {"id": "of.linter", "plugin": "openfoam-linter", "version": "0.2.0-w65r1"},
+    {"id": "of.studio", "plugin": PLUGIN_ID, "version": PLUGIN_VERSION},
+    {"id": "of.linter", "plugin": "openfoam-linter", "version": LINTER_PLUGIN_VERSION},
 )
 
 

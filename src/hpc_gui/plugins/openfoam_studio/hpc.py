@@ -7,7 +7,17 @@ partial failure can never be reported as total success.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
+
+
+_JOB_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
+_PARTITION_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z")
+_MODULE_RE = re.compile(r"[A-Za-z0-9_.+-]+(?:/[A-Za-z0-9_.+-]+)*\Z")
+_TIME_RE = re.compile(
+    r"(?:(?P<days>[0-9]{1,3})-)?(?P<hours>[0-9]{1,3}):"
+    r"(?P<minutes>[0-5][0-9]):(?P<seconds>[0-5][0-9])\Z"
+)
 
 
 @dataclass
@@ -20,10 +30,27 @@ class SlurmResources:
 
 
 def render_slurm_job(job_name: str, allrun_body: str, res: SlurmResources) -> str:
-    if not job_name or any(c in job_name for c in " \t\n;|&$`"):
-        raise ValueError("unsafe job name")
-    if res.nodes < 1 or res.ntasks < 1:
+    if not isinstance(job_name, str) or not _JOB_NAME_RE.fullmatch(job_name):
+        raise ValueError("job name must be 1-128 safe ASCII letters, digits, dots, underscores, or hyphens")
+    if not isinstance(res, SlurmResources):
+        raise TypeError("res must be SlurmResources")
+    if type(res.nodes) is not int or type(res.ntasks) is not int or res.nodes < 1 or res.ntasks < 1:
         raise ValueError("Slurm nodes/ntasks must be >= 1")
+    if not isinstance(res.time, str):
+        raise ValueError("Slurm time must be text in HH:MM:SS or D-HH:MM:SS form")
+    match = _TIME_RE.fullmatch(res.time)
+    if not match or (match.group("days") and int(match.group("hours")) > 23):
+        raise ValueError("Slurm time must be a valid HH:MM:SS or D-HH:MM:SS value")
+    if not isinstance(res.partition, str):
+        raise ValueError("Slurm partition must be text")
+    if res.partition and not _PARTITION_RE.fullmatch(res.partition):
+        raise ValueError("Slurm partition contains unsafe characters")
+    if not isinstance(res.module, str) or not _MODULE_RE.fullmatch(res.module):
+        raise ValueError("module must be a safe slash-separated module name")
+    if any(part in (".", "..") for part in res.module.split("/")):
+        raise ValueError("module path segments cannot be '.' or '..'")
+    if not isinstance(allrun_body, str) or "\x00" in allrun_body:
+        raise ValueError("Allrun body must be text without NUL bytes")
     header = ["#!/bin/bash", f"#SBATCH --job-name={job_name}",
               f"#SBATCH --nodes={res.nodes}", f"#SBATCH --ntasks={res.ntasks}",
               f"#SBATCH --time={res.time}"]

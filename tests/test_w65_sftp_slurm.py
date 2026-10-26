@@ -21,6 +21,28 @@ def test_slurm_draft_only_and_ranks():
         render_slurm_job("bad;name", "x", SlurmResources())
 
 
+def test_slurm_header_fields_reject_injection_and_invalid_values():
+    invalid = (
+        SlurmResources(time="01:00:00\n#SBATCH --output=/tmp/injected"),
+        SlurmResources(partition="compute\n#SBATCH --output=/tmp/injected"),
+        SlurmResources(module="openfoam;touch /tmp/injected"),
+        SlurmResources(module="apps/../outside"),
+        SlurmResources(time="1-24:00:00"),
+        SlurmResources(nodes=True),
+    )
+    for resources in invalid:
+        with pytest.raises((TypeError, ValueError)):
+            render_slurm_job("of-case", "simpleFoam -case .", resources)
+
+    job = render_slurm_job(
+        "case_01", "simpleFoam -case .",
+        SlurmResources(time="2-03:04:05", partition="compute-long"),
+    )
+    assert "#SBATCH --time=2-03:04:05" in job
+    assert "#SBATCH --partition=compute-long" in job
+    assert "module load apps/openfoam/v2312-2025" in job
+
+
 def test_partial_commit_never_all_green():
     commit = MultiFileCommit([FileStage("0/U", "a", "b", True), FileStage("0/p", "a", "b", False, "rename failed")])
     assert commit.overall().startswith("PARTIAL")
