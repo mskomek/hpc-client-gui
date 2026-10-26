@@ -180,7 +180,7 @@ def test_symlink_path_component_and_extra_link_fail_closed(tmp_path: Path):
     try:
         engine_dir.symlink_to(moved, target_is_directory=True)
     except OSError:
-        engine_dir.rename(package / "engine")
+        moved.rename(engine_dir)
         pytest.skip("symlinks unavailable on this platform")
     try:
         assert api3_error_for_dir(manifest, package, pins=table) is not None
