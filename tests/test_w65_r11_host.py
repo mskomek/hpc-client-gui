@@ -25,10 +25,17 @@ from hpc_gui.services.wx_plugin_menu_host import WxPluginMenuHost
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED_OPENFOAM_KEYS = frozenset({
-    "blocked_external", "create_job", "draft_only", "linter", "new_case",
-    "no_findings", "open_studio", "title", "validate", "flow", "inspector",
-    "source_diff", "validation", "run_preview", "results", "apply_confirm",
-    "revert", "linter_unavailable",
+    "add_case", "add_file", "apply_confirm", "blocked_external", "cancel",
+    "cancel_requested", "cancelled", "create_job", "details", "diagnostics",
+    "dictionary_filter", "draft_only", "edition", "export_json", "file",
+    "files", "finding", "flow", "inspector", "line", "lint_failed",
+    "lint_running", "lint_summary", "linter", "linter_title",
+    "linter_unavailable", "local_path_required", "location", "new_case",
+    "no_findings", "open_studio", "remote_path_invalid", "remote_selection",
+    "remote_session_missing", "report_saved", "results", "results_stale",
+    "revert", "rule", "rules", "run_before_export", "run_preview",
+    "select_path", "severity", "source_diff", "source_open_failed",
+    "static_only", "title", "validate", "validation", "verification",
 })
 
 
