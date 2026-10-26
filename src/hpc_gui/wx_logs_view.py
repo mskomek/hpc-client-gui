@@ -7,6 +7,7 @@ from threading import Thread
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.core.logging import log_path as default_log_path
+from hpc_gui.services.system_clipboard import set_text as set_system_clipboard_text
 from hpc_gui.wx_host import make_host
 from hpc_gui.wx_logs import LogDisplayEntry, WxLogsModel, group_repeated_ssh_commands
 
@@ -165,12 +166,7 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
         return value
 
     def _set_clipboard(value: str) -> None:
-        try:
-            if wx.TheClipboard.Open():
-                wx.TheClipboard.SetData(wx.TextDataObject(str(value)))
-                wx.TheClipboard.Close()
-        except Exception:
-            pass
+        set_system_clipboard_text(wx.TheClipboard, wx.TextDataObject, value)
 
     def _refresh_done(result: str | None, error: Exception | None) -> None:
         if not _alive["value"]:

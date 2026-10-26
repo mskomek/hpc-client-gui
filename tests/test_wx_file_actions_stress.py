@@ -64,7 +64,7 @@ def test_context_policy_stays_stable_under_rapid_selection():
 @pytest.mark.gui
 @pytest.mark.wx
 @pytest.mark.semantic
-def test_wx_remote_context_target_stress_uses_real_events(wx_app):
+def test_wx_remote_context_target_stress_uses_real_events(wx_app, english_language):
     backend = MockRemoteFilesBackend()
     backend.entries.update({"/work/dir-a": True, "/work/dir-b": True})
     show_remote_files(
@@ -75,7 +75,7 @@ def test_wx_remote_context_target_stress_uses_real_events(wx_app):
     frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
     listing = frame._wx_remote_controls["listing"]
     _pump(wx_app, lambda: listing.GetItemCount() >= 4)
-    wrong_targets = 0
+    wrong_targets = []
     captured = []
 
     def capture(menu):
@@ -99,25 +99,40 @@ def test_wx_remote_context_target_stress_uses_real_events(wx_app):
             rect = listing.GetItemRect(2)
             position = listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
         elif mode == 2:
-            rect = listing.GetItemRect(listing.GetItemCount() - 1)
+            for item_index in range(listing.GetItemCount()):
+                listing.Select(item_index, False)
             position = listing.ClientToScreen(wx.Point(5, listing.GetSize().height - 5))
         else:
             for item_index in range(listing.GetItemCount()):
                 listing.Select(item_index, False)
-            listing.Select(1)
+            file_row = next(
+                row for row in range(listing.GetItemCount())
+                if listing.GetItemText(row) == "a.txt"
+            )
+            listing.Select(file_row)
             position = wx.DefaultPosition
         event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
         event.SetPosition(position)
         before = len(captured)
         listing.ProcessEvent(event)
         if len(captured) != before + 1:
-            wrong_targets += 1
+            wrong_targets.append((index, mode, "menu-not-captured"))
         if mode == 2 and ("Edit" in captured[-1] or "Rename" in captured[-1]):
-            wrong_targets += 1
+            wrong_targets.append((index, mode, tuple(sorted(captured[-1]))))
         if mode == 3 and "Edit" not in captured[-1]:
-            wrong_targets += 1
-    assert wrong_targets == 0, captured[-4:]
+            wrong_targets.append((index, mode, tuple(sorted(captured[-1]))))
+    assert not wrong_targets, wrong_targets[:8]
     assert len(captured) == 200
+
+
+@pytest.fixture
+def english_language():
+    from hpc_gui.core.i18n import current_language, load_language
+
+    previous = current_language()
+    load_language("en")
+    yield
+    load_language(previous)
 
 
 @pytest.mark.gui

@@ -24,8 +24,7 @@ SPEC_PATH = REPO_ROOT / "build" / "macos" / "hpc-client-gui.spec"
 SMOKE_SCRIPT = REPO_ROOT / "scripts" / "macos_release_smoke.py"
 RELEASE_METADATA = (
     "LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md",
-    "QT_LGPL_SOURCE_OFFER.md", "THIRD_PARTY_VERSIONS.txt",
-    "SBOM.cdx.json", "QT_LGPL_SOURCES.json",
+    "THIRD_PARTY_VERSIONS.txt", "SBOM.cdx.json",
 )
 # Compressed DMG size budget in MiB. The evidence-based target keeps the Mac
 # packages comparable with the other platforms (~1364/1499 MiB was rejected).

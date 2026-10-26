@@ -54,6 +54,7 @@ from hpc_gui.ssh.client import (
 )
 from hpc_gui.wx_connection import WxConnectionModel, connect_profile
 from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer
+from support.wx_event_pump import pump_wx_events
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +122,7 @@ def _wait_for(predicate, timeout_s=10.0, poll_s=0.05):
     while time.monotonic() < deadline:
         if predicate():
             return True
+        pump_wx_events()
         time.sleep(poll_s)
     return predicate()
 

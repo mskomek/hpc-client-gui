@@ -128,3 +128,17 @@ def test_w44_package_hidden_imports_are_intentional():
     assert '"PySide6"' in excludes and '"shiboken6"' in excludes
     decision = (ROOT / "docs" / "decisions" / "V2_RUNTIME_DECISION.md").read_text(encoding="utf-8")
     assert "wx" in decision.lower() and "pyside6" in decision.lower()
+
+
+def test_w56_frozen_apps_include_dynamic_linter_xml_dependency():
+    """Packaged Plugin API v2 engines need stdlib modules hidden from Analysis."""
+    specs = (
+        ROOT / "build" / "windows" / "hpc-client-gui.spec",
+        ROOT / "build" / "linux" / "hpc-client-gui-linux.spec",
+        ROOT / "build" / "macos" / "hpc-client-gui.spec",
+    )
+    for spec in specs:
+        text = spec.read_text(encoding="utf-8")
+        assert '"xml.etree.ElementTree"' in text, (
+            f"{spec.relative_to(ROOT)} must freeze XML support for dynamic linter engines"
+        )

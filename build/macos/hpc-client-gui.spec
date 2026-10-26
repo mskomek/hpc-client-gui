@@ -41,8 +41,7 @@ for source, destination in (
         datas.append((str(source), destination))
 for license_name in (
     "LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md",
-    "QT_LGPL_SOURCE_OFFER.md", "THIRD_PARTY_VERSIONS.txt", "SBOM.cdx.json",
-    "QT_LGPL_SOURCES.json",
+    "THIRD_PARTY_VERSIONS.txt", "SBOM.cdx.json",
 ):
     license_path = REPO_ROOT / license_name
     if license_path.exists():
@@ -57,6 +56,7 @@ if licenses_dir.exists():
 hiddenimports = [
     "hpc_gui.cli", "hpc_gui.cli.main", "hpc_gui.cli.session", "hpc_gui.cli.files",
     "keyring", "keyring.backends.macOS",
+    "xml.etree.ElementTree",
 ]
 
 a = Analysis(

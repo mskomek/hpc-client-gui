@@ -18,20 +18,6 @@
       "migration_target": "cli/command_registry.py, cli/parser_builder.py, cli/command_handlers.py; main.py keeps the entrypoint only"
     },
     {
-      "path": "src/hpc_gui/config/storage.py",
-      "loc": 832,
-      "reason": "Pre-existing oversized module; not part of the plugin-contribution split. Split by responsibility in a dedicated refactor.",
-      "expiry": "2026-12-31",
-      "migration_target": "profile_store.py, secret_refs.py, settings_io.py; storage.py keeps the public functions"
-    },
-    {
-      "path": "src/hpc_gui/services/app_updater.py",
-      "loc": 664,
-      "reason": "Pre-existing oversized module; not part of the plugin-contribution split. Split by responsibility in a dedicated refactor.",
-      "expiry": "2026-12-31",
-      "migration_target": "update_manifest.py, download_verify.py, install_apply.py; app_updater.py keeps the facade"
-    },
-    {
       "path": "src/hpc_gui/ui/dialogs/connection_dialog.py",
       "loc": 1031,
       "reason": "Pre-existing oversized module; not part of the plugin-contribution split. Split by responsibility in a dedicated refactor.",
@@ -75,7 +61,7 @@
     },
     {
       "path": "src/hpc_gui/ui/widgets/jobs_outputs_widget.py",
-      "loc": 1895,
+      "loc": 1911,
       "reason": "Uncommitted edits from the in-flight branch codex/log-repeat-groups in the main checkout (D:\\Projeler\\hpc-client-gui) touch this file; splitting here would create unmergeable conflicts. Split after that branch merges.",
       "expiry": "2026-12-31",
       "migration_target": "outputs_list_model.py, output_viewer.py, output_actions.py (download/open/follow); widget facade"
@@ -137,53 +123,11 @@
       "migration_target": "update_check_model.py, update_dialog_view.py, update_actions.py; facade"
     },
     {
-      "path": "tests/test_jobs_outputs_scroll.py",
-      "loc": 606,
-      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
-      "expiry": "2026-12-31",
-      "migration_target": "split by scroll position, buffer, and rendering"
-    },
-    {
       "path": "tests/test_luna_fm_integration.py",
       "loc": 541,
       "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
       "expiry": "2026-12-31",
       "migration_target": "split by integration area"
-    },
-    {
-      "path": "tests/test_plugin_manager_ui.py",
-      "loc": 1192,
-      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
-      "expiry": "2026-12-31",
-      "migration_target": "split by Plugin Manager tab (discover, installed, updates) and action group"
-    },
-    {
-      "path": "tests/test_ssh_credential_flow.py",
-      "loc": 673,
-      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
-      "expiry": "2026-12-31",
-      "migration_target": "split by credential entry, storage, and redaction"
-    },
-    {
-      "path": "tests/test_ssh_jump_host.py",
-      "loc": 538,
-      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
-      "expiry": "2026-12-31",
-      "migration_target": "split by jump-host configuration, connect, and failure path"
-    },
-    {
-      "path": "tests/test_w33_lifecycle_isolation.py",
-      "loc": 550,
-      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
-      "expiry": "2026-12-31",
-      "migration_target": "split by lifecycle stage (install, enable, disable, remove)"
-    },
-    {
-      "path": "tests/test_wave0_unicode_baseline.py",
-      "loc": 542,
-      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
-      "expiry": "2026-12-31",
-      "migration_target": "split by unicode fixture family"
     },
     {
       "path": "tests/test_wave2_directories_local_files.py",
@@ -198,13 +142,6 @@
       "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
       "expiry": "2026-12-31",
       "migration_target": "split by provider contract area"
-    },
-    {
-      "path": "tests/test_wave80_files_outputs.py",
-      "loc": 609,
-      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
-      "expiry": "2026-12-31",
-      "migration_target": "split into files-tab and outputs-tab modules"
     },
     {
       "path": "tests/test_wx_65a_stress.py",
@@ -263,39 +200,11 @@
       "migration_target": "split by stress scenario (listing, transfer, cancel) into separate modules"
     },
     {
-      "path": "tests/test_wx_file_transfer_integration.py",
-      "loc": 523,
-      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
-      "expiry": "2026-12-31",
-      "migration_target": "split by transfer direction and error path"
-    },
-    {
-      "path": "tests/test_wx_jobs_files_outputs.py",
-      "loc": 673,
-      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
-      "expiry": "2026-12-31",
-      "migration_target": "split by jobs list, job files, and outputs groups"
-    },
-    {
-      "path": "tests/test_wx_remote_file_actions_behavior.py",
-      "loc": 555,
-      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
-      "expiry": "2026-12-31",
-      "migration_target": "split by action (open, rename, delete, transfer)"
-    },
-    {
       "path": "tests/test_wx_terminal_parity_evidence.py",
       "loc": 580,
       "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
       "expiry": "2026-12-31",
       "migration_target": "split by parity evidence category"
-    },
-    {
-      "path": "tests/test_wx_updater_spec.py",
-      "loc": 684,
-      "reason": "Pre-existing oversized test module; not part of the plugin-contribution split. Split by behavior group in a dedicated test refactor.",
-      "expiry": "2026-12-31",
-      "migration_target": "split by update check, download, and dialog spec"
     }
   ]
 }

@@ -122,8 +122,11 @@ class TestMigrationLogic:
             r"(latin-?1|cp125\d*)"
         )
         src_dir = ROOT / "src" / "hpc_gui"
+        journal_codec = src_dir / "journal_studio" / "codec.py"
         for py_file in src_dir.rglob("*.py"):
             if py_file.name.startswith("__"):
+                continue
+            if py_file == journal_codec:
                 continue
             for lineno, line in enumerate(
                 py_file.read_text(encoding="utf-8").splitlines(), 1
@@ -132,6 +135,14 @@ class TestMigrationLogic:
                     f"Latin-1/cp125 reinterpretation in "
                     f"{py_file.name}:{lineno}: {line.strip()}"
                 )
+
+        # Journal Studio has one intentional legacy-file fallback. Keep it
+        # strictly local to journal import, after a strict UTF-8 decode fails.
+        journal_source = journal_codec.read_text(encoding="utf-8")
+        utf8_attempt = journal_source.index('payload.decode(encoding, errors="strict")')
+        windows_fallback = journal_source.index('encoding = "cp1252"')
+        latin1_fallback = journal_source.index('encoding = "latin-1"')
+        assert utf8_attempt < windows_fallback < latin1_fallback
 
     def test_no_errors_ignore_on_user_paths(self):
         """errors='ignore' should not be used on user-controlled paths."""
@@ -161,7 +172,7 @@ class TestReleaseGate:
         # Check critical files for known issues
         critical_paths = [
             "services/files_ssh.py",
-            "ssh/client.py",
+            "ssh/text.py",
             "services/private_profile_data.py",
         ]
         for rel_path in critical_paths:

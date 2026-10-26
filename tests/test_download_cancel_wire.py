@@ -74,7 +74,10 @@ class _PlanWorker:
         self.action = action
         self.conflicts: list[tuple[str, bool]] = []
 
-    def request_conflict_decision(self, _source, target, *, partial: bool = False) -> str:
+    def request_conflict_decision(
+        self, _source, target, *, partial: bool = False, direction: str = "download"
+    ) -> str:
+        del direction
         self.conflicts.append((target.path, partial))
         return self.action
 

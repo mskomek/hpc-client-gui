@@ -88,11 +88,17 @@ def test_w55_shell_tab_and_help_accelerators():
         table = frame.GetAcceleratorTable()
         assert table is not None and table.IsOk(), "shell frame must carry an AcceleratorTable"
         spec = list(getattr(frame, "_wx_shell_accel_spec", []))
+        retained_ids = list(getattr(frame, "_wx_shell_accel_id_refs", []))
+        accel_ids = dict(getattr(frame, "_wx_shell_accel_ids", {}))
+        assert len(retained_ids) == 8, "tab and Help accelerator IDs must remain owned by the frame"
+        assert len({int(ref) for ref in retained_ids}) == len(retained_ids), (
+            "accelerator command IDs must be unique while the frame is alive"
+        )
+        assert len(accel_ids) == len(retained_ids), "every accelerator must retain a distinct command mapping"
         flags_keys = {(flags, key) for flags, key, _cmd in spec}
         assert (int(wx.ACCEL_CTRL), ord("1")) in flags_keys, "Ctrl+1 tab accelerator missing"
         assert (int(wx.ACCEL_CTRL), ord("7")) in flags_keys, "Ctrl+7 tab accelerator missing"
         assert (int(wx.ACCEL_NORMAL), int(wx.WXK_F1)) in flags_keys, "F1 help accelerator missing"
-        accel_ids = dict(getattr(frame, "_wx_shell_accel_ids", {}))
         tab_cmds = sorted(cmd for cmd, idx in accel_ids.items() if idx == 2)
         assert tab_cmds, "Ctrl+3 tab accelerator missing"
         help_cmds = [cmd for cmd, idx in accel_ids.items() if idx == "help"]

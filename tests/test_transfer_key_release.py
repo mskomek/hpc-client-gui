@@ -104,7 +104,11 @@ class TransferKeyReleaseTests(unittest.TestCase):
         dialog = self.panel._transfer_dialogs[-1]
         stop.set()
         dialog.cancel_all()
-        self._pump(lambda: not dialog._running)
+        self._pump(
+            lambda: not dialog._running
+            and not self.panel._active_transfer_keys,
+            timeout=10.0,
+        )
 
         # The dialog is still open and never emitted `finished` - this is
         # exactly when the keys used to stay reserved for good.

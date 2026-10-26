@@ -1,4 +1,4 @@
-"""Write the exact runtime versions used by a release build."""
+"""Write the exact V2 runtime versions used by a release build."""
 
 from __future__ import annotations
 
@@ -9,13 +9,12 @@ import sys
 from pathlib import Path
 
 PACKAGES = (
-    ("PySide6", "PySide6"),
-    ("Shiboken6", "shiboken6"),
-    ("PySide6-Essentials", "PySide6-Essentials"),
-    ("PySide6-Addons", "PySide6-Addons"),
+    ("wxPython", "wxPython"),
     ("PyInstaller", "PyInstaller"),
     ("Paramiko", "paramiko"),
     ("Cryptography", "cryptography"),
+    ("Packaging", "packaging"),
+    ("Keyring", "keyring"),
 )
 
 
@@ -27,16 +26,8 @@ def package_version(distribution: str) -> str:
 
 
 def collect(version: str) -> list[tuple[str, str]]:
-    try:
-        from PySide6.QtCore import qVersion
-    except ImportError as exc:
-        raise RuntimeError("PySide6/Qt runtime could not be imported") from exc
-    qt_version = qVersion()
-    if not qt_version:
-        raise RuntimeError("PySide6/Qt runtime returned no version")
     values = [("HPC Client GUI", version), ("Python", sys.version.split()[0])]
     values.extend((name, package_version(distribution)) for name, distribution in PACKAGES)
-    values.append(("Qt runtime", qt_version))
     return values
 
 

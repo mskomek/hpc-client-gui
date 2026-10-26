@@ -49,10 +49,8 @@ KNOWN_LICENSE_NAMES = (
     "LICENSE",
     "COMMERCIAL_LICENSE.md",
     "THIRD_PARTY_NOTICES.md",
-    "QT_LGPL_SOURCE_OFFER.md",
     "THIRD_PARTY_VERSIONS.txt",
     "SBOM.cdx.json",
-    "QT_LGPL_SOURCES.json",
 )
 
 #: i18n namespaces the settings/updater/provider surfaces need at runtime.

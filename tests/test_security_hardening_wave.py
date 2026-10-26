@@ -181,6 +181,6 @@ def test_sensitive_config_file_is_owner_only(tmp_path: Path):
     from hpc_gui.config import storage
 
     target = tmp_path / "config.json"
-    with patch("hpc_gui.config.storage._config_path", return_value=target):
+    with patch("hpc_gui.config.storage_io._config_path", return_value=target):
         storage.save_config({"profiles": []})
     assert target.stat().st_mode & 0o777 == 0o600

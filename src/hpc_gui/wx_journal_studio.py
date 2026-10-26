@@ -8,7 +8,7 @@ from pathlib import Path
 from pathlib import PurePosixPath
 from threading import Thread
 
-from hpc_gui.core.i18n import t
+from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.journal_studio.document import JournalDocument
 from hpc_gui.services.journal_studio_files import read_local, read_remote
 from hpc_gui.wx_journal_studio_editor import JournalEditorPage
@@ -52,9 +52,14 @@ class JournalStudioWorkspace:
         if self.main_notebook is None:
             raise RuntimeError("The wx shell notebook is unavailable")
         self._pages: dict[int, JournalEditorPage] = {}
+        self._journal_drop_targets = []
         self.panel = session_state.get("_journal_studio_panel")
         if self.panel is None or self.panel.IsBeingDeleted():
             self._build_panel()
+        self._language_callback = self._refresh_language
+        subscribe_language_change(self._language_callback)
+        self.frame.Bind(self.wx.EVT_WINDOW_DESTROY, self._on_host_destroy)
+        self._refresh_language(None)
 
     def _build_panel(self):
         wx = self.wx
@@ -76,7 +81,8 @@ class JournalStudioWorkspace:
         self.documents = wx.Notebook(self.panel)
         root.Add(self.documents, 1, wx.EXPAND | wx.ALL, 4)
         self.panel.SetSizer(root)
-        self.panel.SetDropTarget(self._journal_drop_target())
+        self._set_journal_drop_target(self.panel)
+        self._set_journal_drop_target(self.documents)
         self.btn_new.Bind(wx.EVT_BUTTON, lambda _event: self.new_journal())
         self.btn_open.Bind(wx.EVT_BUTTON, lambda _event: self.open_dialog())
         self.btn_save.Bind(wx.EVT_BUTTON, lambda _event: self._active_page() and self._active_page().save())
@@ -103,6 +109,18 @@ class JournalStudioWorkspace:
 
         return _JournalDrop()
 
+    def _set_journal_drop_target(self, window):
+        target = self._journal_drop_target()
+        window.SetDropTarget(target)
+        self._journal_drop_targets.append(target)
+
+    def _install_page_drop_targets(self, page):
+        pending = [page.page]
+        while pending:
+            window = pending.pop()
+            self._set_journal_drop_target(window)
+            pending.extend(window.GetChildren())
+
     def _show(self):
         index = self._main_page_index()
         if index >= 0:
@@ -127,6 +145,27 @@ class JournalStudioWorkspace:
         if index >= 0:
             self.main_notebook.SetPageText(index, f"{t('journal_studio.title')} — {name}")
 
+    def _refresh_language(self, _language):
+        if self.panel.IsBeingDeleted():
+            return
+        for name, key in (
+            ("btn_new", "new"), ("btn_open", "open"), ("btn_save", "save"),
+            ("btn_validate", "validate"), ("btn_insert", "insert_command"),
+            ("btn_comment", "add_comment"), ("btn_undo", "undo"),
+            ("btn_redo", "redo"), ("btn_slurm", "create_slurm_draft"),
+        ):
+            getattr(self, name).SetLabel(t(f"journal_studio.{key}"))
+        for index, page in self._pages.items():
+            page.refresh_labels()
+            title = Path(page.document.path).name if page.document.path else t("journal_studio.new")
+            self.documents.SetPageText(index, title)
+        self._refresh_title()
+
+    def _on_host_destroy(self, event):
+        if event.GetEventObject() == self.frame:
+            unsubscribe_language_change(self._language_callback)
+        event.Skip()
+
     def dispatch(self, action: str) -> bool:
         self._show()
         if action == "new":
@@ -143,22 +182,29 @@ class JournalStudioWorkspace:
         return bool(session.get("files"))
 
     def _choose_target(self) -> str | None:
-        choices = ["Local"]
+        choices = [("Local", t("journal_studio.local"))]
         if self._remote_available():
-            choices.append("Remote")
-        dialog = self.wx.SingleChoiceDialog(self.panel, "Choose journal target", t("journal_studio.new"), choices)
+            choices.append(("Remote", t("journal_studio.remote")))
+        dialog = self.wx.SingleChoiceDialog(
+            self.panel, t("journal_studio.choose_target"), t("journal_studio.new"),
+            [label for _value, label in choices],
+        )
         try:
-            return choices[dialog.GetSelection()] if dialog.ShowModal() == self.wx.ID_OK else None
+            if dialog.ShowModal() != self.wx.ID_OK:
+                return None
+            return choices[dialog.GetSelection()][0]
         finally:
             dialog.Destroy()
 
     def _choose_context(self):
         choices = [
-            "Solution / TUI", "Solution / Scheme",
-            "Meshing / TUI", "Meshing / Scheme",
+            f"{t('journal_studio.solution')} / {t('journal_studio.tui')}",
+            f"{t('journal_studio.solution')} / {t('journal_studio.scheme')}",
+            f"{t('journal_studio.meshing')} / {t('journal_studio.tui')}",
+            f"{t('journal_studio.meshing')} / {t('journal_studio.scheme')}",
         ]
         dialog = self.wx.SingleChoiceDialog(
-            self.panel, "Fluent 2025 R2 journal context", t("journal_studio.new"), choices
+            self.panel, t("journal_studio.context_prompt"), t("journal_studio.new"), choices
         )
         try:
             if dialog.ShowModal() != self.wx.ID_OK:
@@ -197,7 +243,9 @@ class JournalStudioWorkspace:
             return False
         if target == "Remote":
             initial = str(PurePosixPath(initial_path or "/") / "untitled.jou") if initial_path else "/untitled.jou"
-            dialog = self.wx.TextEntryDialog(self.panel, "Absolute remote .jou path", t("journal_studio.new"), initial)
+            dialog = self.wx.TextEntryDialog(
+                self.panel, t("journal_studio.remote_new_path"), t("journal_studio.new"), initial
+            )
             try:
                 if dialog.ShowModal() != self.wx.ID_OK:
                     return False
@@ -205,7 +253,7 @@ class JournalStudioWorkspace:
             finally:
                 dialog.Destroy()
             if not path or not path.startswith("/") or ".." in PurePosixPath(path).parts:
-                self.wx.MessageBox("Enter a safe absolute POSIX path.", t("journal_studio.title"), self.wx.OK | self.wx.ICON_ERROR, self.panel)
+                self.wx.MessageBox(t("journal_studio.unsafe_remote_path"), t("journal_studio.title"), self.wx.OK | self.wx.ICON_ERROR, self.panel)
                 return False
             document = JournalDocument.new(path=path, remote=True, text=self._template_text(mode, language))
         else:
@@ -218,7 +266,7 @@ class JournalStudioWorkspace:
             finally:
                 dialog.Destroy()
             if Path(path).exists():
-                self.wx.MessageBox("The selected file already exists. Open it or choose a new name.", t("journal_studio.title"), self.wx.OK | self.wx.ICON_WARNING, self.panel)
+                self.wx.MessageBox(t("journal_studio.file_exists"), t("journal_studio.title"), self.wx.OK | self.wx.ICON_WARNING, self.panel)
                 return False
             document = JournalDocument.new(path=path, text=self._template_text(mode, language))
         self._add_document(document, mode=mode, language=language)
@@ -226,18 +274,23 @@ class JournalStudioWorkspace:
 
     def open_dialog(self) -> bool:
         self._show()
-        choices = ["Local"]
+        choices = [("Local", t("journal_studio.local"))]
         if self._remote_available():
-            choices.append("Remote")
-        dialog = self.wx.SingleChoiceDialog(self.panel, "Choose journal source", t("journal_studio.open"), choices)
+            choices.append(("Remote", t("journal_studio.remote")))
+        dialog = self.wx.SingleChoiceDialog(
+            self.panel, t("journal_studio.choose_source"), t("journal_studio.open"),
+            [label for _value, label in choices],
+        )
         try:
-            target = choices[dialog.GetSelection()] if dialog.ShowModal() == self.wx.ID_OK else None
+            target = choices[dialog.GetSelection()][0] if dialog.ShowModal() == self.wx.ID_OK else None
         finally:
             dialog.Destroy()
         if target is None:
             return False
         if target == "Remote":
-            prompt = self.wx.TextEntryDialog(self.panel, "Absolute remote journal path", t("journal_studio.open"), "/")
+            prompt = self.wx.TextEntryDialog(
+                self.panel, t("journal_studio.remote_open_path"), t("journal_studio.open"), "/"
+            )
             try:
                 path = prompt.GetValue() if prompt.ShowModal() == self.wx.ID_OK else ""
             finally:
@@ -284,7 +337,7 @@ class JournalStudioWorkspace:
         if remote and files_backend is None:
             self.wx.MessageBox(t("journal_studio.remote_unavailable"), t("journal_studio.title"), self.wx.OK | self.wx.ICON_WARNING, self.panel)
             return False
-        self.status_message(f"Opening {path}…")
+        self.status_message(t("journal_studio.opening").format(path=path))
 
         def worker():
             try:
@@ -310,6 +363,7 @@ class JournalStudioWorkspace:
             self.documents, document, session_state=self.session_state,
             registry=self.registry, mode=mode, language=language,
         )
+        self._install_page_drop_targets(page)
         title = Path(document.path).name if document.path else t("journal_studio.new")
         self.documents.AddPage(page.page, title, True)
         self._pages[self.documents.GetPageCount() - 1] = page

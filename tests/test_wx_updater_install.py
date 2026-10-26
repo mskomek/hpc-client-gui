@@ -1,0 +1,237 @@
+"""Tests for verified update installation and worker shutdown."""
+
+import time
+from threading import Event
+
+import pytest
+
+wx = pytest.importorskip("wx")
+pytestmark = [pytest.mark.gui, pytest.mark.wx, pytest.mark.usefixtures("updater_english_language")]
+
+from hpc_gui.wx_updater_view import WxUpdateDialog
+from support.wx_updater_helpers import make_release as _make_release
+
+
+def test_update_verification_state_visible():
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
+    rel = _make_release()
+    dlg = WxUpdateDialog(None, rel)
+    dlg._build_for_state("VERIFYING")
+    assert dlg.state == "VERIFYING"
+    # Check that verifying message is visible
+    found = False
+    for idx in range(dlg.content_sizer.GetItemCount()):
+        try:
+            win = dlg.content_sizer.GetItem(idx).GetWindow()
+            if win and "Verifying" in win.GetLabel():
+                found = True
+        except Exception:
+            pass
+    assert found
+    dlg.Destroy()
+    app.Destroy()
+
+
+def test_update_ready_requires_install_confirmation():
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
+    rel = _make_release()
+    dlg = WxUpdateDialog(None, rel)
+    dlg._build_for_state("READY_TO_INSTALL")
+    # Check that Install Update button exists and is primary
+    found_install = False
+    for idx in range(dlg.footer_sizer.GetItemCount()):
+        try:
+            win = dlg.footer_sizer.GetItem(idx).GetWindow()
+            if win and "Install" in win.GetLabel():
+                found_install = True
+                # Check it is bold (primary)
+                fnt = win.GetFont()
+                assert fnt.GetWeight() == wx.FONTWEIGHT_BOLD
+        except Exception:
+            pass
+    assert found_install
+    dlg.Destroy()
+    app.Destroy()
+
+
+def test_install_without_verified_artifact_stays_failed():
+    app = wx.App(False)
+    dlg = WxUpdateDialog(None, _make_release())
+    dlg._build_for_state("READY_TO_INSTALL")
+    dlg._start_install()
+    assert dlg.state == "FAILED"
+    assert "verified update artifact" in dlg._error_message.lower()
+    dlg.Destroy()
+    app.Destroy()
+
+
+def test_update_install_opens_installation_splash():
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
+    rel = _make_release()
+    dlg = WxUpdateDialog(None, rel)
+    dlg._build_for_state("READY_TO_INSTALL")
+    # Find Install button and click it - should close this dialog and open splash
+    # We can't easily test the splash without actually launching installer, but we can check that _start_install is called
+    # Instead, check that the button exists and triggers _start_install
+    install_btn = None
+    for idx in range(dlg.footer_sizer.GetItemCount()):
+        try:
+            win = dlg.footer_sizer.GetItem(idx).GetWindow()
+            if win and "Install" in win.GetLabel():
+                install_btn = win
+        except Exception:
+            pass
+    assert install_btn is not None
+    # Mock show_installing_splash to avoid actually launching installer
+    import hpc_gui.wx_updater_view as mod
+    orig_show = mod.show_installing_splash
+    called = {"hit": False}
+    def fake_splash(parent, version):
+        called["hit"] = True
+        # Return a mock dialog that has _wx_install_update
+        m = wx.Dialog(parent, title="Fake Install")
+        m._wx_install_update = lambda v, msg, f="": None
+        m.Show = lambda: None
+        m.Destroy = lambda: None
+        return m
+    mod.show_installing_splash = fake_splash
+    # Also mock launch_update_installer to avoid actually launching
+    import hpc_gui.services.app_updater as au
+    orig_launch = au.launch_update_installer
+    au.launch_update_installer = lambda *a, **kw: None
+    # Need to set zip path so install doesn't just simulate
+    dlg._zip_path = "/tmp/fake.zip"
+    dlg._artifact_verified = True
+    evt = wx.CommandEvent(wx.wxEVT_BUTTON, install_btn.GetId())
+    install_btn.GetEventHandler().ProcessEvent(evt)
+    app.ProcessPendingEvents()
+    time.sleep(0.3)
+    app.ProcessPendingEvents()
+    assert called["hit"]
+    mod.show_installing_splash = orig_show
+    au.launch_update_installer = orig_launch
+    dlg.Destroy()
+    app.Destroy()
+
+
+def test_installation_progress_uses_real_backend_progress():
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
+    from hpc_gui.wx_updater_view import show_installing_splash
+    dlg = show_installing_splash(None, "1.9.0")
+    assert dlg._wx_install_controls["gauge"] is not None
+    # Simulate real progress
+    dlg._wx_install_update(72, "Copying application files...", "hpc_gui/services/app_updater.py")
+    assert dlg._wx_install_controls["gauge"].GetValue() == 72
+    assert dlg._wx_install_controls["percent"].GetLabel() == "72%"
+    assert "Copying" in dlg._wx_install_controls["phase"].GetLabel()
+    assert "hpc_gui" in dlg._wx_install_controls["file"].GetLabel()
+    dlg.Destroy()
+    app.Destroy()
+
+
+def test_installation_current_item_visible_when_available():
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
+    from hpc_gui.wx_updater_view import show_installing_splash
+    dlg = show_installing_splash(None, "1.9.0")
+    dlg._wx_install_update(45, "Copying application files...", "hpc_gui/wx_updater_view.py")
+    assert dlg._wx_install_controls["file"].GetLabel() == "hpc_gui/wx_updater_view.py"
+    # When no file, should be empty
+    dlg._wx_install_update(90, "Finalizing...", "")
+    assert dlg._wx_install_controls["file"].GetLabel() == ""
+    dlg.Destroy()
+    app.Destroy()
+
+
+@pytest.mark.concurrency
+@pytest.mark.resource
+def test_update_close_in_flight_safe(monkeypatch):
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
+    rel = _make_release()
+    dlg = WxUpdateDialog(None, rel)
+    dlg._build_for_state("DOWNLOADING")
+    monkeypatch.setattr(wx, "MessageBox", lambda *args, **kwargs: wx.NO)
+
+    class CloseEvent:
+        vetoed = False
+        skipped = False
+
+        def Veto(self):
+            self.vetoed = True
+
+        def Skip(self):
+            self.skipped = True
+
+    evt = CloseEvent()
+    try:
+        dlg._on_close(evt)
+        assert evt.vetoed is True
+        assert evt.skipped is False
+        assert dlg.state == "DOWNLOADING"
+        assert dlg._cancelled is False
+        assert dlg._closed is False
+    finally:
+        dlg.Destroy()
+        app.Destroy()
+
+
+@pytest.mark.concurrency
+@pytest.mark.resource
+def test_update_late_callback_after_close_safe(monkeypatch, tmp_path):
+    import hpc_gui.services.app_updater as app_updater
+
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
+    rel = _make_release()
+    dlg = WxUpdateDialog(None, rel)
+    progress_queued = Event()
+    allow_worker_to_finish = Event()
+    queued_callbacks = []
+    before = None
+
+    def queue_call_after(callback, *args):
+        queued_callbacks.append((callback, args))
+
+    def fake_download(_release, progress_cb=None, cancelled=None):
+        progress_cb(100, "downloading", 100, 100)
+        progress_queued.set()
+        assert allow_worker_to_finish.wait(2), "test did not release downloader"
+        return tmp_path / "verified.zip"
+
+    monkeypatch.setattr(dlg.wx, "CallAfter", queue_call_after)
+    monkeypatch.setattr(app_updater, "download_and_verify_release", fake_download)
+    try:
+        dlg._start_download()
+        before = dlg._byte_label.GetLabel()
+        assert progress_queued.wait(2), "download progress was not queued"
+        dlg._closed = True
+        allow_worker_to_finish.set()
+        dlg._worker.join(2)
+        assert not dlg._worker.is_alive(), "download worker did not stop"
+
+        assert queued_callbacks
+        for callback, args in queued_callbacks:
+            callback(*args)
+
+        assert dlg._downloaded == 0
+        assert dlg._byte_label.GetLabel() == before
+        assert dlg.state == "DOWNLOADING"
+        assert getattr(dlg, "_zip_path", None) is None
+    finally:
+        allow_worker_to_finish.set()
+        if hasattr(dlg, "_worker"):
+            dlg._worker.join(2)
+        dlg.Destroy()
+        app.Destroy()

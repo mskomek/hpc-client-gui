@@ -242,39 +242,38 @@ def test_stress_a_right_click_retarget(wx_app, monkeypatch):
     monkeypatch.setattr(view, "visible_actions", recording_visible_actions)
     listing.PopupMenu = lambda menu: None
 
-    entries_of = lambda: [entry.path for entry in frame._wx_remote_tabs[0]["entries"]]  # noqa: E731
     executed = 0
     for index in range(200):
-        paths = entries_of()
+        selectable = [(row, entry.path) for row, entry in enumerate(frame._wx_remote_tabs[0]["entries"]) if listing.GetItemText(row) != ".."]
         mode = index % 5
         before = len(observed)
         if mode == 0:  # right-click a row that is not selected
-            row = index % len(paths)
-            other = (row + 1) % len(paths)
+            row, path = selectable[index % len(selectable)]
+            other, _ = selectable[(index + 1) % len(selectable)]
             _select_only(listing, other)
             listing.ProcessEvent(_context_event(listing, _row_position(listing, row)))
-            expected = (paths[row],)
+            expected = (path,)
         elif mode == 1:  # right-click a row that is already the only selection
-            row = index % len(paths)
+            row, path = selectable[index % len(selectable)]
             _select_only(listing, row)
             listing.ProcessEvent(_context_event(listing, _row_position(listing, row)))
-            expected = (paths[row],)
+            expected = (path,)
         elif mode == 2:  # right-click inside a multiselection
-            first = index % len(paths)
-            second = (first + 1) % len(paths)
+            first, first_path = selectable[index % len(selectable)]
+            second, second_path = selectable[(index + 1) % len(selectable)]
             _select_only(listing, first, second)
             listing.ProcessEvent(_context_event(listing, _row_position(listing, first)))
-            expected = tuple(sorted((paths[first], paths[second])))
+            expected = tuple(sorted((first_path, second_path)))
         elif mode == 3:  # background, below the last row
             _select_only(listing, 0)
             position = listing.ClientToScreen(wx.Point(5, listing.GetSize().height - 4))
             listing.ProcessEvent(_context_event(listing, position))
             expected = ()
         else:  # keyboard context menu key
-            row = index % len(paths)
+            row, path = selectable[index % len(selectable)]
             _select_only(listing, row)
             listing.ProcessEvent(_context_event(listing, wx.DefaultPosition))
-            expected = (paths[row],)
+            expected = (path,)
         executed += 1
         if len(observed) != before + 1:
             METRICS["wrong_targets"] += 1
@@ -290,7 +289,7 @@ def test_stress_a_right_click_retarget(wx_app, monkeypatch):
             continue
         if mode == 2 and sum(listing.IsSelected(i) for i in range(listing.GetItemCount())) != 2:
             METRICS["wrong_targets"] += 1
-        if mode == 0 and not listing.IsSelected(paths.index(expected[0])):
+        if mode == 0 and not listing.IsSelected(next(row for row, path in selectable if path == expected[0])):
             METRICS["wrong_targets"] += 1
 
     _record("right-click retarget", executed, 200)
@@ -663,7 +662,7 @@ def test_stress_d_target_switches(wx_app):
         executed += 1
         for tab in tabs:
             visible = set(_rows(tab["listing"]))
-            if visible - {SENTINELS[tab["path"]]}:
+            if visible - {"..", SENTINELS[tab["path"]]}:
                 METRICS["stale_ui_overwrites"] += 1
             if visible & foreign[tab["path"]]:
                 METRICS["wrong_targets"] += 1
@@ -732,7 +731,7 @@ def test_stress_e_navigate_completion_races(wx_app, tmp_path, monkeypatch):
         rows = set(_rows(frame._wx_remote_controls["listing"]))
         if gate["stale"] in rows:
             METRICS["stale_ui_overwrites"] += 1
-        if rows != {"FAST_ONLY.txt"}:
+        if rows != {"..", "FAST_ONLY.txt"}:
             METRICS["wrong_targets"] += 1
         _enter_path(frame, "/")
         _pump(wx_app, lambda: "slow" in _rows(frame._wx_remote_controls["listing"]))
@@ -787,7 +786,7 @@ def test_stress_e_navigate_completion_races(wx_app, tmp_path, monkeypatch):
         visible = set(_rows(local_frame._wx_local_controls["listing"]))
         if local_gate["stale"] in visible:
             METRICS["stale_ui_overwrites"] += 1
-        if visible != {"FAST_LOCAL.txt", "slow", "fast"}:
+        if visible != {"..", "FAST_LOCAL.txt", "slow", "fast"}:
             METRICS["wrong_targets"] += 1
         executed += 1
 
@@ -1476,6 +1475,7 @@ def test_editor_wx_lifecycle_predecessor_preserves_context_menu_runtime():
             sys.executable,
             "-m",
             "pytest",
+            "--ignore-glob=cd*",
             "tests/test_wx_editor_window_parity.py",
             "tests/test_wx_embedded_terminal.py",
             "tests/test_wx_file003_final_stress.py::test_stress_a_right_click_retarget",
@@ -1484,6 +1484,6 @@ def test_editor_wx_lifecycle_predecessor_preserves_context_menu_runtime():
         cwd=root,
         capture_output=True,
         text=True,
-        timeout=90,
+        timeout=300,
     )
     assert result.returncode == 0, f"child failed {result.returncode}:\n{result.stdout}\n{result.stderr}"

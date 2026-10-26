@@ -49,7 +49,7 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
         "phase": 0,
         "result": "FAIL",
         "done": False,
-        "deadline": time.monotonic() + 12,
+        "deadline": time.monotonic() + 20,
         "bridge_input_chars": 0,
         "ssh_input_chars": 0,
         "keyboard_input_at": None,

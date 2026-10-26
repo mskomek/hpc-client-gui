@@ -9,6 +9,7 @@ from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language
 from hpc_gui.plugins.linter_tools import ToolLoadError, first_linter_tool
 from hpc_gui.services.ansys_tool_presentation import AnsysToolPresentation
 from hpc_gui.services.help_catalog import is_allowed_external_url
+from hpc_gui.services.system_clipboard import set_text as set_system_clipboard_text
 from hpc_gui.wx_ansys import FileDiagnostics, WxAnsysModel
 
 
@@ -332,15 +333,11 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
         if d is None:
             # copy all visible rows
             txt = "\n".join(f"{results_ctrl.GetItemText(r, 0)} [{results_ctrl.GetItemText(r,1)} {results_ctrl.GetItemText(r,2)}] {results_ctrl.GetItemText(r,3)}: {results_ctrl.GetItemText(r,4)}" for r in range(results_ctrl.GetItemCount()))
-            if _wx.TheClipboard.Open():
-                _wx.TheClipboard.SetData(_wx.TextDataObject(txt))
-                _wx.TheClipboard.Close()
+            set_system_clipboard_text(_wx.TheClipboard, _wx.TextDataObject, txt)
             return
         expl = getattr(d, "explanation", "") or getattr(d, "message", "")
         txt = f"{_tr('ansyslint.why_flagged', 'why flagged')}: {expl}\n{_tr('ansyslint.confidence', 'confidence')}: {'heuristic' if getattr(d, 'is_heuristic', False) else 'structural'}"
-        if _wx.TheClipboard.Open():
-            _wx.TheClipboard.SetData(_wx.TextDataObject(txt))
-            _wx.TheClipboard.Close()
+        set_system_clipboard_text(_wx.TheClipboard, _wx.TextDataObject, txt)
 
     def on_copy_fix(_evt):
         import wx as _wx
@@ -348,9 +345,7 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
         fix = getattr(d, "suggested_fix", "") if d else ""
         if not fix:
             return
-        if _wx.TheClipboard.Open():
-            _wx.TheClipboard.SetData(_wx.TextDataObject(str(fix)))
-            _wx.TheClipboard.Close()
+        set_system_clipboard_text(_wx.TheClipboard, _wx.TextDataObject, str(fix))
 
     def on_open_doc(_evt):
         import wx as _wx

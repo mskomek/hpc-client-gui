@@ -8,7 +8,7 @@ pytestmark = pytest.mark.wx
 import pathlib
 
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel, _is_webview_available
-from wx_terminal_webview_support import ASSETS, _fake_ssh, _show_frame_with_panel, _wait_for_ready
+from wx_terminal_webview_support import ASSETS
 
 @pytest.mark.contract
 def test_wx_terminal_webview_assets_are_local_and_vendored():
@@ -100,18 +100,13 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
-@pytest.mark.gui
-def test_wx_terminal_external_navigation_blocked():
-    if not _is_webview_available():
-        pytest.skip("WebView backend unavailable")
-    _app = wx.App.Get() or wx.App(False)
-    frame = wx.Frame(None, size=(900, 600))
-    ssh = _fake_ssh()
-    panel = WxTerminalWebViewPanel(frame, ssh=ssh)
-    _show_frame_with_panel(frame, panel)
-    assert _wait_for_ready(panel, timeout=6) is True
-    # Try to simulate navigating event with external URL — handler should veto
-    # Create a mock event
+@pytest.mark.unit
+def test_wx_terminal_navigation_guard_blocks_external_urls():
+    # This test exercises the event handler with synthetic wx-style events.
+    # Real WebView construction and bridge readiness are covered by the
+    # subprocess smoke test above; creating another WebView controller here
+    # inside the long-lived mixed wx/Qt test process is unnecessary and has
+    # caused process-wide native heap corruption after broad GUI runs.
     class FakeEvent:
         def __init__(self, url):
             self._url = url
@@ -127,6 +122,10 @@ def test_wx_terminal_external_navigation_blocked():
         def Skip(self):
             self.skipped = True
 
+    class NavigationHarness:
+        _on_navigating = WxTerminalWebViewPanel._on_navigating
+
+    panel = NavigationHarness()
     evt = FakeEvent("https://example.com/malicious.js")
     panel._on_navigating(evt)
     assert evt.vetoed is True
@@ -134,8 +133,6 @@ def test_wx_terminal_external_navigation_blocked():
     evt2 = FakeEvent("file:///D:/Projeler/image-process-para-2/src/hpc_gui/assets/terminal/wx_index.html")
     panel._on_navigating(evt2)
     assert evt2.vetoed is False
-    frame.Destroy()
-    wx.Yield()
 
 
 @pytest.mark.audit

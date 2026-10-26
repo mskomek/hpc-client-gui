@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 import time
+from pathlib import Path
 
 import pytest
 
@@ -203,7 +207,35 @@ def english_i18n():
 
 @pytest.mark.gui
 @pytest.mark.wx
-def test_wx_tree_group_click_refresh_copy_and_normal_view(tmp_path, wx_app, english_i18n, monkeypatch):
+@pytest.mark.subprocess
+def test_wx_tree_group_click_refresh_copy_and_normal_view(request):
+    if os.environ.get("HPC_GUI_LOGS_CLIPBOARD_CHILD") != "1":
+        root = Path(__file__).resolve().parents[1]
+        env = os.environ.copy()
+        env["HPC_GUI_LOGS_CLIPBOARD_CHILD"] = "1"
+        env["PYTHONPATH"] = str(root / "src")
+        env["PYTEST_ADDOPTS"] = "--ignore-glob=cd*"
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "tests/test_wx_logs_groups.py::test_wx_tree_group_click_refresh_copy_and_normal_view",
+            ],
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
+        assert result.returncode == 0, f"clipboard child failed:\n{result.stdout}\n{result.stderr}"
+        return
+
+    tmp_path = request.getfixturevalue("tmp_path")
+    request.getfixturevalue("wx_app")
+    request.getfixturevalue("english_i18n")
+    monkeypatch = request.getfixturevalue("monkeypatch")
     import wx
 
     from hpc_gui.core import i18n
@@ -263,7 +295,18 @@ def test_wx_tree_group_click_refresh_copy_and_normal_view(tmp_path, wx_app, engl
         stream.write(_query(3, "squeue -h -u alice") + _query(4, "squeue -h -u alice"))
     host._wx_logs_refresh()
     expected = original + _query(3, "squeue -h -u alice") + _query(4, "squeue -h -u alice")
-    assert _pump_until(lambda: host._wx_logs_model.text == expected)
+
+    def refreshed_group_rendered():
+        if host._wx_logs_model.text != expected:
+            return False
+        refreshed_root = tree.GetRootItem()
+        refreshed_item, _cookie = tree.GetFirstChild(refreshed_root)
+        return (
+            refreshed_item.IsOk()
+            and tree.GetChildrenCount(refreshed_item, False) == 8
+        )
+
+    assert _pump_until(refreshed_group_rendered)
     refreshed_root = tree.GetRootItem()
     refreshed_item, refreshed_cookie = tree.GetFirstChild(refreshed_root)
     assert tree.IsExpanded(refreshed_item)
@@ -271,13 +314,10 @@ def test_wx_tree_group_click_refresh_copy_and_normal_view(tmp_path, wx_app, engl
 
     copy_event = wx.CommandEvent(wx.EVT_BUTTON.evtType[0], controls["copy"].GetId())
     controls["copy"].GetEventHandler().ProcessEvent(copy_event)
-    copied = wx.TextDataObject()
-    assert wx.TheClipboard.Open()
-    try:
-        assert wx.TheClipboard.GetData(copied)
-        assert copied.GetText() == host._wx_logs_model.text
-    finally:
-        wx.TheClipboard.Close()
+    from hpc_gui.services.system_clipboard import get_text
+
+    copied = get_text(wx.TheClipboard, wx.TextDataObject)
+    assert copied == host._wx_logs_model.text
 
     _checkbox_event(wx, controls["collapse_repeats"])
     assert controls["text"].IsShown()

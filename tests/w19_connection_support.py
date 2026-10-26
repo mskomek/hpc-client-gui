@@ -83,33 +83,11 @@ def wx_app():
     app = wx.App.Get()
     if app is None:
         app = wx.App(False)
-    yield app
-    for window in wx.GetTopLevelWindows():
-        try:
-            window.Close()
-        except Exception:
-            pass
-    for _ in range(5):
-        try:
-            wx.Yield()
-        except Exception:
-            app.ProcessPendingEvents()
-    for window in wx.GetTopLevelWindows():
-        try:
-            if not window.IsBeingDeleted():
-                window.Destroy()
-        except Exception:
-            pass
-    for _ in range(5):
-        try:
-            wx.Yield()
-        except Exception:
-            app.ProcessPendingEvents()
-    # NOTE: no app.Destroy() here on purpose. Destroying the shared wx.App
-    # while shell frames with WebView-backed terminal panels are still
-    # draining their deferred deletes crashes the interpreter on shutdown
-    # (0xC0000374) after an otherwise green run. Windows are closed and
-    # destroyed above; the process exit reclaims the app.
+    # tests/conftest.py owns test-scoped top-level window cleanup. A second
+    # fixture teardown here used wx.Yield() after closing/destroying every
+    # window, overlapping that shared cleanup and dispatching deferred native
+    # callbacks against windows already in teardown.
+    return app
 
 
 def _profiles():

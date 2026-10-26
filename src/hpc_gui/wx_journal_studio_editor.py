@@ -10,11 +10,15 @@ from hpc_gui.journal_studio.document import JournalDocument
 from hpc_gui.journal_studio.models import JournalDiagnostic, ParsedJournal
 from hpc_gui.journal_studio.parser import parse_journal
 from hpc_gui.services.journal_studio_files import save_local, save_remote
-from hpc_gui.wx_journal_studio_editor_view import build_editor_view
-
-
-MAX_VISUAL_STRUCTURE_LINES = 10_000
-
+from hpc_gui.wx_journal_studio_editor_view import (
+    build_editor_view,
+    build_large_editor_view,
+    refresh_editor_view_labels,
+)
+from hpc_gui.wx_journal_studio_editor_render import (
+    MAX_VISUAL_STRUCTURE_LINES,
+    exceeds_visual_limits,
+)
 
 def _display_text(text: str) -> str:
     return text.replace("\r\n", "\n").replace("\r", "\n")
@@ -35,9 +39,12 @@ class JournalEditorPage:
         self.language = language
         self._source_model_at_render = document.text
         self._source_text_at_render = _display_text(document.text)
+        self._source_render_generation = 0
+        self._rendering_source = False
         self._undo_text: list[str] = []
         self._redo_text: list[str] = []
-        build_editor_view(self)
+        self.large_journal_mode = exceeds_visual_limits(document.text)
+        (build_large_editor_view if self.large_journal_mode else build_editor_view)(self)
         self._render_source()
         self._refresh_blocks()
         self._refresh_status()
@@ -65,19 +72,17 @@ class JournalEditorPage:
     def _readonly_tab(self, parent):
         return self.wx.TextCtrl(parent, style=self.wx.TE_MULTILINE | self.wx.TE_READONLY | self.wx.HSCROLL)
 
+    def refresh_labels(self) -> None:
+        refresh_editor_view_labels(self)
+
     def _source_value(self) -> str:
         getter = getattr(self.source, "GetText", None) or getattr(self.source, "GetValue")
         return getter()
 
-    def _set_source_value(self, text: str) -> None:
-        self._source_model_at_render = text
-        self._source_text_at_render = _display_text(text)
-        setter = getattr(self.source, "SetText", None) or getattr(self.source, "SetValue")
-        setter(self._source_text_at_render)
-
     def _render_source(self) -> None:
-        self._set_source_value(self.document.text)
-        self._schedule_refresh()
+        from hpc_gui.wx_journal_studio_editor_render import render_source
+
+        render_source(self, _display_text(self.document.text))
 
     def _schedule_refresh(self) -> None:
         timer = getattr(self, "_refresh_timer", None)
@@ -86,6 +91,9 @@ class JournalEditorPage:
         self._refresh_timer = self.wx.CallLater(180, self._refresh_after_edit)
 
     def _source_changed(self, event):
+        if self._rendering_source:
+            event.Skip()
+            return
         value = self._source_value()
         if _display_text(value) == self._source_text_at_render:
             self.document.text = self._source_model_at_render
@@ -111,10 +119,9 @@ class JournalEditorPage:
                 self.document.text.splitlines(keepends=True),
                 fromfile="saved", tofile="edited",
             )))
-            self.preview.SetValue(self.document.text)
         else:
-            self.diff.SetValue("Diff preview paused for journals over 256 KiB.")
-            self.preview.SetValue(self.document.text[:256 * 1024])
+            self.diff.SetValue(t("journal_studio.diff_limit"))
+        self.preview.SetValue(self._preview_content())
 
     def _source_caret_changed(self, event):
         try:
@@ -132,12 +139,8 @@ class JournalEditorPage:
 
     def _refresh_blocks(self):
         text = self.document.text
-        line_count = len(text.splitlines())
-        if len(text) > 4 * 1024 * 1024 or line_count > MAX_VISUAL_STRUCTURE_LINES:
-            message = (
-                "Visual structure is paused for journals over 10,000 lines or 4 MiB; "
-                "source text remains available."
-            )
+        if exceeds_visual_limits(text):
+            message = t("journal_studio.visual_limit")
             self._parsed = ParsedJournal(
                 text, (),
                 (JournalDiagnostic("visual-limit", message, 1, 1, "info"),),
@@ -159,16 +162,22 @@ class JournalEditorPage:
         if parsed.blocks:
             self.structure.SetSelection(min(max(current, 0), len(parsed.blocks) - 1))
         messages = [f"{item.line}:{item.column}  {item.code}: {item.message}" for item in parsed.diagnostics]
-        self.problems.SetValue("\n".join(messages) or "No structural parser diagnostics.")
+        self.problems.SetValue("\n".join(messages) or t("journal_studio.no_diagnostics"))
 
     def _refresh_status(self):
-        origin = "Remote" if self.document.remote else "Local"
+        origin = t("journal_studio.remote") if self.document.remote else t("journal_studio.local")
         state = t("journal_studio.modified") if self.document.modified else t("journal_studio.saved")
         warning = f" — {self.document.decode_warning}" if self.document.decode_warning else ""
         self.status.SetLabel(f"{origin} | {self.document.encoding} | {self.document.newline.replace(chr(13), 'CR').replace(chr(10), 'LF')} | {state}{warning}")
         if not self.document.modified:
-            self.diff.SetValue("No saved changes.")
-        self.preview.SetValue(self.document.text[:256 * 1024])
+            self.diff.SetValue(t("journal_studio.no_saved_changes"))
+        self.preview.SetValue(self._preview_content())
+
+    def _preview_content(self) -> str:
+        text = self.document.text
+        if len(text) > 256 * 1024 or len(text.splitlines()) > MAX_VISUAL_STRUCTURE_LINES:
+            return t("journal_studio.preview_limit")
+        return text
 
     def _select_block(self, _event):
         index = self.structure.GetSelection()
@@ -216,17 +225,65 @@ class JournalEditorPage:
         if self.wx.MessageBox(prompt, t("journal_studio.insert_command"), self.wx.YES_NO | self.wx.ICON_WARNING, self.page) != self.wx.YES:
             return False
         command = self._library_entries[index]["command_path"]
+        return self._insert_command_path(command)
+
+    def _insert_command_path(self, command: str, *, before_index: int | None = None) -> bool:
         newline = self.document.newline
-        insert = command + newline
+        blocks = self._parsed.blocks
+        position = blocks[before_index].start if before_index is not None and before_index < len(blocks) else len(self.document.text)
+        prefix = self.document.text[:position]
+        suffix = self.document.text[position:]
+        separator = "" if not prefix or prefix.endswith(("\n", "\r")) else newline
         self._push_undo()
-        text = self.document.text
-        separator = "" if not text or text.endswith(("\n", "\r")) else newline
-        self.document.text = text + separator + insert
+        self.document.text = prefix + separator + command + newline + suffix
         self._render_source()
         self._refresh_blocks()
         self._refresh_status()
         self.validation.SetValue(t("journal_studio.unverified"))
+        selection = min(before_index or 0, len(self._parsed.blocks) - 1)
+        if selection >= 0:
+            self.structure.SetSelection(selection)
         return True
+
+    def _drop_flow_item(self, x: int, y: int, payload: str) -> bool:
+        command_prefix = "ansys-journal-command:"
+        block_prefix = "ansys-journal-block:"
+        if payload.startswith(command_prefix):
+            command = payload[len(command_prefix):]
+            entry = next((item for item in self._library_entries if item.get("command_path") == command), None)
+            if entry is None or self.language != "tui":
+                return False
+            prompt = t("journal_studio.unverified") + "\n\nInsert only the raw TUI path?"
+            if self.wx.MessageBox(prompt, t("journal_studio.insert_command"), self.wx.YES_NO | self.wx.ICON_WARNING, self.page) != self.wx.YES:
+                return False
+            return self._insert_command_path(command, before_index=self._flow_drop_index(x, y))
+        if payload.startswith(block_prefix):
+            try:
+                source = int(payload[len(block_prefix):])
+            except ValueError:
+                return False
+            blocks = self._parsed.blocks
+            if source < 0 or source >= len(blocks):
+                return False
+            destination = self._flow_drop_index(x, y)
+            if destination == source:
+                return True
+            if self.wx.MessageBox(t("journal_studio.reorder_warning"), t("journal_studio.flow"), self.wx.YES_NO | self.wx.ICON_WARNING, self.page) != self.wx.YES:
+                return False
+            order = list(range(len(blocks)))
+            order.insert(destination, order.pop(source))
+            self._push_undo()
+            self.document.text = self._parsed.reorder(tuple(order))
+            self._render_source()
+            self._refresh_blocks()
+            self.structure.SetSelection(min(destination, len(self._parsed.blocks) - 1))
+            self._refresh_status()
+            return True
+        return False
+
+    def _flow_drop_index(self, x: int, y: int) -> int:
+        index = self.structure.HitTest(x, y)
+        return len(self._parsed.blocks) if index == self.wx.NOT_FOUND else max(0, index)
 
     def add_comment(self):
         newline = self.document.newline

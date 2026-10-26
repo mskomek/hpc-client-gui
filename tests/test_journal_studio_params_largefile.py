@@ -168,7 +168,8 @@ def test_twelve_thousand_line_journal_opens_without_blocking_the_ui_thread(studi
     from hpc_gui import wx_journal_studio
 
     path = tmp_path / "large.jou"
-    data = large_journal_text().encode("utf-8")
+    text = large_journal_text()
+    data = text.encode("utf-8")
     path.write_bytes(data)
     real_read = wx_journal_studio.read_local
 
@@ -183,21 +184,40 @@ def test_twelve_thousand_line_journal_opens_without_blocking_the_ui_thread(studi
 
     beats = [time.perf_counter()]
     gaps: list[float] = []
+    observed_chars: list[int] = []
 
     def beat():
         now = time.perf_counter()
         gaps.append(now - beats[-1])
         beats[-1] = now
-        return studio.ws.documents.GetPageCount() == 1
+        if studio.ws.documents.GetPageCount() != 1:
+            observed_chars.append(0)
+            return False
+        source_text = studio.ws._active_page().source.GetText()
+        observed_chars.append(len(source_text))
+        return source_text == text
 
-    assert pump(wx, beat, timeout=OPEN_BUDGET_SECONDS, on_tick=None)
+    loaded = pump(wx, beat, timeout=OPEN_BUDGET_SECONDS, on_tick=None)
+    loaded_page = studio.ws._active_page()
+    loaded_chars = loaded_page.source.GetTextLength() if loaded_page is not None else -1
+    assert loaded, f"source rendering stalled at {loaded_chars}/{len(text)} chars"
     total = time.perf_counter() - started
     page = studio.ws._active_page()
     assert total < OPEN_BUDGET_SECONDS, f"open took {total:.2f}s"
     assert page.document.to_bytes() == data
+    assert page.source.GetText() == text
+    assert page.large_journal_mode is True
+    assert "Visual Flow is paused" in page.large_mode_notice.GetLabel()
+    assert page.library.GetCount() == len(REGISTRY["commands"])
     assert page.structure.GetCount() == 0
     assert "over 10,000 lines" in page.problems.GetValue()
-    assert max(gaps) < UI_GAP_BUDGET_SECONDS, f"longest UI gap {max(gaps):.2f}s"
+    assert "Preview paused" in page.preview.GetValue()
+    worst_gap = max(range(len(gaps)), key=gaps.__getitem__)
+    assert max(gaps) < UI_GAP_BUDGET_SECONDS, (
+        f"longest UI gap {max(gaps):.2f}s at pump tick {worst_gap}/{len(gaps)}; "
+        f"source length {observed_chars[max(0, worst_gap - 1)]} -> "
+        f"{observed_chars[min(worst_gap, len(observed_chars) - 1)]}/{len(text)}"
+    )
 
 
 def test_twelve_thousand_line_edit_refresh_stays_within_budget(studio, tmp_path):

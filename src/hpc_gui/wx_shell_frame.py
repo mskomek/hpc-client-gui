@@ -429,10 +429,12 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     # is the keyboard-only traversal contract for the main shell.
     _wx_shell_accel_ids: dict = {}
     _wx_shell_accel_spec: list = []
+    _wx_shell_accel_id_refs: list = []
     try:
         _accel_entries = []
         for _tab_index in range(min(7, int(notebook.GetPageCount()))):
             _tab_cmd = wx.NewIdRef()
+            _wx_shell_accel_id_refs.append(_tab_cmd)
             _wx_shell_accel_ids[int(_tab_cmd)] = _tab_index
 
             def _make_tab_handler(_idx=_tab_index):
@@ -454,6 +456,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                 (int(wx.ACCEL_CTRL), ord(str(_tab_index + 1)), int(_tab_cmd))
             )
         _help_cmd = wx.NewIdRef()
+        _wx_shell_accel_id_refs.append(_help_cmd)
         _wx_shell_accel_ids[int(_help_cmd)] = "help"
 
         def _on_accel_help(_evt):
@@ -476,6 +479,10 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         pass
     frame._wx_shell_accel_ids = _wx_shell_accel_ids
     frame._wx_shell_accel_spec = _wx_shell_accel_spec
+    # Keep wx.WindowIDRef objects alive for as long as their integer IDs are
+    # registered with the frame. Their finalizers release IDs, so storing only
+    # int(ref) lets wx reuse one command ID for several accelerator entries.
+    frame._wx_shell_accel_id_refs = _wx_shell_accel_id_refs
 
     frame.Bind(wx.EVT_CLOSE, close)
     frame._wx_shell_close = close

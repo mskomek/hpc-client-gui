@@ -22,6 +22,7 @@ import time
 from pathlib import Path
 
 import paramiko
+from support.mock_ssh_lifecycle import ClientHandlerRegistry
 
 MOCK_USERNAME = "mockuser"
 MOCK_PASSWORD = "mockpass123"  # Test-only fixture credential, not a real secret.
@@ -392,6 +393,7 @@ class MockSSHServer:
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
         self._ready = threading.Event()
+        self._clients = ClientHandlerRegistry(self._stop)
         self.port = 0
         self.pty_sizes: list[tuple[int, int, int, int, str]] = []
         self.resize_sizes: list[tuple[int, int, int, int]] = []
@@ -431,25 +433,27 @@ class MockSSHServer:
                 continue
             except OSError:
                 return
-            threading.Thread(target=self._handle_client, args=(client_sock,), daemon=True).start()
+            self._clients.start(client_sock, self._handle_client)
 
     def _handle_client(self, client_sock: socket.socket) -> None:
         transport = paramiko.Transport(client_sock)
-        transport.add_server_key(self._host_key)
-        transport.set_subsystem_handler("sftp", paramiko.SFTPServer, _StubSFTPServer)
-        server = _ServerInterface(
-            _MockShell(self.root_dir),
-            self.username,
-            self.password,
-            self.pty_sizes,
-            self.resize_sizes,
-        )
+        self._clients.add_transport(transport)
         try:
+            transport.add_server_key(self._host_key)
+            transport.set_subsystem_handler("sftp", paramiko.SFTPServer, _StubSFTPServer)
+            server = _ServerInterface(
+                _MockShell(self.root_dir),
+                self.username,
+                self.password,
+                self.pty_sizes,
+                self.resize_sizes,
+            )
             transport.start_server(server=server)
             channel = transport.accept(20)
             if channel is None:
                 return
-            server.event.wait(20)
+            while transport.is_active() and not self._stop.wait(0.1):
+                pass
         except Exception:
             pass
         finally:
@@ -457,6 +461,11 @@ class MockSSHServer:
                 transport.close()
             except Exception:
                 pass
+            self._clients.remove_transport(transport)
+
+    @property
+    def active_client_count(self) -> int:
+        return self._clients.active_count
 
     def __exit__(self, *exc_info) -> None:
         self._stop.set()
@@ -465,10 +474,4 @@ class MockSSHServer:
                 self._sock.close()
             except OSError:
                 pass
-        # Bounded join so a prior serial run's serve thread cannot linger
-        # indefinitely; daemon thread still never blocks interpreter exit.
-        if self._thread is not None:
-            try:
-                self._thread.join(timeout=2.0)
-            except Exception:
-                pass
+        self._clients.close(self._thread)

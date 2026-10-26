@@ -183,7 +183,10 @@ def _collect_about_labels():
         # assert; returning ID_OK models the Close-button dismissal.
         return wx.ID_OK
 
-    original = wx.Dialog.ShowModal
+    # Preserve the native descriptor. Reading wx.Dialog.ShowModal returns a
+    # built-in function object; assigning that object back does not restore the
+    # SWIG method descriptor and breaks later real Dialog.ShowModal calls.
+    original = wx.Dialog.__dict__["ShowModal"]
     wx.Dialog.ShowModal = _fake_show_modal
     try:
         assert about_view.show_about(None) == wx.ID_OK
@@ -200,7 +203,7 @@ def _collect_about_labels_with(show_fn):
         self.EndModal(wx.ID_OK)
         return wx.ID_OK
 
-    original = wx.Dialog.ShowModal
+    original = wx.Dialog.__dict__["ShowModal"]
     wx.Dialog.ShowModal = _fake_show_modal
     try:
         show_fn(None)

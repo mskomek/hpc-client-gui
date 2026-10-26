@@ -170,6 +170,38 @@ app.Destroy()
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+def test_w21_child_destroy_event_does_not_close_parent_terminal():
+    from hpc_gui.wx_terminal_webview_lifecycle import TerminalLifecycleMixin
+
+    class PanelHarness(TerminalLifecycleMixin):
+        closed = False
+
+        def close(self):
+            self.closed = True
+
+    class DestroyEvent:
+        def __init__(self, window):
+            self.window = window
+            self.skipped = False
+
+        def GetEventObject(self):
+            return self.window
+
+        def Skip(self):
+            self.skipped = True
+
+    panel = PanelHarness()
+    child_event = DestroyEvent(object())
+    panel._on_destroy(child_event)
+    assert panel.closed is False
+    assert child_event.skipped is True
+
+    panel_event = DestroyEvent(panel)
+    panel._on_destroy(panel_event)
+    assert panel.closed is True
+    assert panel_event.skipped is True
+
+
 @pytest.mark.gui
 @pytest.mark.subprocess
 @pytest.mark.semantic
@@ -205,18 +237,30 @@ def exercise_reconnect():
         )
         return
     try:
+        assert panel._closed is False, "child-window teardown closed the terminal panel"
         assert "u1@h1" in panel._identity_label.GetLabel(), panel._identity_label.GetLabel()
         gen_before = panel._generation
         # Disconnect: write path neutralized, status + identity cleared visibly.
         panel.set_ssh(None)
+        assert panel._closed is False, "disconnect closed the terminal panel"
         assert panel._status_label.GetLabel() != "", "disconnect must stay visible"
         assert panel._identity_label.GetLabel() == "", "identity must clear on disconnect"
-        assert panel._handle_input("echo nowhere") is False
+        assert panel._handle_input("echo nowhere") is False, (
+            "disconnected terminal accepted input"
+        )
         # Reconnect: fresh generation (stale callbacks rejected) + new identity.
         panel.set_ssh(FakeSSH("u2", "h2"))
+        assert panel._closed is False, "reconnect left the terminal panel closed"
         assert panel._generation != gen_before, "reconnect must mint a fresh generation"
         assert "u2@h2" in panel._identity_label.GetLabel(), panel._identity_label.GetLabel()
-        assert panel._handle_input("echo back") is True
+        accepted = panel._handle_input("echo back")
+        assert accepted is True, (
+            "reconnected terminal rejected input: "
+            f"closed={panel._closed}, send_input={panel._send_input!r}, "
+            f"ssh={panel._ssh!r}, status={panel._status_text!r}, "
+            f"write_failure={panel._write_failure_shown}, "
+            f"sent={getattr(panel._ssh, 'sent', None)!r}"
+        )
     except Exception as exc:
         finish(f"{type(exc).__name__}: {exc}")
     else:

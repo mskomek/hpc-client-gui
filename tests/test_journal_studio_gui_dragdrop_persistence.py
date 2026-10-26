@@ -51,6 +51,18 @@ class _Event:
         return None
 
 
+class _DragEvent(_Event):
+    def __init__(self, point, *, left_down=False):
+        self.point = point
+        self.left_down = left_down
+
+    def GetPosition(self):
+        return self.point
+
+    def LeftIsDown(self):
+        return self.left_down
+
+
 @pytest.fixture(scope="module")
 def wx_app():
     import wx
@@ -97,6 +109,93 @@ def test_dropping_journal_files_opens_them_and_ignores_other_files(studio, tmp_p
     paths = sorted(page.document.path for page in studio.ws._pages.values())
     assert paths == sorted([str(first), str(second)])
     assert all(not page.document.modified for page in studio.ws._pages.values())
+
+
+def test_dropping_another_journal_onto_open_editor_opens_a_second_tab(studio, tmp_path):
+    first = tmp_path / "first.jou"
+    second = tmp_path / "second.jou"
+    third = tmp_path / "third.jou"
+    _write(first, "/solve/iterate 10\n")
+    _write(second, "/solve/iterate 20\n")
+    _write(third, "/solve/iterate 30\n")
+
+    assert studio.ws._journal_drop_targets
+    assert studio.ws.open_document(str(first), remote=False) is True
+    assert pump(studio.wx, lambda: studio.ws.documents.GetPageCount() == 1)
+    first_page = studio.ws._active_page()
+    source_target = first_page.source.GetDropTarget()
+    assert source_target is not None
+    structure_target = first_page.structure.GetDropTarget()
+    assert structure_target is not None
+
+    assert source_target.OnDropFiles(0, 0, [str(second)]) is True
+    assert pump(studio.wx, lambda: studio.ws.documents.GetPageCount() == 2)
+    assert structure_target.OnDropFiles(0, 0, [str(third)]) is True
+    assert pump(studio.wx, lambda: studio.ws.documents.GetPageCount() == 3)
+    paths = sorted(page.document.path for page in studio.ws._pages.values())
+    assert paths == sorted([str(first), str(second), str(third)])
+
+
+def test_command_library_drag_drop_inserts_and_reorders_flow_blocks(studio, tmp_path, monkeypatch):
+    path = tmp_path / "flow.jou"
+    _write(path, "/solve/iterate 10\n")
+    assert studio.ws.open_document(str(path), remote=False) is True
+    assert pump(studio.wx, lambda: studio.ws.documents.GetPageCount() == 1)
+    page = studio.ws._active_page()
+    studio.frame.Show()
+    studio.wx.Yield()
+    assert page.structure.GetDropTarget() is not None
+    monkeypatch.setattr(studio.wx, "MessageBox", lambda *_args, **_kwargs: studio.wx.YES)
+
+    target_rect = page.structure.GetScreenRect()
+    drop_point = studio.wx.Point(target_rect.x + 50, target_rect.y + 250)
+
+    def point_in_item(window, index):
+        for y in range(128):
+            point = studio.wx.Point(5, y)
+            if window.HitTest(point) == index:
+                return point
+        raise AssertionError(f"List item {index} was not hittable")
+
+    library_point = point_in_item(page.library, 1)
+    mouse = {"point": page.library.ClientToScreen(library_point), "down": True}
+    monkeypatch.setattr(studio.wx, "GetMousePosition", lambda: mouse["point"])
+    monkeypatch.setattr(
+        studio.wx,
+        "GetMouseState",
+        lambda: SimpleNamespace(LeftIsDown=lambda: mouse["down"]),
+    )
+    handlers = page._flow_drag_handlers
+    mouse["point"] = page.library.ClientToScreen(library_point)
+    handlers["library"]["left_down"](_DragEvent(library_point))
+    assert page.library.GetSelection() == 1
+    mouse["point"] = studio.wx.Point(mouse["point"].x + 15, mouse["point"].y)
+    handlers["timer"](_Event())
+    assert page._flow_drag_states["library"]["dragging"] is True
+    mouse["point"] = drop_point
+    handlers["timer"](_Event())
+    mouse["down"] = False
+    handlers["timer"](_Event())
+
+    assert page.document.text == "/solve/iterate 10\n/file/read-case\n"
+    assert page.document.modified is True
+
+    structure_point = point_in_item(page.structure, 0)
+    mouse["point"] = page.structure.ClientToScreen(structure_point)
+    mouse["down"] = True
+    handlers["structure"]["left_down"](_DragEvent(structure_point))
+    assert page.structure.GetSelection() == 0
+    mouse["point"] = studio.wx.Point(mouse["point"].x + 15, mouse["point"].y)
+    handlers["timer"](_Event())
+    mouse["point"] = drop_point
+    handlers["timer"](_Event())
+    mouse["down"] = False
+    handlers["timer"](_Event())
+    assert page.document.text == "/file/read-case\n/solve/iterate 10\n"
+    assert page.document.modified is True
+    assert page._flow_drag_timer.IsRunning() is False
+    assert page.document.text == "/file/read-case\n/solve/iterate 10\n"
+    assert page.document.modified is True
 
 
 def test_dropped_journal_opens_with_its_exact_bytes_and_crlf_newline(studio, tmp_path):
@@ -151,3 +250,31 @@ def test_reopening_same_journal_selects_existing_page_instead_of_duplicating(stu
     studio.wx.Yield()
 
     assert studio.ws.documents.GetPageCount() == 1
+
+
+def test_language_switch_refreshes_open_journal_studio_pages(studio, tmp_path, monkeypatch):
+    from hpc_gui.core import i18n
+
+    original_language = i18n.current_language()
+    monkeypatch.setattr(i18n, "app_data_dir", lambda: tmp_path)
+    source = tmp_path / "language.jou"
+    _write(source, "/solve/iterate 10\n")
+    try:
+        i18n.set_language("en")
+        assert studio.ws.open_document(str(source), remote=False)
+        assert pump(studio.wx, lambda: studio.ws.documents.GetPageCount() == 1)
+        page = studio.ws._active_page()
+
+        i18n.set_language("tr")
+        assert studio.ws.btn_new.GetLabel() == "Yeni Journal"
+        assert page._localized_labels["journal_studio.structure"][0].GetLabel() == "Journal Yapısı"
+        assert page._localized_labels["journal_studio.source"][0].GetLabel() == "Kaynak"
+        assert studio.ws.documents.GetPageText(0) == "language.jou"
+
+        i18n.set_language("en")
+        assert studio.ws.btn_new.GetLabel() == "New Journal"
+        assert page._localized_labels["journal_studio.structure"][0].GetLabel() == "Journal Structure"
+        assert page.results.GetPageText(0) == "Problems"
+        assert page.mode_choice.GetString(0) == "Solution"
+    finally:
+        i18n.set_language(original_language)

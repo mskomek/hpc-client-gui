@@ -39,6 +39,15 @@ def test_about__visible_contract_fields(wx_app):
         assert required in seen["buttons"], seen["buttons"]
 
 
+def test_about_modal_interception_restores_native_wx_descriptor(wx_app):
+    """Temporary interception must not poison later native dialog dispatch."""
+    import wx
+
+    original = wx.Dialog.__dict__["ShowModal"]
+    _collect_about_labels()
+    assert wx.Dialog.__dict__["ShowModal"] is original
+
+
 def test_about__contract_detector_is_sensitive(wx_app, monkeypatch):
     """W01-E sensitivity: the pre-FIX-W01-002 MessageBox implementation
     cannot satisfy the dialog contract (proves the contract test detects

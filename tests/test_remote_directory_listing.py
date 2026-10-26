@@ -8,7 +8,7 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import Qt, QThreadPool
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
 from hpc_gui.services.files_base import RemoteEntry
@@ -81,10 +81,15 @@ class RemoteDirectoryListingTests(unittest.TestCase):
         self.addCleanup(panel.deleteLater)
         return panel
 
-    def _drain(self) -> None:
-        self.assertTrue(QThreadPool.globalInstance().waitForDone(15000))
-        for _ in range(50):
+    def _drain(self, panel: RemoteDirPanel) -> None:
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
             self.app.processEvents()
+            if panel._listing_worker is None and panel._pending_listing is None:
+                self.app.processEvents()
+                return
+            time.sleep(0.005)
+        self.fail("this panel's directory listing did not settle within 15 seconds")
 
     @pytest.mark.gui
     @pytest.mark.qt
@@ -101,7 +106,7 @@ class RemoteDirectoryListingTests(unittest.TestCase):
 
         panel._begin_render = counted  # type: ignore[method-assign]
         panel.set_dir("/work")
-        self._drain()
+        self._drain(panel)
 
         # ".." plus every entry, and the tree is built exactly once.
         self.assertEqual(panel.views["all"].topLevelItemCount(), len(entries) + 1)
@@ -113,7 +118,7 @@ class RemoteDirectoryListingTests(unittest.TestCase):
     def test_default_sort_groups_folders_before_files(self) -> None:
         panel = self._panel(_StreamingFiles(_entries(30)))
         panel.set_dir("/work")
-        self._drain()
+        self._drain(panel)
 
         view = panel.views["all"]
         self.assertEqual(view.topLevelItem(0).text(0), "..")
@@ -140,8 +145,8 @@ class RemoteDirectoryListingTests(unittest.TestCase):
         panel.set_dir("/work/a")
         panel.set_dir("/work/b")
         # B only starts once A's abandoned run settles, so drain twice.
-        self._drain()
-        self._drain()
+        self._drain(panel)
+        self._drain(panel)
 
         self.assertEqual(files.iter_calls, 2)
         self.assertGreaterEqual(files.abandoned, 1)
@@ -161,8 +166,8 @@ class RemoteDirectoryListingTests(unittest.TestCase):
         panel.set_dir("/work/d")
         # The coalesced request only starts once the abandoned one settles, so
         # drain a second time to let it run to completion.
-        self._drain()
-        self._drain()
+        self._drain(panel)
+        self._drain(panel)
 
         self.assertEqual(files.paths, ["/work/a", "/work/d"])
         self.assertEqual(panel.current_dir, "/work/d")
@@ -174,7 +179,7 @@ class RemoteDirectoryListingTests(unittest.TestCase):
     def test_only_the_visible_category_is_sorted_up_front(self) -> None:
         panel = self._panel(_StreamingFiles(_entries(30)))
         panel.set_dir("/work")
-        self._drain()
+        self._drain(panel)
 
         self.assertNotIn("all", panel._dirty_views)
         self.assertIn("slurm", panel._dirty_views)
@@ -187,9 +192,9 @@ class RemoteDirectoryListingTests(unittest.TestCase):
         files = _StreamingFiles(_entries(10))
         panel = self._panel(files)
         panel.set_dir("/work")
-        self._drain()
+        self._drain(panel)
         panel.refresh_async()
-        self._drain()
+        self._drain(panel)
 
         self.assertEqual(files.iter_calls, 1)
         self.assertEqual(panel.views["all"].topLevelItemCount(), 11)

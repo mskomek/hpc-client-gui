@@ -9,6 +9,7 @@ from hpc_gui.core.diagnostics import create_diagnostic_bundle
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.core.log_redaction import redact_text
 from hpc_gui.core.logging import log_path as default_log_path
+from hpc_gui.services.system_clipboard import set_text as set_system_clipboard_text
 from hpc_gui.wx_host import make_host
 from hpc_gui.wx_logs import WxLogsModel
 
@@ -76,9 +77,7 @@ def _build_send_logs(parent, model: WxLogsModel | None = None, *, log_path: str 
     def copy_logs(_event=None):
         try:
             txt = log_view.GetValue()
-            if wx.TheClipboard.Open():
-                wx.TheClipboard.SetData(wx.TextDataObject(txt))
-                wx.TheClipboard.Close()
+            set_system_clipboard_text(wx.TheClipboard, wx.TextDataObject, txt)
         except Exception:
             pass
 

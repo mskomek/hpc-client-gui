@@ -53,11 +53,14 @@ def test_wx_remote_context_menu_reopens_with_turkish_labels(wx_app):
     )
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
     listing = frame._wx_remote_controls["listing"]
-    _pump(wx_app, lambda: listing.GetItemCount() > 0)
-    listing.Select(0)
+    _pump(wx_app, lambda: any(
+        listing.GetItemText(i) == "a.txt" for i in range(listing.GetItemCount())
+    ))
+    row = next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i) == "a.txt")
+    listing.Select(row)
     labels = []
     listing.PopupMenu = lambda menu: labels.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
-    rect = listing.GetItemRect(0)
+    rect = listing.GetItemRect(row)
     position = listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(position)
@@ -79,11 +82,14 @@ def test_wx_local_context_menu_reopens_with_turkish_labels(wx_app, tmp_path: Pat
     show_local_files(path=tmp_path, upload=lambda _paths: None)
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_local_controls")][-1]
     listing = frame._wx_local_controls["listing"]
-    listing.Select(0)
+    _pump(wx_app, lambda: any(
+        listing.GetItemText(i) == "job.slurm" for i in range(listing.GetItemCount())
+    ))
+    row = next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i) == "job.slurm")
+    listing.Select(row)
     labels = []
     listing.PopupMenu = lambda menu: labels.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
-    _pump(wx_app, lambda: listing.GetItemCount() > 0)
-    rect = listing.GetItemRect(0)
+    rect = listing.GetItemRect(row)
     position = listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(position)

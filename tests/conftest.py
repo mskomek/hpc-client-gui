@@ -31,6 +31,29 @@ os.environ.setdefault("HPC_GUI_DISABLE_WEBENGINE", "1")
 
 import pytest  # noqa: E402
 
+
+@pytest.fixture
+def disable_optional_transfer_checksums(monkeypatch):
+    """Isolate transfer protocol assertions from persisted checksum preferences."""
+    from hpc_gui.config import storage
+    from hpc_gui import wx_shell_file_transfer
+
+    monkeypatch.setattr(storage, "get_transfer_checksum_verification_enabled", lambda: False)
+    monkeypatch.setattr(wx_shell_file_transfer, "_transfer_checksum_requested", lambda: False)
+
+
+@pytest.fixture
+def updater_english_language():
+    """Keep updater dialog text assertions independent of test order."""
+    from hpc_gui.core.i18n import current_language, load_language
+
+    previous = current_language()
+    load_language("en")
+    try:
+        yield
+    finally:
+        load_language(previous)
+
 try:
     import wx  # noqa: E402
 except ImportError:  # pragma: no cover - exercised only in non-wx environments
@@ -40,27 +63,74 @@ else:
     # process momentarily holds, a destroyed control) opens a modal dialog that
     # blocks the run until someone clicks it. Tests want the text, not a dialog.
     #
-    # The C++ wxApp is process-global: creating a second wx.App replaces the
-    # first without destroying it, and destroying any app wrapper clears the
-    # global. A module that abandons its replaced app therefore leaves a time
-    # bomb; a later garbage collection pass deallocates that wrapper, tears down
-    # the live application, and the next wx control raises PyNoAppError.
-    # Destroy an app that is about to be replaced while it is still the current
-    # app, before the new app exists. That keeps at most one live application
-    # and removes the abandonment time bomb.
+    # wxApp is process-global. Destroying and recreating its C++ singleton in
+    # a mixed wx/Qt process leaves native state behind; Qt later pumps the
+    # Windows queue and can access freed memory. Keep one app wrapper alive,
+    # and make legacy Destroy() calls release only their test windows.
+    _wx_app_new = wx.App.__new__
     _wx_app_init = wx.App.__init__
+    _wx_app_singleton = None
 
-    def _wx_app_init_without_modal_logging(self, *args, **kwargs):
-        previous = wx.App.Get()
-        if previous is not None and previous is not self:
+    def _wx_app_singleton_new(cls, *args, **kwargs):
+        global _wx_app_singleton
+        current = wx.App.Get()
+        if current is not None:
+            _wx_app_singleton = current
+            return current
+        if _wx_app_singleton is None:
+            _wx_app_singleton = _wx_app_new(cls)
+        return _wx_app_singleton
+
+    def _close_wx_top_level_windows(app, *, keep=()):
+        for _attempt in range(12):
+            windows = [window for window in wx.GetTopLevelWindows() if window not in keep]
+            if not windows:
+                return
+            # Destroy one top-level at a time. Closing a parent can destroy a
+            # modal child that was also in this snapshot; touching that stale
+            # SWIG wrapper then raises a native type error or corrupts wx state.
+            window = windows[-1]
             try:
-                previous.Destroy()
+                if window and not window.IsBeingDeleted():
+                    if not window.Close(force=True):
+                        window.Destroy()
+            except Exception:
+                try:
+                    if window:
+                        window.Destroy()
+                except Exception:
+                    pass
+            try:
+                app.ProcessPendingEvents()
+                wx.YieldIfNeeded()
             except Exception:
                 pass
+
+    def _wx_app_close_windows(self):
+        if wx.App.Get() is not self:
+            return False
+        _close_wx_top_level_windows(self)
+        return True
+
+    def _wx_app_init_without_modal_logging(self, *args, **kwargs):
+        if getattr(self, "_codex_process_app_initialized", False):
+            return
         _wx_app_init(self, *args, **kwargs)
+        self._codex_process_app_initialized = True
         wx.Log.SetActiveTarget(wx.LogStderr())
 
+    wx.App.__new__ = _wx_app_singleton_new
     wx.App.__init__ = _wx_app_init_without_modal_logging
+    wx.App.Destroy = _wx_app_close_windows
+
+    @pytest.fixture(autouse=True)
+    def _release_wx_windows_opened_by_test():
+        app = wx.App.Get()
+        before = set(wx.GetTopLevelWindows()) if app is not None else set()
+        yield
+        app = wx.App.Get()
+        if app is not None:
+            _close_wx_top_level_windows(app, keep=before)
 
 try:
     # Lightweight runs such as the Plugin API contract suite execute without

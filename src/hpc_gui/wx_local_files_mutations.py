@@ -2,6 +2,7 @@
 
 from threading import Thread
 from hpc_gui.core.i18n import t
+from hpc_gui.services.system_clipboard import set_text as set_system_clipboard_text
 from hpc_gui.wx_local_files_model import open_with_system, reveal_in_file_manager
 
 def install_mutations(view):
@@ -180,9 +181,9 @@ def install_mutations(view):
             except OSError as error:
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
         elif action == "copy_path":
-            if wx.TheClipboard.Open():
-                wx.TheClipboard.SetData(wx.TextDataObject(str(entry.path)))
-                wx.TheClipboard.Close()
+            set_system_clipboard_text(
+                wx.TheClipboard, wx.TextDataObject, str(entry.path),
+            )
         elif action == "rename":
             dialog = wx.TextEntryDialog(host, t("dirs.rename"), t("dirs.rename"), entry.path.name)
             try:

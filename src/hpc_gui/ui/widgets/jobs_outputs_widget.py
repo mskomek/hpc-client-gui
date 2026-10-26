@@ -1722,7 +1722,23 @@ class JobsOutputsWidget(QWidget):
             )
 
         finish_scroll()
-        QTimer.singleShot(0, finish_scroll)
+        expected_vertical = widget.verticalScrollBar().value()
+        expected_horizontal = widget.horizontalScrollBar().value()
+
+        def finish_deferred_scroll() -> None:
+            if not isValid(widget):
+                return
+            vertical = widget.verticalScrollBar()
+            if vertical.value() != expected_vertical:
+                return
+            vertical.setValue(vertical.maximum())
+            horizontal = widget.horizontalScrollBar()
+            if horizontal.value() == expected_horizontal:
+                horizontal.setValue(
+                    min(horizontal_position, horizontal.maximum())
+                )
+
+        QTimer.singleShot(0, finish_deferred_scroll)
 
     @staticmethod
     def _is_scrolled_to_bottom(widget: QTextEdit) -> bool:

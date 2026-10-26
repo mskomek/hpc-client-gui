@@ -7,6 +7,7 @@ from typing import Any, Callable
 
 from hpc_gui.core.i18n import t
 from hpc_gui.services.raw_command_result import RawCommandResult
+from hpc_gui.services.system_clipboard import set_text as set_system_clipboard_text
 
 
 _SOURCE_LABELS = {
@@ -160,12 +161,7 @@ def show_raw_viewer(
         parts = [stdout_text.GetValue()]
         if _stderr_state["ctrl"] is not None:
             parts.append(f"\n--- STDERR ---\n{_stderr_state['ctrl'].GetValue()}")
-        data = wx.TextDataObject("\n".join(parts))
-        if wx.TheClipboard.Open():
-            try:
-                wx.TheClipboard.SetData(data)
-            finally:
-                wx.TheClipboard.Close()
+        set_system_clipboard_text(wx.TheClipboard, wx.TextDataObject, "\n".join(parts))
 
     def _on_select_all(_event=None):
         if closed["value"]:

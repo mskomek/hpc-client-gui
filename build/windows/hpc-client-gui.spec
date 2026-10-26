@@ -51,7 +51,7 @@ if I18N_DIR.exists():
     datas.append((str(I18N_DIR), "hpc_gui/i18n"))
 if DOCS_DIR.exists():
     datas.append((str(DOCS_DIR), "hpc_gui/docs"))
-for _license_name in ("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md", "QT_LGPL_SOURCE_OFFER.md", "THIRD_PARTY_VERSIONS.txt", "SBOM.cdx.json", "QT_LGPL_SOURCES.json"):
+for _license_name in ("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md", "THIRD_PARTY_VERSIONS.txt", "SBOM.cdx.json"):
     _license_path = REPO_ROOT / _license_name
     if _license_path.exists():
         datas.append((str(_license_path), "."))
@@ -71,6 +71,9 @@ hiddenimports = sorted(
         "hpc_gui.cli.main",
         "hpc_gui.cli.session",
         "hpc_gui.cli.files",
+        # Plugin API v2 linter engines are imported dynamically from a user
+        # plugin directory; PyInstaller cannot infer their stdlib imports.
+        "xml.etree.ElementTree",
     }
 )
 

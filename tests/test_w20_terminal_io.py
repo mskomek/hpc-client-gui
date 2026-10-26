@@ -122,35 +122,64 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
-@pytest.mark.gui
-@pytest.mark.subprocess
+@pytest.mark.unit
 @pytest.mark.semantic
 def test_w20_write_failure_via_bridge_dispatch():
     """REQ-HPC-W05-TERM-007 / DEF-W20-001: real bridge dispatch shows failure."""
-    if not _is_webview_available():
-        pytest.skip("WebView backend unavailable")
-    code = _SETUP + """
-import json
-frame = wx.Frame(None, size=(900, 600))
-panel = WxTerminalWebViewPanel(frame, ssh=FailSSH())
-panel._ready = True
-panel._is_parity = True
+    import json
 
-class FakeEvent:
-    def GetString(self):
-        return json.dumps({"type": "input", "data": "echo via bridge"})
+    from hpc_gui.wx_terminal_webview_bridge import TerminalBridgeMixin
+    from hpc_gui.wx_terminal_webview_io import TerminalIOMixin
+    from hpc_gui.wx_terminal_webview import (
+        WxTerminalWebViewPanel,
+    )
 
-panel._on_script_message(FakeEvent())
-diag = panel._status_label.GetLabel()
-assert "gönderilemedi" in diag or "could not be sent" in diag, diag
-# The rejected input must not have been accepted anywhere
-assert panel._ssh.sent == ["echo via bridge"], panel._ssh.sent
-panel.close()
-frame.Destroy()
-os._exit(0)
-"""
-    result = _run_subprocess_test(code)
-    assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
+    class StatusLabel:
+        value = "Connected"
+
+        def SetLabel(self, value):
+            self.value = value
+
+        def GetLabel(self):
+            return self.value
+
+    class BridgeHarness(TerminalBridgeMixin, TerminalIOMixin):
+        _write_failure_text = WxTerminalWebViewPanel._write_failure_text
+        _show_write_failure = WxTerminalWebViewPanel._show_write_failure
+        _clear_write_failure = WxTerminalWebViewPanel._clear_write_failure
+
+        def __init__(self):
+            class RejectingSSH:
+                def __init__(self):
+                    self.sent = []
+
+                def send_shell_input(self, value):
+                    self.sent.append(value)
+                    return False
+
+            self._closed = False
+            self._write_failure_shown = False
+            self._status_text = "Connected"
+            self._status_label = StatusLabel()
+            self._ssh = RejectingSSH()
+            self._send_input = None
+            self._resize_pty = None
+
+    class FakeEvent:
+        def GetString(self):
+            return json.dumps({"type": "input", "data": "echo via bridge"})
+
+    from hpc_gui.core import i18n
+
+    previous_language = i18n.current_language()
+    i18n.load_language("en")
+    try:
+        panel = BridgeHarness()
+        panel._on_script_message(FakeEvent())
+        assert "could not be sent" in panel._status_label.GetLabel()
+        assert panel._ssh.sent == ["echo via bridge"]
+    finally:
+        i18n.load_language(previous_language)
 
 
 @pytest.mark.gui

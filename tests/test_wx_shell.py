@@ -26,7 +26,9 @@ def test_wx_shell_dispatches_core_views():
     source = "".join(path.read_text(encoding="utf-8") for path in Path("src/hpc_gui").glob("wx_shell*.py"))
     assert 'command_id == "NAV-FILES"' in source
     assert '"open_editor_new_window": lambda path: open_local(path, True)' in source
-    assert "Path(path).read_text" in source and "manager.open_primary" in source
+    # Local editor loading uses the shared encoding-aware byte decoder in the
+    # extracted files branch; keep the audit tied to that current contract.
+    assert "Path(path).read_bytes" in source and "manager.open_primary" in source
     assert '"upload": upload_local' in source and "_start_file_transfers" in source
     assert "_editor_action_factory" in source and "current.is_local" in source
     assert 'command_id == "NAV-EDITOR"' in source
