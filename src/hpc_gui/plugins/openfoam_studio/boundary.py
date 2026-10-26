@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from hpc_gui.openfoam_core.boundary import BC_TYPES, FIELD_DIMS, PATCH_TYPES, allowed_bc
+from hpc_gui.openfoam_core.boundary import (
+    BC_TYPES,
+    FIELD_DIMS,
+    PATCH_TYPES,  # noqa: F401 — compatibility re-export
+    allowed_bc,
+)
 
 
 def render_field_file(field: str, internal: str, patches: dict[str, tuple[str, str]]) -> str:

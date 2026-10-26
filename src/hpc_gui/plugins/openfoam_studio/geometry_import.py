@@ -39,14 +39,18 @@ def inspect_surface(path: str, size_bytes: int, head: bytes) -> SurfaceInfo:
         verts = re.findall(r"vertex\s+([-\d.eE+]+)\s+([-\d.eE+]+)\s+([-\d.eE+]+)", text[:65536])
         facets = text[:65536].count("facet normal")
         if verts:
-            xs = [float(v[0]) for v in verts]; ys = [float(v[1]) for v in verts]; zs = [float(v[2]) for v in verts]
+            xs = [float(v[0]) for v in verts]
+            ys = [float(v[1]) for v in verts]
+            zs = [float(v[2]) for v in verts]
             bounds = ((min(xs), max(xs)), (min(ys), max(ys)), (min(zs), max(zs)))
         if facets == 0:
             warnings.append("no facets parsed in ASCII STL head; file may be binary or corrupt")
     elif suffix == ".obj":
         verts = re.findall(r"^v\s+([-\d.eE+]+)\s+([-\d.eE+]+)\s+([-\d.eE+]+)", text[:65536], re.M)
         if verts:
-            xs = [float(v[0]) for v in verts]; ys = [float(v[1]) for v in verts]; zs = [float(v[2]) for v in verts]
+            xs = [float(v[0]) for v in verts]
+            ys = [float(v[1]) for v in verts]
+            zs = [float(v[2]) for v in verts]
             bounds = ((min(xs), max(xs)), (min(ys), max(ys)), (min(zs), max(zs)))
     if bounds is None:
         warnings.append("bounds UNKNOWN from head sample; full import will re-measure")

@@ -55,11 +55,9 @@ def selector_state(edition: str = "OpenFOAM.com / ESI (OpenCFD)", version: str =
 
 def diff_rows(preview_text: str) -> list[dict]:
     rows = []
-    current: dict | None = None
     for line in preview_text.splitlines():
         if line.startswith("--- verify-only") or line.startswith("--- no change"):
             rows.append({"kind": "info", "text": line})
-            current = None
         elif line.startswith("--- ") or line.startswith("+++ ") or line.startswith("@@"):
             continue
         elif line.startswith("+") and not line.startswith("+++"):

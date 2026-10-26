@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from hpc_gui.openfoam_core.physics import SOLVER_FAMILIES, TURBULENCE_MODELS, required_fields_for
+from hpc_gui.openfoam_core.physics import (
+    SOLVER_FAMILIES,  # noqa: F401 — compatibility re-export used by solver.py
+    TURBULENCE_MODELS,
+    required_fields_for,  # noqa: F401 — compatibility re-export used by solver.py
+)
 
 AIR_15C = {"rho": 1.225, "mu": 1.789e-05, "units": "SI", "provenance": "user-library:air-15C"}
 WATER_20C = {"rho": 998.0, "mu": 1.002e-03, "units": "SI", "provenance": "user-library:water-20C"}
