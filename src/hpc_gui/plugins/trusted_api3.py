@@ -90,15 +90,15 @@ TRUSTED_API3_PUBLISHER = "HPC Client GUI"
 
 # Exact verified identities (dotted reverse-DNS; short names are rejected).
 API3_LINTER_ID = "org.hpcclient.openfoamlint"
-API3_LINTER_VERSION = "0.2.1-w65r18.20261026.1"
+API3_LINTER_VERSION = "0.2.1-w65r18.20261026.2"
 API3_STUDIO_ID = "org.hpcclient.openfoamcasestudio"
-API3_STUDIO_VERSION = "0.3.1-w65r18.20261026.1"
+API3_STUDIO_VERSION = "0.3.1-w65r18.20261026.2"
 
 API3_LINTER_ENTRYPOINT = "engine/openfoam_lint/__init__.py"
 API3_STUDIO_TEMPLATES_ENTRYPOINT = "templates/index.json"
 
 # The two verified OpenFOAM package identities (id, exact version) that
-# Phase A trusts only these two exact code-pinned release versions.
+# Phase A trusts only these exact code-pinned release versions.
 OPENFOAM_API3_IDENTITIES = (
     (API3_LINTER_ID, API3_LINTER_VERSION),
     (API3_STUDIO_ID, API3_STUDIO_VERSION),
