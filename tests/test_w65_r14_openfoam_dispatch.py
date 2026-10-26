@@ -263,12 +263,12 @@ def test_legacy_short_ids_stay_pending():
     assert pma.is_openfoam_dispatch_ready(_legacy_short("openfoam-case-studio")) is False
 
 
-def test_empty_production_pins_fail_closed(tmp_path: Path):
+def test_candidate_version_with_wrong_payload_fails_closed(tmp_path: Path):
     manifest = _studio_manifest()
     package = _write_package(tmp_path, manifest, {TEMPLATES_REL: TEMPLATES_SRC})
     installed = _installed(manifest, package)
     allowed, reason = pma.can_execute_action("openfoam.open_studio", installed)
-    assert allowed is False and "no host release pin" in reason
+    assert allowed is False and "does not match the host release pin" in reason
     assert api3_error_for_dir(installed.manifest, package) is not None
     assert pma.is_openfoam_dispatch_ready(installed) is False
     assert WxPluginMenuHost().run_openfoam_studio(installed) is False

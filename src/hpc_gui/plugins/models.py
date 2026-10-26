@@ -23,8 +23,8 @@ PLUGIN_API_VERSION = 1
 # The legacy numeric marker 2 is accepted only after the application-owned
 # trusted-tool policy approves the exact ANSYS identity. The narrow marker 3
 # is accepted only after the application-owned API v3 release pin approves
-# the exact OpenFOAM (id, version, contract, hashes) identity; with no
-# provisioned pins every API 3 package fails closed (see trusted_api3).
+# the exact OpenFOAM (id, version, contract, hashes) identity (see
+# trusted_api3 and the host-owned api3-release-pins.json package data).
 SUPPORTED_PLUGIN_API_VERSIONS = frozenset({1, 2, 3})
 
 CAPABILITY_CLUSTER_PROFILE = "cluster-profile"

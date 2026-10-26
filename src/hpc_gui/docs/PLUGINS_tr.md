@@ -237,32 +237,31 @@ sürümünüze göre doğrulayın.
 ## Plugin API v3 sürüm sabitleri (OpenFOAM)
 
 Plugin API v3, yalnızca iki kesin OpenFOAM kimliği için dar kapsamlı,
-konak sabitli bir uzantıdır. Üretimde **konak sürüm sabiti yoktur**, bu
-yüzden sürüm sabitleri yayımlanana kadar her API 3 paketi doğrulama,
-kurulum, yükleme ve çalıştırma aşamalarında kapalı kalır. Eski bir API 2
-paketini sürümünü ya da kimliğini dönüştürerek onaylamayın.
+konak sabitli bir uzantıdır. Uygulama sahipli
+`plugins/api3-release-pins.json` yalnızca aşağıdaki ayrı sürümlü W65 R18
+adaylarını onaylar. Diğer bütün API 3 kimlik/sürümleri kapalı kalır. Eski
+bir API 2 paketini sürümünü ya da kimliğini dönüştürerek onaylamayın.
 
 Dağıtımdaki `*-auditfix1` yapıtları API 2 olarak kalır ve değişmez; API 3
-değildir. API 3, ayrıca sürümlenmiş gelecek bir yapıt ile bilinçli konak
-sürüm sabitleri gerektirir (burada hiçbiri tanımlı değildir).
+değildir. R18 sürüm sabitleri manifest ve payload baytlarını doğrular;
+işletim sistemi sandbox'ı oluşturmaz.
 
-- Linter `org.hpcclient.openfoamlint` (dağıtımdaki `0.2.0-w65r17-auditfix1`
-  API 2 adayı değil, ayrıca sürümlenecek gelecek yapıt)
+  - Linter `org.hpcclient.openfoamlint`
+    (`0.2.1-w65r18.20261026.1`, dağıtımdaki `0.2.0-w65r17-auditfix1`
+    API 2 adayından ayrı sürüm)
   (`HPC Client GUI`, `plugin_api` `3`, yetenekler `linter-tool`, giriş
   noktası `linter_engine` = `engine/openfoam_lint/__init__.py`, içerik
   rolü `linter-engine`). Yürütülebilir içerik yalnızca bu kimlikte
   taşınabilir ve yalnızca sabit doğrulamalı baytlardan yüklenir.
-- Case Studio `org.hpcclient.openfoamcasestudio` (dağıtımdaki
-  `0.3.0-w65r17-auditfix1` API 2 adayı değil, ayrıca sürümlenecek
-  gelecek yapıt)
+  - Case Studio `org.hpcclient.openfoamcasestudio`
+    (`0.3.1-w65r18.20261026.1`, dağıtımdaki `0.3.0-w65r17-auditfix1`
+    API 2 adayından ayrı sürüm)
   (`HPC Client GUI`, `plugin_api` `3`, yetenekler `application-tools`,
-  `job-template`, giriş noktası `job_templates` = `templates/index.json`,
-  içerik rolü `template-index`). Yalnızca bildirimseldir: bu kimlikte
-  `linter_engine` ya da `application_tool` giriş noktası veya
-  `linter-engine` içeriği reddedilir. Aday studio `application_tool`
-  (`engine/openfoam_studio/__init__.py`) için bu ağaçta güvenli bir
-  yükleyici/yönlendirme yoktur; bu yüzden studio çalıştırma kapalı kalır
-  (engelleyici) ve entegre olarak gösterilmez.
+    `job-template`, giriş noktaları `job_templates` = `templates/index.json`
+    ve `application_tool` = `engine/openfoam_studio/__init__.py`, içerik
+    rolü `application-engine`). Yükleme yalnızca kesin konak sabiti bütün
+    paket baytlarını doğrulayınca açılır; callback'ler yetenek ve lifecycle
+    kontrollerinden geçer.
 
 Türkçe sürüm bu sayfadır; İngilizcesi için [PLUGINS_en.md](PLUGINS_en.md).
 

@@ -257,29 +257,26 @@ verify scripts against your installed release.
 ## Plugin API v3 release pins (OpenFOAM)
 
 Plugin API v3 is a narrow host-pinned extension for two exact OpenFOAM
-identities only. Production ships with **no host release pins**, so every
-API 3 package fails closed at validation, install, load, and dispatch
-until release engineering publishes code-owned pins. Never approve an old
-API 2 package by converting its version or identity.
+identities only. The application-owned `plugins/api3-release-pins.json`
+approves only the separately versioned W65 R18 candidates named below.
+Every other API 3 identity/version fails closed. Never approve an old API 2
+package by converting its version or identity.
 
 The shipped `*-auditfix1` artifacts stay API 2 and unchanged; they are
-not API 3. API 3 requires a separately versioned future artifact plus
-deliberate application-owned release pins (none provisioned here).
+not API 3. The R18 release pins attest to exact manifest and payload bytes,
+but do not create an operating-system sandbox.
 
-- Linter `org.hpcclient.openfoamlint` (future separately versioned
-  artifact, not the shipped `0.2.0-w65r17-auditfix1` API 2 candidate)
+- Linter `org.hpcclient.openfoamlint` (`0.2.1-w65r18.20261026.1`, separately
+  versioned from the shipped `0.2.0-w65r17-auditfix1` API 2 candidate)
   (`HPC Client GUI`, `plugin_api` `3`, capabilities `linter-tool`,
   entrypoint `linter_engine` = `engine/openfoam_lint/__init__.py`, payload
   role `linter-engine`). Only this identity may carry executable payloads,
   loaded from pin-verified bytes only.
-- Case Studio `org.hpcclient.openfoamcasestudio` (future separately
-  versioned artifact, not the shipped `0.3.0-w65r17-auditfix1` API 2
-  candidate)
+- Case Studio `org.hpcclient.openfoamcasestudio`
+  (`0.3.1-w65r18.20261026.1`, separately versioned from the shipped
+  `0.3.0-w65r17-auditfix1` API 2 candidate)
   (`HPC Client GUI`, `plugin_api` `3`, capabilities `application-tools`,
-  `job-template`, entrypoint `job_templates` = `templates/index.json`,
-  payload role `template-index`). Declarative only: any `linter_engine` or
-  `application_tool` entrypoint, or any `linter-engine` payload, for this
-  identity is rejected. The candidate studio `application_tool`
-  (`engine/openfoam_studio/__init__.py`) has no safe host loader or
-  dispatch in this tree, so studio execution stays fail-closed (blocker),
-  never labelled integrated.
+  `job-template`, entrypoints `job_templates` = `templates/index.json` and
+  `application_tool` = `engine/openfoam_studio/__init__.py`, payload role
+  `application-engine`). It loads only after the exact host pin verifies
+  every package byte; callbacks are capability and lifecycle gated.

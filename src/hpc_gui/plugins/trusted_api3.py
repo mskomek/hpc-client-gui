@@ -4,7 +4,7 @@ Phase A scoped host trust for the two verified OpenFOAM package identities
 (exact dotted IDs -- never short names):
 
 - ``org.hpcclient.openfoamlint`` lineage (exact dotted ID; executable
-  payload allowed only via a future separately versioned artifact with a
+  payload allowed only for the code-pinned W65 R18 candidate with a
   host pin -- publisher ``HPC Client GUI``, ``plugin_api`` 3,
   capabilities ``["linter-tool"]``, entrypoint
   ``{"linter_engine": "engine/openfoam_lint/__init__.py"}``, payload role
@@ -18,10 +18,9 @@ Phase A scoped host trust for the two verified OpenFOAM package identities
   ``application-engine`` (.py only); the shipped ``0.3.0-w65r17-auditfix1``
   tree stays API 2 and unchanged).
 
-The auditfix1 version strings name the candidate lineage only. API 3
-requires a separately versioned future artifact plus deliberate
-application-owned release pins (none provisioned: ``APPROVED_API3_PINS``
-stays empty).
+The auditfix1 versions remain API 2 and unchanged. The R18 candidate
+versions are separately versioned and pinned by the application-owned
+``api3-release-pins.json`` package data.
 
 A manifest self-claim grants nothing. Trust requires ALL of the following
 from application-owned data (never from the package under review):
@@ -51,13 +50,11 @@ content only. They do not isolate the engine from the host process, the
 filesystem, or the network. Treat an approved engine as host-process code
 with the user's privileges.
 
-RELEASE-PIN BLOCKER: no host-owned release hashes are provisioned in this
-tree. ``APPROVED_API3_PINS`` is therefore empty and every Plugin API v3
-package is rejected at validation, install, load and dispatch time until
-release engineering publishes code-owned pins for the identities above.
-Do NOT populate pins from package-provided hashes and do NOT invent or
-persist a private signing key in this tree. Tests inject pins with
-``monkeypatch`` only; production code must never mutate the table.
+Only the two R18 candidate versions in the host-owned pin file are approved.
+Every other API v3 package is rejected at validation, install, load and
+dispatch time. Never populate pins from package-provided hashes or persist
+a private signing key in this tree. Tests may replace the table with
+``monkeypatch``; production loads the immutable application-owned table.
 
 The Linter identity may carry only ``linter-engine``; the Studio identity
 may carry only ``application-engine``. Both exact entrypoints are pinned.
@@ -77,6 +74,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping
 
+from hpc_gui.plugins._api3_release_pins import Api3Pin, load_application_release_pins
 from hpc_gui.plugins._api3_files import (
     api3_components_have_links,
     api3_pin_path_error,
@@ -98,7 +96,7 @@ API3_LINTER_ENTRYPOINT = "engine/openfoam_lint/__init__.py"
 API3_STUDIO_TEMPLATES_ENTRYPOINT = "templates/index.json"
 
 # The two verified OpenFOAM package identities (id, exact version) that
-# Phase A may trust once host-owned release pins are provisioned.
+# Phase A trusts only these two exact code-pinned release versions.
 OPENFOAM_API3_IDENTITIES = (
     (API3_LINTER_ID, API3_LINTER_VERSION),
     (API3_STUDIO_ID, API3_STUDIO_VERSION),
@@ -119,52 +117,32 @@ __all__ = [
 ]
 
 RELEASE_PIN_BLOCKER = (
-    "no host release pins are provisioned for Plugin API v3 "
-    "(release engineering must publish code-owned pins; package-provided "
-    "hashes can never substitute)"
+    "the exact identity and version are not in the application-owned "
+    "release pin table (package-provided hashes can never substitute)"
 )
 
 
-class Api3Pin:
-    """Application-owned release pin for one exact (id, version) package."""
-
-    __slots__ = (
-        "plugin_id",
-        "version",
-        "publisher",
-        "api",
-        "capabilities",
-        "entrypoints",
-        "files",
-        "manifest_sha256",
-    )
-
-    def __init__(
-        self,
-        plugin_id: str,
-        version: str,
-        *,
-        publisher: str = TRUSTED_API3_PUBLISHER,
-        api: int = TRUSTED_API3_VERSION,
-        capabilities: tuple[str, ...] = (),
-        entrypoints: tuple[tuple[str, str], ...] = (),
-        files: tuple[tuple[str, str, str], ...] = (),
-        manifest_sha256: str | None = None,
-    ) -> None:
-        self.plugin_id = plugin_id
-        self.version = version
-        self.publisher = publisher
-        self.api = api
-        self.capabilities = capabilities
-        self.entrypoints = entrypoints
-        self.files = files
-        self.manifest_sha256 = manifest_sha256
-
-
-# Production table: intentionally empty (see RELEASE_PIN_BLOCKER above).
-# Tests replace this module global with monkeypatch; production code must
-# never assign to it.
-APPROVED_API3_PINS: dict[tuple[str, str], Api3Pin] = {}
+APPROVED_API3_PINS: Mapping[tuple[str, str], Api3Pin] = load_application_release_pins(
+    Path(__file__).with_name("api3-release-pins.json"),
+    expected={
+        (API3_LINTER_ID, API3_LINTER_VERSION): (
+            ("linter-tool",),
+            (("linter_engine", API3_LINTER_ENTRYPOINT),),
+            "linter-engine",
+        ),
+        (API3_STUDIO_ID, API3_STUDIO_VERSION): (
+            ("application-tools", "job-template"),
+            (
+                ("application_tool", "engine/openfoam_studio/__init__.py"),
+                ("job_templates", API3_STUDIO_TEMPLATES_ENTRYPOINT),
+            ),
+            "application-engine",
+        ),
+    },
+    publisher=TRUSTED_API3_PUBLISHER,
+    api=TRUSTED_API3_VERSION,
+    validate_path_role=api3_pin_path_error,
+)
 
 
 def api3_pin_for(

@@ -2,7 +2,8 @@
 
 Focused attack-surface tests for the application-owned API v3 gate. Every
 case must fail closed with no import, no test bypass, and no compact
-line-count tricks. Production pins stay empty; pins are monkeypatched.
+line-count tricks. Synthetic versions remain unpinned; tests inject narrow
+pins with monkeypatch when exercising successful trust paths.
 """
 
 from __future__ import annotations
@@ -211,6 +212,9 @@ def test_malformed_package_metadata_fails_closed(tmp_path: Path):
 
 
 @pytest.mark.contract
-def test_production_pins_stay_empty_and_fail_closed(tmp_path: Path):
-    assert trusted_api3.APPROVED_API3_PINS == {}
+def test_only_r18_release_versions_are_pinned(tmp_path: Path):
+    assert set(trusted_api3.APPROVED_API3_PINS) == {
+        ("org.hpcclient.openfoamlint", "0.2.1-w65r18.20261026.1"),
+        ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r18.20261026.1"),
+    }
     assert api3_error_for_dir(_manifest(), tmp_path, pins=None) is not None

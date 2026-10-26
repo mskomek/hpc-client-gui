@@ -2,8 +2,8 @@
 
 Direct facade/engine contract checks plus one end-to-end load of the real
 ``lint_text`` entrypoint through the API3 verified-byte loader. All
-sources and pins here are synthetic (``tmp_path`` + ``monkeypatch``);
-production ``APPROVED_API3_PINS`` stays empty.
+sources and test pins here are synthetic (``tmp_path`` + ``monkeypatch``);
+production pins approve only the two exact W65 R18 candidate identities.
 """
 
 from __future__ import annotations
@@ -42,10 +42,13 @@ from hpc_gui.plugin_engines.openfoam_lint.api import (
 )
 
 
-def test_production_api3_pins_stay_empty():
+def test_production_api3_pins_are_exact_candidate_versions():
     from hpc_gui.plugins import trusted_api3
 
-    assert trusted_api3.APPROVED_API3_PINS == {}
+    assert set(trusted_api3.APPROVED_API3_PINS) == {
+        ("org.hpcclient.openfoamlint", "0.2.1-w65r18.20261026.1"),
+        ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r18.20261026.1"),
+    }
 
 
 def test_facade_contract_names():

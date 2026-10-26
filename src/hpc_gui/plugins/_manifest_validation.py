@@ -90,8 +90,8 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
     elif plugin_api == 3:
         # Narrow host-pinned contract (trusted_api3): exact id, publisher,
         # API, entrypoints, capabilities, version plus exact file roles and
-        # hashes. With no provisioned host release pins this always fails
-        # closed here; installer/loader/dispatch re-verify actual bytes.
+        # hashes. Installer/loader/dispatch re-verify actual bytes after
+        # this code-owned release pin contract passes.
         reason = api3_static_error(manifest)
         if reason:
             errors.append(f"unapproved plugin_api 3 package: {reason}")

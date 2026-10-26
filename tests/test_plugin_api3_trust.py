@@ -134,8 +134,11 @@ def _file_entry(**overrides) -> dict:
 
 
 @pytest.mark.contract
-def test_production_pin_table_is_empty():
-    assert trusted_api3.APPROVED_API3_PINS == {}
+def test_production_pin_table_contains_only_r18_candidates():
+    assert set(trusted_api3.APPROVED_API3_PINS) == {
+        ("org.hpcclient.openfoamlint", "0.2.1-w65r18.20261026.1"),
+        ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r18.20261026.1"),
+    }
     assert SUPPORTED_PLUGIN_API_VERSIONS == frozenset({1, 2, 3})
 
 
