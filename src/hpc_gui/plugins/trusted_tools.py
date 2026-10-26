@@ -12,7 +12,18 @@ APPROVED_TRUSTED_TOOLS = {
         "publisher": "HPC Client GUI",
         "api": TRUSTED_TOOL_API_VERSION,
         "entrypoint": "engine/ansys_lint/__init__.py",
-    }
+    },
+    # W65 r12: verified OpenFOAM Linter plugin identity (LINT-013/G38).
+    # Identity source: N plugins/openfoam_lint/__init__.py PLUGIN_ID
+    # ("openfoam-linter") and engine layout engine/openfoam_lint/.
+    # Publisher follows the host's own approved-tool publisher. Approval
+    # stays code-owned here: a manifest naming this id with a different
+    # publisher or entrypoint is still rejected below.
+    "openfoam-linter": {
+        "publisher": "HPC Client GUI",
+        "api": TRUSTED_TOOL_API_VERSION,
+        "entrypoint": "engine/openfoam_lint/__init__.py",
+    },
 }
 
 

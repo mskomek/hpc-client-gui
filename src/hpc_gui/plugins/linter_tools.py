@@ -20,7 +20,10 @@ import importlib
 import sys
 
 from hpc_gui.plugins.loader import load_installed_plugins
-from hpc_gui.plugins.trusted_tools import is_approved_trusted_tool
+from hpc_gui.plugins.trusted_tools import (
+    APPROVED_TRUSTED_TOOLS,
+    is_approved_trusted_tool,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +74,13 @@ def load_tool_for_plugin(installed) -> LinterTool:
         raise ToolLoadError("Executable plugin is disabled unless it is an application-approved trusted tool.")
     descriptor = getattr(installed, "linter_engine", None) or {}
     rel = descriptor.get("module")
-    if rel != "engine/ansys_lint/__init__.py":
+    # W65 r12: the expected engine path is policy-derived (one approved
+    # entrypoint per plugin identity), never manifest-derived. An approved
+    # id with a wrong publisher already fails is_approved_trusted_tool
+    # above, so keying on the id here cannot be spoofed by a manifest.
+    policy = APPROVED_TRUSTED_TOOLS.get(getattr(installed.manifest, "id", None))
+    expected = policy["entrypoint"] if isinstance(policy, dict) else None
+    if expected is None or rel != expected:
         raise ToolLoadError("Trusted tool entrypoint is not approved.")
     package_dir = Path(installed.directory)
     init_path = package_dir / rel

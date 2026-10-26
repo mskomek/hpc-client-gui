@@ -23,15 +23,69 @@ ALLOWED_ACTIONS = frozenset(
         "editor.lint_current",
         "editor.new_from_plugin_templates",
         "plugin.open_trusted_tool",
+        # W65 r10: OpenFOAM studio/linter registration (HOST-002/G02).
+        # Allowlisted so the r9 validator-clean manifest fragment resolves
+        # to a known host action instead of "unknown action", but kept
+        # inert by the readiness gate below until plugin/host readiness
+        # is verified in a VM (no execution, no UI construction).
+        "openfoam.open_studio",
+        "openfoam.new_case",
+        "openfoam.create_job_draft",
+        "openfoam.validate",
     }
 )
+
+# OpenFOAM subset of the allowlist (W65 r10 inert registration).
+OPENFOAM_ACTIONS = frozenset(
+    {
+        "openfoam.open_studio",
+        "openfoam.new_case",
+        "openfoam.create_job_draft",
+        "openfoam.validate",
+    }
+)
+
+# Code-owned readiness flag: False until an OpenFOAM package identity is
+# installed AND a real (wx/Qt) host execution path is verified in a VM.
+# Reactivation trigger: N package install (G47) + VM-proven host path.
+OPENFOAM_DISPATCH_READY = False
+
+OPENFOAM_PENDING_REASON = (
+    "openfoam host binding pending readiness "
+    "(menu stays disabled; no execution)"
+)
+
+# Host method names for the future live path (r10 stubs return False).
+_OPENFOAM_HOST_METHODS = {
+    "openfoam.open_studio": "run_openfoam_studio",
+    "openfoam.new_case": "new_openfoam_case",
+    "openfoam.create_job_draft": "create_openfoam_job_draft",
+    "openfoam.validate": "validate_with_openfoam_linter",
+}
 
 # Action -> required plugin capability (at least one must be present)
 ACTION_CAPABILITIES: dict[str, tuple[str, ...]] = {
     "editor.lint_current": ("lint-rules", "linter-tool"),
     "editor.new_from_plugin_templates": ("job-template",),
     "plugin.open_trusted_tool": ("linter-tool",),
+    # W65 r10: studio actions need the generic application-tools surface;
+    # validate reuses the same lint surfaces as the existing lint action.
+    "openfoam.open_studio": ("application-tools",),
+    "openfoam.new_case": ("application-tools",),
+    "openfoam.create_job_draft": ("application-tools",),
+    "openfoam.validate": ("lint-rules", "linter-tool"),
 }
+
+
+def is_openfoam_dispatch_ready(plugin=None) -> bool:
+    """Return True only when an OpenFOAM host execution path is proven.
+
+    R10 always returns False (code-owned flag above): the registration
+    path (allowlist + capability) is live, but dispatch stays inert so
+    menu items render disabled and nothing executes. Reactivation needs
+    an installed OpenFOAM package identity plus a VM-verified host path.
+    """
+    return bool(OPENFOAM_DISPATCH_READY)
 
 
 def is_allowed_action(action: str) -> bool:
@@ -50,6 +104,11 @@ def can_execute_action(action: str, plugin: InstalledPlugin) -> tuple[bool, str]
         caps = set(plugin.manifest.capabilities or ())
         if not any(cap in caps for cap in required):
             return False, f"plugin {plugin.manifest.id} lacks required capability for {action!r}: needs {required}"
+    # W65 r10 readiness gate: OpenFOAM actions are registered but inert
+    # until a host execution path is proven. Items stay disabled; the
+    # reason distinguishes "pending" from "unknown action".
+    if action in OPENFOAM_ACTIONS and not is_openfoam_dispatch_ready(plugin):
+        return False, OPENFOAM_PENDING_REASON
     # Integrity: disabled/incompatible/corrupt plugins never reach here because
     # they are filtered by load_installed_plugins, but double-check
     # that manifest requires_app is still satisfied by current app version could be done by caller.
@@ -79,6 +138,24 @@ def dispatch_plugin_menu_action(
     allowed, reason = can_execute_action(action, plugin)
     if not allowed:
         logger.warning("Blocked plugin menu action %r for plugin %s: %s", action, getattr(plugin.manifest, "id", "?"), reason)
+        return False
+
+    # W65 r10: OpenFOAM actions stay inert even when a host is supplied.
+    # No UI is constructed and no plugin code runs; the readiness gate
+    # above already blocks, this is defense in depth for direct callers.
+    if action in OPENFOAM_ACTIONS:
+        if not is_openfoam_dispatch_ready(plugin):
+            logger.warning("Blocked plugin menu action %r for plugin %s: %s", action, plugin.manifest.id, OPENFOAM_PENDING_REASON)
+            return False
+        if host is not None:
+            try:
+                handler = getattr(host, _OPENFOAM_HOST_METHODS[action], None)
+                if callable(handler):
+                    return bool(handler(plugin))
+            except Exception as exc:
+                logger.warning("Plugin menu action %r failed for %s: %s", action, plugin.manifest.id, exc, exc_info=exc)
+                return False
+        logger.warning("Unhandled plugin menu action %r", action)
         return False
 
     # If a host adapter is supplied, delegate to it – shared layer never builds Qt UI

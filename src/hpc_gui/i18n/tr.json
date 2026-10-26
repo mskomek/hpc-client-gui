@@ -1384,5 +1384,25 @@
     "invalid_folder": "Geçersiz klasör: {path}",
     "no_supported_files": "Desteklenen dosya yok.",
     "engine_error": "Motor hatası"
+  },
+  "openfoam": {
+    "blocked_external": "Kullanılamıyor: harici dönüştürücü eksik",
+    "create_job": "İş Taslağı Oluştur",
+    "draft_only": "Yalnızca taslak - çalıştırmadan önce inceleyin",
+    "linter": "OpenFOAM Denetleyici",
+    "new_case": "Yeni OpenFOAM Vakası",
+    "no_findings": "Bulgu yok",
+    "open_studio": "OpenFOAM Vaka Stüdyosu ile Aç",
+    "title": "OpenFOAM Vaka Stüdyosu",
+    "validate": "OpenFOAM Denetleyici ile Doğrula",
+    "flow": "Görsel Akış",
+    "inspector": "Denetçi",
+    "source_diff": "Kaynak Farkı",
+    "validation": "Doğrulama",
+    "run_preview": "Çalıştırma Önizlemesi",
+    "results": "Sonuçlar",
+    "apply_confirm": "Uygula (onayla)",
+    "revert": "Geri Al",
+    "linter_unavailable": "Denetleyici yok; yalnızca statik denetim"
   }
 }

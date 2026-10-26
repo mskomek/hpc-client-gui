@@ -4,6 +4,7 @@ from pathlib import PurePosixPath
 from threading import Thread
 from hpc_gui.core.i18n import t
 from hpc_gui.services.file_clipboard import get_file_clipboard
+from hpc_gui.services.file_context_actions import is_openfoam_file_context_action
 
 
 def install_actions(view):
@@ -36,6 +37,11 @@ def install_actions(view):
     def run_action(action, selected, target_dir=None):
         tstate = active_tab_state()
         if not tstate:
+            return
+        if is_openfoam_file_context_action(action):
+            # W65 r13: of.* file-context ids never reach run_operation,
+            # chmod/Slurm/shell follow-ups. Identity-checked dispatch lives
+            # in the interactions layer; here fail closed with no effects.
             return
         if action == "run_shell" and run_shell and selected:
             run_shell(selected[0])

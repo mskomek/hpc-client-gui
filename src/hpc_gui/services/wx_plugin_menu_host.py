@@ -51,3 +51,23 @@ class WxPluginMenuHost:
         # wx has no Qt dialog – explicitly unsupported, do not fabricate
         logger.info("wx open_trusted_tool not supported for %s", plugin.manifest.id)
         return False
+
+    # W65 r10: OpenFOAM studio/linter host paths (HOST-002/G02).
+    # Registration is live via plugin_menu_actions allowlist, but every
+    # path stays inert (returns False, no UI, no execution) until a real
+    # wx flow is verified in a VM. Do not fabricate tool pages here.
+    def run_openfoam_studio(self, plugin: InstalledPlugin) -> bool:
+        logger.info("wx run_openfoam_studio not supported for %s", plugin.manifest.id)
+        return False
+
+    def new_openfoam_case(self, plugin: InstalledPlugin) -> bool:
+        logger.info("wx new_openfoam_case not supported for %s", plugin.manifest.id)
+        return False
+
+    def create_openfoam_job_draft(self, plugin: InstalledPlugin) -> bool:
+        logger.info("wx create_openfoam_job_draft not supported for %s", plugin.manifest.id)
+        return False
+
+    def validate_with_openfoam_linter(self, plugin: InstalledPlugin) -> bool:
+        logger.info("wx validate_with_openfoam_linter not supported for %s", plugin.manifest.id)
+        return False

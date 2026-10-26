@@ -1,0 +1,24 @@
+{
+ "excuse_host_run": false,
+ "candidate": {
+  "git_head": "e764299070e7b7945d51c8980959ca2759208fcf",
+  "key_files": "workflow.py ce205ef4, workflow_compiler.py cee8b96d, solver_effects.py fe55b62f, test_w65_r3_guards.py 76a5bc19, test_w65_workflow.py e5bcd7e1",
+  "zip_sha256": "75da1e903b27a096ed04ac47d37034f6a89c67658b2a2da7031131a706173b5d"
+ },
+ "command": "Set-Location C:/w65-confirm-r8/candidate; $env:PYTHONPATH='src'; C:/w65-r8-matplotlib-venv/Scripts/python.exe -m pytest tests/test_w65_catalog.py tests/test_w65_core_roundtrip.py tests/test_w65_evidence.py tests/test_w65_lint.py tests/test_w65_mesh.py tests/test_w65_physics.py tests/test_w65_r2_compiler.py tests/test_w65_r2_gui.py tests/test_w65_r2_jobs.py tests/test_w65_r2_lintcli.py tests/test_w65_r2_post.py tests/test_w65_r2_typed.py tests/test_w65_r3_guards.py tests/test_w65_sftp_slurm.py tests/test_w65_workflow.py -q",
+ "exit_code": 0,
+ "guest": {
+  "matplotlib": "3.11.2 (pip install in disposable venv C:/w65-r8-matplotlib-venv only)",
+  "python": "3.14.7",
+  "pytest": "9.1.1",
+  "user": "test/home",
+  "vm": "Windows11"
+ },
+ "log": ".tmp/simple-wave/W65-r8-matplotlib-followup.log",
+ "note": "Additive G29 recheck authorized by the r9 operator instruction. The 2 r8 env-only chart failures (matplotlib absent in system guest python) pass with matplotlib present; no product code changed for this receipt.",
+ "result": "145 passed",
+ "round": 8,
+ "scope": "exact r8 confirm candidate, full 15-file W65 suite in disposable venv",
+ "verdict": "PASS",
+ "wave": "W65"
+}

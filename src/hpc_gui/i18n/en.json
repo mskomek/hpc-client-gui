@@ -1384,5 +1384,25 @@
     "invalid_folder": "Invalid folder: {path}",
     "no_supported_files": "No supported files to lint.",
     "engine_error": "Engine error"
+  },
+  "openfoam": {
+    "blocked_external": "Unavailable: external converter missing",
+    "create_job": "Create Job Draft",
+    "draft_only": "Draft only - review before running",
+    "linter": "OpenFOAM Linter",
+    "new_case": "New OpenFOAM Case",
+    "no_findings": "No findings",
+    "open_studio": "Open with OpenFOAM Case Studio",
+    "title": "OpenFOAM Case Studio",
+    "validate": "Validate with OpenFOAM Linter",
+    "flow": "Visual Flow",
+    "inspector": "Inspector",
+    "source_diff": "Source Diff",
+    "validation": "Validation",
+    "run_preview": "Run Preview",
+    "results": "Results",
+    "apply_confirm": "Apply (confirm)",
+    "revert": "Revert",
+    "linter_unavailable": "Linter unavailable; static checks only"
   }
 }

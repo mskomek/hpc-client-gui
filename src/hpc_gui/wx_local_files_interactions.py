@@ -1,9 +1,63 @@
 """Private wx local-file interactions component."""
 
 from hpc_gui.core.i18n import t
+from hpc_gui.services.file_context_actions import (
+    context_selection as context_selection,
+    dispatch_openfoam_file_context_action as dispatch_openfoam_file_context_action,
+    is_openfoam_file_context_action as is_openfoam_file_context_action,
+    visible_actions as visible_actions,
+    visible_actions_with_openfoam as visible_actions_with_openfoam,
+)
 from hpc_gui.wx_local_files_model import LocalEntry
-from hpc_gui.services.file_context_actions import context_selection
 from hpc_gui.wx_smart_file_open import open_local_file
+
+
+def _openfoam_plugins(view) -> tuple:
+    """Installed OpenFOAM plugins offered to the local File context menu.
+
+    Read from the optional ``openfoam_file_context_plugins`` view
+    attribute (iterable or zero-argument provider); absent means no
+    contribution. Never raises: failures yield no plugins.
+    """
+    provider = getattr(view, "openfoam_file_context_plugins", None)
+    if provider is None:
+        return ()
+    if callable(provider):
+        try:
+            provider = provider()
+        except Exception:
+            return ()
+    try:
+        return tuple(provider or ())
+    except TypeError:
+        return ()
+
+
+def local_menu_actions(selection, plugins, *, upload=True) -> tuple:
+    """Real local menu composition: base actions + validated of.* ids.
+
+    This is the exact composition used by :func:`context_menu` below.
+    Readiness False yields the legacy base order unchanged. Only of.*
+    ids are ever appended; availability filtering stays with the base.
+    """
+    base = tuple(
+        action for action in visible_actions(selection, remote=False)
+        if action != "upload" or upload
+    )
+    extra = visible_actions_with_openfoam(selection, remote=False, plugins=plugins)
+    of_only = [action for action in extra if is_openfoam_file_context_action(action)]
+    return base + tuple(action for action in of_only if action not in base)
+
+
+def run_openfoam_file_context_action(action, selection, plugins) -> tuple:
+    """Fail-closed of.* dispatch for the local menu (W65 r13).
+
+    Always returns ``(False, reason)``: readiness False yields the pending
+    reason, a simulated-ready state yields the no-run-path reason. Never
+    touches the local model, dialogs, solver or HPC paths.
+    """
+    target = next(iter(plugins or ()), None)
+    return dispatch_openfoam_file_context_action(action, target, selection)
 
 def install_interactions(view):
     active_tab_state = view.active_tab_state
@@ -101,10 +155,14 @@ def install_interactions(view):
             background=index < 0 and not keyboard_context,
         )
         menu = wx.Menu()
-        actions = tuple(action for action in visible_actions(selection, remote=False) if action != "upload" or upload)
+        plugins = _openfoam_plugins(view)
+        actions = local_menu_actions(selection, plugins, upload=bool(upload))
         for action in actions:
             item = menu.Append(wx.ID_ANY, t(labels.get(action, "help.help_title")))
-            listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action), item)
+            if is_openfoam_file_context_action(action):
+                listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_openfoam_file_context_action(action, selection, plugins), item)
+            else:
+                listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action), item)
         listing.PopupMenu(menu)
         menu.Destroy()
 

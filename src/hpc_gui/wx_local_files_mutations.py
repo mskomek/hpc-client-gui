@@ -2,6 +2,7 @@
 
 from threading import Thread
 from hpc_gui.core.i18n import t
+from hpc_gui.services.file_context_actions import is_openfoam_file_context_action
 from hpc_gui.wx_local_files_model import open_with_system, reveal_in_file_manager
 
 def install_mutations(view):
@@ -98,6 +99,12 @@ def install_mutations(view):
     def run_action(action: str) -> None:
         tstate = active_tab_state()
         if not tstate:
+            return
+        if is_openfoam_file_context_action(action):
+            # W65 r13: of.* file-context ids are dispatched through the
+            # host-owned openfoam file-context path (interactions layer),
+            # never through legacy local mutations. Fail closed: no model
+            # change, no dialog, no execution.
             return
         selected = selected_entries()
         if action == "run_shell" and run_shell and selected:
