@@ -76,6 +76,10 @@ def _git(root: Path, *args: str) -> str:
     return subprocess.check_output(["git", "-C", str(root), *args], text=True).strip()
 
 
+def _git_bytes(root: Path, commit: str, path: str) -> bytes:
+    return subprocess.check_output(["git", "-C", str(root), "show", f"{commit}:{path}"])
+
+
 def _source_binding(
     root: Path,
     commit: str,
@@ -85,8 +89,7 @@ def _source_binding(
     *,
     package_path: str,
 ) -> dict:
-    source = root / path
-    original = source.read_bytes()
+    original = _git_bytes(root, commit, path)
     blob = _git(root, "rev-parse", f"{commit}:{path}")
     return {
         "package_path": package_path,
@@ -163,7 +166,7 @@ def _host_dependencies(root: Path, commit: str, engine_files: list[Path]) -> lis
         if source is None:
             raise RuntimeError(f"unresolved host API dependency: {module}")
         git_path = source.relative_to(root).as_posix()
-        payload = source.read_bytes()
+        payload = _git_bytes(root, commit, git_path)
         dependencies.append({
             "module": module,
             "source_path": git_path,
@@ -248,17 +251,21 @@ def _make_package(root: Path, commit: str, out: Path, *, kind: str) -> dict:
         if source.is_symlink() or not source.resolve().is_relative_to(root.resolve()):
             raise RuntimeError(f"plugin source is a link or escapes the repository: {source}")
     for source in [*engine_sources, *core_sources]:
-        relative = source.relative_to(engine_root if source.is_relative_to(engine_root) else core_root).as_posix()
-        if source.is_relative_to(engine_root):
+        is_engine_source = source.is_relative_to(engine_root)
+        relative_root = engine_root if is_engine_source else core_root
+        relative = source.relative_to(relative_root).as_posix()
+        if is_engine_source:
             package_path = f"{output_prefix}/{relative}"
-            transformed, transform = _relocate_core_imports(source.read_bytes(), core_module=False)
         else:
             package_path = f"{output_prefix}/openfoam_core/{relative}"
-            transformed, transform = _relocate_core_imports(source.read_bytes(), core_module=True)
+        source_path = source.relative_to(root).as_posix()
+        source_bytes = _git_bytes(root, commit, source_path)
+        transformed, transform = _relocate_core_imports(
+            source_bytes, core_module=not is_engine_source,
+        )
         files[package_path] = (transformed, engine_role)
         binding_rows.append(_source_binding(
-            root, commit, source.relative_to(root).as_posix(), transformed, transform,
-            package_path=package_path,
+            root, commit, source_path, transformed, transform, package_path=package_path,
         ))
     host_deps = _host_dependencies(root, commit, engine_sources)
     generator_path = Path(__file__).resolve().relative_to(root).as_posix()
@@ -339,7 +346,7 @@ def _make_package(root: Path, commit: str, out: Path, *, kind: str) -> dict:
     }
 
 
-def _verify_zip(out: Path, result: dict) -> None:
+def _verify_zip(root: Path, out: Path, commit: str, result: dict) -> None:
     archive_path = out / result["zip_path"]
     with zipfile.ZipFile(archive_path) as archive:
         names = archive.namelist()
@@ -371,6 +378,19 @@ def _verify_zip(out: Path, result: dict) -> None:
         target = package_dir.joinpath(*rel.parts)
         if _sha(target.read_bytes()) != row.get("output_sha256"):
             raise ValueError(f"source-binding output digest mismatch: {archive_path.name}:{rel}")
+        source_bytes = _git_bytes(root, commit, row["source_path"])
+        actual_blob = _git(root, "rev-parse", f"{commit}:{row['source_path']}")
+        if (actual_blob != row.get("git_blob")
+                or _sha(source_bytes) != row.get("source_sha256")
+                or len(source_bytes) != row.get("source_bytes")):
+            raise ValueError(f"source binding does not match Git blob: {row['source_path']}")
+    for dependency in bindings.get("host_api_dependencies", []):
+        source_bytes = _git_bytes(root, commit, dependency["source_path"])
+        actual_blob = _git(root, "rev-parse", f"{commit}:{dependency['source_path']}")
+        if (actual_blob != dependency.get("git_blob")
+                or _sha(source_bytes) != dependency.get("source_sha256")
+                or len(source_bytes) != dependency.get("source_bytes")):
+            raise ValueError(f"host dependency binding does not match Git blob: {dependency['source_path']}")
     if _sha(archive_path.read_bytes()) != result["zip_sha256"]:
         raise ValueError(f"archive digest changed while verifying: {archive_path.name}")
 
@@ -386,7 +406,7 @@ def build(output: str) -> Path:
     out.mkdir(parents=True)
     results = [_make_package(root, commit, out, kind="studio"), _make_package(root, commit, out, kind="linter")]
     for result in results:
-        _verify_zip(out, result)
+        _verify_zip(root, out, commit, result)
     provenance = {
         "schema_version": 1,
         "built_utc": datetime.now(timezone.utc).isoformat(),
