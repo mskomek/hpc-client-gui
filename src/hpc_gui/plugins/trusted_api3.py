@@ -57,7 +57,9 @@ a private signing key in this tree. Tests may replace the table with
 ``monkeypatch``; production loads the immutable application-owned table.
 
 The Linter identity may carry only ``linter-engine``; the Studio identity
-may carry only ``application-engine``. Both exact entrypoints are pinned.
+may carry only ``application-engine`` plus the JSON-only
+``application-catalog`` data role. Both exact entrypoints and every catalog
+byte are pinned.
 Pin paths are validated as safe package-relative POSIX paths before any
 filesystem access (no absolute paths, drive prefixes, backslashes,
 NUL/control chars, empty/dot/dotdot segments, or URL schemes), and

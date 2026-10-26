@@ -18,8 +18,8 @@ GENERATOR_VERSION = "1"
 PUBLISHER = "HPC Client GUI"
 STUDIO_ID = "org.hpcclient.openfoamcasestudio"
 LINTER_ID = "org.hpcclient.openfoamlint"
-STUDIO_VERSION = "0.3.1-w65r18.20261026.1"
-LINTER_VERSION = "0.2.1-w65r18.20261026.1"
+STUDIO_VERSION = "0.3.1-w65r18.20261026.2"
+LINTER_VERSION = "0.2.1-w65r18.20261026.2"
 APP_FLOOR = ">=1.5.9"
 STUDIO_ENGINE = "engine/openfoam_studio/__init__.py"
 LINTER_ENGINE = "engine/openfoam_lint/__init__.py"
@@ -266,6 +266,15 @@ def _make_package(root: Path, commit: str, out: Path, *, kind: str) -> dict:
         files[package_path] = (transformed, engine_role)
         binding_rows.append(_source_binding(
             root, commit, source_path, transformed, transform, package_path=package_path,
+        ))
+    if kind == "studio":
+        catalog_source = "src/hpc_gui/plugin_engines/openfoam_studio/data/command_catalog.json"
+        catalog_payload = _git_bytes(root, commit, catalog_source)
+        catalog_path = f"{output_prefix}/data/command_catalog.json"
+        files[catalog_path] = (catalog_payload, "application-catalog")
+        binding_rows.append(_source_binding(
+            root, commit, catalog_source, catalog_payload, "identity",
+            package_path=catalog_path,
         ))
     host_deps = _host_dependencies(root, commit, engine_sources)
     generator_path = Path(__file__).resolve().relative_to(root).as_posix()

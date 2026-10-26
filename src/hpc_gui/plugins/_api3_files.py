@@ -23,8 +23,9 @@ def api3_pin_path_error(path: Any, role: Any) -> str | None:
     Rejects absolute paths, drive prefixes, backslashes, NUL/control
     characters, empty/dot/dotdot segments, percent-encoded traversal, and
     URL schemes. Enforces narrow suffix/role combinations: only the
-    ``linter-engine`` or ``application-engine`` role may use ``.py``; every other role must use a
-    declarative suffix. Callers must fail closed on any non-None return.
+    ``linter-engine`` or ``application-engine`` role may use ``.py``;
+    ``application-catalog`` is restricted to JSON; every other role must use
+    a declarative suffix. Callers must fail closed on any non-None return.
     """
     if not isinstance(path, str) or not path:
         return "pinned payload path must be a non-empty string"
@@ -46,7 +47,10 @@ def api3_pin_path_error(path: Any, role: Any) -> str | None:
         return f"pinned payload path must not escape the package: {path!r}"
     leaf = segments[-1]
     suffix = "." + leaf.rsplit(".", 1)[-1].lower() if "." in leaf else ""
-    if role in {"linter-engine", "application-engine"}:
+    if role == "application-catalog":
+        if suffix != ".json":
+            return f"pinned application catalog needs a .json suffix: {path!r}"
+    elif role in {"linter-engine", "application-engine"}:
         if suffix != API3_LINTER_ENGINE_SUFFIX:
             return f"pinned linter-engine payload needs a .py suffix: {path!r}"
     elif suffix not in API3_DECLARATIVE_SUFFIXES:

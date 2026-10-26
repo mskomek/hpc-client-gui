@@ -54,6 +54,7 @@ KNOWN_FILE_ROLES = frozenset(
         "linter-data",
         "linter-engine",
         "application-engine",
+        "application-catalog",
     }
 )
 

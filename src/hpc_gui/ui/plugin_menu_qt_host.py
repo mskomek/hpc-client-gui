@@ -17,7 +17,7 @@ def _studio_gate(plugin: InstalledPlugin) -> str | None:
 
     Declarative API 3 only: never imports package Python. Verifies exact
     studio identity and API 3 static+on-disk integrity via
-    ``api3_error_for_dir``. Empty production pins fail closed here.
+    ``api3_error_for_dir`` against the exact application-owned release pin.
     """
     from hpc_gui.plugins.trusted_api3 import api3_error_for_dir
 

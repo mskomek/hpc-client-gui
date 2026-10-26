@@ -198,8 +198,9 @@ def is_openfoam_dispatch_ready(plugin=None) -> bool:
     Dynamic fail-closed gate (r14): exact owning identity, capability,
     app compatibility, API 3 static+on-disk integrity via
     ``api3_error_for_dir``, and (for dispatch) a real callable framework
-    callback. Legacy short identities and empty production pins stay
-    disabled. Never sets the code-owned ``OPENFOAM_DISPATCH_READY`` flag.
+    callback. Legacy short identities and versions outside the exact
+    application-owned release pins stay disabled. Never sets the code-owned
+    ``OPENFOAM_DISPATCH_READY`` flag.
     """
     if plugin is None or getattr(plugin, "manifest", None) is None:
         return False

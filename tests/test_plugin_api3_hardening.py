@@ -115,6 +115,8 @@ def test_pin_suffix_role_combinations_are_narrow():
     assert api3_pin_path_error("data.json", "linter-data") is None
     assert api3_pin_path_error("doc.md", "documentation") is None
     assert api3_pin_path_error("index.json", "template-index") is None
+    assert api3_pin_path_error("engine/openfoam_studio/data/command_catalog.json", "application-catalog") is None
+    assert api3_pin_path_error("engine/openfoam_studio/data/command_catalog.py", "application-catalog") is not None
     assert api3_pin_path_error("data.json", "linter-engine") is not None
     assert api3_pin_path_error("engine.py", "linter-data") is not None
     assert api3_pin_path_error("payload.exe", "documentation") is not None

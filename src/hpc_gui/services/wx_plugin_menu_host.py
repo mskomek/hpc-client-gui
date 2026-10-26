@@ -17,7 +17,7 @@ def _studio_gate(plugin: InstalledPlugin) -> str | None:
 
     Declarative API 3 only: never imports package Python. Verifies exact
     studio identity and API 3 static+on-disk integrity via
-    ``api3_error_for_dir``. Empty production pins fail closed here.
+    ``api3_error_for_dir`` against the exact application-owned release pin.
     """
     from hpc_gui.plugins.trusted_api3 import api3_error_for_dir
 
@@ -199,7 +199,7 @@ class WxPluginMenuHost:
         Uses only ``linter_tools.load_tool_for_plugin`` (pin-verified
         bytes, no importlib/sys.path/CWD candidate load) and the verified
         ``create_plugin`` descriptor's ``wx_page_factory``. Empty
-        production pins fail closed before any import.
+        release-pin mismatch fails closed before any import.
         """
         reason = _linter_gate(plugin)
         if reason:
