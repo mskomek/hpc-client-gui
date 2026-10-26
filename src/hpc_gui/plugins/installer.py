@@ -62,6 +62,7 @@ from hpc_gui.plugins.schema_compat import (
     unsupported_schema_message,
 )
 from hpc_gui.plugins.state import read_active_versions, record_installed_version
+from hpc_gui.plugins.trusted_api3 import api3_error_for_dir, api3_linter_entrypoint
 from hpc_gui.plugins.trusted_tools import trusted_tool_error
 from hpc_gui.plugins.storage import (
     MANIFEST_NAME,
@@ -191,11 +192,22 @@ def _check_entrypoint_payloads(
 
 
 def _check_linter_entrypoint(staging_dir: Path, manifest: PluginManifest) -> dict[str, str] | None:
-    """Statically verify a Plugin API v2 linter-engine entrypoint.
+    """Statically verify a Plugin API v2/v3 linter-engine entrypoint.
 
     Only declared paths/roles/files are checked - engine code is never
-    imported at install time.
+    imported at install time. API v2 reuses the application-owned ANSYS
+    trusted-tool policy; API v3 requires the application-owned release pin
+    (exact identity, contract and payload hashes) via ``trusted_api3``.
     """
+    if manifest.plugin_api == 3:
+        reason = api3_error_for_dir(manifest, staging_dir)
+        if reason:
+            raise InstallError(f"Unapproved plugin_api 3 package: {reason}")
+        # Policy-derived entrypoint, never manifest-derived. Identities
+        # without an approved executable (e.g. declarative studio) record
+        # no engine; dispatch of such packages stays fail-closed.
+        expected = api3_linter_entrypoint(manifest)
+        return {"module": expected} if expected else None
     if manifest.plugin_api != 2:
         return None
     reason = trusted_tool_error({
@@ -403,6 +415,7 @@ def install_plugin_from_registry(
         installed_plugin = InstalledPlugin(
             manifest=manifest,
             directory=final_dir.resolve(),
+            plugin_root=plugins_root(root).resolve(),
             cluster_profiles=profiles,
             linter_engine=linter_engine,
         )

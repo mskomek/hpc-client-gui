@@ -159,7 +159,10 @@ Zorunlu anahtarlar (`schema_version`, `plugin_api`, `id`, `name`, `version`,
 - `schema_version` değeri `1` olur.
 - `plugin_api` değeri `1` olur (yalnızca veri dağıtan eklentiler). `2`
   sayısal işareti yalnızca uygulama onaylı güvenilir araçlar içindir ve tek
-  başına kod çalıştırmaya izin vermez.
+  başına kod çalıştırmaya izin vermez. `3` sayısal işareti yalnızca
+  uygulamaya ait API v3 sürüm sabitlerine (noktalı kimlik, sürüm, yayıncı,
+  yetenekler, giriş noktaları ve dosya özetleri) sahip paketler içindir;
+  konak sabiti yoksa her API 3 paketi kapalı kalır.
 - `id`, `org.hpcclient.truba` gibi noktalı ters alan adı kimliğidir (küçük
   harf, bölümler noktayla ayrılır). Serbest biçimli görünen adlar reddedilir:
   iki eklenti birbirini sessizce gölgeleyemez.
@@ -205,7 +208,10 @@ yayımlaması için hazırdır; bu sürümde ANSYS paketi henüz yayımlanmamı�
 yayımlayabilir: alınan manifest/kurulum doğrulama zinciri içinde SHA-256 ile
 sabitlenmiş, saf Python analiz motoru taşıyan isteğe bağlı eklentiler.
 Kurulum sırasında hiçbir şey çalıştırılmaz; motor yalnızca aracı açtığınızda
-tembel yükleme ile devreye girer.
+tembel yükleme ile devreye girer. Doğrulanmış özetler yalnızca dosya
+içeriğini kanıtlar: konak süreçte çalıştırma bir işletim sistemi kum
+havuzu değildir, onaylı motor yine de kullanıcı yetkilerinizle konak
+süreç kod olarak çalışır.
 
 Planlanan ilk denetleyici aracı **ANSYS Script & Journal Linter**
 (`org.hpcclient.ansyslint`), Ansys journal/betikleri için gayriresmî,
@@ -227,6 +233,36 @@ bağlantısı ve JSON/metin dışa aktarma sunar. Aynı motor, eklenti deposu
 ANSYS, Inc. tarafından geliştirilmemiştir, onaylanmaz; resmî dokümantasyonun
 yerini tutmaz ve sezgisel bulguları açıkça etiketler — betiklerinizi kurulu
 sürümünüze göre doğrulayın.
+
+## Plugin API v3 sürüm sabitleri (OpenFOAM)
+
+Plugin API v3, yalnızca iki kesin OpenFOAM kimliği için dar kapsamlı,
+konak sabitli bir uzantıdır. Üretimde **konak sürüm sabiti yoktur**, bu
+yüzden sürüm sabitleri yayımlanana kadar her API 3 paketi doğrulama,
+kurulum, yükleme ve çalıştırma aşamalarında kapalı kalır. Eski bir API 2
+paketini sürümünü ya da kimliğini dönüştürerek onaylamayın.
+
+Dağıtımdaki `*-auditfix1` yapıtları API 2 olarak kalır ve değişmez; API 3
+değildir. API 3, ayrıca sürümlenmiş gelecek bir yapıt ile bilinçli konak
+sürüm sabitleri gerektirir (burada hiçbiri tanımlı değildir).
+
+- Linter `org.hpcclient.openfoamlint` (dağıtımdaki `0.2.0-w65r17-auditfix1`
+  API 2 adayı değil, ayrıca sürümlenecek gelecek yapıt)
+  (`HPC Client GUI`, `plugin_api` `3`, yetenekler `linter-tool`, giriş
+  noktası `linter_engine` = `engine/openfoam_lint/__init__.py`, içerik
+  rolü `linter-engine`). Yürütülebilir içerik yalnızca bu kimlikte
+  taşınabilir ve yalnızca sabit doğrulamalı baytlardan yüklenir.
+- Case Studio `org.hpcclient.openfoamcasestudio` (dağıtımdaki
+  `0.3.0-w65r17-auditfix1` API 2 adayı değil, ayrıca sürümlenecek
+  gelecek yapıt)
+  (`HPC Client GUI`, `plugin_api` `3`, yetenekler `application-tools`,
+  `job-template`, giriş noktası `job_templates` = `templates/index.json`,
+  içerik rolü `template-index`). Yalnızca bildirimseldir: bu kimlikte
+  `linter_engine` ya da `application_tool` giriş noktası veya
+  `linter-engine` içeriği reddedilir. Aday studio `application_tool`
+  (`engine/openfoam_studio/__init__.py`) için bu ağaçta güvenli bir
+  yükleyici/yönlendirme yoktur; bu yüzden studio çalıştırma kapalı kalır
+  (engelleyici) ve entegre olarak gösterilmez.
 
 Türkçe sürüm bu sayfadır; İngilizcesi için [PLUGINS_en.md](PLUGINS_en.md).
 

@@ -80,12 +80,24 @@ class FilesBackend(ABC):
     def upload(self, local_path: str, remote_path: str) -> None:
         raise NotImplementedError
 
+    def upload_exclusive(self, local_path: str, remote_path: str) -> None:
+        """Create a remote file only if no directory entry already exists."""
+        raise NotImplementedError
+
     # --- Optional file operations (used by RemoteDirPanel context menu) ---
     # Backends that don't support these can rely on the default NotImplementedError.
     def remove(self, remote_path: str, recursive: bool = False) -> None:
         raise NotImplementedError
 
     def rename(self, remote_path: str, new_remote_path: str) -> None:
+        raise NotImplementedError
+
+    def rename_noreplace(self, remote_path: str, new_remote_path: str) -> None:
+        """Atomically move a file only when the destination does not exist.
+
+        Backends without a documented no-replace primitive must fail closed;
+        callers must not emulate this with an exists-then-rename sequence.
+        """
         raise NotImplementedError
 
     def mkdir(self, remote_dir: str) -> None:
@@ -114,6 +126,10 @@ class FilesBackend(ABC):
         Optional: backends that support rich stat can override this.
         Default raises NotImplementedError.
         """
+        raise NotImplementedError
+
+    def lstat_entry(self, remote_path: str) -> RemoteEntry:
+        """Return entry metadata without following a symbolic link."""
         raise NotImplementedError
 
     def sha256(self, remote_path: str) -> str:

@@ -29,7 +29,7 @@ def test_cli_counts_match_gui_positions(tmp_path, capsys):
     target = tmp_path / "controlDict"
     text = "FoamFile\n{\n    version 2.0;\n}\n"
     target.write_text(text, encoding="utf-8")
-    gui = api.lint_text(str(target), text)
+    gui = api.lint_text(target.name, text)
     assert cli.main([str(target), "--format", "json"]) == (1 if any(
         d.severity == "error" for d in gui) else 0)
     out = json.loads(capsys.readouterr().out)

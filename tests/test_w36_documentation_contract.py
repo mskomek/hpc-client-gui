@@ -64,9 +64,10 @@ def test_docs_manifest_contract_matches_schema():
     # Documented capability names are exactly the implemented vocabulary.
     for name in re.findall(r"`(cluster-profile|lint-rules|job-template|application-tools|linter-tool)`", en):
         assert name in KNOWN_CAPABILITIES
-    # Documented pins match the validator: schema 1, plugin API set.
+    # Documented pins match the validator: schema 1, plugin API set
+    # (1 declarative, 2 ANSYS trusted tool, 3 host-pinned OpenFOAM trust).
     assert PLUGIN_API_VERSION == 1
-    assert SUPPORTED_PLUGIN_API_VERSIONS == frozenset({1, 2})
+    assert SUPPORTED_PLUGIN_API_VERSIONS == frozenset({1, 2, 3})
     # The documented advisory contract validates clean in code.
     _files = [
         {

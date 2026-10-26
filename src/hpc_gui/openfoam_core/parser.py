@@ -1,15 +1,22 @@
-"""Minimal OpenFOAM dictionary parser (W65 BASE-001).
+"""Legacy dict-shaped view over the single static engine (W65 LINT-COMPAT).
 
-Builds a nested node tree preserving source spans. Unknown or dynamic
-constructs (``#codeStream`` blocks, ``$variables``, regex patch names)
-are preserved as raw entries and never evaluated.
+``parse_text`` preserves the historical ``parser.ParsedDictionary``
+contract (``entries`` dict, ``order``, ``spans``, ``issues``,
+``has_executable_directive``, ``includes``) for API1/API2 clients. It is a
+deliberately small projection over ``document.parse_dictionary`` using the
+same tokenizer and the same never-evaluate security posture, never a
+parallel parser. New code must use the rich ``document`` contract via the
+``hpc_gui.openfoam_core`` facade.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from hpc_gui.openfoam_core.lexer import LexToken, lex
+from hpc_gui.openfoam_core.document import parse_dictionary as _parse_rich
+from hpc_gui.openfoam_core.limits import SOURCE_DOCS as SOURCE_DOCS
+
+__all__ = ["ParseIssue", "ParsedDictionary", "SOURCE_DOCS", "parse_text"]
 
 
 @dataclass
@@ -21,99 +28,48 @@ class ParseIssue:
 
 @dataclass
 class ParsedDictionary:
-    entries: dict = field(default_factory=dict)  # key -> value | dict | list | {"__raw__": text}
+    entries: dict = field(default_factory=dict)
     order: list[str] = field(default_factory=list)
-    spans: dict = field(default_factory=dict)  # key -> (start_line, start_col, end_line, end_col)
+    spans: dict = field(default_factory=dict)
     issues: list[ParseIssue] = field(default_factory=list)
     has_executable_directive: bool = False
     includes: list[str] = field(default_factory=list)
 
 
 def parse_text(text: str) -> ParsedDictionary:
-    tokens = lex(text)
+    if not isinstance(text, str):
+        raise TypeError("dictionary text must be str")
+    rich = _parse_rich(text)
     parsed = ParsedDictionary()
-    for tok in tokens:
-        if tok.kind == "DIRECTIVE" and tok.text.lower() in ("#codestream", "#calc", "#eval"):
+    for token in rich.tokens:
+        if token.kind == "directive" and token.value.lower() in (
+            "#codestream", "#calc", "#eval",
+        ):
             parsed.has_executable_directive = True
-        if tok.kind == "DIRECTIVE" and tok.text.lower() in ("#include", "#includeetc", "#includefunc"):
-            parsed.includes.append(tok.text)
-    # Structural parse: sequence of `key value... ;` or `key { ... }`.
-    idx = 0
-    n = len(tokens)
-    while idx < n:
-        tok = tokens[idx]
-        if tok.kind in ("COMMENT", "DIRECTIVE", "SEMI", "RBRACE", "RPAREN"):
-            idx += 1
+        if token.kind == "directive" and token.value.lower() in (
+            "#include", "#includeetc", "#includefunc",
+        ):
+            parsed.includes.append(token.value)
+    children: dict[str, list[str]] = {}
+    for entry in rich.entries:
+        if entry.scope:
+            children.setdefault(entry.scope[0], []).append(
+                f"{entry.key} {entry.value}".strip()
+            )
+    for entry in rich.entries:
+        if entry.scope:
             continue
-        if tok.kind in ("LBRACE", "LPAREN"):
-            parsed.issues.append(ParseIssue("unexpected block open", tok.line, tok.column))
-            idx += 1
-            continue
-        key = tok.text
-        key_line, key_col = tok.line, tok.column
-        idx += 1
-        # Skip FoamFile-style header words already consumed as key; gather value tokens.
-        values: list[LexToken] = []
-        depth_brace = 0
-        depth_paren = 0
-        closed = False
-        while idx < n:
-            t = tokens[idx]
-            if t.kind == "LBRACE":
-                depth_brace += 1
-                values.append(t)
-            elif t.kind == "RBRACE":
-                if depth_brace == 0:
-                    break
-                depth_brace -= 1
-                values.append(t)
-            elif t.kind == "LPAREN":
-                depth_paren += 1
-                values.append(t)
-            elif t.kind == "RPAREN":
-                if depth_paren == 0 and depth_brace == 0:
-                    values.append(t)
-                    idx += 1
-                    continue
-                depth_paren = max(0, depth_paren - 1)
-                values.append(t)
-            elif t.kind == "SEMI" and depth_brace == 0 and depth_paren == 0:
-                closed = True
-                end_line, end_col = t.line, t.column
-                idx += 1
-                break
-            elif t.kind == "LBRACE" and False:  # pragma: no cover - clarity
-                pass
-            else:
-                values.append(t)
-            idx += 1
-            if depth_brace == 0 and values and values[-1].kind == "RBRACE":
-                # `key { ... }` block without trailing semicolon is legal.
-                closed = True
-                end_line, end_col = values[-1].line, values[-1].column
-                break
+        if entry.key not in parsed.entries:
+            parsed.order.append(entry.key)
+        if entry.is_dictionary:
+            inner = "; ".join(children.get(entry.key, []))
+            parsed.entries[entry.key] = {"__block__": inner}
         else:
-            end_line, end_col = key_line, key_col
-        if not closed and not values:
-            continue
-        if not closed:
-            parsed.issues.append(ParseIssue(f"entry '{key}' missing terminating ';'", key_line, key_col))
-            end_line, end_col = (values[-1].line, values[-1].column) if values else (key_line, key_col)
-        if key not in parsed.entries:
-            parsed.order.append(key)
-        parsed.entries[key] = _materialize(values)
-        parsed.spans[key] = (key_line, key_col, end_line, end_col)
+            parsed.entries[entry.key] = entry.value
+        parsed.spans[entry.key] = (entry.line, entry.column, entry.end_line, entry.end_column)
+    for diagnostic in rich.diagnostics:
+        if diagnostic.rule_id in ("OF-DICT-001", "OF-DICT-002"):
+            parsed.issues.append(
+                ParseIssue(diagnostic.message, diagnostic.line, diagnostic.column)
+            )
     return parsed
-
-
-def _materialize(values: list[LexToken]):
-    if not values:
-        return ""
-    if len(values) == 1 and values[0].kind in ("WORD", "NUMBER", "STRING"):
-        return values[0].text
-    if values[0].kind == "LBRACE" and values[-1].kind == "RBRACE":
-        inner = " ".join(v.text for v in values[1:-1] if v.kind != "COMMENT")
-        return {"__block__": inner}
-    if values[0].kind == "LPAREN":
-        return [v.text for v in values if v.kind not in ("LPAREN", "RPAREN", "COMMENT")]
-    return " ".join(v.text for v in values if v.kind != "COMMENT")

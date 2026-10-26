@@ -39,6 +39,18 @@ class EditorDocumentActionsMixin:
     def _current_document(self) -> _EditorDocument | None:
         current = self.document_tabs.currentWidget()
         return current if isinstance(current, _EditorDocument) else None
+    def go_to_line(self, line: int) -> bool:
+        """Focus the current document at a one-based source line."""
+        if isinstance(line, bool) or not isinstance(line, int) or line < 1:
+            return False
+        block = self.text.document().findBlockByNumber(line - 1)
+        if not block.isValid():
+            return False
+        cursor = self.text.textCursor()
+        cursor.setPosition(block.position())
+        self.text.setTextCursor(cursor)
+        self.text.setFocus()
+        return True
     @staticmethod
     def _tab_title(path: str) -> str:
         return posixpath.basename(path.rstrip("/")) if path else t("editor.title")

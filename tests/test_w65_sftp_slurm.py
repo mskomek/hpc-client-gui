@@ -7,18 +7,25 @@ from hpc_gui.plugins.openfoam_studio.host_adapter import contributions
 from hpc_gui.plugins.openfoam_studio.hpc import (
     FileStage, MultiFileCommit, SlurmResources, plan_ranks_match, render_slurm_job,
 )
+from hpc_gui.plugins.openfoam_studio.solver import render_run_plan
 from hpc_gui.plugins.openfoam_studio.security import assert_argv_safe, include_is_safe
 
 
 def test_slurm_draft_only_and_ranks():
-    job = render_slurm_job("of-case", "simpleFoam -case .", SlurmResources(nodes=1, ntasks=4))
+    plan = render_run_plan("simpleFoam")
+    job = render_slurm_job(
+        "of-case", SlurmResources(nodes=1, ntasks=4), allrun_sha256=plan["allrun_sha256"])
     assert "DRAFT ONLY" in job and "--ntasks=4" in job and "never auto-submitted" in job
     assert not any(line.strip().startswith("sbatch") for line in job.splitlines())
+    assert "exec bash -- ./Allrun" in job
+    assert plan["allrun_sha256"] in job
+    assert "simpleFoam -case ." not in job
+    assert "sha256sum --check --status" in job
     plan_ranks_match(4, 4)
     with pytest.raises(ValueError):
         plan_ranks_match(4, 2)
     with pytest.raises(ValueError):
-        render_slurm_job("bad;name", "x", SlurmResources())
+        render_slurm_job("bad;name", SlurmResources(), allrun_sha256=plan["allrun_sha256"])
 
 
 def test_slurm_header_fields_reject_injection_and_invalid_values():
@@ -32,15 +39,29 @@ def test_slurm_header_fields_reject_injection_and_invalid_values():
     )
     for resources in invalid:
         with pytest.raises((TypeError, ValueError)):
-            render_slurm_job("of-case", "simpleFoam -case .", resources)
+            render_slurm_job("of-case", resources, allrun_sha256=render_run_plan("simpleFoam")["allrun_sha256"])
 
     job = render_slurm_job(
-        "case_01", "simpleFoam -case .",
-        SlurmResources(time="2-03:04:05", partition="compute-long"),
+        "case_01", SlurmResources(time="2-03:04:05", partition="compute-long"),
+        allrun_sha256=render_run_plan("simpleFoam")["allrun_sha256"],
     )
     assert "#SBATCH --time=2-03:04:05" in job
     assert "#SBATCH --partition=compute-long" in job
     assert "module load apps/openfoam/v2312-2025" in job
+
+
+def test_slurm_draft_requires_a_validated_run_plan_digest():
+    digest = render_run_plan("simpleFoam")["allrun_sha256"]
+    for invalid in ("", "a" * 63, "g" * 64, "a" * 64 + "\n#SBATCH --output=bad"):
+        with pytest.raises(ValueError):
+            render_slurm_job("of-case", SlurmResources(), allrun_sha256=invalid)
+    with pytest.raises(TypeError):
+        render_slurm_job("of-case", "simpleFoam; touch /tmp/pwned", SlurmResources())
+    with pytest.raises(TypeError):
+        render_slurm_job("of-case", SlurmResources(), allrun_body="echo injected")
+    script = render_slurm_job("of-case", SlurmResources(), allrun_sha256=digest)
+    assert "Allrun body" not in script
+    assert "echo injected" not in script
 
 
 def test_partial_commit_never_all_green():

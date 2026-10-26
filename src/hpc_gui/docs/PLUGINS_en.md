@@ -169,7 +169,10 @@ before anything else. Required keys (`schema_version`, `plugin_api`, `id`,
 - `schema_version` is `1`.
 - `plugin_api` is `1` (data-only plugins). The numeric marker `2` is
   accepted only for application-approved trusted tools and never grants
-  code execution by itself.
+  code execution by itself. The numeric marker `3` is accepted only for
+  application-owned API v3 release pins (exact dotted id, version,
+  publisher, capabilities, entrypoints, and file hashes); with no
+  provisioned host pins every API 3 package fails closed.
 - `id` is a dotted reverse-DNS identity such as `org.hpcclient.truba`
   (lowercase, segments separated by dots). Free-form display names are
   rejected: two plugins must never silently shadow each other.
@@ -225,6 +228,9 @@ executable plugin. Its identity is application-approved and its code is
 loaded only after the usual manifest/file hash checks.
 Nothing runs at install time - the engine loads only when you open it,
 and every byte is pinned by SHA-256 exactly like declarative data.
+Verified hashes attest to file content only: host process execution is
+not an OS sandbox, so an approved engine still runs as host-process code
+with your privileges.
 
 The current tool is **ANSYS Script & Journal Linter**
 (`org.hpcclient.ansyslint`). It is an *unofficial* offline checker for
@@ -247,3 +253,33 @@ repository checkout (`scripts/ansys-journal-lint.py`).
 It is not affiliated with or endorsed by ANSYS, Inc., does not replace the
 official documentation, and labels heuristic findings explicitly -
 verify scripts against your installed release.
+
+## Plugin API v3 release pins (OpenFOAM)
+
+Plugin API v3 is a narrow host-pinned extension for two exact OpenFOAM
+identities only. Production ships with **no host release pins**, so every
+API 3 package fails closed at validation, install, load, and dispatch
+until release engineering publishes code-owned pins. Never approve an old
+API 2 package by converting its version or identity.
+
+The shipped `*-auditfix1` artifacts stay API 2 and unchanged; they are
+not API 3. API 3 requires a separately versioned future artifact plus
+deliberate application-owned release pins (none provisioned here).
+
+- Linter `org.hpcclient.openfoamlint` (future separately versioned
+  artifact, not the shipped `0.2.0-w65r17-auditfix1` API 2 candidate)
+  (`HPC Client GUI`, `plugin_api` `3`, capabilities `linter-tool`,
+  entrypoint `linter_engine` = `engine/openfoam_lint/__init__.py`, payload
+  role `linter-engine`). Only this identity may carry executable payloads,
+  loaded from pin-verified bytes only.
+- Case Studio `org.hpcclient.openfoamcasestudio` (future separately
+  versioned artifact, not the shipped `0.3.0-w65r17-auditfix1` API 2
+  candidate)
+  (`HPC Client GUI`, `plugin_api` `3`, capabilities `application-tools`,
+  `job-template`, entrypoint `job_templates` = `templates/index.json`,
+  payload role `template-index`). Declarative only: any `linter_engine` or
+  `application_tool` entrypoint, or any `linter-engine` payload, for this
+  identity is rejected. The candidate studio `application_tool`
+  (`engine/openfoam_studio/__init__.py`) has no safe host loader or
+  dispatch in this tree, so studio execution stays fail-closed (blocker),
+  never labelled integrated.

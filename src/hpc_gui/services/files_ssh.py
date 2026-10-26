@@ -221,6 +221,20 @@ class SSHFilesBackend(FilesBackend):
             mode=mode,
         )
 
+    def lstat_entry(self, remote_path: str) -> RemoteEntry:
+        """Return SFTP metadata for the link itself, without following it."""
+        with _translate_remote_errors(remote_path):
+            st = self.ssh.sftp.lstat(remote_path)
+        mode = int(getattr(st, "st_mode", 0) or 0)
+        return RemoteEntry(
+            name=os.path.basename(remote_path.rstrip("/")) or "/",
+            path=remote_path,
+            is_dir=pystat.S_ISDIR(mode),
+            size=int(getattr(st, "st_size", 0) or 0),
+            mtime=int(getattr(st, "st_mtime", 0) or 0),
+            mode=mode,
+        )
+
     def download(self, remote_path: str, local_path: str, progress_cb=None) -> None:
         self._download(remote_path, local_path, progress_cb, resume=False)
 
@@ -382,6 +396,25 @@ class SSHFilesBackend(FilesBackend):
         finally:
             sftp.close()
 
+    def upload_exclusive(self, local_path: str, remote_path: str) -> None:
+        """Upload with SFTP's exclusive-create flag; never truncate a target."""
+        sftp = self.ssh.open_transfer_sftp()
+        try:
+            local_size = os.path.getsize(local_path)
+            sent = 0
+            with open(local_path, "rb") as source:
+                with _translate_remote_errors(remote_path):
+                    with sftp.open(remote_path, "xb") as target:
+                        _enable_sftp_pipelining(target)
+                        while chunk := source.read(1024 * 1024):
+                            target.write(chunk)
+                            sent += len(chunk)
+                        target.flush()
+            if sent != local_size:
+                raise IOError("exclusive SFTP upload length changed while streaming")
+        finally:
+            sftp.close()
+
     def remove(self, remote_path: str, recursive: bool = False) -> None:
         # Use shell rm to support recursive deletes reliably.
         # remote_path is user-provided via UI; quote defensively.
@@ -395,6 +428,15 @@ class SSHFilesBackend(FilesBackend):
         # a missing/denied source carries its path in `.filename` like every
         # other backend read path (W12: rename used to surface paramiko's
         # bare "[Errno N] ..." text with no attributable path).
+        with _translate_remote_errors(remote_path):
+            self.ssh.sftp.rename(remote_path, new_remote_path)
+
+    def rename_noreplace(self, remote_path: str, new_remote_path: str) -> None:
+        """Use standard SFTP RENAME, whose contract refuses an existing target.
+
+        Deliberately do not call Paramiko's ``posix_rename`` extension: that
+        operation replaces an existing target and is unsafe for drafts.
+        """
         with _translate_remote_errors(remote_path):
             self.ssh.sftp.rename(remote_path, new_remote_path)
 

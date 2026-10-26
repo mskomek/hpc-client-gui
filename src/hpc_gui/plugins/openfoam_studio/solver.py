@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from hashlib import sha256
 import shlex
 
 from hpc_gui.plugins.openfoam_studio.physics import SOLVER_FAMILIES, required_fields_for
@@ -58,7 +59,10 @@ def render_run_plan(solver: str, *, case_dir: str = ".", parallel: bool = False,
         lines.append(" ".join(shlex.quote(a) for a in argv))
     if family in ("transient",):
         lines.append("# transient: resume with -latestTime only after checkpoint review")
-    return {"steps": steps, "allrun": "\n".join(lines) + "\n", "solver": solver, "family": family}
+    allrun = "\n".join(lines) + "\n"
+    return {"steps": steps, "allrun": allrun,
+            "allrun_sha256": sha256(allrun.encode("utf-8", errors="strict")).hexdigest(),
+            "solver": solver, "family": family}
 
 
 def _guard_no_injection(steps: list[list[str]]) -> None:

@@ -10,29 +10,26 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
+from pathlib import Path
 
 
 def _lint_paths(paths: list[str]) -> list[dict]:
     from hpc_gui.plugins.openfoam_lint import api
-    diags = []
-    for path in paths:
-        if os.path.isdir(path):
-            targets = []
-            for root, _, files in os.walk(path):
-                targets += [os.path.join(root, f) for f in files
-                            if f.endswith(("Dict", "Properties", "FoamFile"))]
-        else:
-            targets = [path]
-        for target in targets:
-            text = api.read_text_limited(target)
-            for diag in api.lint_text(target, text):
-                diags.append({"rule": diag.rule, "severity": diag.severity,
-                              "certainty": diag.certainty, "file": diag.file,
-                              "line": diag.line, "column": diag.column,
-                              "message": diag.message, "fix_preview": diag.fix_preview})
-    return diags
+    diagnostics = []
+    for raw in paths:
+        path = Path(raw).expanduser()
+        if not path.exists() and not path.is_symlink():
+            raise ValueError(f"selected path does not exist: {path}")
+        # Use the canonical bounded, link-rejecting scanner. A CLI path is
+        # a filesystem selector, never an untrusted lint_text file_name.
+        for diag in api.lint_paths([path]):
+            diagnostics.append({"rule": diag.rule, "severity": diag.severity,
+                                "certainty": diag.certainty, "file": diag.file,
+                                "line": diag.line, "column": diag.column,
+                                "message": diag.message,
+                                "fix_preview": diag.fix_preview})
+    return diagnostics
 
 
 def main(argv: list[str] | None = None) -> int:

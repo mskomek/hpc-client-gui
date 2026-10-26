@@ -91,7 +91,23 @@ class LocalContextMenuMixin:
                 if all_files and paths:
                     suffixes = [Path(str(p)).suffix.lower() for p in paths]
                     lint_batch_ok = self._local_lint_supports_suffixes(suffixes)
-        plugin_menu = menu.addMenu(t("files.plugins")) if lint_batch_ok else None
+        from hpc_gui.services.openfoam_file_dispatch import (
+            active_linter,
+            supports_local_targets,
+        )
+
+        openfoam_plugin = None
+        openfoam_allowed = False
+        openfoam_reason = ""
+        if supports_local_targets(paths):
+            openfoam_plugin = active_linter()
+            if openfoam_plugin is not None:
+                from hpc_gui.services.plugin_menu_actions import can_execute_action
+
+                openfoam_allowed, openfoam_reason = can_execute_action(
+                    "openfoam.validate", openfoam_plugin
+                )
+        plugin_menu = menu.addMenu(t("files.plugins")) if lint_batch_ok or openfoam_plugin else None
         act_ansys_lint = (
             plugin_menu.addAction(t("files.ansys_lint"))
             if plugin_menu is not None
@@ -99,6 +115,15 @@ class LocalContextMenuMixin:
         )
         if act_ansys_lint is not None:
             act_ansys_lint.setEnabled(lint_batch_ok)
+        act_openfoam_lint = (
+            plugin_menu.addAction(t("openfoam.linter_title"))
+            if plugin_menu is not None and openfoam_plugin is not None
+            else None
+        )
+        if act_openfoam_lint is not None:
+            act_openfoam_lint.setEnabled(openfoam_allowed)
+            if openfoam_reason:
+                act_openfoam_lint.setToolTip(openfoam_reason)
         if one_selected and one_is_dir and folder_lint_path:
             tools = self._tools_for_folder(folder_lint_path)
             if tools:
@@ -181,4 +206,9 @@ class LocalContextMenuMixin:
                 self.run_ansys_lint(Path(str(paths[0])))
             else:
                 self.run_ansys_lint_batch([Path(str(p)) for p in paths])
+            return
+        if act_openfoam_lint is not None and chosen == act_openfoam_lint:
+            from hpc_gui.services.openfoam_file_dispatch import dispatch_linter
+
+            dispatch_linter(paths, host_window=self.window())
             return

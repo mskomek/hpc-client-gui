@@ -284,6 +284,13 @@ class RemoteContextMenuMixin:
                 lint_batch_ok = True
         act_ansys_lint = menu.addAction(_tr("files.ansys_lint", "ANSYS Journal Lint"))
         act_ansys_lint.setEnabled(lint_batch_ok)
+        from hpc_gui.ui.widgets._remote_linter_action import build_remote_linter_action
+
+        act_openfoam_lint = build_remote_linter_action(
+            menu,
+            sel_paths[0] if single_selection else None,
+            is_directory=single_selection_is_dir,
+        )
         if single_selection and not single_selection_is_dir:
             self._build_send_to_plugin_menu(
                 menu, sel_paths[0] if single_selection and not single_selection_is_dir else None
@@ -394,6 +401,12 @@ class RemoteContextMenuMixin:
                     self.run_ansys_lint(sel_paths[0])
             else:
                 self.run_ansys_lint_batch(sel_paths)
+            return
+
+        if act_openfoam_lint is not None and chosen == act_openfoam_lint:
+            from hpc_gui.ui.widgets._remote_linter_action import dispatch_remote_linter
+
+            dispatch_remote_linter(self, sel_paths, self.session)
             return
 
         if chosen == act_view_edit:

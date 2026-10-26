@@ -19,8 +19,6 @@ closed with an actionable message; use the standalone CLI or the
 
 from __future__ import annotations
 
-import os
-
 PLUGIN_ID = "openfoam-linter"
 PLUGIN_VERSION = "0.2.0-w65r17-auditfix1"
 PLUGIN_BASE = "0.1.0"
@@ -54,37 +52,17 @@ def create_plugin() -> dict:
 
 
 def lint_text(text: str, file_name: str = "", options=None):
-    """Lint in-memory text; returns a list of api.Diagnostic. No execution."""
-    from hpc_gui.plugins.openfoam_lint.api import lint_text as _core
+    """Lint in-memory text through the canonical host engine."""
+    from hpc_gui.plugins.openfoam_lint.api import lint_text as canonical_facade
 
-    return _core(file_name or "<buffer>", text)
+    return canonical_facade(file_name or "<buffer>", text)
 
 
 def lint_paths(paths, options=None):
-    """Lint files/directories; returns a flat list of api.Diagnostic.
+    """Lint bounded file/case inputs through the canonical host engine."""
+    from hpc_gui.plugins.openfoam_lint.api import lint_paths as canonical_facade
 
-    Directories are walked for OpenFOAM dictionary basenames (same filter
-    as the standalone CLI). Files are read as text; unreadable paths
-    raise ValueError. Never executes case content.
-    """
-    from hpc_gui.plugins.openfoam_lint.api import lint_text as _core
-
-    diags = []
-    targets: list[str] = []
-    for path in paths or []:
-        entry = os.fspath(path)
-        if os.path.isdir(entry):
-            for root, _, files in os.walk(entry):
-                targets += [os.path.join(root, name) for name in files
-                            if name.endswith(("Dict", "Properties", "FoamFile"))]
-        else:
-            targets.append(entry)
-    from hpc_gui.plugins.openfoam_lint.api import read_text_limited
-
-    for target in targets:
-        text = read_text_limited(target)
-        diags.extend(_core(target, text))
-    return diags
+    return canonical_facade(paths or [], options=options)
 
 
 __all__ = ["PLUGIN_ID", "PLUGIN_VERSION", "PLUGIN_BASE", "RULE_FAMILIES",

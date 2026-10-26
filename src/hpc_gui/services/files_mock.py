@@ -146,6 +146,15 @@ class MockFilesBackend(FilesBackend):
         self._mode[remote_path] = stat.S_IFREG | 0o644
         self._touch(remote_path)
 
+    def upload_exclusive(self, local_path: str, remote_path: str) -> None:
+        remote_path = _norm(remote_path)
+        if remote_path in self._files or remote_path in self._dirs:
+            raise FileExistsError(remote_path)
+        self._ensure_parent_dirs(remote_path)
+        self._files[remote_path] = Path(local_path).read_bytes()
+        self._mode[remote_path] = stat.S_IFREG | 0o644
+        self._touch(remote_path)
+
     def exists(self, remote_path: str) -> bool:
         remote_path = _norm(remote_path)
         return remote_path in self._files or remote_path in self._dirs
@@ -187,6 +196,33 @@ class MockFilesBackend(FilesBackend):
 
     def rename(self, remote_path: str, new_remote_path: str) -> None:
         self.move(remote_path, new_remote_path)
+
+    def rename_noreplace(self, remote_path: str, new_remote_path: str) -> None:
+        src = _norm(remote_path)
+        dst = _norm(new_remote_path)
+        if dst in self._files or dst in self._dirs:
+            raise FileExistsError(dst)
+        if src not in self._files:
+            raise FileNotFoundError(src)
+        self._ensure_parent_dirs(dst)
+        self._files[dst] = self._files.pop(src)
+        self._mode[dst] = self._mode.pop(src, stat.S_IFREG | 0o644)
+        self._mt[dst] = self._mt.pop(src, int(time.time()))
+
+    def lstat_entry(self, remote_path: str) -> RemoteEntry:
+        path = _norm(remote_path)
+        if path not in self._files and path not in self._dirs:
+            raise FileNotFoundError(path)
+        is_dir = path in self._dirs
+        mode = self._mode.get(path, (stat.S_IFDIR if is_dir else stat.S_IFREG) | (0o755 if is_dir else 0o644))
+        return RemoteEntry(
+            name=posixpath.basename(path.rstrip("/")) or "/",
+            path=path,
+            is_dir=is_dir,
+            size=0 if is_dir else len(self._files.get(path, b"")),
+            mtime=self._mt.get(path, 0),
+            mode=mode,
+        )
 
     def copy(self, src_remote_path: str, dst_remote_path: str, recursive: bool = False) -> None:
         src = _norm(src_remote_path)

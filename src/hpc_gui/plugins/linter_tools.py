@@ -10,76 +10,86 @@ startup or other plugins.
 from __future__ import annotations
 
 import logging
-import hashlib
-import re
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
-import importlib.util
 import importlib
+import importlib.machinery
+import importlib.util
 import sys
-
 from hpc_gui.plugins.loader import load_installed_plugins
+from hpc_gui.plugins.trusted_api3 import api3_linter_entrypoint
 from hpc_gui.plugins.trusted_tools import (
     APPROVED_TRUSTED_TOOLS,
     is_approved_trusted_tool,
 )
+from hpc_gui.plugins._api3_engine_loader import (
+    LinterTool,
+    ToolLoadError,
+    _Api3PinnedFinder as _Api3PinnedFinder,
+    _api3_pinned_table as _api3_pinned_table,
+    _load_api3_engine_verified,
+    _remove_api3_finder as _remove_api3_finder,
+    _remove_module_namespace,
+    _tool_module_name,
+    unload_api3_engine,
+)
 
 logger = logging.getLogger(__name__)
-
-def _tool_module_name(installed) -> str:
-    """Return a private namespace for this immutable installed tool."""
-    manifest = installed.manifest
-    identity = "\0".join(
-        [manifest.id, manifest.version, *(file.sha256 for file in manifest.files)]
-    )
-    digest = hashlib.sha256(identity.encode("ascii")).hexdigest()[:16]
-    safe_id = re.sub(r"[^a-zA-Z0-9_]", "_", manifest.id)
-    return f"_hpc_gui_trusted_{safe_id}_{digest}"
-
-
-def _remove_module_namespace(module_name: str) -> None:
-    for name in tuple(sys.modules):
-        if name == module_name or name.startswith(module_name + "."):
-            sys.modules.pop(name, None)
-
-
-class ToolLoadError(RuntimeError):
-    """Raised when an installed linter tool cannot be loaded."""
-
-
-@dataclass(frozen=True)
-class LinterTool:
-    """A successfully loaded plugin tool descriptor."""
-
-    plugin_id: str
-    version: str
-    title: str
-    description: str
-    page_factory: Callable[..., Any]
-    module_name: str
-
-    @property
-    def display_name(self) -> str:
-        return self.title
 
 
 def load_tool_for_plugin(installed) -> LinterTool:
     """Load (and cache) the linter tool of one installed plugin.
 
     ``installed`` is an :class:`~hpc_gui.plugins.models.InstalledPlugin` whose
-    identity has passed the application-owned Trusted Tool policy.
+    identity has passed the application-owned Trusted Tool policy (API v2)
+    or the application-owned API v3 release pin (exact identity, contract
+    and payload hashes, re-verified from bytes on disk here, immediately
+    before import).
     """
-    if not is_approved_trusted_tool(installed.manifest):
-        raise ToolLoadError("Executable plugin is disabled unless it is an application-approved trusted tool.")
     descriptor = getattr(installed, "linter_engine", None) or {}
     rel = descriptor.get("module")
-    # W65 r12: the expected engine path is policy-derived (one approved
-    # entrypoint per plugin identity), never manifest-derived. An approved
-    # id with a wrong publisher already fails is_approved_trusted_tool
-    # above, so keying on the id here cannot be spoofed by a manifest.
-    policy = APPROVED_TRUSTED_TOOLS.get(getattr(installed.manifest, "id", None))
-    expected = policy["entrypoint"] if isinstance(policy, dict) else None
+    if getattr(installed.manifest, "plugin_api", None) == 3:
+        # Verified-bytes gate: the expected path is policy-derived (the
+        # host pin's entrypoint), never manifest-derived. The bounded
+        # loader below executes only pin-verified bytes (no disk re-read),
+        # closing the hash-to-import race for the pinned closure.
+        expected = api3_linter_entrypoint(installed.manifest)
+        if expected is None or rel != expected:
+            raise ToolLoadError("Trusted tool entrypoint is not approved.")
+        module = _load_api3_engine_verified(installed, rel)
+        module_name = module.__name__
+        try:
+            tool_descriptor = module.create_plugin()
+            if not isinstance(tool_descriptor, dict):
+                raise TypeError("create_plugin must return a descriptor object")
+            if tool_descriptor.get("id") != installed.manifest.id:
+                raise TypeError("create_plugin id does not match the installed plugin")
+            page_factory = tool_descriptor.get("page_factory")
+            wx_page_factory = tool_descriptor.get("wx_page_factory")
+            if not callable(page_factory):
+                raise TypeError("create_plugin must return a callable page_factory")
+            if wx_page_factory is not None and not callable(wx_page_factory):
+                raise TypeError("create_plugin wx_page_factory must be callable")
+        except Exception as exc:
+            unload_api3_engine(module_name)
+            raise ToolLoadError(f"Trusted tool descriptor is invalid: {exc}") from exc
+        return LinterTool(
+            plugin_id=installed.manifest.id,
+            version=installed.manifest.version,
+            title=str(tool_descriptor["title"]),
+            description=str(tool_descriptor.get("description", "")),
+            page_factory=page_factory,
+            module_name=module_name,
+            wx_page_factory=wx_page_factory,
+        )
+    else:
+        if not is_approved_trusted_tool(installed.manifest):
+            raise ToolLoadError("Executable plugin is disabled unless it is an application-approved trusted tool.")
+        # W65 r12: the expected engine path is policy-derived (one approved
+        # entrypoint per plugin identity), never manifest-derived. An approved
+        # id with a wrong publisher already fails is_approved_trusted_tool
+        # above, so keying on the id here cannot be spoofed by a manifest.
+        policy = APPROVED_TRUSTED_TOOLS.get(getattr(installed.manifest, "id", None))
+        expected = policy["entrypoint"] if isinstance(policy, dict) else None
     if expected is None or rel != expected:
         raise ToolLoadError("Trusted tool entrypoint is not approved.")
     package_dir = Path(installed.directory)
@@ -109,6 +119,7 @@ def load_tool_for_plugin(installed) -> LinterTool:
             description=str(descriptor.get("description", "")),
             page_factory=descriptor["page_factory"],
             module_name=module_name,
+            wx_page_factory=descriptor.get("wx_page_factory"),
         )
     except ToolLoadError:
         raise
@@ -160,15 +171,26 @@ def tool_supported_suffixes(tool: LinterTool) -> frozenset[str]:
 
     The engine package ``__init__`` lazily re-exports only the callable
     API; ``SUPPORTED_SUFFIXES`` lives in the ``api`` submodule, so fall
-    back to importing that sibling when the attribute is absent.
+    back to that sibling when the attribute is absent. API 3 engines
+    (``__hpc_api3__``) never fall back to a filesystem import: only an
+    already-loaded pinned ``.api`` module from verified bytes is read,
+    otherwise the suffix set stays empty (fail closed).
     """
     module = _engine_module(tool)
     suffixes = getattr(module, "SUPPORTED_SUFFIXES", None)
     if suffixes is None:
+        if getattr(module, "__hpc_api3__", False):
+            api = sys.modules.get(f"{module.__name__}.api")
+            if api is None:
+                return frozenset()
+        else:
+            try:
+                api = sys.modules.get(f"{module.__name__}.api") or importlib.import_module(f"{module.__name__}.api")
+            except (AttributeError, ImportError):
+                return frozenset()
         try:
-            api = sys.modules.get(f"{module.__name__}.api") or importlib.import_module(f"{module.__name__}.api")
             suffixes = api.SUPPORTED_SUFFIXES
-        except (AttributeError, ImportError):
+        except AttributeError:
             return frozenset()
     return frozenset(str(value).lower() for value in suffixes)
 

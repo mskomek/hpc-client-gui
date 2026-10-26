@@ -7,6 +7,7 @@ from typing import Any
 
 from hpc_gui.plugins._validator_contracts import ALLOWED_PAYLOAD_SUFFIXES, MANIFEST_OPTIONAL_KEYS, MANIFEST_REQUIRED_KEYS, PROVIDER_ID_RE, TRUSTED_DECLARATIVE_ENGINES, V2_LINTER_DATA_ROLE, V2_LINTER_ENGINE_ROLE, V2_LINTER_ENTRYPOINT_KEY, _is_nonempty_str
 from hpc_gui.plugins.compatibility import validate_requires_app
+from hpc_gui.plugins.trusted_api3 import api3_static_error
 from hpc_gui.plugins.trusted_tools import trusted_tool_error
 from hpc_gui.plugins.models import (
     CAPABILITY_LINTER_TOOL, KNOWN_CAPABILITIES, KNOWN_FILE_ROLES, SUPPORTED_PLUGIN_API_VERSIONS, is_safe_relative_path, is_valid_semver,
@@ -73,7 +74,7 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
             if capability not in KNOWN_CAPABILITIES:
                 errors.append(f"unsupported plugin capability: {capability!r}")
     if isinstance(capabilities, list) and plugin_api == 1 and CAPABILITY_LINTER_TOOL in capabilities:
-        errors.append("manifest capability 'linter-tool' requires plugin_api 2")
+        errors.append("manifest capability 'linter-tool' requires plugin_api 2 or 3")
     if plugin_api == 2 and (
         not isinstance(capabilities, list)
         or CAPABILITY_LINTER_TOOL not in capabilities
@@ -86,13 +87,27 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
             errors.append(f"unapproved trusted tool: {reason}")
         else:
             trusted_tool = True
+    elif plugin_api == 3:
+        # Narrow host-pinned contract (trusted_api3): exact id, publisher,
+        # API, entrypoints, capabilities, version plus exact file roles and
+        # hashes. With no provisioned host release pins this always fails
+        # closed here; installer/loader/dispatch re-verify actual bytes.
+        reason = api3_static_error(manifest)
+        if reason:
+            errors.append(f"unapproved plugin_api 3 package: {reason}")
+        else:
+            trusted_tool = True
 
     if not isinstance(manifest["entrypoints"], dict):
         errors.append("manifest entrypoints must be a JSON object")
     elif plugin_api == 1 and V2_LINTER_ENTRYPOINT_KEY in manifest["entrypoints"]:
         errors.append(
-            f"manifest entrypoint '{V2_LINTER_ENTRYPOINT_KEY}' requires plugin_api 2"
+            f"manifest entrypoint '{V2_LINTER_ENTRYPOINT_KEY}' requires plugin_api 2 or 3"
         )
+    elif plugin_api == 3:
+        # No structural entrypoint check here: the api3_static_error gate
+        # above already exact-matches entrypoints against the host pin.
+        pass
     elif plugin_api == 2:
         linter_entry = manifest["entrypoints"].get(V2_LINTER_ENTRYPOINT_KEY)
         if not isinstance(linter_entry, str) or not linter_entry.strip():
@@ -233,18 +248,29 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
         if role not in KNOWN_FILE_ROLES:
             errors.append(f"unsupported manifest file role: {role!r}")
         suffix = PurePosixPath(str(path)).suffix.lower()
-        executable_engine_file = trusted_tool and role == V2_LINTER_ENGINE_ROLE and suffix == ".py"
+        executable_engine_file = (
+            trusted_tool
+            and suffix == ".py"
+            and (
+                role == V2_LINTER_ENGINE_ROLE
+                or (plugin_api == 3 and role == "application-engine")
+            )
+        )
         if suffix and suffix not in ALLOWED_PAYLOAD_SUFFIXES and not executable_engine_file:
             errors.append(
                 f"manifest file '{path}' has a forbidden executable-looking extension '{suffix}'"
             )
-        if role == V2_LINTER_ENGINE_ROLE and not trusted_tool:
+        if role in {V2_LINTER_ENGINE_ROLE, "application-engine"} and not trusted_tool:
             errors.append(
-                f"manifest file '{path}' uses forbidden executable role '{V2_LINTER_ENGINE_ROLE}'"
+                f"manifest file '{path}' uses forbidden executable role '{role}'"
             )
-        if role in {V2_LINTER_ENGINE_ROLE, V2_LINTER_DATA_ROLE} and plugin_api != 2:
+        if role == "application-engine" and plugin_api != 3:
             errors.append(
-                f"manifest file '{path}' uses v2 role '{role}' but plugin_api is not 2"
+                f"manifest file '{path}' uses role 'application-engine' but plugin_api is not 3"
+            )
+        if role in {V2_LINTER_ENGINE_ROLE, "application-engine", V2_LINTER_DATA_ROLE} and plugin_api not in (2, 3):
+            errors.append(
+                f"manifest file '{path}' uses v2/v3 role '{role}' but plugin_api is not 2 or 3"
             )
         if role == V2_LINTER_DATA_ROLE and suffix not in {".json", ".md", ".txt"}:
             errors.append(

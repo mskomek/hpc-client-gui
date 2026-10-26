@@ -21,8 +21,11 @@ _STORAGE_PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 PLUGIN_API_VERSION = 1
 # The legacy numeric marker 2 is accepted only after the application-owned
-# trusted-tool policy approves the exact ANSYS identity.
-SUPPORTED_PLUGIN_API_VERSIONS = frozenset({1, 2})
+# trusted-tool policy approves the exact ANSYS identity. The narrow marker 3
+# is accepted only after the application-owned API v3 release pin approves
+# the exact OpenFOAM (id, version, contract, hashes) identity; with no
+# provisioned pins every API 3 package fails closed (see trusted_api3).
+SUPPORTED_PLUGIN_API_VERSIONS = frozenset({1, 2, 3})
 
 CAPABILITY_CLUSTER_PROFILE = "cluster-profile"
 CAPABILITY_LINT_RULES = "lint-rules"
@@ -50,6 +53,7 @@ KNOWN_FILE_ROLES = frozenset(
         "documentation",
         "linter-data",
         "linter-engine",
+        "application-engine",
     }
 )
 
@@ -241,7 +245,13 @@ class InstalledPlugin:
     job_templates_index: Mapping[str, Any] | None = None
     # Reserved for an application-owned declarative engine descriptor.
     linter_engine: Mapping[str, Any] | None = None
+    application_tool: Mapping[str, Any] | None = None
     plugin_menu_contribution: Any | None = None
+    # The host-resolved plugin storage root used to validate current active
+    # and disabled state again at action dispatch time. Optional for callers
+    # that only use declarative data; executable/action paths fail closed if
+    # no canonical root is available.
+    plugin_root: Path | None = None
 
 
 def is_valid_semver(value: Any) -> bool:

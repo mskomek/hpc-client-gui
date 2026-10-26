@@ -115,7 +115,7 @@ REGISTRY_PLUGIN_TYPES = frozenset(
     }
 )
 
-DISCOVERABLE_PLUGIN_API_VERSIONS = frozenset({1, 2})
+DISCOVERABLE_PLUGIN_API_VERSIONS = frozenset({1, 2, 3})
 
 def _is_nonempty_str(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())

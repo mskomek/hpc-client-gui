@@ -155,7 +155,7 @@ def test_engine_lints_static_without_execution(tmp_path: Path):
     module = importlib.import_module(tool.module_name)
     diags = module.lint_text("application simpleFoam\n",
                              file_name="system/controlDict")
-    assert any(d.rule == "OF-DICT-002" for d in diags)  # missing FoamFile
+    assert any(d.rule == "OF-DICT-001" for d in diags)  # malformed dictionary structure
     sec = module.lint_text("#codeStream\n{\ncode 1;\n}\n", file_name="0/U")
     assert any(d.rule == "OF-SEC-001" for d in sec)  # flagged, not executed
     case = tmp_path / "case"
@@ -164,8 +164,8 @@ def test_engine_lints_static_without_execution(tmp_path: Path):
         "application simpleFoam\n", encoding="utf-8")
     found = module.lint_paths([case])
     assert any(d.file.endswith("controlDict") for d in found)
-    with pytest.raises(ValueError, match="cannot read"):
-        module.lint_paths([tmp_path / "missing"])
+    missing = module.lint_paths([tmp_path / "missing"])
+    assert any(d.rule == "OF-CASE-006" for d in missing)
 
 
 def test_engine_page_factory_fails_closed():

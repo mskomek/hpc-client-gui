@@ -29,11 +29,19 @@ class SlurmResources:
     module: str = "apps/openfoam/v2312-2025"
 
 
-def render_slurm_job(job_name: str, allrun_body: str, res: SlurmResources) -> str:
+def render_slurm_job(job_name: str, res: SlurmResources, *, allrun_sha256: str) -> str:
+    """Render a draft that verifies and invokes a separately generated Allrun.
+
+    Raw shell text is deliberately not accepted here. The caller must pass the
+    digest returned with a host-generated run plan; the submitted script checks
+    the reviewed file before executing it and never interpolates its contents.
+    """
     if not isinstance(job_name, str) or not _JOB_NAME_RE.fullmatch(job_name):
         raise ValueError("job name must be 1-128 safe ASCII letters, digits, dots, underscores, or hyphens")
     if not isinstance(res, SlurmResources):
         raise TypeError("res must be SlurmResources")
+    if not isinstance(allrun_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", allrun_sha256):
+        raise ValueError("Allrun SHA-256 must be 64 lowercase hexadecimal characters")
     if type(res.nodes) is not int or type(res.ntasks) is not int or res.nodes < 1 or res.ntasks < 1:
         raise ValueError("Slurm nodes/ntasks must be >= 1")
     if not isinstance(res.time, str):
@@ -49,16 +57,23 @@ def render_slurm_job(job_name: str, allrun_body: str, res: SlurmResources) -> st
         raise ValueError("module must be a safe slash-separated module name")
     if any(part in (".", "..") for part in res.module.split("/")):
         raise ValueError("module path segments cannot be '.' or '..'")
-    if not isinstance(allrun_body, str) or "\x00" in allrun_body:
-        raise ValueError("Allrun body must be text without NUL bytes")
     header = ["#!/bin/bash", f"#SBATCH --job-name={job_name}",
               f"#SBATCH --nodes={res.nodes}", f"#SBATCH --ntasks={res.ntasks}",
               f"#SBATCH --time={res.time}"]
     if res.partition:
         header.append(f"#SBATCH --partition={res.partition}")
-    return "\n".join(header + [f"module load {res.module}",
-                              "# DRAFT ONLY - review before sbatch; never auto-submitted",
-                              allrun_body]) + "\n"
+    run_guard = [
+        "# DRAFT ONLY - review before sbatch; never auto-submitted",
+        f"expected_allrun_sha256={allrun_sha256}",
+        'if [ ! -f ./Allrun ] || [ -L ./Allrun ]; then',
+        '  echo "Refusing missing or symlinked Allrun" >&2; exit 1',
+        "fi",
+        'printf \'%s  %s\\n\' "$expected_allrun_sha256" ./Allrun | sha256sum --check --status || {',
+        '  echo "Allrun does not match the reviewed workflow draft" >&2; exit 1',
+        "}",
+        "exec bash -- ./Allrun",
+    ]
+    return "\n".join(header + [f"module load {res.module}"] + run_guard) + "\n"
 
 
 @dataclass

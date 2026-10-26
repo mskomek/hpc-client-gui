@@ -21,7 +21,7 @@ class JobTemplateError(ValueError):
     """Raised for malformed templates or invalid render values."""
 
 
-VARIABLE_TYPES = frozenset({"string", "integer", "boolean", "choice", "path"})
+VARIABLE_TYPES = frozenset({"string", "integer", "boolean", "choice", "path", "sha256"})
 
 _PLACEHOLDER_RE = re.compile(r"\{\{([a-z][a-z0-9_]*)\}\}")
 
@@ -243,6 +243,13 @@ def render_template(template: JobTemplate, values: dict[str, object]) -> str:
                 raise JobTemplateError(
                     f"[{template.id}] variable '{variable.name}' must be one of "
                     f"{list(variable.choices)}"
+                )
+            return text_value
+        if variable.type == "sha256":
+            text_value = str(value)
+            if not re.fullmatch(r"[0-9a-f]{64}", text_value):
+                raise JobTemplateError(
+                    f"[{template.id}] variable '{variable.name}' must be a lowercase SHA-256 digest"
                 )
             return text_value
         return str(value)
