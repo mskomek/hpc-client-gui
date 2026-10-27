@@ -18,8 +18,8 @@ GENERATOR_VERSION = "2"
 PUBLISHER = "HPC Client GUI"
 STUDIO_ID = "org.hpcclient.openfoamcasestudio"
 LINTER_ID = "org.hpcclient.openfoamlint"
-STUDIO_VERSION = "0.3.1-w65r19.20261027.4"
-LINTER_VERSION = "0.2.1-w65r19.20261027.4"
+STUDIO_VERSION = "0.3.1-w65r19.20261027.5"
+LINTER_VERSION = "0.2.1-w65r19.20261027.5"
 APP_FLOOR = ">=1.5.9"
 STUDIO_ENGINE = "engine/openfoam_studio/__init__.py"
 LINTER_ENGINE = "engine/openfoam_lint/__init__.py"
@@ -35,20 +35,34 @@ _TRUBA_TEMPLATE = """#!/usr/bin/env bash
 # Draft only. Review cluster policy and module availability before submission.
 set -eo pipefail
 if ! command -v module >/dev/null 2>&1 && [[ -r /etc/profile.d/modules.sh ]]; then
-    source /etc/profile.d/modules.sh
+    if ! source /etc/profile.d/modules.sh; then
+        echo "Environment Modules initialization failed." >&2
+        exit 1
+    fi
 fi
 if ! command -v module >/dev/null 2>&1; then
     echo "Environment Modules is unavailable." >&2
     exit 127
 fi
-module load apps/openfoam/v2312-2025
-set +e
-source "$WM_PROJECT_DIR/etc/bashrc"
-openfoam_env_status=$?
-set -e
-if (( openfoam_env_status != 0 )); then
-    echo "OpenFOAM environment initialization failed: $openfoam_env_status" >&2
-    exit "$openfoam_env_status"
+if module load apps/openfoam/v2312-2025; then
+    module_rc=0
+else
+    module_rc=$?
+fi
+expected_project_dir=/arf/sw/apps/openfoam/v2312-2025
+expected_project_version=v2312
+if [[ "${WM_PROJECT_DIR:-}" != "$expected_project_dir" || "${WM_PROJECT_VERSION:-}" != "$expected_project_version" ]]; then
+    echo "Loaded OpenFOAM environment does not match v2312." >&2
+    exit 1
+fi
+for required_command in blockMesh checkMesh; do
+    if ! command -v "$required_command" >/dev/null 2>&1; then
+        printf "Required OpenFOAM command is unavailable: %s\\n" "$required_command" >&2
+        exit 1
+    fi
+done
+if (( module_rc != 0 )); then
+    printf "Environment Modules returned %s after configuring verified %s (%s); continuing.\\n" "$module_rc" "$expected_project_version" "$expected_project_dir" >&2
 fi
 set -u
 expected_allrun_sha256={{allrun_sha256}}

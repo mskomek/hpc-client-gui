@@ -126,7 +126,13 @@ def check_parallel_consistency(documents: dict, ntasks: int) -> None:
         raise ValueError(f"rank mismatch: decompose {count} != scheduler ntasks {ntasks}")
 
 
-def render_slurm_wrapper(spec: JobSpec, *, allrun_sha256: str) -> str:
+def render_slurm_wrapper(
+    spec: JobSpec,
+    *,
+    allrun_sha256: str,
+    release: str,
+    required_commands: tuple[str, ...],
+) -> str:
     """Render the reviewable wrapper; references Allrun only by digest."""
     if not isinstance(spec, JobSpec):
         raise TypeError("spec must be a validated JobSpec")
@@ -136,6 +142,20 @@ def render_slurm_wrapper(spec: JobSpec, *, allrun_sha256: str) -> str:
     )
     if not isinstance(allrun_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", allrun_sha256):
         raise ValueError("Allrun SHA-256 must be 64 lowercase hexadecimal characters")
+    profile = release_profile(release)
+    expected_project_dir = profile.get("truba_project_dir")
+    expected_project_version = profile.get("truba_project_version")
+    if not isinstance(expected_project_dir, str) or not re.fullmatch(r"/[A-Za-z0-9_./+-]+", expected_project_dir):
+        raise ValueError("release has no verified TRUBA project directory")
+    if not isinstance(expected_project_version, str) or not re.fullmatch(r"v[0-9]+(?:\.[0-9]+)*", expected_project_version):
+        raise ValueError("release has no verified OpenFOAM project version")
+    if spec.module != profile.get("truba_module"):
+        raise ValueError("Slurm draft module does not match the selected release profile")
+    if not isinstance(required_commands, tuple) or not required_commands or any(
+        not isinstance(command, str) or not re.fullmatch(r"[A-Za-z0-9_.+-]+", command)
+        for command in required_commands
+    ):
+        raise ValueError("required runtime commands must be a non-empty safe tuple")
     header = [
         "#!/bin/bash",
         f"#SBATCH --job-name={spec.job_name}",
@@ -149,13 +169,28 @@ def render_slurm_wrapper(spec: JobSpec, *, allrun_sha256: str) -> str:
         "# DRAFT ONLY - review before submitting; nothing is submitted by the studio",
         "set -eo pipefail",
         "if ! command -v module >/dev/null 2>&1 && [[ -r /etc/profile.d/modules.sh ]]; then",
-        "  source /etc/profile.d/modules.sh",
+        "  if ! source /etc/profile.d/modules.sh; then",
+        '    echo \"Environment Modules initialization failed.\" >&2; exit 1',
+        "  fi",
         "fi",
         "if ! command -v module >/dev/null 2>&1; then",
         '  echo \"Environment Modules is unavailable.\" >&2',
         "  exit 127",
         "fi",
-        f"module load {spec.module}",
+        f"if module load {spec.module}; then module_rc=0; else module_rc=$?; fi",
+        f"expected_project_dir={expected_project_dir}",
+        f"expected_project_version={expected_project_version}",
+        'if [ \"${WM_PROJECT_DIR:-}\" != \"$expected_project_dir\" ] || [ \"${WM_PROJECT_VERSION:-}\" != \"$expected_project_version\" ]; then',
+        '  echo \"Loaded OpenFOAM environment does not match the selected release.\" >&2; exit 1',
+        "fi",
+        'for required_command in ' + " ".join(required_commands) + "; do",
+        '  if ! command -v \"$required_command\" >/dev/null 2>&1; then',
+        '    printf \"Required OpenFOAM command is unavailable: %s\\n\" \"$required_command\" >&2; exit 1',
+        "  fi",
+        "done",
+        'if [ \"$module_rc\" -ne 0 ]; then',
+        '  printf \"Environment Modules returned %s after configuring verified %s (%s); continuing.\\n\" \"$module_rc\" \"$expected_project_version\" \"$expected_project_dir\" >&2',
+        "fi",
         "set -u",
         f"expected_allrun_sha256={allrun_sha256}",
         'if [ ! -f ./Allrun ] || [ -L ./Allrun ]; then',
@@ -202,5 +237,13 @@ def build_draft_bundle(documents: dict, catalog: dict, steps, spec: JobSpec) -> 
     solver = _solver_for(documents)
     allrun_text = render_allrun(solver, tuple(steps), catalog["commands"])
     digest = hashlib.sha256(allrun_text.encode("utf-8")).hexdigest()
-    slurm_text = render_slurm_wrapper(spec, allrun_sha256=digest)
+    required_commands = tuple(dict.fromkeys(("blockMesh", "checkMesh", *steps, solver)))
+    if spec.ntasks > 1:
+        required_commands = tuple(dict.fromkeys((*required_commands, "decomposePar", "mpirun", "reconstructPar")))
+    slurm_text = render_slurm_wrapper(
+        spec,
+        allrun_sha256=digest,
+        release=catalog["version"],
+        required_commands=required_commands,
+    )
     return DraftBundle(solver=solver, allrun_text=allrun_text, allrun_sha256=digest, slurm_text=slurm_text, spec=spec)

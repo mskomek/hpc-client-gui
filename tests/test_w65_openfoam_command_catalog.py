@@ -106,4 +106,7 @@ def test_runtime_verified_icofoam_builds_a_bounded_parallel_draft(tmp_path):
     assert "mpirun -np \"$nprocs\" \"$solver\" -parallel" in bundle.allrun_text
     assert bundle.allrun_sha256 in bundle.slurm_text
     assert "exec bash -- ./Allrun" in bundle.slurm_text
+    assert "expected_project_version=v2312" in bundle.slurm_text
+    assert "expected_project_dir=/arf/sw/apps/openfoam/v2312-2025" in bundle.slurm_text
+    assert "Required OpenFOAM command is unavailable" in bundle.slurm_text
     assert "sbatch " not in bundle.slurm_text

@@ -33,6 +33,8 @@ _RELEASES = {
         ),
         "catalog_file": "engine/openfoam_studio/data/command_catalog.json",
         "truba_module": "apps/openfoam/v2312-2025",
+        "truba_project_dir": "/arf/sw/apps/openfoam/v2312-2025",
+        "truba_project_version": "v2312",
         "source_tag": "OpenFOAM-v2312",
         "source_revision": "",
     },

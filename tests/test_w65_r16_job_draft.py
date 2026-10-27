@@ -114,9 +114,17 @@ def test_build_bundle_uses_exact_bytes_digest():
 
 def test_wrapper_has_no_submit_invocation():
     spec = validate_job_spec()
-    text = render_slurm_wrapper(spec, allrun_sha256="a" * 64)
+    text = render_slurm_wrapper(
+        spec,
+        allrun_sha256="a" * 64,
+        release="v2312",
+        required_commands=("blockMesh", "checkMesh", "simpleFoam"),
+    )
     assert "sbatch " not in text and "sbatch\n" not in text
     assert "source /etc/profile.d/modules.sh" in text
+    assert "if module load apps/openfoam/v2312-2025; then module_rc=0; else module_rc=$?; fi" in text
+    assert "WM_PROJECT_VERSION" in text and "WM_PROJECT_DIR" in text
+    assert "command -v \"$required_command\"" in text
     assert text.index("module load apps/openfoam/v2312-2025") < text.index("set -u")
     for forbidden in ("Popen", "os.system", "shell=True"):
         assert forbidden not in text
@@ -132,7 +140,23 @@ def test_v2312_draft_rejects_an_unverified_safe_module_name():
 def test_wrapper_revalidates_forged_job_spec():
     forged = JobSpec(job_name="safe\n#SBATCH --partition=admin")
     with pytest.raises(ValueError):
-        render_slurm_wrapper(forged, allrun_sha256="a" * 64)
+        render_slurm_wrapper(
+            forged,
+            allrun_sha256="a" * 64,
+            release="v2312",
+            required_commands=("blockMesh",),
+        )
+
+
+def test_wrapper_rejects_release_module_mismatch():
+    spec = validate_job_spec(module="apps/openfoam/v1912")
+    with pytest.raises(ValueError, match="module does not match"):
+        render_slurm_wrapper(
+            spec,
+            allrun_sha256="a" * 64,
+            release="v2312",
+            required_commands=("blockMesh",),
+        )
 
 
 def test_bundle_bounds_workflow_step_count():
