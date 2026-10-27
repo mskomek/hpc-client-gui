@@ -1,4 +1,6 @@
 {
+  "schema_version": 1,
+  "source_commit": "3ec93982e18e8f1b933e4d2e047d3623683fb780",
   "pins": [
     {
       "api": 3,
@@ -14,12 +16,12 @@
         [
           "README.md",
           "documentation",
-          "03ee4457a219bc16551574c29326225fe6d7620170461073adaeb43265fdffd0"
+          "078261536fca1df07d220cf2a11d65a8475409985d7b0c538598b21e562eb6fc"
         ],
         [
           "W65_SOURCE_BINDINGS.json",
           "documentation",
-          "283ccb9ca6f7b9468703cfa3ea9097f505f23e15ddc86f9cacf3d77b05bb2000"
+          "6a0cbe5780bdc69c12b8a64498f2ecac6419ecc8450f3e5b276dfd90a14aacf8"
         ],
         [
           "engine/openfoam_studio/__init__.py",
@@ -144,32 +146,32 @@
         [
           "engine/openfoam_studio/qt_actions.py",
           "application-engine",
-          "6afc0d3ff52343d3100a9161624063326a3c3f721685cf1e11a559f9b87ef00c"
+          "8ee65a9c9fd57d02cf0a25deb1e876b1449cc23387122c6f0e995a4548d8ddc3"
         ],
         [
           "engine/openfoam_studio/qt_inspector.py",
           "application-engine",
-          "b1c1218cfb6bc7e79f7165d6c12e969641dbf73bd83f39e4bc7dab87a1465e32"
+          "1a8e02fe6ee340d0f46468aa8942c541f2b739c92b4fbfb96477ef7e0a109a9f"
         ],
         [
           "engine/openfoam_studio/qt_job_draft.py",
           "application-engine",
-          "5edd18b33eb82844f02ab926df33333472c32749f41d0aed03a413d55bcc6caa"
+          "5c840a5700117731e3f60bd08d406acf65f38a5e245a06c75a60bb32d8a018c2"
         ],
         [
           "engine/openfoam_studio/qt_page.py",
           "application-engine",
-          "28c472f3e2539a6d7d38d80a69ba24d141414795890caa179bae225413198cec"
+          "c3364ec551b36edda80dffc19a2a5eeadb243ee03eed62c9ac32e7cef18a07e5"
         ],
         [
           "engine/openfoam_studio/qt_review.py",
           "application-engine",
-          "01c3952e5995825d038e39901e1bf03166d52f8811b30b29cd000f943b61faaf"
+          "5fffe15b92190f09983b3ac9c17a7a33c38b492cbcec72372938ca1c61e5ce29"
         ],
         [
           "engine/openfoam_studio/qt_view.py",
           "application-engine",
-          "efecf4071924660b717bb5f1c5798790b09d0f7c4c29aa60c60fc406145ffa0e"
+          "b3233e1af8c6b8f8d46a661b1ff2a7fd827ddc0133f5c3ebbdb97abca2e435fa"
         ],
         [
           "engine/openfoam_studio/recovery_store.py",
@@ -219,12 +221,12 @@
         [
           "engine/openfoam_studio/wx_job_draft.py",
           "application-engine",
-          "991ba73f91e0cf0b877d7d3ca571eb2ee3d01ac624514b1eb4bd6c68e9f77041"
+          "52cfba0ae24c653df6c0efa48fcec9bb30877d8d1d0d476cf18c893c5547f6cf"
         ],
         [
           "engine/openfoam_studio/wx_page.py",
           "application-engine",
-          "f507f5110757244c6126f036855d86df3547ee57f262243b1e0d08e68817edde"
+          "79a146aef3ee477220491ac7e3018657d7c8258c33d620a888c646cf6e496eb2"
         ],
         [
           "engine/openfoam_studio/wx_save_actions.py",
@@ -234,7 +236,7 @@
         [
           "engine/openfoam_studio/wx_view.py",
           "application-engine",
-          "26721561fe933d173f8e67741409601872bfebe8b9868d09addd0e8a27fa890a"
+          "653478f7459c2a468b9615db2262b511361421c287aab2ea3bff49cdce851733"
         ],
         [
           "engine/openfoam_studio/wx_workflow.py",
@@ -252,10 +254,10 @@
           "ad42fae2116bacb4f5b789a83c4597aaf978606815499b77c49946d2c368bcc2"
         ]
       ],
-      "manifest_sha256": "7db0c3b352e55ba1d917e8048e4076868299fbc100199f1bf0d18dbad8f84955",
+      "manifest_sha256": "8e22b0f5beea6d8f0b23f80e441620e0a570cd8c67824d3b402dbb1822830004",
       "plugin_id": "org.hpcclient.openfoamcasestudio",
       "publisher": "HPC Client GUI",
-      "version": "0.3.1-w65r18.20261026.2"
+      "version": "0.3.1-w65r18.20261027.3"
     },
     {
       "api": 3,
@@ -269,12 +271,12 @@
         [
           "README.md",
           "documentation",
-          "00b81bf4e2b638ea8e0e0178b487a921e04f3c72780060337ee8f670922300f1"
+          "17fe692bcfed2b4b3dd0cef2254af1cc4b729bfd18435ab002f8566c1ff987ac"
         ],
         [
           "W65_SOURCE_BINDINGS.json",
           "documentation",
-          "48a606f83f15c65d9efe96079425c9737ecbc3f431ceb59d94e2bdc1b947b1c3"
+          "08ce6ea100cc96cc904fe08c9b3da5874aeb64b9aa0ec8c441c9b6e1958af36e"
         ],
         [
           "engine/openfoam_lint/__init__.py",
@@ -422,12 +424,10 @@
           "43eb038fd44263bb1701fd86befbb3893dcffb8f0d2e750b278ff4c3cbf1e022"
         ]
       ],
-      "manifest_sha256": "cee87e621d2be77b0d24edbfcbc836500cd01fa6ed0241b839d464d4aaffe9da",
+      "manifest_sha256": "d617867ada9d2dbf7b34f26d93ffd715664681ceeb0f517a112fcfd477e4b840",
       "plugin_id": "org.hpcclient.openfoamlint",
       "publisher": "HPC Client GUI",
-      "version": "0.2.1-w65r18.20261026.2"
+      "version": "0.2.1-w65r18.20261027.3"
     }
-  ],
-  "schema_version": 1,
-  "source_commit": "4aec311e98a98c4cd13153e15387c429ff1962d5"
+  ]
 }
