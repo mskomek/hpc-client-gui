@@ -147,7 +147,7 @@ def _rows(listing):
 @pytest.mark.semantic
 @pytest.mark.regression
 def test_stress_a_right_click_retarget(wx_app, monkeypatch):
-    import hpc_gui.wx_remote_files_view as view
+    import hpc_gui.wx_remote_files_interactions as interactions
 
     assert wx.App.Get() is wx_app
     backend = MockRemoteFilesBackend()
@@ -157,13 +157,16 @@ def test_stress_a_right_click_retarget(wx_app, monkeypatch):
     _pump(wx_app, lambda: listing.GetItemCount() >= 5)
 
     observed = []
-    original_visible_actions = view.visible_actions
+    original_visible_actions = interactions.visible_actions
 
     def recording_visible_actions(selection, *args, **kwargs):
         observed.append(selection)
         return original_visible_actions(selection, *args, **kwargs)
 
-    monkeypatch.setattr(view, "visible_actions", recording_visible_actions)
+    # The production context composer calls the imported helper in this
+    # interactions module; patch that exact seam so the stress assertions
+    # observe the selection produced by a real context-menu event.
+    monkeypatch.setattr(interactions, "visible_actions", recording_visible_actions)
     listing.PopupMenu = lambda menu: None
 
     def actionable_rows():
