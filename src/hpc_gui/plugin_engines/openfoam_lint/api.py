@@ -36,6 +36,7 @@ CASE_RULES = {
     "OF-CASE-002": {"title": "Missing include", "severity": "warning", "confidence": "contextual", "verification_level": "contextual"},
     "OF-CASE-003": {"title": "Unresolved includeEtc", "severity": "info", "confidence": "certain", "verification_level": "contextual"},
     "OF-CASE-004": {"title": "Unparsed include", "severity": "info", "confidence": "heuristic", "verification_level": "contextual"},
+    "OF-CASE-007": {"title": "Unsupported input file", "severity": "info", "confidence": "heuristic", "verification_level": "contextual"},
     "OF-SEC-004": {"title": "Include depth limit", "severity": "warning", "confidence": "structural", "verification_level": "contextual"},
     "OF-CTRL-001": {"title": "Control time interval", "severity": "warning", "confidence": "structural", "verification_level": "static"},
     "OF-CTRL-002": {"title": "Positive time step", "severity": "warning", "confidence": "structural", "verification_level": "static"},
@@ -220,6 +221,12 @@ def lint_files(
             checked.add(relative)
             continue
         if not is_dictionary_name(relative):
+            findings.append(Diagnostic(
+                "OF-CASE-007", "info", "heuristic", relative, 1, 1,
+                "Input is not a supported dictionary and was not parsed.",
+                "Select a supported OpenFOAM dictionary; static lint does not run other files.",
+                verification_level="contextual",
+            ))
             continue
         document, file_findings = _lint_text_result(text, relative)
         parsed[relative] = document
