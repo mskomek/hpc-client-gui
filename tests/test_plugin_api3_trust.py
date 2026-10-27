@@ -140,6 +140,8 @@ def test_production_pin_table_contains_only_declared_w65_candidates():
         ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r18.20261027.3"),
         ("org.hpcclient.openfoamlint", "0.2.1-w65r19.20261027.1"),
         ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r19.20261027.1"),
+        ("org.hpcclient.openfoamlint", "0.2.1-w65r19.20261027.2"),
+        ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r19.20261027.2"),
     }
     assert SUPPORTED_PLUGIN_API_VERSIONS == frozenset({1, 2, 3})
 
