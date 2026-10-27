@@ -4,14 +4,14 @@ Phase A scoped host trust for the two verified OpenFOAM package identities
 (exact dotted IDs -- never short names):
 
 - ``org.hpcclient.openfoamlint`` lineage (exact dotted ID; executable
-  payload allowed only for code-pinned W65 R18.3/R19.1/R19.2/R19.3/R19.4 candidates with a
+  payload allowed only for code-pinned W65 R18.3/R19.1/R19.2/R19.3/R19.4/R19.5 candidates with a
   host pin -- publisher ``HPC Client GUI``, ``plugin_api`` 3,
   capabilities ``["linter-tool"]``, entrypoint
   ``{"linter_engine": "engine/openfoam_lint/__init__.py"}``, payload role
   ``linter-engine`` (.py only); the shipped ``0.2.0-w65r17-auditfix1``
   tree stays API 2 and unchanged).
 - ``org.hpcclient.openfoamcasestudio`` lineage (exact dotted ID;
-  application-engine payload allowed only for code-pinned W65 R18.3/R19.1/R19.2/R19.3/R19.4
+  application-engine payload allowed only for code-pinned W65 R18.3/R19.1/R19.2/R19.3/R19.4/R19.5
   candidates with an exact host pin --
   publisher ``HPC Client GUI``, ``plugin_api`` 3, capabilities
   ``["application-tools"]``, entrypoint
@@ -19,7 +19,7 @@ Phase A scoped host trust for the two verified OpenFOAM package identities
   ``application-engine`` (.py only); the shipped ``0.3.0-w65r17-auditfix1``
   tree stays API 2 and unchanged).
 
-The auditfix1 versions remain API 2 and unchanged. The R18.3, R19.1, R19.2, R19.3 and R19.4
+The auditfix1 versions remain API 2 and unchanged. The R18.3, R19.1, R19.2, R19.3, R19.4 and R19.5
 candidate versions are separately versioned and pinned by the application-owned
 ``api3-release-pins.json`` package data.
 
@@ -51,7 +51,7 @@ content only. They do not isolate the engine from the host process, the
 filesystem, or the network. Treat an approved engine as host-process code
 with the user's privileges.
 
-Only the two OpenFOAM identities and their exact R18.3/R19.1/R19.2/R19.3/R19.4 versions in
+Only the two OpenFOAM identities and their exact R18.3/R19.1/R19.2/R19.3/R19.4/R19.5 versions in
 the host-owned pin file are approved.
 Every other API v3 package is rejected at validation, install, load and
 dispatch time. Never populate pins from package-provided hashes or persist
@@ -97,12 +97,14 @@ API3_LINTER_R19_1_VERSION = "0.2.1-w65r19.20261027.1"
 API3_LINTER_VERSION = "0.2.1-w65r19.20261027.2"
 API3_LINTER_R19_3_VERSION = "0.2.1-w65r19.20261027.3"
 API3_LINTER_R19_4_VERSION = "0.2.1-w65r19.20261027.4"
+API3_LINTER_R19_5_VERSION = "0.2.1-w65r19.20261027.5"
 API3_STUDIO_ID = "org.hpcclient.openfoamcasestudio"
 API3_STUDIO_PREVIOUS_VERSION = "0.3.1-w65r18.20261027.3"
 API3_STUDIO_R19_1_VERSION = "0.3.1-w65r19.20261027.1"
 API3_STUDIO_VERSION = "0.3.1-w65r19.20261027.2"
 API3_STUDIO_R19_3_VERSION = "0.3.1-w65r19.20261027.3"
 API3_STUDIO_R19_4_VERSION = "0.3.1-w65r19.20261027.4"
+API3_STUDIO_R19_5_VERSION = "0.3.1-w65r19.20261027.5"
 
 API3_LINTER_ENTRYPOINT = "engine/openfoam_lint/__init__.py"
 API3_STUDIO_TEMPLATES_ENTRYPOINT = "templates/index.json"
@@ -115,11 +117,13 @@ OPENFOAM_API3_IDENTITIES = (
     (API3_LINTER_ID, API3_LINTER_VERSION),
     (API3_LINTER_ID, API3_LINTER_R19_3_VERSION),
     (API3_LINTER_ID, API3_LINTER_R19_4_VERSION),
+    (API3_LINTER_ID, API3_LINTER_R19_5_VERSION),
     (API3_STUDIO_ID, API3_STUDIO_PREVIOUS_VERSION),
     (API3_STUDIO_ID, API3_STUDIO_R19_1_VERSION),
     (API3_STUDIO_ID, API3_STUDIO_VERSION),
     (API3_STUDIO_ID, API3_STUDIO_R19_3_VERSION),
     (API3_STUDIO_ID, API3_STUDIO_R19_4_VERSION),
+    (API3_STUDIO_ID, API3_STUDIO_R19_5_VERSION),
 )
 
 # The exact executable role and entrypoint type per application-owned identity.
@@ -153,6 +157,7 @@ APPROVED_API3_PINS: Mapping[tuple[str, str], Api3Pin] = load_application_release
                 API3_LINTER_VERSION,
                 API3_LINTER_R19_3_VERSION,
                 API3_LINTER_R19_4_VERSION,
+                API3_LINTER_R19_5_VERSION,
             ), (
                 ("linter-tool",),
                 (("linter_engine", API3_LINTER_ENTRYPOINT),),
@@ -164,6 +169,7 @@ APPROVED_API3_PINS: Mapping[tuple[str, str], Api3Pin] = load_application_release
                 API3_STUDIO_VERSION,
                 API3_STUDIO_R19_3_VERSION,
                 API3_STUDIO_R19_4_VERSION,
+                API3_STUDIO_R19_5_VERSION,
             ), (
                 ("application-tools", "job-template"),
                 (

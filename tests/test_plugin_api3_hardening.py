@@ -226,5 +226,7 @@ def test_only_declared_w65_release_versions_are_pinned(tmp_path: Path):
         ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r19.20261027.3"),
         ("org.hpcclient.openfoamlint", "0.2.1-w65r19.20261027.4"),
         ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r19.20261027.4"),
+        ("org.hpcclient.openfoamlint", "0.2.1-w65r19.20261027.5"),
+        ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r19.20261027.5"),
     }
     assert api3_error_for_dir(_manifest(), tmp_path, pins=None) is not None
