@@ -147,7 +147,16 @@ def render_slurm_wrapper(spec: JobSpec, *, allrun_sha256: str) -> str:
         header.append(f"#SBATCH --partition={spec.partition}")
     guard = [
         "# DRAFT ONLY - review before submitting; nothing is submitted by the studio",
-        "set -euo pipefail",
+        "set -eo pipefail",
+        "if ! command -v module >/dev/null 2>&1 && [[ -r /etc/profile.d/modules.sh ]]; then",
+        "  source /etc/profile.d/modules.sh",
+        "fi",
+        "if ! command -v module >/dev/null 2>&1; then",
+        '  echo \"Environment Modules is unavailable.\" >&2',
+        "  exit 127",
+        "fi",
+        f"module load {spec.module}",
+        "set -u",
         f"expected_allrun_sha256={allrun_sha256}",
         'if [ ! -f ./Allrun ] || [ -L ./Allrun ]; then',
         '  echo "Refusing missing or symlinked Allrun" >&2; exit 1',
@@ -157,7 +166,7 @@ def render_slurm_wrapper(spec: JobSpec, *, allrun_sha256: str) -> str:
         "}",
         "exec bash -- ./Allrun",
     ]
-    return "\n".join(header + [f"module load {spec.module}"] + guard) + "\n"
+    return "\n".join(header + guard) + "\n"
 
 
 def _solver_for(documents: dict) -> str:
@@ -185,6 +194,10 @@ def build_draft_bundle(documents: dict, catalog: dict, steps, spec: JobSpec) -> 
         job_name=spec.job_name, nodes=spec.nodes, ntasks=spec.ntasks,
         time=spec.time, partition=spec.partition, module=spec.module,
     )
+    if spec.module != profile["truba_module"]:
+        raise ValueError(
+            f"Slurm draft module is not verified for {catalog['version']}: {spec.module}"
+        )
     check_parallel_consistency(documents, spec.ntasks)
     solver = _solver_for(documents)
     allrun_text = render_allrun(solver, tuple(steps), catalog["commands"])

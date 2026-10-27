@@ -12,7 +12,7 @@ OPENFOAM_EDITION = "OpenFOAM.com / ESI"
 CASE_STUDIO_EDITION = "OpenFOAM.com / ESI (OpenCFD)"
 
 _V2312_COMMANDS = (
-    "blockMesh", "checkMesh", "decomposePar", "simpleFoam",
+    "blockMesh", "checkMesh", "decomposePar", "simpleFoam", "icoFoam",
     "reconstructPar", "postProcess",
 )
 

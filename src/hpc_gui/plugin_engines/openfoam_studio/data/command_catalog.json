@@ -29,6 +29,14 @@
       "verification_status": "unverified"
     },
     {
+      "category": "Solver",
+      "execution": "draft-only",
+      "name": "icoFoam",
+      "parameters": [],
+      "source": "TRUBA apps/openfoam/v2312-2025; scratch debug job 6860151",
+      "verification_status": "runtime-executed"
+    },
+    {
       "category": "Post-processing",
       "execution": "draft-only",
       "name": "reconstructPar",

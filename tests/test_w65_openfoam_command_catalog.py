@@ -8,6 +8,7 @@ from types import SimpleNamespace
 import pytest
 
 from hpc_gui.plugin_engines.openfoam_studio.command_catalog import load_command_catalog
+from hpc_gui.plugin_engines.openfoam_studio.job_draft import build_draft_bundle, validate_job_spec
 
 
 def _catalog(commands=None):
@@ -20,6 +21,7 @@ def _catalog(commands=None):
              "parameters": [], "execution": "draft-only"}
             for name, category in (
                 ("simpleFoam", "Solver"), ("blockMesh", "Mesh"),
+                ("icoFoam", "Solver"),
                 ("checkMesh", "Mesh"), ("decomposePar", "Mesh"),
                 ("reconstructPar", "Post-processing"),
                 ("postProcess", "Post-processing"),
@@ -74,3 +76,34 @@ def test_catalog_rejects_symlink(tmp_path):
         pytest.skip("symlink creation unavailable")
     with pytest.raises(ValueError, match="missing or outside"):
         load_command_catalog(plugin)
+
+
+def test_runtime_verified_icofoam_builds_a_bounded_parallel_draft(tmp_path):
+    catalog = load_command_catalog(_plugin(tmp_path, _catalog()))
+
+    class Parsed:
+        def __init__(self, values):
+            self._values = values
+
+        def value(self, key, default=None):
+            return self._values.get(key, default)
+
+    documents = {
+        "system/controlDict": SimpleNamespace(parsed=Parsed({"application": "icoFoam"})),
+        "system/decomposeParDict": SimpleNamespace(parsed=Parsed({"numberOfSubdomains": 4})),
+    }
+    bundle = build_draft_bundle(
+        documents,
+        catalog,
+        ["blockMesh", "checkMesh", "icoFoam"],
+        validate_job_spec(
+            job_name="w65-icofoam-smoke", nodes=1, ntasks=4,
+            time="00:02:00", partition="debug",
+        ),
+    )
+
+    assert bundle.solver == "icoFoam"
+    assert "mpirun -np \"$nprocs\" \"$solver\" -parallel" in bundle.allrun_text
+    assert bundle.allrun_sha256 in bundle.slurm_text
+    assert "exec bash -- ./Allrun" in bundle.slurm_text
+    assert "sbatch " not in bundle.slurm_text
