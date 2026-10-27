@@ -238,24 +238,28 @@ sürümünüze göre doğrulayın.
 
 Plugin API v3, yalnızca iki kesin OpenFOAM kimliği için dar kapsamlı,
 konak sabitli bir uzantıdır. Uygulama sahipli
-`plugins/api3-release-pins.json` yalnızca aşağıdaki ayrı sürümlü W65 R18
-adaylarını onaylar. Diğer bütün API 3 kimlik/sürümleri kapalı kalır. Eski
-bir API 2 paketini sürümünü ya da kimliğini dönüştürerek onaylamayın.
+`plugins/api3-release-pins.json` yalnızca aşağıdaki ayrı sürümlü W65 R18.3
+ve R19.1 adaylarını onaylar. R18.3 pinleri kurulu adayları desteklemeye
+devam eder; R19.1 güncel adaydır. Diğer bütün API 3 kimlik/sürümleri kapalı
+kalır. Eski bir API 2 paketini sürümünü ya da kimliğini dönüştürerek
+onaylamayın.
 
 Dağıtımdaki `*-auditfix1` yapıtları API 2 olarak kalır ve değişmez; API 3
-değildir. R18 sürüm sabitleri manifest ve payload baytlarını doğrular;
+değildir. R18.3 ve R19.1 sürüm sabitleri manifest ve payload baytlarını doğrular;
 işletim sistemi sandbox'ı oluşturmaz.
 
   - Linter `org.hpcclient.openfoamlint`
-    (`0.2.1-w65r18.20261026.1`, dağıtımdaki `0.2.0-w65r17-auditfix1`
-    API 2 adayından ayrı sürüm)
+    (`0.2.1-w65r19.20261027.1` ve korunan
+    `0.2.1-w65r18.20261027.3`, dağıtımdaki `0.2.0-w65r17-auditfix1`
+    API 2 adayından ayrı sürümler)
   (`HPC Client GUI`, `plugin_api` `3`, yetenekler `linter-tool`, giriş
   noktası `linter_engine` = `engine/openfoam_lint/__init__.py`, içerik
   rolü `linter-engine`). Yürütülebilir içerik yalnızca bu kimlikte
   taşınabilir ve yalnızca sabit doğrulamalı baytlardan yüklenir.
   - Case Studio `org.hpcclient.openfoamcasestudio`
-    (`0.3.1-w65r18.20261026.1`, dağıtımdaki `0.3.0-w65r17-auditfix1`
-    API 2 adayından ayrı sürüm)
+    (`0.3.1-w65r19.20261027.1` ve korunan
+    `0.3.1-w65r18.20261027.3`, dağıtımdaki `0.3.0-w65r17-auditfix1`
+    API 2 adayından ayrı sürümler)
   (`HPC Client GUI`, `plugin_api` `3`, yetenekler `application-tools`,
     `job-template`, giriş noktaları `job_templates` = `templates/index.json`
     ve `application_tool` = `engine/openfoam_studio/__init__.py`, içerik

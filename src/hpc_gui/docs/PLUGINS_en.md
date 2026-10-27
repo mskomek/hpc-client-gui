@@ -258,23 +258,26 @@ verify scripts against your installed release.
 
 Plugin API v3 is a narrow host-pinned extension for two exact OpenFOAM
 identities only. The application-owned `plugins/api3-release-pins.json`
-approves only the separately versioned W65 R18 candidates named below.
-Every other API 3 identity/version fails closed. Never approve an old API 2
-package by converting its version or identity.
+approves only the separately versioned W65 R18.3 and R19.1 candidates
+named below. R18.3 pins remain available for installed candidates; R19.1 is
+the current candidate. Every other API 3 identity/version fails closed.
+Never approve an old API 2 package by converting its version or identity.
 
 The shipped `*-auditfix1` artifacts stay API 2 and unchanged; they are
-not API 3. The R18 release pins attest to exact manifest and payload bytes,
-but do not create an operating-system sandbox.
+not API 3. The R18.3 and R19.1 release pins attest to exact manifest and
+payload bytes, but do not create an operating-system sandbox.
 
-- Linter `org.hpcclient.openfoamlint` (`0.2.1-w65r18.20261026.1`, separately
-  versioned from the shipped `0.2.0-w65r17-auditfix1` API 2 candidate)
+- Linter `org.hpcclient.openfoamlint` (`0.2.1-w65r19.20261027.1`, with the
+  retained `0.2.1-w65r18.20261027.3` candidate; separately versioned from
+  the shipped `0.2.0-w65r17-auditfix1` API 2 candidate)
   (`HPC Client GUI`, `plugin_api` `3`, capabilities `linter-tool`,
   entrypoint `linter_engine` = `engine/openfoam_lint/__init__.py`, payload
   role `linter-engine`). Only this identity may carry executable payloads,
   loaded from pin-verified bytes only.
 - Case Studio `org.hpcclient.openfoamcasestudio`
-  (`0.3.1-w65r18.20261026.1`, separately versioned from the shipped
-  `0.3.0-w65r17-auditfix1` API 2 candidate)
+  (`0.3.1-w65r19.20261027.1`, with the retained
+  `0.3.1-w65r18.20261027.3` candidate; separately versioned from the
+  shipped `0.3.0-w65r17-auditfix1` API 2 candidate)
   (`HPC Client GUI`, `plugin_api` `3`, capabilities `application-tools`,
   `job-template`, entrypoints `job_templates` = `templates/index.json` and
   `application_tool` = `engine/openfoam_studio/__init__.py`, payload role

@@ -3,7 +3,7 @@
 Direct facade/engine contract checks plus one end-to-end load of the real
 ``lint_text`` entrypoint through the API3 verified-byte loader. All
 sources and test pins here are synthetic (``tmp_path`` + ``monkeypatch``);
-production pins approve only the two exact W65 R18 candidate identities.
+production pins approve only the explicitly enumerated W65 candidate identities.
 """
 
 from __future__ import annotations
@@ -48,6 +48,8 @@ def test_production_api3_pins_are_exact_candidate_versions():
     assert set(trusted_api3.APPROVED_API3_PINS) == {
         ("org.hpcclient.openfoamlint", "0.2.1-w65r18.20261027.3"),
         ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r18.20261027.3"),
+        ("org.hpcclient.openfoamlint", "0.2.1-w65r19.20261027.1"),
+        ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r19.20261027.1"),
     }
 
 

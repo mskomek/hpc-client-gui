@@ -4,22 +4,23 @@ Phase A scoped host trust for the two verified OpenFOAM package identities
 (exact dotted IDs -- never short names):
 
 - ``org.hpcclient.openfoamlint`` lineage (exact dotted ID; executable
-  payload allowed only for the code-pinned W65 R18 candidate with a
+  payload allowed only for code-pinned W65 R18.3/R19.1 candidates with a
   host pin -- publisher ``HPC Client GUI``, ``plugin_api`` 3,
   capabilities ``["linter-tool"]``, entrypoint
   ``{"linter_engine": "engine/openfoam_lint/__init__.py"}``, payload role
   ``linter-engine`` (.py only); the shipped ``0.2.0-w65r17-auditfix1``
   tree stays API 2 and unchanged).
 - ``org.hpcclient.openfoamcasestudio`` lineage (exact dotted ID;
-  application-engine payload allowed only with an exact host pin --
+  application-engine payload allowed only for code-pinned W65 R18.3/R19.1
+  candidates with an exact host pin --
   publisher ``HPC Client GUI``, ``plugin_api`` 3, capabilities
   ``["application-tools"]``, entrypoint
   ``{"application_tool": "engine/openfoam_studio/__init__.py"}``, payload role
   ``application-engine`` (.py only); the shipped ``0.3.0-w65r17-auditfix1``
   tree stays API 2 and unchanged).
 
-The auditfix1 versions remain API 2 and unchanged. The R18 candidate
-versions are separately versioned and pinned by the application-owned
+The auditfix1 versions remain API 2 and unchanged. The R18.3 and R19.1
+candidate versions are separately versioned and pinned by the application-owned
 ``api3-release-pins.json`` package data.
 
 A manifest self-claim grants nothing. Trust requires ALL of the following
@@ -50,7 +51,8 @@ content only. They do not isolate the engine from the host process, the
 filesystem, or the network. Treat an approved engine as host-process code
 with the user's privileges.
 
-Only the two R18 candidate versions in the host-owned pin file are approved.
+Only the two OpenFOAM identities and their exact R18.3/R19.1 versions in
+the host-owned pin file are approved.
 Every other API v3 package is rejected at validation, install, load and
 dispatch time. Never populate pins from package-provided hashes or persist
 a private signing key in this tree. Tests may replace the table with
@@ -90,9 +92,11 @@ TRUSTED_API3_PUBLISHER = "HPC Client GUI"
 
 # Exact verified identities (dotted reverse-DNS; short names are rejected).
 API3_LINTER_ID = "org.hpcclient.openfoamlint"
-API3_LINTER_VERSION = "0.2.1-w65r18.20261027.3"
+API3_LINTER_PREVIOUS_VERSION = "0.2.1-w65r18.20261027.3"
+API3_LINTER_VERSION = "0.2.1-w65r19.20261027.1"
 API3_STUDIO_ID = "org.hpcclient.openfoamcasestudio"
-API3_STUDIO_VERSION = "0.3.1-w65r18.20261027.3"
+API3_STUDIO_PREVIOUS_VERSION = "0.3.1-w65r18.20261027.3"
+API3_STUDIO_VERSION = "0.3.1-w65r19.20261027.1"
 
 API3_LINTER_ENTRYPOINT = "engine/openfoam_lint/__init__.py"
 API3_STUDIO_TEMPLATES_ENTRYPOINT = "templates/index.json"
@@ -100,7 +104,9 @@ API3_STUDIO_TEMPLATES_ENTRYPOINT = "templates/index.json"
 # The two verified OpenFOAM package identities (id, exact version) that
 # Phase A trusts only these exact code-pinned release versions.
 OPENFOAM_API3_IDENTITIES = (
+    (API3_LINTER_ID, API3_LINTER_PREVIOUS_VERSION),
     (API3_LINTER_ID, API3_LINTER_VERSION),
+    (API3_STUDIO_ID, API3_STUDIO_PREVIOUS_VERSION),
     (API3_STUDIO_ID, API3_STUDIO_VERSION),
 )
 
@@ -127,19 +133,23 @@ RELEASE_PIN_BLOCKER = (
 APPROVED_API3_PINS: Mapping[tuple[str, str], Api3Pin] = load_application_release_pins(
     Path(__file__).with_name("api3-release-pins.json"),
     expected={
-        (API3_LINTER_ID, API3_LINTER_VERSION): (
-            ("linter-tool",),
-            (("linter_engine", API3_LINTER_ENTRYPOINT),),
-            "linter-engine",
-        ),
-        (API3_STUDIO_ID, API3_STUDIO_VERSION): (
-            ("application-tools", "job-template"),
-            (
-                ("application_tool", "engine/openfoam_studio/__init__.py"),
-                ("job_templates", API3_STUDIO_TEMPLATES_ENTRYPOINT),
-            ),
-            "application-engine",
-        ),
+        (plugin_id, version): contract
+        for plugin_id, versions, contract in (
+            (API3_LINTER_ID, (API3_LINTER_PREVIOUS_VERSION, API3_LINTER_VERSION), (
+                ("linter-tool",),
+                (("linter_engine", API3_LINTER_ENTRYPOINT),),
+                "linter-engine",
+            )),
+            (API3_STUDIO_ID, (API3_STUDIO_PREVIOUS_VERSION, API3_STUDIO_VERSION), (
+                ("application-tools", "job-template"),
+                (
+                    ("application_tool", "engine/openfoam_studio/__init__.py"),
+                    ("job_templates", API3_STUDIO_TEMPLATES_ENTRYPOINT),
+                ),
+                "application-engine",
+            )),
+        )
+        for version in versions
     },
     publisher=TRUSTED_API3_PUBLISHER,
     api=TRUSTED_API3_VERSION,

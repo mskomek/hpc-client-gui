@@ -214,9 +214,11 @@ def test_malformed_package_metadata_fails_closed(tmp_path: Path):
 
 
 @pytest.mark.contract
-def test_only_r18_release_versions_are_pinned(tmp_path: Path):
+def test_only_declared_w65_release_versions_are_pinned(tmp_path: Path):
     assert set(trusted_api3.APPROVED_API3_PINS) == {
         ("org.hpcclient.openfoamlint", "0.2.1-w65r18.20261027.3"),
         ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r18.20261027.3"),
+        ("org.hpcclient.openfoamlint", "0.2.1-w65r19.20261027.1"),
+        ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r19.20261027.1"),
     }
     assert api3_error_for_dir(_manifest(), tmp_path, pins=None) is not None
