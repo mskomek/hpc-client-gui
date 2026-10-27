@@ -218,7 +218,7 @@ def _one_file():
     return fca.context_selection("case.foam", False, ("case.foam",), (False,))
 
 
-def test_file_context_unready_by_default():
+def test_file_context_requires_an_application_pinned_api3_plugin():
     assert fca.is_openfoam_file_context_ready() is False
     for selection in (_one_dir(), _one_file()):
         assert fca.openfoam_file_context_actions(selection, _studio_plugin()) == ()
@@ -226,20 +226,7 @@ def test_file_context_unready_by_default():
             selection, _linter_plugin(), remote=True) == ()
 
 
-def test_file_context_ready_verified_identities(monkeypatch):
-    monkeypatch.setattr(fca, "OPENFOAM_FILE_CONTEXT_READY", True)
-    studio = fca.openfoam_file_context_actions(_one_dir(), _studio_plugin())
-    assert studio == ("of.newCase", "of.openStudio", "of.createJob")
-    linter = fca.openfoam_file_context_actions(_one_dir(), _linter_plugin())
-    assert linter == ("of.validate",)
-    assert fca.openfoam_file_context_actions(
-        _one_file(), _studio_plugin(), remote=True) == studio
-    assert fca.openfoam_file_context_actions(
-        _one_file(), _linter_plugin(), remote=True) == linter
-
-
-def test_file_context_rejects_spoof_and_shape(monkeypatch):
-    monkeypatch.setattr(fca, "OPENFOAM_FILE_CONTEXT_READY", True)
+def test_file_context_rejects_unpinned_identity_and_shape():
     evil = models.InstalledPlugin(
         manifest=models.PluginManifest(
             schema_version=1, plugin_api=1, id="openfoam-case-studio",
@@ -280,23 +267,19 @@ def test_file_context_visible_path_unchanged():
             assert not any(action.startswith("of.") for action in seen)
 
 
-def test_file_context_dispatch_is_safe_noop(monkeypatch):
+def test_file_context_dispatch_rejects_legacy_unpinned_packages():
     studio, linter = _studio_plugin(), _linter_plugin()
     ok, reason = fca.dispatch_openfoam_file_context_action("of.bogus", studio)
     assert ok is False and "unknown" in reason
     ok, reason = fca.dispatch_openfoam_file_context_action(
         "of.newCase", studio, _one_dir())
-    assert ok is False and reason == fca.OPENFOAM_FILE_CONTEXT_PENDING_REASON
+    assert ok is False and "approved owner" in reason
     ok, reason = fca.dispatch_openfoam_file_context_action(
         "of.validate", studio, _one_dir())
-    assert ok is False and "capability" in reason
-    monkeypatch.setattr(fca, "OPENFOAM_FILE_CONTEXT_READY", True)
-    ok, reason = fca.dispatch_openfoam_file_context_action(
-        "of.openStudio", studio, _one_dir())
-    assert ok is False and reason == fca.OPENFOAM_FILE_CONTEXT_NO_RUN_PATH_REASON
+    assert ok is False and "approved owner" in reason
     ok, reason = fca.dispatch_openfoam_file_context_action(
         "of.validate", linter, _one_dir())
-    assert ok is False and reason == fca.OPENFOAM_FILE_CONTEXT_NO_RUN_PATH_REASON
+    assert ok is False and "approved owner" in reason
 
 
 def test_file_context_label_keys_reuse_paired_i18n():

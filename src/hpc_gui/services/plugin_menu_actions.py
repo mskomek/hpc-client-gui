@@ -31,11 +31,8 @@ ALLOWED_ACTIONS = frozenset(
         "editor.lint_current",
         "editor.new_from_plugin_templates",
         "plugin.open_trusted_tool",
-        # W65 r10: OpenFOAM studio/linter registration (HOST-002/G02).
-        # Allowlisted so the r9 validator-clean manifest fragment resolves
-        # to a known host action instead of "unknown action", but kept
-        # inert by the readiness gate below until plugin/host readiness
-        # is verified in a VM (no execution, no UI construction).
+        # W65: OpenFOAM studio/linter actions are host-owned and require the
+        # exact API 3 release pin plus a framework callback below.
         "openfoam.open_studio",
         "openfoam.new_case",
         "openfoam.create_job_draft",
@@ -59,8 +56,12 @@ _OPENFOAM_ACTION_IDS: dict[str, tuple[str, ...]] = {
 # short IDs never reach the API 3 on-disk gate; they stay pending.
 _OPENFOAM_API3_IDS = frozenset({API3_LINTER_ID, API3_STUDIO_ID})
 
-# OpenFOAM subset of the allowlist (W65 r10 inert registration; r14 live
-# gate below reuses the same set).
+OPENFOAM_PENDING_REASON = (
+    "openfoam package is not on the application-owned API 3 release pin "
+    "(no execution)"
+)
+
+# OpenFOAM subset of the allowlist.
 OPENFOAM_ACTIONS = frozenset(
     {
         "openfoam.open_studio",
@@ -70,17 +71,7 @@ OPENFOAM_ACTIONS = frozenset(
     }
 )
 
-# Code-owned readiness flag: False until an OpenFOAM package identity is
-# installed AND a real (wx/Qt) host execution path is verified in a VM.
-# Reactivation trigger: N package install (G47) + VM-proven host path.
-OPENFOAM_DISPATCH_READY = False
-
-OPENFOAM_PENDING_REASON = (
-    "openfoam host binding pending readiness "
-    "(menu stays disabled; no execution)"
-)
-
-# Host method names for the future live path (r10 stubs return False).
+# Host method names for the controlled framework paths.
 _OPENFOAM_HOST_METHODS = {
     "openfoam.open_studio": "run_openfoam_studio",
     "openfoam.new_case": "new_openfoam_case",
@@ -199,8 +190,8 @@ def is_openfoam_dispatch_ready(plugin=None) -> bool:
     app compatibility, API 3 static+on-disk integrity via
     ``api3_error_for_dir``, and (for dispatch) a real callable framework
     callback. Legacy short identities and versions outside the exact
-    application-owned release pins stay disabled. Never sets the code-owned
-    ``OPENFOAM_DISPATCH_READY`` flag.
+    application-owned release pins stay disabled. Readiness is derived from
+    current package and host evidence rather than a mutable flag.
     """
     if plugin is None or getattr(plugin, "manifest", None) is None:
         return False
@@ -216,14 +207,19 @@ def is_allowed_action(action: str) -> bool:
     return action in ALLOWED_ACTIONS
 
 
-def can_execute_action(action: str, plugin: InstalledPlugin) -> tuple[bool, str]:
+def can_execute_action(
+    action: str,
+    plugin: InstalledPlugin,
+    *,
+    host=None,
+) -> tuple[bool, str]:
     """Return (allowed, reason). Validates allowlist, capability guard, plugin integrity."""
     if action not in ALLOWED_ACTIONS:
         return False, f"unknown action {action!r}"
     if plugin is None or getattr(plugin, "manifest", None) is None:
         return False, "plugin is not installed or missing manifest"
     if action in OPENFOAM_ACTIONS:
-        return _openfoam_gate(action, plugin, host=None)
+        return _openfoam_gate(action, plugin, host=host)
     # Capability guard
     required = ACTION_CAPABILITIES.get(action, ())
     if required:

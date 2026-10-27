@@ -7,9 +7,12 @@ from hpc_gui.services.file_context_actions import (
     FILE_CONTEXT_LABEL_KEYS,
     context_selection,
     dispatch_openfoam_file_context_action,
+    installed_openfoam_file_context_plugins,
     is_openfoam_file_context_action,
+    openfoam_file_context_plugin,
     visible_actions,
     visible_actions_with_openfoam,
+    wx_file_context_host,
 )
 from hpc_gui.services.file_open import detect_file_type, smart_open_preferences
 from hpc_gui.wx_smart_file_open import choose_smart_open
@@ -20,27 +23,22 @@ REMOTE_CANDIDATE_ACTIONS = ("open", "edit", "edit_new_window", "run_shell", "fol
 
 
 def _openfoam_plugins(view) -> tuple:
-    """Installed OpenFOAM plugins offered to the remote File context menu.
-
-    Read from the optional ``openfoam_file_context_plugins`` view
-    attribute (iterable or zero-argument provider); absent means no
-    contribution. Never raises: failures yield no plugins.
-    """
-    provider = getattr(view, "openfoam_file_context_plugins", None)
-    if provider is None:
-        return ()
-    if callable(provider):
-        try:
-            provider = provider()
-        except Exception:
-            return ()
-    try:
-        return tuple(provider or ())
-    except TypeError:
-        return ()
+    """Discover active OpenFOAM packages through the host's verified loader."""
+    return installed_openfoam_file_context_plugins()
 
 
-def remote_menu_actions(selection, plugins, *, follow=True, chmod=True, submit=True, operation=True, favorites=True) -> tuple:
+def remote_menu_actions(
+    selection,
+    plugins,
+    *,
+    follow=True,
+    chmod=True,
+    submit=True,
+    operation=True,
+    favorites=True,
+    host=None,
+    session_state=None,
+) -> tuple:
     """Real remote menu composition: candidate order ∩ allowed + of.* ids.
 
     This is the exact composition used by :func:`context` below (via
@@ -59,19 +57,28 @@ def remote_menu_actions(selection, plugins, *, follow=True, chmod=True, submit=T
     if not favorites:
         allowed.discard("favorite")
     actions = tuple(action for action in REMOTE_CANDIDATE_ACTIONS if action in allowed)
-    extra = visible_actions_with_openfoam(selection, remote=True, plugins=plugins)
+    extra = visible_actions_with_openfoam(
+        selection, remote=True, plugins=plugins, host=host,
+        session_state=session_state,
+    )
     of_only = [action for action in extra if is_openfoam_file_context_action(action)]
     return actions + tuple(action for action in of_only if action not in actions)
 
 
-def run_openfoam_file_context_action(action, selection, plugins) -> tuple:
-    """Fail-closed of.* dispatch for the remote menu (W65 r13).
-
-    Always returns ``(False, reason)``. Never touches run_operation,
-    chmod/Slurm/shell follow-ups, solver or HPC paths.
-    """
-    target = next(iter(plugins or ()), None)
-    return dispatch_openfoam_file_context_action(action, target, selection)
+def run_openfoam_file_context_action(
+    action,
+    selection,
+    plugins,
+    *,
+    host=None,
+    session_state=None,
+) -> tuple:
+    """Invoke the owning pinned plugin through its host-owned wx callback."""
+    target = openfoam_file_context_plugin(action, plugins)
+    return dispatch_openfoam_file_context_action(
+        action, target, selection, remote=True, host=host,
+        session_state=session_state,
+    )
 
 
 def install_interactions(view):
@@ -220,6 +227,7 @@ def install_interactions(view):
         selected = selection.effective_paths
         menu = wx.Menu()
         plugins = _openfoam_plugins(view)
+        plugin_host, session_state = wx_file_context_host(view, selection, remote=True)
         actions = remote_menu_actions(
             selection, plugins,
             follow=callable(getattr(panel, "_follow_callback", None)),
@@ -227,12 +235,22 @@ def install_interactions(view):
             submit=_available(submit_slurm, submit_slurm_supported),
             operation=_available(operation, operation_supported),
             favorites=_current_navigation_store() is not None,
+            host=plugin_host,
+            session_state=session_state,
         )
         labels = FILE_CONTEXT_LABEL_KEYS
         for action in actions:
             item = menu.Append(wx.ID_ANY, t(labels.get(action, f"dirs.{action}")))
             if is_openfoam_file_context_action(action):
-                listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_openfoam_file_context_action(action, selection, plugins), item)
+                def run_openfoam(_event, action=action):
+                    ok, reason = run_openfoam_file_context_action(
+                        action, selection, plugins, host=plugin_host,
+                        session_state=session_state,
+                    )
+                    if not ok:
+                        wx.MessageBox(reason, t("login.err_title"), wx.OK | wx.ICON_WARNING, parent=panel)
+
+                listing.Bind(wx.EVT_MENU, run_openfoam, item)
                 continue
             target_dir = clicked.path if clicked and clicked.is_dir else tstate["path"]
             listing.Bind(wx.EVT_MENU, lambda _event, action=action, target=target_dir: run_action(action, selected, target), item)

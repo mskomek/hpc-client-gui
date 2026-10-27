@@ -40,7 +40,7 @@ TEMPLATES_SRC = b'{"schema_version": 1, "templates": []}'
 STUDIO_ENGINE_SRC = (
     "from types import SimpleNamespace\n"
     "def _wx(parent=None, *, plugin, session_state=None, initial_path=None, remote=False, **kwargs):\n"
-    "    return SimpleNamespace(action=kwargs.get('action'))\n"
+    "    return SimpleNamespace(action=kwargs.get('action'), initial_path=initial_path, remote=remote)\n"
     "def _qt(parent=None, *, plugin, session_state=None, initial_path=None, remote=False, **kwargs):\n"
     "    return SimpleNamespace(action=kwargs.get('action'))\n"
     "def create_plugin():\n"

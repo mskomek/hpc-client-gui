@@ -53,7 +53,17 @@ def supports_local_targets(paths) -> bool:
 
 def supports_remote_target(path: str, *, is_directory: bool) -> bool:
     """Accept one SFTP dictionary or a selected remote directory."""
-    if not isinstance(path, str) or not path.startswith("/") or ".." in PurePosixPath(path).parts:
+    if (
+        not isinstance(path, str)
+        or len(path) > 4096
+        or not path.startswith("/")
+        or path.startswith("//")
+        or "\\" in path
+        or any(ord(char) < 0x20 or ord(char) == 0x7F for char in path)
+    ):
+        return False
+    components = path[1:].split("/")
+    if not components or any(part in {"", ".", ".."} for part in components):
         return False
     if is_directory:
         return True

@@ -1,22 +1,8 @@
-"""W65 r13: wire the of.* file-context path through the real UI call sites.
+"""W65 r13 compatibility checks for legacy, unpinned File-menu plugins.
 
-The r12 ``openfoam_file_context_actions()`` service was not consumed by
-either wx File context menu: the local view calls
-``visible_actions(selection, remote=False)`` and the remote view uses a
-fixed candidate-action tuple intersected with the same service result.
-This round threads the narrow W65 of.* contribution path through those
-real call sites (``wx_local_files_interactions.context_menu``,
-``wx_remote_files_interactions.context``) using validated installed
-plugin identities/capabilities, with readiness False by default: while
-false, no OpenFOAM file-context actions are shown and nothing executes.
-Tests explicitly simulating ready state verify menu composition and a
-fail-closed/no-side-effect dispatch path with fakes; they never claim
-actual wx/VM readiness from mocks.
-
-No solver/HPC execution, no UI construction, no manifest/trust/linter/
-installer/loader/validator/lifecycle/wx-shell edits, no i18n string
-changes (of.* labels reuse the paired openfoam.* keys), no readiness
-flip, no W32-owned behavior change.
+Live API 3 menu discovery and dispatch are covered by the r15 integration
+tests. These fixtures deliberately represent historical API 1 packages;
+they must remain absent from the menu even when supplied by a caller.
 """
 
 from __future__ import annotations
@@ -82,10 +68,9 @@ def _one_file():
     return fca.context_selection("case.foam", False, ("case.foam",), (False,))
 
 
-# --- menu composition is byte-identical while readiness is False --------
+# --- legacy API 1 packages cannot authorize OpenFOAM actions --------------
 
 def test_local_menu_unchanged_when_not_ready():
-    assert fca.OPENFOAM_FILE_CONTEXT_READY is False
     for selection in (_one_dir(), _one_file()):
         base = fca.visible_actions(selection, remote=False)
         assert local_menu_actions(selection, [_studio_plugin()]) == base
@@ -95,7 +80,6 @@ def test_local_menu_unchanged_when_not_ready():
 
 
 def test_remote_menu_unchanged_when_not_ready():
-    assert fca.OPENFOAM_FILE_CONTEXT_READY is False
     for selection in (_one_dir(), _one_file()):
         allowed = set(fca.visible_actions(selection, remote=True))
         legacy = tuple(a for a in REMOTE_CANDIDATE_ACTIONS if a in allowed)
@@ -104,86 +88,42 @@ def test_remote_menu_unchanged_when_not_ready():
         assert not any(a.startswith("of.") for a in remote_menu_actions(selection, []))
 
 
-# --- simulated-ready composition uses validated identities --------------
+# --- discovery always uses the host's normal plugin loader ----------------
 
-def test_ready_local_menu_shows_validated_identities(monkeypatch):
-    monkeypatch.setattr(fca, "OPENFOAM_FILE_CONTEXT_READY", True)
-    studio = local_menu_actions(_one_dir(), [_studio_plugin()])
-    assert studio[-3:] == ("of.newCase", "of.openStudio", "of.createJob")
-    linter = local_menu_actions(_one_dir(), [_linter_plugin()])
-    assert linter[-1:] == ("of.validate",)
-    both = local_menu_actions(_one_dir(), [_studio_plugin(), _linter_plugin()])
-    assert both[-4:] == fca.OPENFOAM_FILE_CONTEXT_IDS
-    assert local_menu_actions(_one_dir(), [_evil_plugin()]) == (
-        local_menu_actions(_one_dir(), []))
-    background = fca.context_selection(None, None, (), (), background=True)
-    assert local_menu_actions(background, [_studio_plugin()]) == (
-        local_menu_actions(background, []))
+def test_plugin_discovery_ignores_view_supplied_objects(monkeypatch):
+    import hpc_gui.wx_local_files_interactions as local_view
+    import hpc_gui.wx_remote_files_interactions as remote_view
+
+    monkeypatch.setattr(local_view, "installed_openfoam_file_context_plugins", lambda: ())
+    monkeypatch.setattr(remote_view, "installed_openfoam_file_context_plugins", lambda: ())
+    supplied = SimpleNamespace(openfoam_file_context_plugins=[_studio_plugin()])
+    assert local_plugins(supplied) == ()
+    assert remote_plugins(supplied) == ()
 
 
-def test_ready_remote_menu_shows_validated_identities(monkeypatch):
-    monkeypatch.setattr(fca, "OPENFOAM_FILE_CONTEXT_READY", True)
-    studio = remote_menu_actions(_one_dir(), [_studio_plugin()])
-    assert studio[-3:] == ("of.newCase", "of.openStudio", "of.createJob")
-    both = remote_menu_actions(_one_file(), [_studio_plugin(), _linter_plugin()])
-    assert both[-4:] == fca.OPENFOAM_FILE_CONTEXT_IDS
-    no_fav = remote_menu_actions(_one_dir(), [_studio_plugin()], favorites=False)
-    assert "favorite" not in no_fav and no_fav[-3:] == studio[-3:]
-    gated = remote_menu_actions(
-        _one_file(), [_studio_plugin(), _linter_plugin()],
-        follow=False, chmod=False, submit=False, operation=False)
-    assert not {"follow_track", "chmod", "submit_slurm", "new_file"} & set(gated)
-    assert gated[-4:] == fca.OPENFOAM_FILE_CONTEXT_IDS
-    assert remote_menu_actions(_one_dir(), [_evil_plugin()]) == (
-        remote_menu_actions(_one_dir(), []))
+# --- legacy packages cannot cross the API 3 trust boundary ----------------
 
-
-# --- provider attribute shapes never raise ------------------------------
-
-def test_plugin_provider_shapes():
-    assert local_plugins(SimpleNamespace()) == ()
-    assert remote_plugins(SimpleNamespace()) == ()
-    view = SimpleNamespace(openfoam_file_context_plugins=[_studio_plugin()])
-    assert local_plugins(view) == (_studio_plugin(),) or len(local_plugins(view)) == 1
-    assert len(remote_plugins(view)) == 1
-    lazy = SimpleNamespace(openfoam_file_context_plugins=lambda: [_linter_plugin()])
-    assert len(local_plugins(lazy)) == 1 and len(remote_plugins(lazy)) == 1
-
-    def _boom():
-        raise RuntimeError("nope")
-
-    assert local_plugins(SimpleNamespace(openfoam_file_context_plugins=_boom)) == ()
-    assert remote_plugins(SimpleNamespace(openfoam_file_context_plugins=_boom)) == ()
-    assert local_plugins(SimpleNamespace(openfoam_file_context_plugins=object())) == ()
-
-
-# --- dispatch is always fail-closed with no side effects ----------------
-
-def test_of_dispatch_fail_closed_not_ready():
-    assert fca.OPENFOAM_FILE_CONTEXT_READY is False
+def test_of_dispatch_rejects_legacy_packages():
     studio, linter = _studio_plugin(), _linter_plugin()
     pairs = [("of.newCase", studio), ("of.openStudio", studio),
              ("of.createJob", studio), ("of.validate", linter)]
     for runner in (local_run_of, remote_run_of):
         for action, plugin in pairs:
             ok, reason = runner(action, _one_dir(), [plugin])
-            assert ok is False and reason == fca.OPENFOAM_FILE_CONTEXT_PENDING_REASON
+            assert ok is False and "approved owner" in reason
         ok, reason = runner("of.bogus", _one_dir(), [studio])
         assert ok is False and "unknown" in reason
 
 
-def test_of_dispatch_fail_closed_ready_simulated(monkeypatch):
-    monkeypatch.setattr(fca, "OPENFOAM_FILE_CONTEXT_READY", True)
+def test_of_dispatch_rejects_wrong_owner_and_unsupported_path():
+    studio, linter = _studio_plugin(), _linter_plugin()
     for runner in (local_run_of, remote_run_of):
-        ok, reason = runner("of.openStudio", _one_dir(), [_studio_plugin()])
-        assert ok is False and reason == fca.OPENFOAM_FILE_CONTEXT_NO_RUN_PATH_REASON
-        ok, reason = runner("of.validate", _one_dir(), [_linter_plugin()])
-        assert ok is False and reason == fca.OPENFOAM_FILE_CONTEXT_NO_RUN_PATH_REASON
-        ok, reason = runner("of.validate", _one_dir(), [_studio_plugin()])
-        assert ok is False and "capability" in reason
+        ok, reason = runner("of.validate", _one_dir(), [studio])
+        assert ok is False and "approved owner" in reason
+        ok, reason = runner("of.openStudio", _one_dir(), [linter])
+        assert ok is False and "approved owner" in reason
         ok, reason = runner("of.openStudio", _one_dir(), [])
-        assert ok is False and "not installed" in reason
-
+        assert ok is False and "approved owner" in reason
 
 # --- real run_action owners never execute of.* ---------------------------
 

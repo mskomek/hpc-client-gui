@@ -71,9 +71,11 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
     _local = _local_files_callbacks(session_state, frame, lifecycle)
     _remote = _remote_files_callbacks(session_state, frame, lifecycle)
     local_panel = build_local_files_panel(top_splitter, **_local)
+    local_panel._wx_openfoam_session_state = session_state
     session_state["_embedded_local_files_panel"] = local_panel
     local_workspace = build_local_files_navigation(wx, top_splitter, local_panel, t)
     remote_panel = build_remote_files_panel(top_splitter, **_remote)
+    remote_panel._wx_openfoam_session_state = session_state
     session_state["_embedded_remote_files_panel"] = remote_panel
     upload_selected.Bind(
         wx.EVT_BUTTON,

@@ -80,7 +80,15 @@ def _wx_session_state(editor_page) -> dict:
     return {}
 
 
-def _open_studio_page(plugin: InstalledPlugin, editor_page, *, action=None) -> bool:
+def _open_studio_page(
+    plugin: InstalledPlugin,
+    editor_page,
+    *,
+    action=None,
+    initial_path=None,
+    remote=False,
+    session_state=None,
+) -> bool:
     reason = _studio_gate(plugin)
     if reason:
         logger.warning("wx openfoam studio blocked for %s: %s", plugin.manifest.id, reason)
@@ -97,7 +105,11 @@ def _open_studio_page(plugin: InstalledPlugin, editor_page, *, action=None) -> b
         return False
     try:
         parent = _wx_parent_for(editor_page)
-        session_state = _wx_session_state(editor_page)
+        session_state = (
+            session_state
+            if isinstance(session_state, dict) and session_state
+            else _wx_session_state(editor_page)
+        )
         if parent is None:
             logger.warning("wx OpenFOAM Case Studio needs the active application frame")
             return False
@@ -115,7 +127,7 @@ def _open_studio_page(plugin: InstalledPlugin, editor_page, *, action=None) -> b
             pass
         page = create_wx_page(
             frame, plugin=plugin, session_state=session_state,
-            initial_path=None, remote=False, action=action,
+            initial_path=initial_path, remote=remote, action=action,
         )
         if page is None:
             frame.Destroy()
@@ -133,10 +145,14 @@ def _open_studio_page(plugin: InstalledPlugin, editor_page, *, action=None) -> b
 class WxPluginMenuHost:
     """wx implementation – routes only where a real wx path exists."""
 
-    def __init__(self, editor_page=None, *, initial_paths=(), session_state=None):
+    def __init__(self, editor_page=None, *, initial_paths=(), session_state=None, remote=False):
         self._editor = editor_page
         self._initial_paths = tuple(str(path) for path in (initial_paths or ()))
         self._session_override = dict(session_state or {})
+        self._remote = bool(remote)
+
+    def _initial_path(self):
+        return self._initial_paths[0] if len(self._initial_paths) == 1 else None
 
     def run_editor_lint(self, plugin_id: str) -> bool:
         # No verified wx lint pipeline – explicitly unsupported
@@ -177,11 +193,17 @@ class WxPluginMenuHost:
 
     def run_openfoam_studio(self, plugin: InstalledPlugin) -> bool:
         """Open the page factory from the exact host-pinned Studio engine."""
-        return _open_studio_page(plugin, self._editor, action=None)
+        return _open_studio_page(
+            plugin, self._editor, action=None, initial_path=self._initial_path(),
+            remote=self._remote, session_state=self._session_override,
+        )
 
     def new_openfoam_case(self, plugin: InstalledPlugin) -> bool:
         """Open Case Studio for a new case (review-only, no execution)."""
-        return _open_studio_page(plugin, self._editor, action="new")
+        return _open_studio_page(
+            plugin, self._editor, action="new", initial_path=self._initial_path(),
+            remote=self._remote, session_state=self._session_override,
+        )
 
     def create_openfoam_job_draft(self, plugin: InstalledPlugin) -> bool:
         """Open Case Studio job-draft flow (review-only, no execution).
@@ -191,7 +213,10 @@ class WxPluginMenuHost:
         existing Allrun is never overwritten, and no scheduler
         submission, child-process, or network call runs here.
         """
-        return _open_studio_page(plugin, self._editor, action="draft")
+        return _open_studio_page(
+            plugin, self._editor, action="draft", initial_path=self._initial_path(),
+            remote=self._remote, session_state=self._session_override,
+        )
 
     def validate_with_openfoam_linter(self, plugin: InstalledPlugin) -> bool:
         """Validate via the verified-byte API 3 linter engine (read-only).
