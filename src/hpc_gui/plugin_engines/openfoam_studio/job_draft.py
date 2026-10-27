@@ -11,6 +11,8 @@ import hashlib
 import re
 from dataclasses import dataclass
 
+from hpc_gui.openfoam_core.release_support import OPENFOAM_EDITION, release_profile
+
 
 _JOB_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
 _PARTITION_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z")
@@ -74,15 +76,24 @@ def validate_job_spec(
     return JobSpec(job_name=job_name, nodes=nodes, ntasks=ntasks, time=time, partition=partition, module=module)
 
 
-def require_catalog_v2312(catalog: dict) -> None:
-    """Require the real ESI v2312 application catalog; raises otherwise."""
+def require_release_catalog(catalog: dict) -> dict:
+    """Require a catalog with a matching host-owned OpenFOAM release profile."""
     if not isinstance(catalog, dict):
         raise ValueError("case catalog is unavailable")
-    if catalog.get("product") != "OpenFOAM.com / ESI" or catalog.get("version") != "v2312":
-        raise ValueError("case catalog does not match OpenFOAM.com v2312")
+    if catalog.get("product") != OPENFOAM_EDITION:
+        raise ValueError("case catalog is not an OpenFOAM.com / ESI catalog")
+    profile = release_profile(catalog.get("version"))
     commands = catalog.get("commands")
     if not isinstance(commands, list) or not commands:
         raise ValueError("case catalog has no command list")
+    return profile
+
+
+def require_catalog_v2312(catalog: dict) -> None:
+    """Compatibility guard for callers that explicitly require the TRUBA target."""
+    profile = require_release_catalog(catalog)
+    if profile["source_tag"] != "OpenFOAM-v2312":
+        raise ValueError("case catalog does not match OpenFOAM.com v2312")
 
 
 def decompose_subdomains(documents: dict) -> int | None:
@@ -161,7 +172,11 @@ def build_draft_bundle(documents: dict, catalog: dict, steps, spec: JobSpec) -> 
 
     if not isinstance(documents, dict) or not documents:
         raise ValueError("no case is open")
-    require_catalog_v2312(catalog)
+    profile = require_release_catalog(catalog)
+    if not profile["truba_module"]:
+        raise ValueError(
+            f"Slurm job draft is disabled for {catalog['version']}: no TRUBA module is verified"
+        )
     if not isinstance(spec, JobSpec):
         raise TypeError("spec must be a validated JobSpec")
     if not isinstance(steps, (tuple, list)) or len(steps) > MAX_WORKFLOW_STEPS:

@@ -5,7 +5,7 @@ def create_plugin():
     return {
         "id": "org.hpcclient.openfoamcasestudio",
         "title": "OpenFOAM Visual Case Studio",
-        "description": "OpenFOAM.com v2312 case workspace with source-preserving dictionaries and draft-only workflows.",
+        "description": "OpenFOAM.com v2312 and limited v1912 case workspace with source-preserving dictionaries and draft-only workflows.",
         "wx_page_factory": _wx_page_factory,
         "qt_page_factory": _qt_page_factory,
     }

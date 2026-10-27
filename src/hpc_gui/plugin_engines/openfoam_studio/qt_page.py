@@ -31,6 +31,7 @@ from .qt_inspector import QtTypedInspector
 from .qt_job_draft import open_job_draft
 from .qt_review import store_reviewed_allrun, validate_case
 from .qt_view import QtCaseStudioView
+from .release_selection import ReleaseSelectionController
 from .workspace import CaseWorkspace
 from .workflow import WorkflowPlan
 
@@ -49,6 +50,7 @@ class QtCaseStudioPage(QWidget, QtCaseStudioView):
         super().__init__(parent)
         self.plugin = plugin
         self.session_state = dict(session_state or {})
+        self.target_release = "v2312"
         self.workspace: CaseWorkspace | None = None
         self.remote = False
         self.documents: dict = {}
@@ -58,6 +60,8 @@ class QtCaseStudioPage(QWidget, QtCaseStudioView):
         self._loading = False
         self.last_error = ""
         self._build()
+        self.release_selection = ReleaseSelectionController(self)
+        self.release_selection.bind()
         self.save_actions = QtCaseSaveActions(self)
         self.case_manager_actions = QtCaseManagerActions(self)
         self.case_manager_actions.bind()
@@ -344,7 +348,7 @@ class QtCaseStudioPage(QWidget, QtCaseStudioView):
             region_summary = t("openfoam.regions_unresolved")
         self.preview.setPlainText(
             "OpenFOAM.com / ESI\n"
-            "v2312\n"
+            f"{self.target_release}\n"
             f"{t('openfoam.case_root')}: {self.workspace.root}\n"
             f"{t('openfoam.solver')}: {solver}\n"
             f"{t('openfoam.dictionary_count')}: {len(self.documents)}\n"
@@ -402,6 +406,7 @@ class QtCaseStudioPage(QWidget, QtCaseStudioView):
             if str(command.get("name")) == name:
                 self.command_details.setPlainText(
                     f"{name}\ncategory: {command.get('category', '')}\n"
+                    f"release: {self.target_release}\n"
                     f"status: {command.get('verification_status', '')}\n"
                     f"execution: {command.get('execution', '')}"
                 )

@@ -183,6 +183,32 @@ def _skip_balanced(tokens: list[Token], pos: int) -> int:
     return pos
 
 
+def _dictionary_key(tokens: list[Token], pos: int, source: str) -> tuple[str, int]:
+    """Read a bare key, keeping adjacent function-style keys intact."""
+    token = tokens[pos]
+    end = pos + 1
+    if (
+        token.kind != "atom"
+        or end >= len(tokens)
+        or tokens[end].kind != "punct"
+        or tokens[end].value != "("
+        or tokens[end].offset != token.end
+    ):
+        return token.value, end
+    depth = 0
+    for index in range(end, len(tokens)):
+        current = tokens[index]
+        if current.kind != "punct":
+            continue
+        if current.value == "(":
+            depth += 1
+        elif current.value == ")":
+            depth -= 1
+            if depth == 0:
+                return source[token.offset:current.end], index + 1
+    return token.value, end
+
+
 def parse_dictionary(text: str, *, path: str = "<memory>") -> ParsedDictionary:
     """Parse one dictionary without expanding includes or directives."""
     if not isinstance(text, str):
@@ -254,9 +280,12 @@ def parse_dictionary(text: str, *, path: str = "<memory>") -> ParsedDictionary:
                 pos += 1
                 continue
             if tok.kind in ("atom", "string"):
-                key = tok.value.strip("\"'") if tok.kind == "string" else tok.value
+                if tok.kind == "string":
+                    key, key_end = tok.value.strip("\"'"), pos + 1
+                else:
+                    key, key_end = _dictionary_key(tokens, pos, text)
                 key_line, key_col = tok.line, tok.column
-                pos += 1
+                pos = key_end
                 while pos < total and tokens[pos].kind == "comment":
                     pos += 1
                 if pos < total and tokens[pos].kind == "punct" and tokens[pos].value == "{":

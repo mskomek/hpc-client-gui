@@ -83,6 +83,23 @@ def test_download_exact_file_verifies_hash_and_size(tmp_path: Path):
         )
 
 @pytest.mark.unit
+def test_remote_url_prefix_is_not_recreated_under_staging_root(tmp_path: Path):
+    payload = b"catalog"
+    remote_path = "plugins/example/1.2.3/engine/catalog.json"
+    fetcher = make_fetcher({OFFICIAL_RAW_BASE + remote_path: payload})
+    destination = download_exact_file(
+        rel_path=remote_path,
+        destination_rel_path="engine/catalog.json",
+        destination_dir=tmp_path,
+        expected_sha256=sha256_bytes(payload),
+        expected_size=len(payload),
+        fetcher=fetcher,
+    )
+    assert destination == tmp_path / "engine" / "catalog.json"
+    assert destination.read_bytes() == payload
+    assert not (tmp_path / "plugins").exists()
+
+@pytest.mark.unit
 def test_download_missing_file_raises(tmp_path: Path):
     with pytest.raises(DownloadError):
         download_exact_file(

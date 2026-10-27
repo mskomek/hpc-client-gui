@@ -8,6 +8,7 @@ from hpc_gui.core.i18n import t
 from hpc_gui.openfoam_core import DecodedSource
 from hpc_gui.openfoam_core.cancellation import ScanCancelledError
 from hpc_gui.openfoam_core.files import read_dictionary_file
+from hpc_gui.openfoam_core.release_support import supported_releases
 
 from .api import lint_paths, rule_catalog
 
@@ -19,6 +20,7 @@ class WxLinterPage:
         self.wx = wx
         self.page = wx.Panel(parent)
         self.session_state = session_state or {}
+        self.target_release = "v2312"
         self.paths = [str(path) for path in initial_paths]
         self.remote = bool(remote)
         self.result = None
@@ -42,9 +44,9 @@ class WxLinterPage:
         self.edition.SetSelection(0)
         self.edition.Enable(False)
         header.Add(self.edition, 0, wx.ALL, 4)
-        self.version = wx.Choice(self.page, choices=["v2312"])
+        self.version = wx.Choice(self.page, choices=list(supported_releases()))
         self.version.SetSelection(0)
-        self.version.Enable(False)
+        self.version.Enable(True)
         header.Add(self.version, 0, wx.ALL, 4)
         self.add_file = wx.Button(self.page, label=t("openfoam.add_file"))
         self.add_case = wx.Button(self.page, label=t("openfoam.add_case"))
@@ -83,6 +85,7 @@ class WxLinterPage:
         self.run.Bind(wx.EVT_BUTTON, self._run_lint)
         self.export.Bind(wx.EVT_BUTTON, self._export_json)
         self.cancel.Bind(wx.EVT_BUTTON, self._cancel_lint)
+        self.version.Bind(wx.EVT_CHOICE, self._release_changed)
         self.diagnostics.Bind(wx.EVT_LIST_ITEM_SELECTED, self._show_details)
         self.diagnostics.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self._open_source)
         self._stale_timer = wx.Timer(self.page)
@@ -93,6 +96,15 @@ class WxLinterPage:
 
     def _refresh_files(self):
         self.files.Set([str(path) for path in self.paths])
+
+    def _release_changed(self, _event):
+        self.target_release = self.version.GetStringSelection()
+        if self.result is not None:
+            self._mark_existing_results_stale()
+        else:
+            self.status.SetLabel(
+                f"OpenFOAM.com / ESI {self.target_release}; static common-rule profile."
+            )
 
     def open_paths(self, paths, *, remote=False, action=None):
         self.paths = [str(path) for path in paths]
@@ -126,12 +138,15 @@ class WxLinterPage:
             self.status.SetLabel(t("openfoam.select_path"))
             return
         self.run.Disable()
+        self.version.Disable()
         self.add_file.Disable()
         self.add_case.Disable()
         self.export.Disable()
         self.cancel.Enable()
         self.status.SetLabel(t("openfoam.lint_running"))
         chosen = tuple(self.paths)
+        release = self.version.GetStringSelection()
+        self.target_release = release
         event = Event()
         self._cancel_event = event
         self._stale = False
@@ -148,9 +163,13 @@ class WxLinterPage:
                     files = session.get("files") if isinstance(session, dict) else getattr(session, "files", None)
                     if files is None or len(chosen) != 1:
                         raise RuntimeError("a connected SFTP session and one remote case path are required")
-                    result = lint_remote_path(chosen[0], files, cancel_event=event)
+                    result = lint_remote_path(
+                        chosen[0], files, cancel_event=event, release=release,
+                    )
                 else:
-                    result = lint_paths(chosen, cancel_event=event)
+                    result = lint_paths(
+                        chosen, cancel_event=event, release=release,
+                    )
                 error = None
             except ScanCancelledError:
                 result, error, cancelled = None, None, True
@@ -168,6 +187,7 @@ class WxLinterPage:
 
     def _lint_done(self, result, error, cancelled=False):
         self.run.Enable(True)
+        self.version.Enable(True)
         self.cancel.Disable()
         if not self.remote:
             self.add_file.Enable(True)
@@ -189,7 +209,13 @@ class WxLinterPage:
             self.diagnostics.SetItem(index, 2, finding.rule_id)
             self.diagnostics.SetItem(index, 3, f"{finding.path}:{finding.line}:{finding.column}")
             self.diagnostics.SetItem(index, 4, finding.message)
-        self.status.SetLabel(t("openfoam.lint_summary").format(files=len(result.files_checked), errors=result.errors, warnings=result.warnings))
+        self.status.SetLabel(
+            f"OpenFOAM.com / ESI {result.version}; "
+            + t("openfoam.lint_summary").format(
+                files=len(result.files_checked), errors=result.errors,
+                warnings=result.warnings,
+            )
+        )
         if not self.findings:
             self.details.SetValue(t("openfoam.no_findings"))
         self.tabs.SetSelection(2)

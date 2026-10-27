@@ -4,8 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-EDITIONS = {"OpenFOAM.com / ESI (OpenCFD)": ("v2312",)}
-VERSIONS = {"v2312": "active"}
+from hpc_gui.openfoam_core.release_support import (
+    CASE_STUDIO_EDITION,
+    release_profile,
+    supported_releases,
+)
+
+EDITIONS = {CASE_STUDIO_EDITION: supported_releases()}
+VERSIONS = {release: release_profile(release)["status"] for release in EDITIONS[CASE_STUDIO_EDITION]}
 SOLVERS = ("icoFoam", "simpleFoam", "pimpleFoam", "chtMultiRegionSimpleFoam",
            "buoyantSimpleFoam", "rhoSimpleFoam", "interFoam")
 MODES = ("serial", "parallel")
@@ -24,9 +30,9 @@ def select(edition: str, version: str, solver: str, mode: str, profile: str) -> 
     if edition not in EDITIONS:
         raise ValueError(f"edition '{edition}' unsupported (disabled with reason)")
     if version not in EDITIONS[edition]:
-        raise ValueError(f"version '{version}' unavailable for {edition}; only v2312 active")
-    if solver not in SOLVERS:
-        raise ValueError(f"solver '{solver}' not in typed selector (use RAW-ADVANCED path)")
+        raise ValueError(f"version '{version}' unavailable for {edition}")
+    if solver not in release_profile(version)["solvers"]:
+        raise ValueError(f"solver '{solver}' is not enabled for {version}")
     if mode not in MODES:
         raise ValueError(f"mode '{mode}' invalid")
     return Selection(edition, version, solver, mode, profile)

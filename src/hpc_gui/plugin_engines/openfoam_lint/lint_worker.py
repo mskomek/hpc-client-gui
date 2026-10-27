@@ -20,12 +20,14 @@ class LintTask(QRunnable):
     """Run local or SFTP lint without blocking the GUI thread."""
 
     def __init__(self, token: int, paths: tuple[str, ...], *, remote_files=None,
-                 cancel_event: Event | None = None) -> None:
+                 cancel_event: Event | None = None,
+                 release: str = "v2312") -> None:
         super().__init__()
         self.token = token
         self.paths = paths
         self.remote_files = remote_files
         self.cancel_event = cancel_event or Event()
+        self.release = release
         self.signals = LintSignals()
 
     @Slot()
@@ -35,17 +37,24 @@ class LintTask(QRunnable):
             if self.remote_files is None:
                 from .api import lint_paths
 
-                result = lint_paths(self.paths, cancel_event=self.cancel_event)
+                result = lint_paths(
+                    self.paths, cancel_event=self.cancel_event,
+                    release=self.release,
+                )
             else:
                 from .remote_case import lint_remote_path
 
                 runs = [
-                    lint_remote_path(path, self.remote_files, cancel_event=self.cancel_event)
+                    lint_remote_path(
+                        path, self.remote_files, cancel_event=self.cancel_event,
+                        release=self.release,
+                    )
                     for path in self.paths
                 ]
                 result = LintResult(
                     tuple(item for run in runs for item in run.diagnostics),
                     tuple(path for run in runs for path in run.files_checked),
+                    version=self.release,
                 )
             raise_if_cancelled(self.cancel_event)
         except ScanCancelledError:

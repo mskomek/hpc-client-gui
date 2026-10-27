@@ -24,7 +24,7 @@ from hpc_gui.openfoam_core.remote_paths import (
     require_remote_regular_file,
 )
 
-from .api import lint_files
+from .api import _check_release, lint_files
 
 MAX_FILE_BYTES = MAX_REMOTE_DICTIONARY_BYTES
 MAX_CASE_BYTES = MAX_REMOTE_CASE_BYTES
@@ -75,8 +75,9 @@ def _selected_root(path: PurePosixPath, files) -> tuple[PurePosixPath, PurePosix
     return path.parent, path
 
 
-def lint_remote_path(path: str, files, *, cancel_event=None):
+def lint_remote_path(path: str, files, *, cancel_event=None, release: str | None = None):
     """Lint a remote case or one dictionary through the active SFTP adapter."""
+    _check_release(release)
     selected = PurePosixPath(path)
     root, selected_file = _selected_root(selected, files)
     contents = scan_remote_dictionaries(
@@ -103,9 +104,14 @@ def lint_remote_path(path: str, files, *, cancel_event=None):
             contents[relative] = _read_bytes(files, selected_file, cancel_event=cancel_event)
     if not contents and selected_file is not None:
         relative = selected_file.relative_to(root).as_posix() if root in selected_file.parents else selected_file.name
-        result = lint_files({relative: _read_bytes(files, selected_file, cancel_event=cancel_event)}, case_context=False)
+        result = lint_files(
+            {relative: _read_bytes(files, selected_file, cancel_event=cancel_event)},
+            case_context=False, release=release,
+        )
     else:
-        result = lint_files(contents, case_context=selected_file is None or bool(contents))
+        result = lint_files(
+            contents, case_context=selected_file is None or bool(contents), release=release,
+        )
     base = root
     return type(result)(
         tuple(

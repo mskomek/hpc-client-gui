@@ -6,6 +6,7 @@ from threading import Event
 
 from PySide6.QtCore import QFileSystemWatcher, Qt, QThreadPool
 from PySide6.QtWidgets import (
+    QComboBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from hpc_gui.core.i18n import t
+from hpc_gui.openfoam_core.release_support import supported_releases
 
 from .lint_worker import LintTask
 
@@ -48,6 +50,8 @@ def create_qt_page(parent=None, *, initial_paths=(), session_state=None, host_wi
     widget = QWidget(parent)
     layout = QVBoxLayout(widget)
     status = QLabel(t("openfoam.static_only"))
+    version = QComboBox()
+    version.addItems(list(supported_releases()))
     paths = QListWidget()
     for path in initial_paths:
         paths.addItem(str(path))
@@ -63,6 +67,8 @@ def create_qt_page(parent=None, *, initial_paths=(), session_state=None, host_wi
     cancel = QPushButton(t("openfoam.cancel"))
     cancel.setEnabled(False)
     actions = QHBoxLayout()
+    actions.addWidget(QLabel(t("openfoam.edition")))
+    actions.addWidget(version)
     for control in (add_file, add_case, run, cancel):
         actions.addWidget(control)
     layout.addWidget(status)
@@ -84,7 +90,7 @@ def create_qt_page(parent=None, *, initial_paths=(), session_state=None, host_wi
     worker_pool = QThreadPool.globalInstance()
     task_state = {
         "token": 0, "task": None, "cancel_event": None,
-        "stale": False, "has_result": False,
+        "stale": False, "has_result": False, "release": "v2312",
     }
     host = host_window
 
@@ -92,6 +98,14 @@ def create_qt_page(parent=None, *, initial_paths=(), session_state=None, host_wi
         if task_state["task"] is not None or task_state["has_result"]:
             task_state["stale"] = True
             status.setText(t("openfoam.results_stale"))
+
+    def release_changed(release: str):
+        if task_state["task"] is not None or task_state["has_result"]:
+            mark_stale()
+        else:
+            status.setText(
+                f"OpenFOAM.com / ESI {release}; static common-rule profile."
+            )
 
     watcher.fileChanged.connect(mark_stale)
     watcher.directoryChanged.connect(mark_stale)
@@ -136,6 +150,7 @@ def create_qt_page(parent=None, *, initial_paths=(), session_state=None, host_wi
         task_state["task"] = task_state["task"] if busy else None
         add_file.setEnabled(not busy and not remote_mode)
         add_case.setEnabled(not busy and not remote_mode)
+        version.setEnabled(not busy)
         run.setEnabled(not busy)
         cancel.setEnabled(busy)
 
@@ -157,11 +172,15 @@ def create_qt_page(parent=None, *, initial_paths=(), session_state=None, host_wi
                 if column == 0:
                     cell.setData(Qt.ItemDataRole.UserRole, (path, diagnostic.line))
                 table.setItem(row, column, cell)
-        status.setText(t("openfoam.lint_summary").format(
-            files=len(result.files_checked), errors=result.errors, warnings=result.warnings
-        ))
+        summary = t("openfoam.lint_summary").format(
+            files=len(result.files_checked), errors=result.errors,
+            warnings=result.warnings,
+        )
+        status.setText(f"OpenFOAM.com / ESI {result.version}; {summary}")
         if not result.diagnostics:
-            status.setText(t("openfoam.no_findings"))
+            status.setText(
+                f"OpenFOAM.com / ESI {result.version}; {t('openfoam.no_findings')}"
+            )
         task_state["stale"] = False
         task_state["has_result"] = True
         if not remote_mode:
@@ -210,6 +229,7 @@ def create_qt_page(parent=None, *, initial_paths=(), session_state=None, host_wi
                     status.setText(t("openfoam.local_path_required"))
                     return
         task_state["token"] += 1
+        task_state["release"] = version.currentText()
         task_state["stale"] = False
         task_state["has_result"] = False
         event = Event()
@@ -218,6 +238,7 @@ def create_qt_page(parent=None, *, initial_paths=(), session_state=None, host_wi
             task_state["token"], selected,
             remote_files=remote_files if remote_mode else None,
             cancel_event=event,
+            release=task_state["release"],
         )
         task_state["task"] = task
         task.signals.finished.connect(completed)
@@ -264,6 +285,7 @@ def create_qt_page(parent=None, *, initial_paths=(), session_state=None, host_wi
     add_file.clicked.connect(choose_files)
     add_case.clicked.connect(choose_case)
     run.clicked.connect(validate)
+    version.currentTextChanged.connect(release_changed)
     cancel.clicked.connect(request_cancel)
     add_file.setEnabled(not remote_mode)
     add_case.setEnabled(not remote_mode)

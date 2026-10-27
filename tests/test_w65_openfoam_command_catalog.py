@@ -15,13 +15,16 @@ def _catalog(commands=None):
         "schema_version": 1,
         "product": "OpenFOAM.com / ESI",
         "version": "v2312",
-        "commands": commands if commands is not None else [{
-            "name": "simpleFoam",
-            "category": "Solver",
-            "verification_status": "unverified",
-            "parameters": [],
-            "execution": "draft-only",
-        }],
+        "commands": commands if commands is not None else [
+            {"name": name, "category": category, "verification_status": "unverified",
+             "parameters": [], "execution": "draft-only"}
+            for name, category in (
+                ("simpleFoam", "Solver"), ("blockMesh", "Mesh"),
+                ("checkMesh", "Mesh"), ("decomposePar", "Mesh"),
+                ("reconstructPar", "Post-processing"),
+                ("postProcess", "Post-processing"),
+            )
+        ],
     }
 
 

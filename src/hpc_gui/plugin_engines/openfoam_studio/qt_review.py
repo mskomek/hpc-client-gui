@@ -69,7 +69,9 @@ def validate_case(page) -> bool:
             raise RuntimeError("verified linter engine has no case lint entrypoint")
         contents = {name: document.to_bytes() for name, document in workspace.documents.items()}
         root = None if workspace.remote else workspace.root
-        result = lint_files(contents, root=root, case_context=True)
+        result = lint_files(
+            contents, root=root, case_context=True, release=page.target_release,
+        )
     except Exception as exc:
         page._show_error(t("openfoam.validation_failed").format(error=exc))
         return False

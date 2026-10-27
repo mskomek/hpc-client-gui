@@ -105,7 +105,7 @@ class QtCaseManagerActions:
             for folder in ("system", "constant", "0"):
                 (target / folder).mkdir()
             (target / "README-openfoam-starter.txt").write_text(
-                "OpenFOAM Case Studio starter case (OpenFOAM.com v2312).\n", encoding="utf-8"
+                f"OpenFOAM Case Studio starter case (OpenFOAM.com {page.target_release}).\n", encoding="utf-8"
             )
             page.open_target(str(target))
             return True

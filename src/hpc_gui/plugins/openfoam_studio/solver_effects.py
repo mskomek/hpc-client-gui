@@ -14,6 +14,7 @@ No execution, no I/O, no physics defaults invented beyond the compiler's own.
 from __future__ import annotations
 
 from hpc_gui.openfoam_core.physics import SOLVER_FAMILIES, required_fields_for
+from hpc_gui.openfoam_core.release_support import release_profile
 
 #: Canonical classified v2312 solver binaries -> family. Single source of
 #: truth; ``solver.SOLVER_BINARIES`` and ``workflow.SOLVER_TOOLS`` mirror it.
@@ -31,14 +32,14 @@ _DEFAULT_REGIONS = {"fluid": ["fluid"], "solid": ["solid"]}
 _DEFAULT_MODEL = {"rans-steady": "kOmegaSST"}
 
 
-def solver_family(tool: str) -> str:
+def solver_family(tool: str, *, release: str = "v2312") -> str:
     """Return the solver family, or raise for an unclassified tool."""
-    if tool not in SOLVER_BINARIES:
-        raise ValueError(f"solver '{tool}' is not a classified v2312 binary")
+    if tool not in release_profile(release)["solvers"] or tool not in SOLVER_BINARIES:
+        raise ValueError(f"solver '{tool}' is not classified for {release}")
     return SOLVER_BINARIES[tool]
 
 
-def bound_state(tool: str, params: dict | None = None
+def bound_state(tool: str, params: dict | None = None, *, release: str = "v2312"
                 ) -> tuple[str, str, list[str], dict | None]:
     """Bind (family, model, fields, regions) with compiler-identical defaults.
 
@@ -49,7 +50,7 @@ def bound_state(tool: str, params: dict | None = None
     the compiler would refuse to produce.
     """
     params = dict(params or {})
-    family = solver_family(tool)
+    family = solver_family(tool, release=release)
     allowed = SOLVER_FAMILIES.get(family, {}).get("models", [])
     if not allowed:
         raise ValueError(
@@ -80,7 +81,7 @@ def bound_state(tool: str, params: dict | None = None
     return family, model, fields, regions
 
 
-def solver_effect_paths(tool: str, params: dict | None = None) -> list[str]:
+def solver_effect_paths(tool: str, params: dict | None = None, *, release: str = "v2312") -> list[str]:
     """Complete ordered case-file list a solver node mutates.
 
     Mirrors ``workflow_compiler._solver_files`` relpaths exactly: the
@@ -90,7 +91,7 @@ def solver_effect_paths(tool: str, params: dict | None = None) -> list[str]:
     for compressible/buoyant/multiphase). Every op is a ``create`` PatchOp
     (mutating), so all paths are reported — no verify-only filtering.
     """
-    family, _model, fields, regions = bound_state(tool, params)
+    family, _model, fields, regions = bound_state(tool, params, release=release)
     paths = ["system/controlDict", "system/fvSchemes", "system/fvSolution"]
     paths.extend(f"0/{fld}" for fld in fields)
     paths.append("constant/transportProperties")

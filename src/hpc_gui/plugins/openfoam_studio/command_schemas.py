@@ -7,6 +7,8 @@ out-of-range values; raw/advanced tools are not listed here.
 
 from __future__ import annotations
 
+from hpc_gui.openfoam_core.release_support import release_profile
+
 
 def _p(name, ptype, required=False, default=None, units=None, choices=None, minimum=None, maximum=None):
     return {"name": name, "type": ptype, "required": required, "default": default,
@@ -92,7 +94,10 @@ class SchemaError(ValueError):
     pass
 
 
-def validate(tool: str, params: dict) -> dict:
+def validate(tool: str, params: dict, *, release: str = "v2312") -> dict:
+    profile = release_profile(release)
+    if tool not in profile["typed_commands"]:
+        raise SchemaError(f"tool '{tool}' has no typed schema for {release}")
     if tool not in SCHEMAS:
         raise SchemaError(f"tool '{tool}' has no ACTIVE-TYPED schema (RAW-ADVANCED only)")
     spec = {p["name"]: p for p in SCHEMAS[tool]["params"]}

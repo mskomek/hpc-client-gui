@@ -62,6 +62,8 @@ def test_facade_contract_names():
     assert not is_dictionary_name("Allrun")
     assert is_mesh_boundary_path("constant/polyMesh/boundary")
     assert not is_mesh_boundary_path("system/controlDict")
+    assert not is_dictionary_name("constant/polyMesh/faces")
+    assert not is_dictionary_name("constant/polyMesh/points")
     assert safe_relative_path("system/controlDict")
     assert not safe_relative_path("../escape")
     assert not safe_relative_path("/absolute")
@@ -89,6 +91,21 @@ def test_parse_dictionary_static_only():
     assert any(t.kind == "directive" for t in parsed.tokens)
     with pytest.raises(TypeError):
         parse_dictionary(b"bytes")  # noqa: B036 - must reject non-str
+
+
+def test_function_style_dictionary_keys_keep_argument_scope():
+    text = (
+        "divSchemes\n{\n"
+        "    div(phi,U) Gauss linearUpwind grad(U);\n"
+        "    div(phi,k) Gauss upwind;\n"
+        "}\n"
+    )
+    parsed = parse_dictionary(text)
+    keys = [entry.key for entry in parsed.entries if entry.scope == ("divSchemes",)]
+    assert keys == ["div(phi,U)", "div(phi,k)"]
+    assert not any(item.rule_id == "OF-DICT-002" for item in parsed.diagnostics)
+    duplicate = parse_dictionary(text.replace("div(phi,k)", "div(phi,U)"))
+    assert sum(item.rule_id == "OF-DICT-002" for item in duplicate.diagnostics) == 1
 
 
 def test_parse_region_and_mesh_helpers():
@@ -216,6 +233,23 @@ def test_lint_paths_discovers_case(tmp_path):
     result = lint_paths([tmp_path])
     assert result.files_checked
     assert discover_case_files(tmp_path)
+
+
+def test_case_scan_ignores_large_poly_mesh_geometry(tmp_path):
+    _write_case(tmp_path, {"system/controlDict": "application simpleFoam;\n"})
+    poly_mesh = tmp_path / "constant" / "polyMesh"
+    poly_mesh.mkdir(parents=True)
+    (poly_mesh / "faces").write_bytes(b"x" * (MAX_DICTIONARY_BYTES + 1))
+    (poly_mesh / "points").write_bytes(b"x" * (MAX_DICTIONARY_BYTES + 1))
+    (poly_mesh / "boundary").write_text(
+        "1\n(\ninlet\n{\n type patch;\n nFaces 1;\n startFace 0;\n}\n)\n",
+        encoding="utf-8",
+    )
+    result = lint_paths([tmp_path], release="v1912")
+    assert result.version == "v1912"
+    assert str(tmp_path / "system" / "controlDict") in result.files_checked
+    assert not any(item.rule_id == "OF-CASE-006" for item in result.diagnostics)
+    assert not any(item.path.endswith("polyMesh/faces") for item in result.diagnostics)
 
 
 def test_remote_path_validation():

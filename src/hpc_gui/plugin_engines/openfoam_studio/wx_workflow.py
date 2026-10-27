@@ -25,6 +25,7 @@ class WxCommandWorkflow:
     ):
         self.wx = wx
         self.plan = plan
+        self.release = "v2312"
         self.commands = list(commands)
         self.visible_commands = list(self.commands)
         self.command_list = command_list
@@ -88,7 +89,7 @@ class WxCommandWorkflow:
         command = self._selected_command()
         if command is not None:
             self.command_details.SetValue(
-                f"{command['name']}\n{command['category']}\nOpenFOAM.com / ESI v2312\n"
+                f"{command['name']}\n{command['category']}\nOpenFOAM.com / ESI {self.release}\n"
                 f"Status: {command['verification_status']}\nSource: {command['source']}\n"
                 f"{t('openfoam.no_parameters_verified')}\n{t('openfoam.commands_draft_only')}"
             )

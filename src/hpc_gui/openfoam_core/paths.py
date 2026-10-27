@@ -56,6 +56,8 @@ def is_dictionary_name(relative: str) -> bool:
     if not parts:
         return False
     leaf = parts[-1]
+    if "polyMesh" in parts:
+        return False
     if leaf in ("Allrun", "Allclean") or leaf.startswith("."):
         return False
     if normalized.endswith((".stl", ".STL", ".obj", ".OBJ", ".vtk", ".VTK")):

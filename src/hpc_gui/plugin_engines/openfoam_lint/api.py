@@ -21,6 +21,7 @@ from hpc_gui.openfoam_core import (
     read_dictionary_file,
     safe_relative_path,
 )
+from hpc_gui.openfoam_core.release_support import linter_supports_release
 from hpc_gui.openfoam_core.local_paths import require_local_path_without_links
 from hpc_gui.openfoam_core.cancellation import raise_if_cancelled
 
@@ -80,6 +81,11 @@ def _check_file_name(file_name: str) -> str:
     return file_name
 
 
+def _check_release(release: str | None) -> None:
+    if release is not None and not linter_supports_release(release):
+        raise ValueError(f"OpenFOAM.com release is not supported by the static linter: {release!r}")
+
+
 def _check_text(text: str) -> str:
     if not isinstance(text, str):
         raise TypeError("lint input must be str; decode bytes explicitly before linting")
@@ -107,12 +113,14 @@ def _lint_text_result(text: str, path: str) -> tuple[ParsedDictionary, tuple[Dia
     return lint_dictionary(text, path=path)
 
 
-def lint_text(text: str, *, file_name: str = "<memory>", options=None) -> LintResult:
+def lint_text(text: str, *, file_name: str = "<memory>", options=None,
+              release: str | None = None) -> LintResult:
     """Lint one in-memory dictionary without expanding includes or running directives."""
+    _check_release(release)
     label = _check_file_name(file_name)
     body = _check_text(text)
     _parsed, findings = _lint_text_result(body, label)
-    return LintResult(findings, (label,))
+    return LintResult(findings, (label,), version=release or "v2312")
 
 
 def _oversize_diagnostic(relative: str) -> Diagnostic:
@@ -128,8 +136,10 @@ def lint_files(
     *,
     root: str | Path | None = None,
     case_context: bool | None = None,
+    release: str | None = None,
 ) -> LintResult:
     """Lint a bounded set of case-relative source contents, useful for SFTP adapters."""
+    _check_release(release)
     if not isinstance(files, Mapping):
         raise TypeError("lint_files input must be a mapping of relative path to bytes or str")
     parsed: dict[str, ParsedDictionary] = {}
@@ -240,11 +250,15 @@ def lint_files(
         findings.extend(lint_case_layout(parsed))
         findings.extend(lint_boundary_requirements(parsed))
         findings.extend(lint_mesh_patch_consistency(parsed, mesh_sources))
-    return LintResult(tuple(findings), tuple(sorted(checked)))
+    return LintResult(
+        tuple(findings), tuple(sorted(checked)), version=release or "v2312",
+    )
 
 
-def lint_paths(paths: Iterable[str | Path], options=None, *, cancel_event=None) -> LintResult:
+def lint_paths(paths: Iterable[str | Path], options=None, *, cancel_event=None,
+               release: str | None = None) -> LintResult:
     """Lint selected dictionaries or case folders; bounded and read-only."""
+    _check_release(release)
     selected = tuple(Path(item).expanduser() for item in paths)
     findings: list[Diagnostic] = []
     files_checked: list[str] = []
@@ -273,7 +287,7 @@ def lint_paths(paths: Iterable[str | Path], options=None, *, cancel_event=None) 
                     maximum_files=max(0, MAX_CASE_FILES - len(content)),
                     cancel_event=cancel_event,
                 ))
-                result = lint_files(content, root=root, case_context=True)
+                result = lint_files(content, root=root, case_context=True, release=release)
                 findings.extend(result.diagnostics)
                 files_checked.extend(str(root / file) for file in result.files_checked)
             elif item.is_file():
@@ -299,7 +313,9 @@ def lint_paths(paths: Iterable[str | Path], options=None, *, cancel_event=None) 
                 f"Selected path could not be read: {exc}", "Check file permissions and symlink targets.",
                 verification_level="contextual",
             ))
-    return LintResult(tuple(findings), tuple(files_checked))
+    return LintResult(
+        tuple(findings), tuple(files_checked), version=release or "v2312",
+    )
 
 
 def rule_catalog() -> dict[str, dict[str, str]]:

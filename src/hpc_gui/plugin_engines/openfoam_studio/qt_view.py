@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 )
 
 from hpc_gui.core.i18n import t
+from hpc_gui.openfoam_core.release_support import supported_releases
 
 
 class QtCaseStudioView:
@@ -60,8 +61,8 @@ class QtCaseStudioView:
         self.product.addItem("OpenFOAM.com / ESI")
         self.product.setEnabled(False)
         self.version = QComboBox()
-        self.version.addItem("v2312")
-        self.version.setEnabled(False)
+        self.version.addItems(list(supported_releases()))
+        self.version.setEnabled(True)
         toolbar.addWidget(self.product)
         toolbar.addWidget(self.version)
         outer.addLayout(toolbar)

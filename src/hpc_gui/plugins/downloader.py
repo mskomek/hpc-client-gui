@@ -59,6 +59,7 @@ def download_exact_file(
     *,
     rel_path: str,
     destination_dir: Path,
+    destination_rel_path: str | None = None,
     expected_sha256: str,
     expected_size: int | None = None,
     max_bytes: int = FILE_MAX_BYTES,
@@ -92,7 +93,9 @@ def download_exact_file(
             f"SHA-256 mismatch for '{rel_path}' (expected {expected_sha256}, got {actual_sha256})."
         )
 
-    destination = destination_dir / rel_path
+    local_rel_path = rel_path if destination_rel_path is None else destination_rel_path
+    validate_payload_rel_path(local_rel_path)
+    destination = destination_dir / local_rel_path
     staging_root = Path(destination_dir).resolve()
     resolved_parent = destination.parent.resolve()
     try:

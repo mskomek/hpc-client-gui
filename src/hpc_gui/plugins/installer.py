@@ -350,6 +350,7 @@ def install_plugin_from_registry(
                 destination = download_exact_file(
                     rel_path=remote_rel,
                     destination_dir=staging_dir,
+                    destination_rel_path=rel,
                     expected_sha256=file_entry.sha256,
                     expected_size=file_entry.size,
                     max_bytes=FILE_MAX_BYTES,
@@ -357,12 +358,6 @@ def install_plugin_from_registry(
                 )
             except DownloadError as exc:
                 raise InstallError(str(exc)) from exc
-            local_rel = destination.relative_to(staging_dir).as_posix()
-            if local_rel != rel:
-                # The remote layout mirrors the manifest-relative layout.
-                target = staging_dir / rel
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(destination), str(target))
             downloaded += 1
 
         if downloaded != len(manifest.files):  # pragma: no cover - defensive

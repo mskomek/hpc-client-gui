@@ -1,0 +1,33 @@
+{
+  "commands": [
+    {
+      "category": "Mesh",
+      "execution": "draft-only",
+      "name": "blockMesh",
+      "parameters": [],
+      "source": "applications/utilities/mesh/generation/blockMesh",
+      "verification_status": "runtime-executed"
+    },
+    {
+      "category": "Mesh",
+      "execution": "draft-only",
+      "name": "checkMesh",
+      "parameters": [],
+      "source": "applications/utilities/mesh/manipulation/checkMesh",
+      "verification_status": "runtime-executed"
+    },
+    {
+      "category": "Solver",
+      "execution": "draft-only",
+      "name": "simpleFoam",
+      "parameters": [],
+      "source": "applications/solvers/incompressible/simpleFoam",
+      "verification_status": "runtime-executed"
+    }
+  ],
+  "product": "OpenFOAM.com / ESI",
+  "schema_version": 1,
+  "source_revision": "51dd8f1c633dda9a38e974bded29f0c772f42fe9",
+  "source_tag": "OpenFOAM-v1912.200626",
+  "version": "v1912"
+}

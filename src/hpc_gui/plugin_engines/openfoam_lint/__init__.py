@@ -1,12 +1,16 @@
-"""OpenFOAM.com v2312 static linter plugin API."""
+"""OpenFOAM.com v1912/v2312 static linter plugin API."""
 from .api import lint_files, lint_paths, lint_text, rule_catalog, supports_filename
 from .api import SUPPORTED_FILENAMES, SUPPORTED_SUFFIXES
 from .rules import LintResult
 from .remote_case import lint_remote_path
+from hpc_gui.openfoam_core.release_support import linter_supports_release, supported_releases
+
+SUPPORTED_OPENFOAM_RELEASES = supported_releases()
 
 __all__ = [
     "LintResult", "SUPPORTED_FILENAMES", "SUPPORTED_SUFFIXES", "lint_files",
     "lint_paths", "lint_remote_path", "lint_text", "rule_catalog", "supports_filename",
+    "SUPPORTED_OPENFOAM_RELEASES", "linter_supports_release",
 ]
 
 
@@ -14,7 +18,7 @@ def create_plugin():
     return {
         "id": "org.hpcclient.openfoamlint",
         "title": "OpenFOAM Linter",
-        "description": "Read-only OpenFOAM.com v2312 static and cross-file diagnostics.",
+        "description": "Read-only OpenFOAM.com v1912/v2312 static and cross-file diagnostics.",
         "page_factory": _qt_page_factory,
         "wx_page_factory": _wx_page_factory,
     }

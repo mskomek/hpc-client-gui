@@ -10,7 +10,14 @@ from types import SimpleNamespace
 
 import pytest
 from PySide6.QtCore import QCoreApplication, QEvent, QEventLoop, QThreadPool, QTimer
-from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QTableWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QLabel,
+    QListWidget,
+    QPushButton,
+    QTableWidget,
+)
 
 from hpc_gui.core.i18n import t
 from hpc_gui.plugin_engines.openfoam_lint.qt_page import create_qt_page
@@ -120,6 +127,27 @@ def test_qt_linter_runs_and_marks_local_findings_stale(tmp_path):
     source.write_text("application simpleFoam\n", encoding="utf-8")
     _wait_for(lambda: status.text() != initial_status)
     assert table.rowCount() == initial_rows
+    page.close()
+
+
+def test_qt_linter_selected_release_reaches_result(tmp_path):
+    _application()
+    case = tmp_path / "case"
+    system = case / "system"
+    system.mkdir(parents=True)
+    (system / "controlDict").write_text(
+        "application simpleFoam;\n", encoding="utf-8",
+    )
+    page = create_qt_page()
+    selector = page.findChild(QComboBox)
+    assert selector is not None
+    assert [selector.itemText(i) for i in range(selector.count())] == ["v2312", "v1912"]
+    selector.setCurrentText("v1912")
+    page.findChild(QListWidget).addItem(str(case))
+    page.findChildren(QPushButton)[2].click()
+    status = page.findChildren(QLabel)[0]
+    _wait_for(lambda: "v1912" in status.text())
+    assert "v1912" in status.text()
     page.close()
 
 

@@ -11,6 +11,7 @@ from hpc_gui.openfoam_core import preferred_newline
 from .command_catalog import load_command_catalog
 from .workspace import CaseWorkspace
 from .wx_view import WxCaseStudioView
+from .release_selection import ReleaseSelectionController
 from .workflow import WorkflowPlan
 from .run_script import render_allrun
 from .wx_workflow import WxCommandWorkflow
@@ -36,6 +37,7 @@ class WxCaseStudioPage(WxCaseStudioView):
 
         self.wx = wx
         self.plugin = plugin
+        self.target_release = "v2312"
         self.session_state = session_state or {}
         self.workspace = None
         self.remote = False
@@ -64,6 +66,8 @@ class WxCaseStudioPage(WxCaseStudioView):
             move_down_button=self.move_step_down,
             status=self.status,
         )
+        self.release_selection = ReleaseSelectionController(self)
+        self.release_selection.bind()
         self.inspector = WxTypedInspector(
             wx,
             key_list=self.key_list,
@@ -306,7 +310,7 @@ class WxCaseStudioPage(WxCaseStudioView):
         except ValueError:
             region_summary = t("openfoam.regions_unresolved")
         self.preview.SetValue(
-            f"OpenFOAM.com / ESI\nv2312\n{t('openfoam.case_root')}: {self.workspace.root}\n"
+            f"OpenFOAM.com / ESI\n{self.target_release}\n{t('openfoam.case_root')}: {self.workspace.root}\n"
             f"{t('openfoam.solver')}: {solver}\n{t('openfoam.dictionary_count')}: {len(self.documents)}\n"
             f"{t('openfoam.regions')}: {region_summary}\n"
             f"{t('openfoam.modified_files')}: {len(self.workspace.modified_paths())}\n"
@@ -365,7 +369,10 @@ class WxCaseStudioPage(WxCaseStudioView):
 
             def worker():
                 try:
-                    result, error = lint_files(contents, root=root, case_context=True), None
+                    result, error = lint_files(
+                        contents, root=root, case_context=True,
+                        release=self.target_release,
+                    ), None
                 except Exception as exc:
                     result, error = None, exc
                 self.wx.CallAfter(self._validation_done, result, error)

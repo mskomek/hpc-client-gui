@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from hpc_gui.core.i18n import t
+from hpc_gui.openfoam_core.release_support import supported_releases
 
 
 class WxCaseStudioView:
@@ -24,9 +25,9 @@ class WxCaseStudioView:
         self.product = wx.Choice(self.panel, choices=["OpenFOAM.com / ESI"])
         self.product.SetSelection(0)
         self.product.Enable(False)
-        self.version = wx.Choice(self.panel, choices=["v2312"])
+        self.version = wx.Choice(self.panel, choices=list(supported_releases()))
         self.version.SetSelection(0)
-        self.version.Enable(False)
+        self.version.Enable(True)
         toolbar.Add(wx.StaticText(self.panel, label=t("openfoam.edition")), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 8)
         toolbar.Add(self.product, 0, wx.ALL, 3)
         toolbar.Add(self.version, 0, wx.ALL, 3)

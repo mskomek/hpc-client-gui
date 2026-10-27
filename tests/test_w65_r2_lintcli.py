@@ -8,6 +8,7 @@ import sys
 import pytest
 
 from hpc_gui.plugins.openfoam_lint import api, cli
+from hpc_gui.plugin_engines.openfoam_lint import cli as engine_cli
 from hpc_gui.plugins.openfoam_lint.policy import LintPolicy
 
 
@@ -23,6 +24,29 @@ def test_cli_json_clean_and_error_exit_codes(tmp_path, capsys):
     out = json.loads(capsys.readouterr().out)
     assert out["counts"]["error"] >= 1
     assert all({"rule", "severity", "file", "line"} <= set(d) for d in out["diagnostics"])
+
+
+def test_cli_release_is_explicit_in_result(tmp_path, capsys):
+    target = tmp_path / "controlDict"
+    target.write_text("application simpleFoam;\n", encoding="utf-8")
+    assert cli.main(["--release", "v1912", str(target)]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out["edition"] == "OpenFOAM.com / ESI"
+    assert out["version"] == "v1912"
+
+
+def test_hpc_gui_cli_release_is_explicit_in_result(tmp_path, capsys):
+    target = tmp_path / "controlDict"
+    target.write_text("application simpleFoam;\n", encoding="utf-8")
+    parser = __import__("argparse").ArgumentParser()
+    commands = parser.add_subparsers()
+    engine_cli.add_parser(commands)
+    args = parser.parse_args([
+        "openfoam", "lint", "--release", "v1912", str(target),
+        "--format", "json",
+    ])
+    assert engine_cli.run_lint(args) == 0
+    assert '"version": "v1912"' in capsys.readouterr().out
 
 
 def test_cli_counts_match_gui_positions(tmp_path, capsys):

@@ -46,18 +46,18 @@ def _legacy(items) -> list[Diagnostic]:
     ]
 
 
-def lint_text(relpath: str, text: str) -> list[Diagnostic]:
+def lint_text(relpath: str, text: str, *, release: str | None = None) -> list[Diagnostic]:
     """Delegate text linting to the single canonical static engine."""
     from hpc_gui.plugin_engines.openfoam_lint.api import lint_text as canonical_lint_text
 
-    return _legacy(canonical_lint_text(text, file_name=relpath).diagnostics)
+    return _legacy(canonical_lint_text(text, file_name=relpath, release=release).diagnostics)
 
 
-def lint_paths(paths, options=None) -> list[Diagnostic]:
+def lint_paths(paths, options=None, *, release: str | None = None) -> list[Diagnostic]:
     """Delegate bounded file/case reads and linting to the canonical engine."""
     from hpc_gui.plugin_engines.openfoam_lint.api import lint_paths as canonical_lint_paths
 
-    return _legacy(canonical_lint_paths(paths, options=options).diagnostics)
+    return _legacy(canonical_lint_paths(paths, options=options, release=release).diagnostics)
 
 
 def read_text_limited(path: str) -> str:
