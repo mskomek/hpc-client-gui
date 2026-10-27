@@ -67,11 +67,11 @@ def build_wx_bundle(page, *, job_name, nodes, ntasks, time, partition, module):
         module=(module or "").strip() or DEFAULT_MODULE,
     )
     if page.workspace is None:
-        raise ValueError("no case is open")
+        raise ValueError(t("openfoam.no_case"))
     if page.workspace.read_only:
-        raise PermissionError("case workspace is a read-only snapshot")
+        raise PermissionError(t("openfoam.read_only_snapshot"))
     if page.workspace.modified_paths():
-        raise ValueError("save all dictionaries before generating a job draft")
+        raise ValueError(t("openfoam.unsaved_draft_blocked"))
     return build_draft_bundle(page.documents, page.command_catalog, page.workflow_plan.steps, spec)
 
 
@@ -90,18 +90,24 @@ def open_job_draft(page) -> bool:
     wx = page.wx
     if not ensure_case_for_draft(page):
         return False
-    job_name = _prompt_text(wx, page.panel, "Job Draft", "Job name:", DEFAULT_JOB_NAME)
+    job_name = _prompt_text(
+        wx, page.panel, t("openfoam.job_draft_title"), t("openfoam.job_name"), DEFAULT_JOB_NAME
+    )
     if job_name is None:
         return False
-    ntasks_text = _prompt_text(wx, page.panel, "Job Draft", "Tasks (ntasks):", "1")
+    ntasks_text = _prompt_text(
+        wx, page.panel, t("openfoam.job_draft_title"), t("openfoam.tasks"), "1"
+    )
     if ntasks_text is None:
         return False
     try:
         ntasks = int(str(ntasks_text).strip())
     except ValueError:
-        page._show_error("Scheduler ntasks must be an integer >= 1")
+        page._show_error(t("openfoam.ntasks_integer_required"))
         return False
-    time_text = _prompt_text(wx, page.panel, "Job Draft", "Walltime (HH:MM:SS):", DEFAULT_TIME)
+    time_text = _prompt_text(
+        wx, page.panel, t("openfoam.job_draft_title"), t("openfoam.walltime"), DEFAULT_TIME
+    )
     if time_text is None:
         return False
     try:
@@ -110,24 +116,26 @@ def open_job_draft(page) -> bool:
             time=time_text, partition="", module=DEFAULT_MODULE,
         )
     except Exception as exc:
-        page._show_error(f"Could not build job draft: {exc}")
+        page._show_error(t("openfoam.draft_build_failed").format(error=exc))
         return False
     preview = (
-        f"Solver: {bundle.solver}\nAllrun SHA-256: {bundle.allrun_sha256}\n\n"
-        f"--- Allrun (review) ---\n{bundle.allrun_text}\n\n"
-        f"--- Slurm wrapper (review) ---\n{bundle.slurm_text}\n\n"
-        "Nothing is submitted."
+        t("openfoam.draft_preview_header").format(
+            solver=bundle.solver, sha256=bundle.allrun_sha256
+        )
+        + f"\n\n{t('openfoam.generated_allrun_review')}\n{bundle.allrun_text}\n\n"
+        + f"{t('openfoam.generated_slurm_review')}\n{bundle.slurm_text}\n\n"
+        + t("openfoam.nothing_submitted")
     )
-    viewer = wx.Dialog(page.panel, title="Job Draft (review only)")
+    viewer = wx.Dialog(page.panel, title=t("openfoam.job_draft_title"))
     try:
         viewer.SetSize((760, 560))
         sizer = wx.BoxSizer(wx.VERTICAL)
         text = wx.TextCtrl(viewer, value=preview, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
         sizer.Add(text, 1, wx.EXPAND | wx.ALL, 6)
         row = wx.BoxSizer(wx.HORIZONTAL)
-        create_button = wx.Button(viewer, label="Create Allrun (create-only)")
-        save_button = wx.Button(viewer, label="Save Job Wrapper (create-only)")
-        close_button = wx.Button(viewer, label="Close")
+        create_button = wx.Button(viewer, label=t("openfoam.create_allrun_create_only"))
+        save_button = wx.Button(viewer, label=t("openfoam.save_wrapper_create_only"))
+        close_button = wx.Button(viewer, label=t("openfoam.close"))
         for button in (create_button, save_button, close_button):
             row.Add(button, 0, wx.ALL, 4)
         sizer.Add(row, 0, wx.ALIGN_RIGHT)
@@ -139,16 +147,16 @@ def open_job_draft(page) -> bool:
             try:
                 page.workspace.create_allrun(bundle.allrun_text)
             except FileExistsError as exc:
-                page._show_error(f"Allrun preserved (already exists): {exc}")
+                page._show_error(t("openfoam.allrun_preserved").format(error=exc))
                 return
             except Exception as exc:
-                page._show_error(f"Could not create Allrun: {exc}")
+                page._show_error(t("openfoam.allrun_create_failed").format(error=exc))
                 return
             save_button.Enable(allrun_matches(page.workspace, bundle.allrun_sha256))
 
         def _on_save(_event):
             if not allrun_matches(page.workspace, bundle.allrun_sha256):
-                page._show_error("Save blocked: on-disk Allrun does not match the reviewed draft")
+                page._show_error(t("openfoam.draft_allrun_mismatch"))
                 save_button.Enable(False)
                 return
             try:
@@ -165,12 +173,12 @@ def open_job_draft(page) -> bool:
                         page.workspace.root, bundle.slurm_text, filename=DEFAULT_JOB_FILENAME
                     )
             except FileExistsError as exc:
-                page._show_error(f"Wrapper preserved (already exists): {exc}")
+                page._show_error(t("openfoam.wrapper_preserved").format(error=exc))
                 return
             except Exception as exc:
-                page._show_error(f"Could not save job wrapper: {exc}")
+                page._show_error(t("openfoam.wrapper_save_failed").format(error=exc))
                 return
-            page.status.SetLabel(f"Job wrapper created: {path}")
+            page.status.SetLabel(t("openfoam.wrapper_created").format(path=path))
             save_button.Enable(False)
 
         create_button.Bind(wx.EVT_BUTTON, _on_create)

@@ -14,6 +14,8 @@ import sys
 
 from PySide6.QtWidgets import QDialog, QPushButton, QTextEdit, QVBoxLayout
 
+from hpc_gui.core.i18n import t
+
 _LINTER_ID = "org.hpcclient.openfoamlint"
 
 
@@ -52,13 +54,13 @@ def validate_case(page) -> bool:
     """Lint the open case through verified linter bytes (read-only)."""
     workspace = page.workspace
     if workspace is None:
-        page.status.setText("No case open")
+        page.status.setText(t("openfoam.no_case"))
         return False
     tool = _resolve_linter_tool()
     if tool is None:
-        page.validation.setPlainText("Linter unavailable: install the OpenFOAM linter.")
+        page.validation.setPlainText(t("openfoam.linter_unavailable"))
         page.bottom.setCurrentWidget(page.validation)
-        page.status.setText("Validation unavailable: no verified linter engine")
+        page.status.setText(t("openfoam.validation_unavailable"))
         return False
     try:
         module = sys.modules.get(getattr(tool, "module_name", ""))
@@ -69,11 +71,13 @@ def validate_case(page) -> bool:
         root = None if workspace.remote else workspace.root
         result = lint_files(contents, root=root, case_context=True)
     except Exception as exc:
-        page._show_error(f"Validation failed: {exc}")
+        page._show_error(t("openfoam.validation_failed").format(error=exc))
         return False
     page.validation.setPlainText(result.to_markdown())
     page.bottom.setCurrentWidget(page.validation)
-    page.status.setText(f"Validation complete: {len(result.diagnostics)} finding(s)")
+    page.status.setText(
+        t("openfoam.validation_complete").format(findings=len(result.diagnostics))
+    )
     return True
 
 
@@ -83,11 +87,11 @@ def build_allrun_script(page) -> str:
 
     workspace = page.workspace
     if workspace is None:
-        raise ValueError("no case is open")
+        raise ValueError(t("openfoam.no_case"))
     if workspace.read_only:
-        raise PermissionError("case workspace is a read-only snapshot")
+        raise PermissionError(t("openfoam.read_only_snapshot"))
     if workspace.modified_paths():
-        raise ValueError("save all dictionaries before generating Allrun")
+        raise ValueError(t("openfoam.save_before_allrun"))
     control = page.documents.get("system/controlDict")
     solver = control.parsed.value("application") if control else None
     solver = str(solver or "").strip().strip("\"'")
@@ -99,18 +103,18 @@ def open_draft_review(page) -> bool:
     try:
         script = build_allrun_script(page)
     except Exception as exc:
-        page._show_error(f"Could not create Allrun: {exc}")
+        page._show_error(t("openfoam.allrun_create_failed").format(error=exc))
         return False
     dialog = QDialog(page)
-    dialog.setWindowTitle("Job Draft (review only — nothing is submitted)")
+    dialog.setWindowTitle(t("openfoam.job_draft_title"))
     dialog.resize(720, 520)
     layout = QVBoxLayout(dialog)
     viewer = QTextEdit()
     viewer.setReadOnly(True)
     viewer.setPlainText(script)
     layout.addWidget(viewer)
-    create_button = QPushButton("Create Allrun (create-only)")
-    close_button = QPushButton("Close")
+    create_button = QPushButton(t("openfoam.create_allrun_create_only"))
+    close_button = QPushButton(t("openfoam.close"))
     layout.addWidget(create_button)
     layout.addWidget(close_button)
     outcome: list = []
@@ -125,21 +129,21 @@ def store_reviewed_allrun(page) -> bool:
     """Persist a reviewed draft; an existing Allrun is preserved, never replaced."""
     workspace = page.workspace
     if workspace is None:
-        page.status.setText("No case open")
+        page.status.setText(t("openfoam.no_case"))
         return False
     try:
         script = build_allrun_script(page)
     except Exception as exc:
-        page._show_error(f"Could not create Allrun: {exc}")
+        page._show_error(t("openfoam.allrun_create_failed").format(error=exc))
         return False
-    page.status.setText("Generating OpenFOAM Allrun ...")
+    page.status.setText(t("openfoam.generating_allrun"))
     try:
         path = workspace.create_allrun(script)
     except FileExistsError as exc:
-        page.status.setText(f"Allrun preserved (already exists): {exc}")
+        page.status.setText(t("openfoam.allrun_preserved").format(error=exc))
         return False
     except Exception as exc:
-        page._show_error(f"Could not create Allrun: {exc}")
+        page._show_error(t("openfoam.allrun_create_failed").format(error=exc))
         return False
-    page.status.setText(f"Allrun created: {path}")
+    page.status.setText(t("openfoam.allrun_created").format(path=path))
     return True

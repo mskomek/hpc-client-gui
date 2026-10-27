@@ -14,7 +14,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
-from hpc_gui.core.i18n import tr
+from hpc_gui.core.i18n import t
 
 from .models import SaveReport
 from .recovery_store import recovery_profile_id, recovery_store_for_backend
@@ -79,7 +79,7 @@ class QtCaseManagerActions:
 
     def _new_case(self, _checked=False):
         parent = QFileDialog.getExistingDirectory(
-            self.page, "Choose parent folder", "", QFileDialog.ShowDirsOnly
+            self.page, t("openfoam.choose_parent"), "", QFileDialog.ShowDirsOnly
         )
         if parent:
             self.create_new_case_at(parent)
@@ -87,11 +87,16 @@ class QtCaseManagerActions:
     def create_new_case_at(self, parent) -> bool:
         """Create a starter case skeleton, then open it. Returns True on success."""
         page = self.page
-        name, accepted = QInputDialog.getText(page, "New Case", "Case name:", text="OpenFOAMCase")
+        name, accepted = QInputDialog.getText(
+            page,
+            t("openfoam.new_case"),
+            t("openfoam.case_name_prompt"),
+            text="OpenFOAMCase",
+        )
         if not accepted:
             return False
         if not valid_case_folder_name(name.strip()):
-            page._show_error(tr("openfoam.invalid_case_name", "Invalid case folder name"))
+            page._show_error(t("openfoam.invalid_case_name"))
             return False
         target = Path(str(parent)).expanduser() / name.strip()
         try:
@@ -105,55 +110,77 @@ class QtCaseManagerActions:
             page.open_target(str(target))
             return True
         except FileExistsError:
-            page._show_error(tr("openfoam.case_exists", "Case folder already exists"))
+            page._show_error(t("openfoam.case_exists"))
         except OSError as exc:
-            page._show_error(f"Could not create case: {exc}")
+            page._show_error(t("openfoam.case_create_failed").format(error=exc))
         return False
 
     def _open_case(self, _checked=False):
         page = self.page
-        choices = ["Local"]
+        choices = [t("openfoam.local")]
         if _session_files(page.session_state) is not None:
-            choices.append("Remote")
+            choices.append(t("openfoam.remote"))
         if len(choices) > 1:
-            mode, accepted = QInputDialog.getItem(page, "Open Case", "Case location:", choices, 0, False)
+            mode, accepted = QInputDialog.getItem(
+                page,
+                t("openfoam.open_case"),
+                t("openfoam.choose_case_mode"),
+                choices,
+                0,
+                False,
+            )
             if not accepted:
                 return
-            remote = mode == "Remote"
+            remote = mode == t("openfoam.remote")
         else:
             remote = False
         if remote:
-            path, accepted = QInputDialog.getText(page, "Open Case", "Remote case path:", text="/")
+            path, accepted = QInputDialog.getText(
+                page,
+                t("openfoam.open_case"),
+                t("openfoam.remote_case_path"),
+                text="/",
+            )
             if accepted and path.strip():
                 page.open_target(path.strip(), remote=True)
             return
-        selected = QFileDialog.getExistingDirectory(page, "Open Case", "", QFileDialog.ShowDirsOnly)
+        selected = QFileDialog.getExistingDirectory(
+            page, t("openfoam.open_case"), "", QFileDialog.ShowDirsOnly
+        )
         if selected:
             page.open_target(selected)
 
     def _open_snapshot(self, _checked=False):
         page = self.page
-        choices = ["Local"]
+        choices = [t("openfoam.local")]
         if _session_files(page.session_state) is not None:
-            choices.append("Remote")
+            choices.append(t("openfoam.remote"))
         if len(choices) > 1:
             mode, accepted = QInputDialog.getItem(
-                page, "Open Snapshot", "Snapshot location:", choices, 0, False
+                page,
+                t("openfoam.open_snapshot"),
+                t("openfoam.snapshot_mode"),
+                choices,
+                0,
+                False,
             )
             if not accepted:
                 return
-            remote = mode == "Remote"
+            remote = mode == t("openfoam.remote")
         else:
             remote = False
         if remote:
             path, accepted = QInputDialog.getText(
-                page, "Open Snapshot", "Remote snapshot path:", text="/"
+                page,
+                t("openfoam.open_snapshot"),
+                t("openfoam.remote_snapshot_path"),
+                text="/",
             )
             if accepted and path.strip():
                 page.open_target(path.strip(), remote=True, read_only=True)
             return
         selected = QFileDialog.getExistingDirectory(
-            page, "Open Snapshot", "", QFileDialog.ShowDirsOnly
+            page, t("openfoam.open_snapshot"), "", QFileDialog.ShowDirsOnly
         )
         if selected:
             page.open_target(selected, read_only=True)
@@ -227,7 +254,7 @@ class QtCaseSaveActions:
         page = self.page
         workspace = page.workspace
         if workspace is None:
-            page.status.setText("No case open")
+            page.status.setText(t("openfoam.no_case"))
             return
         try:
             report = workspace.save()
@@ -245,17 +272,21 @@ class QtCaseSaveActions:
         if report.success:
             if report.errors or report.recovery_paths:
                 paths = ", ".join(report.recovery_paths) or "; ".join(report.errors)
-                detail = f"Saved with recovery artifacts: {paths}"
+                detail = t("openfoam.save_recovery").format(paths=paths)
                 if report.recovery_paths and not recovery_persisted:
-                    detail += " (recovery index unavailable)"
+                    detail += " " + t("openfoam.recovery_index_unavailable")
                 page._show_error(detail)
             else:
-                page.status.setText(f"Saved {len(report.saved)} file(s)")
+                page.status.setText(t("openfoam.save_success").format(count=len(report.saved)))
             return
         details = "; ".join((*report.conflicts, *report.errors, *report.recovery_paths))
         if report.recovery_paths and not recovery_persisted:
-            details += "; recovery index unavailable"
-        page._show_error(f"Save failed: {details}" if details else "Save failed")
+            details += "; " + t("openfoam.recovery_index_unavailable")
+        page._show_error(
+            t("openfoam.save_failed").format(details=details)
+            if details
+            else t("openfoam.save_failed_simple")
+        )
 
     def recover(self, _checked=False):
         page = self.page
@@ -270,16 +301,16 @@ class QtCaseSaveActions:
             return
         files = _session_files(page.session_state)
         if files is None:
-            page._show_error("Remote session is unavailable; reconnect before recovering")
+            page._show_error(t("openfoam.recovery_remote_unavailable"))
             return
         root, paths = workspace.root, self.pending_paths
         current_profile = recovery_profile_id(files)
         if self.pending_profile_id and current_profile != self.pending_profile_id:
-            page._show_error("Recovery belongs to a different connection profile")
+            page._show_error(t("openfoam.recovery_wrong_profile"))
             return
         workspace.files = files
         page.recover_button.setEnabled(False)
-        page.status.setText("Recovering remote save ...")
+        page.status.setText(t("openfoam.recovery_running"))
         try:
             report = workspace.recover_save(paths)
         except Exception as exc:
@@ -298,13 +329,17 @@ class QtCaseSaveActions:
             self._clear_recovery(files, root)
             if current_workspace:
                 page.recover_button.setEnabled(False)
-                page.status.setText(f"Recovered {len(report.saved)} file(s)")
+                page.status.setText(t("openfoam.save_recovered").format(count=len(report.saved)))
             return
         self._remember_recovery(root, files, report.recovery_paths or original_paths)
         if current_workspace:
             page.recover_button.setEnabled(True)
             details = "; ".join((*report.conflicts, *report.errors, *self.pending_paths))
-            page._show_error(f"Recovery failed: {details}" if details else "Recovery failed")
+            page._show_error(
+                t("openfoam.recovery_failed").format(details=details)
+                if details
+                else t("openfoam.recovery_failed_simple")
+            )
 
     def confirm_discard(self, title: str, message: str) -> bool:
         answer = QMessageBox.question(

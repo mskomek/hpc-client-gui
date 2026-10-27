@@ -16,7 +16,7 @@ class WxCaseStudioView:
         self.recover_button = wx.Button(self.panel, label=t("openfoam.recover_save"))
         self.recover_button.Disable()
         self.validate_button = wx.Button(self.panel, label=t("openfoam.validate"))
-        self.allrun_button = wx.Button(self.panel, label="Create Allrun")
+        self.allrun_button = wx.Button(self.panel, label=t("openfoam.create_allrun"))
         self.undo_button = wx.Button(self.panel, label=t("openfoam.undo"))
         self.redo_button = wx.Button(self.panel, label=t("openfoam.redo"))
         for button in (self.new_button, self.open_button, self.snapshot_button, self.save_button, self.recover_button, self.validate_button, self.allrun_button, self.undo_button, self.redo_button):

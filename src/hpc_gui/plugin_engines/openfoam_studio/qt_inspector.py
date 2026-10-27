@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QComboBox, QLabel, QLineEdit, QWidget
 
-from hpc_gui.core.i18n import tr
+from hpc_gui.core.i18n import t, tr
 
 from .inspector_fields import FieldSpec, infer_field, initial_values, validate_values
 
@@ -83,7 +83,7 @@ class QtTypedInspector:
         self.controls = []
         self.selected_entry = None
         self.selected_spec = FieldSpec("raw")
-        self.type_label.setText("Parameter type: unknown")
+        self.type_label.setText(t("openfoam.parameter_type_unknown"))
         self.apply_button.setEnabled(False)
 
     def _show_entry(self, entry):
@@ -100,7 +100,7 @@ class QtTypedInspector:
         type_text = spec.kind
         if spec.component_count:
             type_text = f"{type_text} ({spec.component_count})"
-        self.type_label.setText(f"Parameter type: {type_text}")
+        self.type_label.setText(t("openfoam.parameter_type").format(type=type_text))
         initial = initial_values(entry, spec)
         if spec.kind in {"boolean", "choice"}:
             choices = list(spec.choices) if spec.kind == "choice" else ["false", "true"]
@@ -131,7 +131,7 @@ class QtTypedInspector:
         entry = self.selected_entry
         document = self.current_document()
         if entry is None or document is None:
-            self.status.setText("Select a scalar parameter first")
+            self.status.setText(t("openfoam.select_scalar"))
             return
         try:
             values = tuple(self._control_value(control) for control in self.controls)
@@ -144,9 +144,9 @@ class QtTypedInspector:
                 updated = document.parsed.replace_scalar(entry.key, normalized, scope=entry.scope)
             self.on_replace(document, entry, updated)
             self.refresh(document, selected_key=entry.qualified_key)
-            self.status.setText("Parameter applied")
+            self.status.setText(t("openfoam.parameter_applied"))
         except Exception as exc:
-            self.status.setText(f"Invalid parameter value: {exc}")
+            self.status.setText(t("openfoam.parameter_invalid").format(error=exc))
 
     def _control_value(self, control) -> str:
         if isinstance(control, QComboBox):

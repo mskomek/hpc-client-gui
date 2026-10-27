@@ -90,9 +90,9 @@ TRUSTED_API3_PUBLISHER = "HPC Client GUI"
 
 # Exact verified identities (dotted reverse-DNS; short names are rejected).
 API3_LINTER_ID = "org.hpcclient.openfoamlint"
-API3_LINTER_VERSION = "0.2.1-w65r18.20261026.2"
+API3_LINTER_VERSION = "0.2.1-w65r18.20261027.3"
 API3_STUDIO_ID = "org.hpcclient.openfoamcasestudio"
-API3_STUDIO_VERSION = "0.3.1-w65r18.20261026.2"
+API3_STUDIO_VERSION = "0.3.1-w65r18.20261027.3"
 
 API3_LINTER_ENTRYPOINT = "engine/openfoam_lint/__init__.py"
 API3_STUDIO_TEMPLATES_ENTRYPOINT = "templates/index.json"

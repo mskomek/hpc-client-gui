@@ -17,6 +17,13 @@ def test_ascii_stl_head_bounds():
     assert info.fmt == "STL" and info.bounds is not None and info.facet_count == 1
 
 
+def test_invalid_utf8_geometry_sample_is_reported_without_data_loss():
+    head = b"solid box\xff\nfacet normal 0 0 1\n"
+    info = inspect_surface("box.stl", len(head) * 10, head)
+    assert info.facet_count == 1
+    assert "geometry preview sample contains invalid UTF-8; metadata may be incomplete" in info.warnings
+
+
 def test_geometry_negatives():
     with pytest.raises(ValueError):
         inspect_surface("part.step", 100, b"data")

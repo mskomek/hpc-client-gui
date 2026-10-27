@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from hpc_gui.core.i18n import tr
+from hpc_gui.core.i18n import t, tr
 from hpc_gui.openfoam_core import preferred_newline
 
 from .command_catalog import load_command_catalog
@@ -122,12 +122,12 @@ class QtCaseStudioPage(QWidget, QtCaseStudioView):
             if action == "draft":
                 QTimer.singleShot(0, lambda: open_job_draft(self))
         except Exception as exc:
-            self._show_error(f"Could not open case: {exc}")
+            self._show_error(t("openfoam.case_open_failed").format(error=exc))
 
     def _open_remote_target(self, path: str, *, action=None, read_only: bool = False):
         files = _session_files(self.session_state)
         if files is None:
-            reason = "Remote case is unavailable: no authenticated session"
+            reason = t("openfoam.remote_unavailable")
             self.status.setText(reason)
             self.last_error = reason
             return
@@ -147,11 +147,11 @@ class QtCaseStudioPage(QWidget, QtCaseStudioView):
             remote = PurePosixPath(*parts[:base_index])
         elif not is_directory or remote.name in case_roots:
             remote = remote.parent
-        self.status.setText("Loading remote case ...")
+        self.status.setText(t("openfoam.remote_loading"))
         try:
             workspace = CaseWorkspace(str(remote), remote=True, files=files, read_only=read_only)
         except Exception as exc:
-            self._show_error(f"Could not open case: {exc}")
+            self._show_error(t("openfoam.case_open_failed").format(error=exc))
             return
         self._install_workspace(workspace)
         if selected_file is not None:
@@ -176,15 +176,15 @@ class QtCaseStudioPage(QWidget, QtCaseStudioView):
         self.redo_button.setEnabled(not workspace.read_only)
         self.allrun_button.setEnabled(not workspace.read_only)
         self.case_manager_actions.refresh_search()
-        mode = "Remote" if self.remote else "Local"
+        mode = t("openfoam.remote") if self.remote else t("openfoam.local")
         if workspace.read_only:
-            mode = f"{mode} (read-only snapshot)"
-        self.status.setText(f"Case opened: {workspace.root} [{mode}]")
+            mode = t("openfoam.read_only_snapshot_mode").format(mode=mode)
+        self.status.setText(t("openfoam.case_opened").format(path=workspace.root, mode=mode))
 
     # -- tree and search -------------------------------------------------
     def _populate_tree(self):
         self.tree.clear()
-        root_label = self.workspace.root if self.workspace else "Case structure"
+        root_label = self.workspace.root if self.workspace else t("openfoam.case_structure")
         root = QTreeWidgetItem([root_label])
         self.tree.addTopLevelItem(root)
         if self.workspace is None:
@@ -217,7 +217,7 @@ class QtCaseStudioPage(QWidget, QtCaseStudioView):
         try:
             document = self.workspace.open_dictionary(target)
         except Exception as exc:
-            self._show_error(f"Could not open dictionary: {exc}")
+            self._show_error(t("openfoam.dictionary_open_failed").format(error=exc))
             return
         known = {
             self.source_tabs.indexOf(editor): relative
@@ -247,7 +247,8 @@ class QtCaseStudioPage(QWidget, QtCaseStudioView):
             document = self.documents.get(relative)
             if document is not None and document.modified:
                 if not self.save_actions.confirm_discard(
-                    "Close Tab", f"Discard unsaved edits to {relative}?"
+                    t("openfoam.close_tab"),
+                    t("openfoam.discard_unsaved_edits").format(path=relative),
                 ):
                     return
             del self._editors[relative]
@@ -309,7 +310,7 @@ class QtCaseStudioPage(QWidget, QtCaseStudioView):
                     f"{issue.path}:{issue.line}:{issue.column} {issue.message}"
                 )
         self.problems.clear()
-        self.problems.addItems(values or ["No findings"])
+        self.problems.addItems(values or [t("openfoam.no_findings")])
 
     def _refresh_diff(self):
         lines: list[str] = []
@@ -324,31 +325,32 @@ class QtCaseStudioPage(QWidget, QtCaseStudioView):
                     tofile=relative + " (edited)",
                 )
             )
-        self.diff.setPlainText("".join(lines) or "No unsaved changes")
+        self.diff.setPlainText("".join(lines) or t("openfoam.no_changes"))
 
     def _refresh_preview(self):
         if self.workspace is None:
-            self.preview.setPlainText("No case open")
+            self.preview.setPlainText(t("openfoam.no_case"))
             return
         control = self.documents.get("system/controlDict")
         solver = control.parsed.value("application") if control else None
-        solver = solver or "unknown solver"
+        solver = solver or t("openfoam.unknown_solver")
         try:
             region_properties = self.workspace.region_properties
             region_summary = (
-                "no regions declared" if region_properties is None else region_properties.summary
+                t("openfoam.no_regions_declared")
+                if region_properties is None else region_properties.summary
             )
         except ValueError:
-            region_summary = "regions unresolved"
+            region_summary = t("openfoam.regions_unresolved")
         self.preview.setPlainText(
             "OpenFOAM.com / ESI\n"
             "v2312\n"
-            f"Case root: {self.workspace.root}\n"
-            f"Solver: {solver}\n"
-            f"Dictionaries: {len(self.documents)}\n"
-            f"Regions: {region_summary}\n"
-            f"Modified files: {len(self.workspace.modified_paths())}\n"
-            "Runtime: draft only (nothing is executed)"
+            f"{t('openfoam.case_root')}: {self.workspace.root}\n"
+            f"{t('openfoam.solver')}: {solver}\n"
+            f"{t('openfoam.dictionary_count')}: {len(self.documents)}\n"
+            f"{t('openfoam.regions')}: {region_summary}\n"
+            f"{t('openfoam.modified_files')}: {len(self.workspace.modified_paths())}\n"
+            + t("openfoam.runtime_not_run")
         )
 
     # -- save / validate / allrun -----------------------------------------
@@ -457,7 +459,7 @@ class QtCaseStudioPage(QWidget, QtCaseStudioView):
         self.last_error = str(message)
         self.status.setText(str(message))
         notice = QMessageBox(self)
-        notice.setWindowTitle(tr("openfoam.title", "OpenFOAM Case Studio"))
+        notice.setWindowTitle(t("openfoam.title"))
         notice.setText(str(message))
         notice.setIcon(QMessageBox.Warning)
         notice.setAttribute(Qt.WA_DeleteOnClose)
@@ -465,7 +467,7 @@ class QtCaseStudioPage(QWidget, QtCaseStudioView):
 
     def open_local_directory(self) -> str:
         selected = QFileDialog.getExistingDirectory(
-            self, "Open Case", "", QFileDialog.ShowDirsOnly
+            self, t("openfoam.open_case"), "", QFileDialog.ShowDirsOnly
         )
         if selected:
             self.open_target(selected)

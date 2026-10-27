@@ -46,8 +46,8 @@ def test_production_api3_pins_are_exact_candidate_versions():
     from hpc_gui.plugins import trusted_api3
 
     assert set(trusted_api3.APPROVED_API3_PINS) == {
-        ("org.hpcclient.openfoamlint", "0.2.1-w65r18.20261026.2"),
-        ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r18.20261026.2"),
+        ("org.hpcclient.openfoamlint", "0.2.1-w65r18.20261027.3"),
+        ("org.hpcclient.openfoamcasestudio", "0.3.1-w65r18.20261027.3"),
     }
 
 

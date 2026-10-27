@@ -24,7 +24,7 @@ from hpc_gui.services.wx_plugin_menu_host import WxPluginMenuHost
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-EXPECTED_OPENFOAM_KEYS = frozenset({
+BASE_OPENFOAM_KEYS = frozenset({
     "add_case", "add_file", "apply_confirm", "blocked_external", "cancel",
     "cancel_requested", "cancelled", "create_job", "details", "diagnostics",
     "dictionary_filter", "draft_only", "edition", "export_json", "file",
@@ -36,6 +36,44 @@ EXPECTED_OPENFOAM_KEYS = frozenset({
     "revert", "rule", "rules", "run_before_export", "run_preview",
     "select_path", "severity", "source_diff", "source_open_failed",
     "static_only", "title", "validate", "validation", "verification",
+})
+
+EXPECTED_OPENFOAM_KEYS = BASE_OPENFOAM_KEYS | frozenset({
+    "add_workflow_step", "allrun_create_failed", "allrun_created",
+    "allrun_preserved", "apply_parameter", "case_create_failed",
+    "case_exists", "case_name", "case_name_prompt", "case_open_failed",
+    "case_opened", "case_preview", "case_root", "case_structure",
+    "choose_case_mode", "choose_parent", "close", "close_tab",
+    "command_library", "commands_draft_only", "create_allrun",
+    "create_allrun_create_only", "dictionary_count", "dictionary_open_failed",
+    "diff", "discard_unsaved_edits", "draft_allrun_mismatch",
+    "draft_allrun_required", "draft_build_failed", "draft_preview_header",
+    "draft_preview_summary", "draft_save_requires_writable_case",
+    "filter_commands", "generated_allrun_review", "generated_slurm_review",
+    "generating_allrun", "invalid_case_name", "invalid_job_inputs",
+    "invalid_workflow_command", "job_draft_title", "job_name",
+    "linter_not_installed", "local", "modified_files", "module",
+    "move_workflow_down", "move_workflow_up", "no_case", "no_case_prompt",
+    "no_changes", "no_parameters_verified", "no_regions_declared", "nodes",
+    "nothing_submitted", "ntasks_integer_required", "open_case", "open_snapshot",
+    "parameter_applied", "parameter_invalid", "parameter_type",
+    "parameter_type_unknown", "partition", "problems", "raw_value_locked",
+    "read_only_allrun", "read_only_draft_blocked", "read_only_snapshot",
+    "read_only_snapshot_mode", "recover_save", "recovery_failed",
+    "recovery_failed_simple", "recovery_index_unavailable",
+    "recovery_not_persisted", "recovery_remote_unavailable", "recovery_running",
+    "recovery_wrong_profile", "redo", "refresh_preview", "regions",
+    "regions_unresolved", "remote", "remote_case_path", "remote_loading",
+    "remote_snapshot_path", "remote_unavailable", "remove_workflow_step",
+    "review_scripts_before_saving", "runtime_not_run", "save_before_allrun",
+    "save_case", "save_failed", "save_failed_simple", "save_recovered",
+    "save_recovery", "save_success", "save_wrapper_create_only", "search_case",
+    "search_dictionaries", "select_scalar", "snapshot_mode", "snapshot_read_only",
+    "solver", "source", "starter_readme", "tasks", "undo", "unknown_solver",
+    "unsaved_draft_blocked", "validation_complete", "validation_failed",
+    "validation_unavailable", "visual_flow", "walltime", "workflow_added",
+    "workflow_drag_hint", "workflow_removed", "wrapper_created",
+    "wrapper_preserved", "wrapper_save_failed",
 })
 
 

@@ -431,11 +431,11 @@ class WxCaseStudioPage(WxCaseStudioView):
         try:
             script = render_allrun(solver, self.workflow_plan.steps, self.command_catalog["commands"])
         except ValueError as exc:
-            self._show_error(f"Could not create Allrun: {exc}")
+            self._show_error(t("openfoam.allrun_create_failed").format(error=exc))
             return
         workspace = self.workspace
         self.allrun_button.Disable()
-        self.status.SetLabel("Generating OpenFOAM Allrun...")
+        self.status.SetLabel(t("openfoam.generating_allrun"))
 
         def save_script():
             try:
@@ -454,9 +454,9 @@ class WxCaseStudioPage(WxCaseStudioView):
             return
         self.allrun_button.Enable(not workspace.read_only)
         if error is not None:
-            self._show_error(f"Could not create Allrun: {error}")
+            self._show_error(t("openfoam.allrun_create_failed").format(error=error))
             return
-        self.status.SetLabel(f"Allrun created: {path}")
+        self.status.SetLabel(t("openfoam.allrun_created").format(path=path))
 
     def _show_error(self, message):
         self.wx.MessageBox(str(message), t("openfoam.title"), self.wx.OK | self.wx.ICON_WARNING, self.panel)

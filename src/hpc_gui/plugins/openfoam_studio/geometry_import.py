@@ -32,9 +32,11 @@ def inspect_surface(path: str, size_bytes: int, head: bytes) -> SurfaceInfo:
     bounds = None
     facets = None
     try:
-        text = head.decode("utf-8", errors="ignore")
+        text = head.decode("utf-8", errors="replace")
     except Exception:
         text = ""
+    if "\ufffd" in text:
+        warnings.append("geometry preview sample contains invalid UTF-8; metadata may be incomplete")
     if suffix == ".stl" and text.lstrip().lower().startswith("solid"):
         verts = re.findall(r"vertex\s+([-\d.eE+]+)\s+([-\d.eE+]+)\s+([-\d.eE+]+)", text[:65536])
         facets = text[:65536].count("facet normal")

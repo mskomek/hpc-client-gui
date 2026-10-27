@@ -13,6 +13,7 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
+from hpc_gui.core.i18n import current_language, load_language
 from hpc_gui.wx_editor_view import build_editor_panel
 
 
@@ -33,6 +34,8 @@ def _click(control):
 
 @pytest.fixture
 def wx_app():
+    previous_language = current_language()
+    load_language("en")
     app = wx.App.Get()
     if app is None:
         app = wx.App(False)
@@ -43,6 +46,7 @@ def wx_app():
     app.ProcessPendingEvents()
     wx.SafeYield()
     app.Destroy()
+    load_language(previous_language)
 
 
 def _close(frame, app):

@@ -5,6 +5,7 @@ from unittest import mock
 
 import pytest
 
+from hpc_gui.core.i18n import t
 from hpc_gui.services import x11_runner, xserver_manager, x11_system_ssh
 from hpc_gui.services.x11_system_ssh import build_x11_launch
 
@@ -55,4 +56,4 @@ def test_macos_password_x11_is_explicitly_rejected():
     info = type("Info", (), {"x11_forwarding": True, "password": "secret", "key_path": ""})()
     with mock.patch.object(x11_runner, "_is_macos", return_value=True):
         assert runner.run_if_x11(info, "xclock") is True
-    assert "password-only" in messages[0] or messages[0] == "[login.x11_macos_password_limit]"
+    assert messages[0] == t("login.x11_macos_password_limit")

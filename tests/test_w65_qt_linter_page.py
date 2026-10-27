@@ -8,11 +8,28 @@ from pathlib import Path
 from threading import Event
 from types import SimpleNamespace
 
-from PySide6.QtCore import QEventLoop, QTimer
+import pytest
+from PySide6.QtCore import QCoreApplication, QEvent, QEventLoop, QThreadPool, QTimer
 from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QTableWidget
 
 from hpc_gui.core.i18n import t
 from hpc_gui.plugin_engines.openfoam_lint.qt_page import create_qt_page
+
+pytestmark = pytest.mark.qt
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _finish_qt_workers():
+    yield
+    assert QThreadPool.globalInstance().waitForDone(5000)
+    app = QApplication.instance()
+    if app is None:
+        return
+    for widget in app.topLevelWidgets():
+        widget.close()
+        widget.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    app.processEvents()
 
 
 def _application():
@@ -149,13 +166,11 @@ def test_qt_linter_cancel_stops_at_sftp_file_boundary():
         session_state={"session": {"files": files}},
     )
     buttons = page.findChildren(QPushButton)
-    cancel = next(button for button in buttons if button.text() == "Cancel")
+    cancel = next(button for button in buttons if button.text() == t("openfoam.cancel"))
     status = page.findChild(QLabel)
     assert started.wait(2)
     cancel.click()
     release.set()
-    from hpc_gui.core.i18n import t
-
     _wait_for(lambda: status.text() == t("openfoam.cancelled"))
     assert files.downloaded
     page.close()
