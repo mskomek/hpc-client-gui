@@ -42,7 +42,7 @@ def _coerce_int(value: object, default: int) -> int:
 
 
 def ensure_case_for_draft(page) -> bool:
-    """Guide the user to open a case before any draft preview."""
+    """Open a case when needed and continue only after it loaded."""
     if page.workspace is not None:
         return True
     page.status.setText(t("openfoam.no_case_prompt"))
@@ -50,7 +50,7 @@ def ensure_case_for_draft(page) -> bool:
         page.case_manager_actions._open_case()
     except Exception as exc:
         page._show_error(t("openfoam.case_open_failed").format(error=exc))
-    return False
+    return page.workspace is not None
 
 
 def _read_spec(dialog: QDialog) -> JobSpec:

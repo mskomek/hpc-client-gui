@@ -45,7 +45,7 @@ def _wx_session_files(page):
 
 
 def ensure_case_for_draft(page) -> bool:
-    """Guide the user to open a case before any draft preview."""
+    """Open a case when needed and continue only after it loaded."""
     if getattr(page, "workspace", None) is not None:
         return True
     page.status.SetLabel(t("openfoam.no_case"))
@@ -53,7 +53,7 @@ def ensure_case_for_draft(page) -> bool:
         page.case_manager_actions._open_case(None)
     except Exception as exc:
         page._show_error(t("openfoam.case_open_failed").format(error=exc))
-    return False
+    return getattr(page, "workspace", None) is not None
 
 
 def build_wx_bundle(page, *, job_name, nodes, ntasks, time, partition, module):

@@ -335,3 +335,37 @@ def test_qt_action_state_flow_offscreen(monkeypatch):
     assert page.opened is True
     page2 = _Page(object())
     assert qt_job_draft.ensure_case_for_draft(page2) is True
+
+    page3 = _Page(None)
+    page3.case_manager_actions = _Actions(page3)
+
+    def open_case_successfully():
+        page3.opened = True
+        page3.workspace = object()
+
+    page3.case_manager_actions._open_case = open_case_successfully
+    assert qt_job_draft.ensure_case_for_draft(page3) is True
+
+
+def test_wx_action_state_continues_after_case_selection():
+    from hpc_gui.plugin_engines.openfoam_studio import wx_job_draft
+
+    class _Status:
+        def SetLabel(self, _value):
+            pass
+
+    class _Page:
+        workspace = None
+        status = _Status()
+
+        def _show_error(self, _message):
+            pass
+
+    page = _Page()
+
+    class _Actions:
+        def _open_case(self, _event):
+            page.workspace = object()
+
+    page.case_manager_actions = _Actions()
+    assert wx_job_draft.ensure_case_for_draft(page) is True
