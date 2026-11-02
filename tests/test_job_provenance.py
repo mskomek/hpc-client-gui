@@ -28,3 +28,41 @@ def test_array_parent_identity_and_restart(tmp_path):
     second = JobRecordStore(path)
     assert second.get("12345")["script_hash"]
     assert capture.analytics_job_id("12345_7") == "12345"
+
+
+@pytest.mark.integration
+def test_submission_redacts_secrets_without_changing_executed_script_hash(tmp_path):
+    from hpc_gui.services.job_provenance import script_hash
+
+    store = JobRecordStore(tmp_path / "provenance-redact.sqlite3")
+    capture = JobProvenanceCapture(store)
+    original_script = (
+        '#!/bin/bash\nexport AWS_SECRET_ACCESS_KEY="fake-sentinel"\n'
+        'python solve.py --token="two fake words" --mode=stable\n'
+    )
+    record = capture.submitted(
+        "908", original_script, profile_id="profile-a", provider_id="truba",
+    )
+    saved = store.get("908")
+    for secret in ("fake-sentinel", "two fake words"):
+        assert secret not in saved["script_text"]
+        assert secret not in record["script_text"]
+    assert saved["script_text"].count("[REDACTED]") == 2
+    assert "--mode=stable" in saved["script_text"]
+    assert saved["script_hash"] == script_hash(original_script)
+    assert record["script_hash"] == script_hash(original_script)
+    assert saved["profile_id"] == "profile-a"
+    assert saved["provider_id"] == "truba"
+    assert store._db.execute("PRAGMA user_version").fetchone()[0] == 2
+    store.close()
+
+
+@pytest.mark.integration
+def test_provenance_keeps_nonsecret_script_intact(tmp_path):
+    store = JobRecordStore(tmp_path / "provenance-safe.sqlite3")
+    script = "#!/bin/bash\n#SBATCH --output=slurm-%j.out\necho ok\n"
+    JobProvenanceCapture(store).submitted("909", script)
+    saved = store.get("909")
+    assert saved["script_text"] == script
+    assert saved["profile_id"] == ""
+    store.close()
