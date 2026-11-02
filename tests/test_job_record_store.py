@@ -211,3 +211,31 @@ def test_legacy_explicit_submission_can_reuse_deleted_local_identity(tmp_path):
     assert recovered["script_hash"] == "new"
     assert recovered["state"] == "SUBMITTED"
     store.close()
+
+
+def test_noncorrupt_migration_error_keeps_original_database(tmp_path):
+    path = tmp_path / "legacy-unexpected-schema.sqlite3"
+    with sqlite3.connect(path) as db:
+        db.execute("""CREATE TABLE job_records (
+            job_id TEXT PRIMARY KEY, profile_id TEXT,
+            provider_id TEXT, state TEXT, scope TEXT
+        )""")
+        db.execute(
+            "INSERT INTO job_records VALUES (?, ?, ?, ?, ?)",
+            ("777", "profile-a", "slurm", "COMPLETED", "app-submitted"),
+        )
+        # A malformed pre-existing workspace table produces a schema error,
+        # not SQLITE_CORRUPT; the original database must remain untouched.
+        db.execute("CREATE TABLE job_workspaces (job_id TEXT)")
+        db.execute("PRAGMA user_version = 2")
+
+    with pytest.raises(sqlite3.OperationalError):
+        JobRecordStore(path)
+
+    assert path.exists()
+    with sqlite3.connect(path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert db.execute(
+            "SELECT job_id, profile_id, state FROM job_records"
+        ).fetchone() == ("777", "profile-a", "COMPLETED")
+    assert list(tmp_path.glob("legacy-unexpected-schema.sqlite3.corrupt-*")) == []
