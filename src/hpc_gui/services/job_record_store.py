@@ -192,6 +192,17 @@ class JobRecordStore:
         json_values = {}
         for key in _JSON_FIELDS:
             incoming = record.get(key)
+            # Preserve the public v2 submission API until every caller is migrated.
+            # Never persist the legacy plaintext script field without redaction.
+            if key == "metadata":
+                legacy = {
+                    field: record[field]
+                    for field in ("script_hash", "script_text", "exit_code")
+                    if field in record
+                }
+                incoming = {**legacy, **dict(incoming or {})}
+            elif key == "paths" and "script_path" in record:
+                incoming = {"script_path": record["script_path"], **dict(incoming or {})}
             merged = dict(old_value.get(key) or {})
             if isinstance(incoming, Mapping):
                 for field, value in incoming.items():
