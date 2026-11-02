@@ -76,4 +76,6 @@ jobs:
           tests/test_job_paths.py
           tests/test_job_rows.py
           tests/test_job_security.py
+          tests/test_job_provenance.py
+          tests/test_job_record_store.py
           -q --tb=short
