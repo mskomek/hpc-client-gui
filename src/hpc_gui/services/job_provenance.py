@@ -6,6 +6,7 @@ from typing import Any, Mapping
 
 from hpc_gui import __version__
 from hpc_gui.services.job_record_store import JobRecordStore
+from hpc_gui.services.job_security import redact_sensitive_text
 
 
 def script_hash(script_text: str) -> str:
@@ -20,7 +21,7 @@ class JobProvenanceCapture:
         record = {
             "job_id": str(job_id), "profile_id": profile_id, "provider_id": provider_id,
             "state": "SUBMITTED", "submitted_at": time.time(), "script_path": str((paths or {}).get("script") or ""),
-            "script_hash": script_hash(script_text), "script_text": script_text,
+            "script_hash": script_hash(script_text), "script_text": redact_sensitive_text(script_text),
             "resources": dict(resources or {}), "timing": {"app_version": __version__, **dict(paths or {})},
         }
         self.store.upsert(record)
