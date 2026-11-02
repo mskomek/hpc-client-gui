@@ -90,7 +90,8 @@ class JobRecordStore:
     def _migrate(self) -> None:
         version = int(self._db.execute("PRAGMA user_version").fetchone()[0])
         if version > SCHEMA_VERSION:
-            raise sqlite3.DatabaseError("unsupported job record schema")
+            # Do not treat a valid newer database as corrupt or replace it.
+            raise ValueError("unsupported job record schema")
         with self._db:
             self._db.execute("""CREATE TABLE IF NOT EXISTS job_workspaces (
                 profile_id TEXT NOT NULL DEFAULT '', cluster_id TEXT NOT NULL DEFAULT '',
