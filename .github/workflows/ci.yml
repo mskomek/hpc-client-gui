@@ -73,4 +73,6 @@ jobs:
           tests/test_hardening_additional.py::test_wx_dispatch_uses_host
           tests/test_wx_smoke_shutdown_contract.py
           tests/test_wx_terminal_url_bridge.py
+          tests/test_job_paths.py
+          tests/test_job_rows.py
           -q --tb=short
