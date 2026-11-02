@@ -60,11 +60,18 @@ class JobRecordStore:
         try:
             self._connect()
             self._migrate()
-        except sqlite3.DatabaseError:
+        except sqlite3.DatabaseError as exc:
             try:
                 self._db.close()
             except (AttributeError, sqlite3.DatabaseError):
                 pass
+            # Operational/constraint/locking errors are not corrupt databases.
+            # Never move the original file out of the way for these failures.
+            code = getattr(exc, "sqlite_errorcode", None)
+            if code is None or (code & 0xFF) not in {
+                sqlite3.SQLITE_CORRUPT, sqlite3.SQLITE_NOTADB,
+            }:
+                raise
             suffix = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
             backup = self.path.with_suffix(self.path.suffix + f".corrupt-{suffix}")
             counter = 1
