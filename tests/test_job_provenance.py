@@ -53,7 +53,7 @@ def test_submission_redacts_secrets_without_changing_executed_script_hash(tmp_pa
     assert record["script_hash"] == script_hash(original_script)
     assert saved["profile_id"] == "profile-a"
     assert saved["provider_id"] == "truba"
-    assert store._db.execute("PRAGMA user_version").fetchone()[0] == 2
+    assert store._db.execute("PRAGMA user_version").fetchone()[0] == 4
     store.close()
 
 
