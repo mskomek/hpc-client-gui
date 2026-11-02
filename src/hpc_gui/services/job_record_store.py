@@ -255,7 +255,9 @@ class JobRecordStore:
         return True
 
     def upsert(self, record: Mapping[str, Any]) -> None:
-        self._write(record, allow_resurrect=_text(record.get("source")) == "submitted")
+        # Explicit submissions may legitimately reuse an ID after local details
+        # were deleted. Passive queue/accounting observations never resurrect it.
+        self._write(record, allow_resurrect=True)
 
     def record_observation(self, record: Mapping[str, Any]) -> bool:
         """Save a queue/accounting observation unless the user deleted details."""
