@@ -87,11 +87,37 @@ class JobRecordStore:
         self._db.row_factory = sqlite3.Row
         self._db.execute("PRAGMA busy_timeout=15000")
 
+    def _snapshot_legacy_for_rollback(self) -> None:
+        """Preserve original v2 data before modifying schema; never overwrite backups."""
+        legacy = self._db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='job_records'"
+        ).fetchone()
+        if not legacy:
+            return
+        backup = self.path.with_name(
+            f"{self.path.name}.before-v4-{time.time_ns()}.sqlite3"
+        )
+        fd = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        os.close(fd)
+        try:
+            target = sqlite3.connect(backup)
+            try:
+                self._db.backup(target)
+            finally:
+                target.close()
+            if os.name == "posix":
+                backup.chmod(0o600)
+        except (OSError, sqlite3.DatabaseError):
+            backup.unlink(missing_ok=True)
+            raise
+
     def _migrate(self) -> None:
         version = int(self._db.execute("PRAGMA user_version").fetchone()[0])
         if version > SCHEMA_VERSION:
             # Do not treat a valid newer database as corrupt or replace it.
             raise ValueError("unsupported job record schema")
+        if version < SCHEMA_VERSION:
+            self._snapshot_legacy_for_rollback()
         with self._db:
             self._db.execute("""CREATE TABLE IF NOT EXISTS job_workspaces (
                 profile_id TEXT NOT NULL DEFAULT '', cluster_id TEXT NOT NULL DEFAULT '',
