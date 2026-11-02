@@ -75,4 +75,5 @@ jobs:
           tests/test_wx_terminal_url_bridge.py
           tests/test_job_paths.py
           tests/test_job_rows.py
+          tests/test_job_security.py
           -q --tb=short
