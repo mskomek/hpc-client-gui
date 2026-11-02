@@ -197,3 +197,17 @@ def test_future_schema_rejected_without_quarantine_or_data_loss(tmp_path):
         assert db.execute("PRAGMA user_version").fetchone()[0] == 5
         assert db.execute("SELECT value FROM future_data").fetchone()[0] == "preserved"
     assert not list(tmp_path.glob("future.sqlite3.corrupt*"))
+
+
+def test_legacy_explicit_submission_can_reuse_deleted_local_identity(tmp_path):
+    store = JobRecordStore(tmp_path / "legacy-resubmit.sqlite3")
+    identity = {"job_id": "55", "profile_id": "p", "cluster_id": "c", "provider_id": "truba"}
+    store.upsert({**identity, "state": "SUBMITTED", "script_hash": "old"})
+    assert store.delete_details([identity]) == 1
+    assert not store.record_observation({**identity, "state": "COMPLETED"})
+    # Legacy JobProvenanceCapture.upsert supplies no explicit "source" key.
+    store.upsert({**identity, "state": "SUBMITTED", "script_hash": "new"})
+    recovered = store.get("55", profile_id="p", cluster_id="c", provider_id="truba")
+    assert recovered["script_hash"] == "new"
+    assert recovered["state"] == "SUBMITTED"
+    store.close()
