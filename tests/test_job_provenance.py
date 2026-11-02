@@ -66,3 +66,51 @@ def test_provenance_keeps_nonsecret_script_intact(tmp_path):
     assert saved["script_text"] == script
     assert saved["profile_id"] == ""
     store.close()
+
+
+@pytest.mark.integration
+def test_same_job_id_updates_only_explicit_profile_and_cluster(tmp_path):
+    store = JobRecordStore(tmp_path / "separate-profiles.sqlite3")
+    capture = JobProvenanceCapture(store)
+    capture.submitted(
+        "42", "echo first", profile_id="arf", cluster_id="cluster-one",
+        provider_id="slurm",
+    )
+    capture.submitted(
+        "42", "echo second", profile_id="arf2", cluster_id="cluster-two",
+        provider_id="slurm",
+    )
+
+    assert store.get("42") is None  # ambiguous ID, never select another profile
+
+    capture.observation(
+        "42", profile_id="arf", cluster_id="cluster-one",
+        provider_id="slurm", state="COMPLETED", exit_code="0:0",
+        elapsed="00:03", max_rss="8G",
+    )
+
+    first = store.get(
+        "42", profile_id="arf", cluster_id="cluster-one", provider_id="slurm",
+    )
+    second = store.get(
+        "42", profile_id="arf2", cluster_id="cluster-two", provider_id="slurm",
+    )
+    assert first["state"] == "COMPLETED"
+    assert first["exit_code"] == "0:0"
+    assert first["resources"]["max_rss"] == "8G"
+    assert second["state"] == "SUBMITTED"
+    assert second["exit_code"] == ""
+    assert second["script_text"] == "echo second"
+    assert len(store.list()) == 2
+    store.close()
+
+
+@pytest.mark.integration
+def test_unscoped_observation_does_not_update_ambiguous_job_id(tmp_path):
+    store = JobRecordStore(tmp_path / "ambiguous-observation.sqlite3")
+    capture = JobProvenanceCapture(store)
+    capture.submitted("42", "echo one", profile_id="p1")
+    capture.submitted("42", "echo two", profile_id="p2")
+    capture.observation("42", state="FAILED", exit_code="1:0")
+    assert {row["state"] for row in store.list()} == {"SUBMITTED"}
+    store.close()
