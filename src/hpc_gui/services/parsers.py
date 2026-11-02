@@ -42,6 +42,13 @@ class ScontrolJobDetails:
     nodelist: str = ""
     exit_code: str = ""
     user: str = ""
+    time_limit: str = ""
+    submit_time: str = ""
+    eligible_time: str = ""
+    start_time: str = ""
+    end_time: str = ""
+    requested_tres: str = ""
+    allocated_nodelist: str = ""
     raw: str = ""
     metadata: dict[str, Any] | None = None
 
@@ -56,7 +63,7 @@ _KNOWN_SCONTROL_KEYS = frozenset({
     "Requeue", "Restarts", "RunTime", "TimeLimit", "TimeMin",
     "SubmitTime", "EligibleTime", "StartTime", "EndTime", "Elapsed",
     "ExitCode", "DerivedExitCode", "Partition", "AllocNode:Sid",
-    "ReqNodeList", "ExcNodeList", "NodeList", "BatchHost",
+    "ReqNodeList", "ExcNodeList", "NodeList", "SchedNodeList", "BatchHost",
     "NumNodes", "NumCPUs", "NumTasks", "CPUs/Task", "ReqB:S:C:T",
     "Tres", "Command", "WorkDir", "StdErr", "StdIn", "StdOut",
     "Power", "Reboot", "ResizeTime", "Share", "Socks/Node",
@@ -84,6 +91,13 @@ _KEY_MAP = {
     "NodeList": "nodelist",
     "ExitCode": "exit_code",
     "UserId": "user",
+    "TimeLimit": "time_limit",
+    "SubmitTime": "submit_time",
+    "EligibleTime": "eligible_time",
+    "StartTime": "start_time",
+    "EndTime": "end_time",
+    "ReqTRES": "requested_tres",
+    "SchedNodeList": "allocated_nodelist",
 }
 
 
@@ -128,6 +142,8 @@ def _parse_scontrol_v1(raw_text: str, parser_config: dict[str, Any] | None = Non
     for scontrol_key, model_key in _KEY_MAP.items():
         if scontrol_key in fields:
             normalized[model_key] = fields[scontrol_key]
+    if not fields.get("NodeList") and fields.get("SchedNodeList"):
+        normalized["nodelist"] = fields["SchedNodeList"]
 
     # Preserve unknown fields as metadata
     for key, value in fields.items():

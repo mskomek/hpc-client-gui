@@ -157,9 +157,9 @@ class TerminalLifecycleMixin:
         """Update the connection status label. States: disconnected, connecting, connected, reconnecting."""
         label_map = {
             "disconnected": t("login.status_disconnected"),
-            "connecting": t("login.status_connecting") if t("login.status_connecting") != "[login.status_connecting]" else "Connecting\u2026",
-            "connected": t("login.status_connected") if t("login.status_connected") != "[login.status_connected]" else "Connected",
-            "reconnecting": t("login.status_reconnecting") if t("login.status_reconnecting") != "[login.status_reconnecting]" else "Reconnecting\u2026",
+            "connecting": t("login.status_connecting"),
+            "connected": t("login.status_connected"),
+            "reconnecting": t("login.status_reconnecting"),
         }
         self._status_text = label_map.get(state, state)
         try:

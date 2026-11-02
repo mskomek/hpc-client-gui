@@ -1484,7 +1484,13 @@ class LoginWidget(QWidget):
         for key, widget, label in (("project", self.project, self.project_label), ("account", self.account, self.account_label)):
             rule = requirements.get(key) if isinstance(requirements, dict) else None
             if isinstance(rule, dict) and rule.get("required") and not widget.text().strip():
-                QMessageBox.warning(self, t("login.err_title"), f"{label.text().rstrip(' *')} is required for this provider.")
+                QMessageBox.warning(
+                    self,
+                    t("login.err_title"),
+                    t("connection.required_field").format(
+                        field=label.text().rstrip(" *")
+                    ),
+                )
                 widget.setFocus()
                 return False
 

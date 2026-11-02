@@ -20,28 +20,28 @@ class EditorLintingMixin:
         path = self.path_in.text().strip()
         text = self.text.toPlainText()
         if not path:
-            QMessageBox.information(self, t("common.info"), t("editor.lint_need_path") if t("editor.lint_need_path") != "[editor.lint_need_path]" else "Please provide a target path first.")
+            QMessageBox.information(self, t("common.info"), t("editor.lint_need_path"))
             return
         issues = self._collect_lint_issues(path, text)
         diagnostics = self._run_plugin_lint(path, text, plugin_id=plugin_id)
         diagnostics = diagnostics + self._run_v2_tool_lint(path, text)
         diagnostics = diagnostics + self._run_cross_checks(text)
         if not issues and not diagnostics:
-            QMessageBox.information(self, t("common.info"), t("editor.lint_ok") if t("editor.lint_ok") != "[editor.lint_ok]" else "Lint passed. No obvious issues found.")
+            QMessageBox.information(self, t("common.info"), t("editor.lint_ok"))
             return
         self._show_lint_results(path, issues, diagnostics)
     def run_lint(self):
         path = self.path_in.text().strip()
         text = self.text.toPlainText()
         if not path:
-            QMessageBox.information(self, t("common.info"), t("editor.lint_need_path") if t("editor.lint_need_path") != "[editor.lint_need_path]" else "Please provide a target path first.")
+            QMessageBox.information(self, t("common.info"), t("editor.lint_need_path"))
             return
         issues = self._collect_lint_issues(path, text)
         diagnostics = self._run_plugin_lint(path, text)
         diagnostics = diagnostics + self._run_v2_tool_lint(path, text)
         diagnostics = diagnostics + self._run_cross_checks(text)
         if not issues and not diagnostics:
-            QMessageBox.information(self, t("common.info"), t("editor.lint_ok") if t("editor.lint_ok") != "[editor.lint_ok]" else "Lint passed. No obvious issues found.")
+            QMessageBox.information(self, t("common.info"), t("editor.lint_ok"))
             return
         self._show_lint_results(path, issues, diagnostics)
     def _run_cross_checks(self, text: str) -> list:
@@ -195,8 +195,6 @@ class EditorLintingMixin:
         dialog = QDialog(self)
         dialog.setWindowTitle(
             t("editor.lint_results_title")
-            if t("editor.lint_results_title") != "[editor.lint_results_title]"
-            else "Lint results"
         )
         dialog.resize(640, 380)
         layout = QVBoxLayout(dialog)
@@ -248,26 +246,26 @@ class EditorLintingMixin:
             return issues
         stripped = text.lstrip()
         if not stripped.startswith("#!"):
-            issues.append(t("editor.validation_missing_shebang") if t("editor.validation_missing_shebang") != "[editor.validation_missing_shebang]" else "- Missing shebang (e.g. #!/bin/bash)")
+            issues.append(t("editor.validation_missing_shebang"))
         if "#SBATCH" not in text:
-            issues.append(t("editor.validation_missing_sbatch") if t("editor.validation_missing_sbatch") != "[editor.validation_missing_sbatch]" else "- No #SBATCH directives found")
+            issues.append(t("editor.validation_missing_sbatch"))
         if "USERNAME" in text or "<partition>" in text:
-            issues.append(t("editor.validation_placeholders") if t("editor.validation_placeholders") != "[editor.validation_placeholders]" else "- Template placeholders detected (USERNAME / <partition>)")
+            issues.append(t("editor.validation_placeholders"))
         if "--time=" not in text and "\n#SBATCH -t " not in text:
-            issues.append(t("editor.validation_missing_time") if t("editor.validation_missing_time") != "[editor.validation_missing_time]" else "- Time limit is not set (#SBATCH --time or -t)")
+            issues.append(t("editor.validation_missing_time"))
         if "--output=" not in text and "\n#SBATCH -o " not in text:
-            issues.append(t("editor.validation_missing_output") if t("editor.validation_missing_output") != "[editor.validation_missing_output]" else "- Output file is not set (#SBATCH --output or -o)")
+            issues.append(t("editor.validation_missing_output"))
         return issues
     def _diagnose_submit_output(self, details: str) -> str:
         msg = (details or "").lower()
         if "invalid account" in msg:
-            return t("editor.submit_hint_account") if t("editor.submit_hint_account") != "[editor.submit_hint_account]" else "Invalid account/partition combination. Verify #SBATCH -A and -p values."
+            return t("editor.submit_hint_account")
         if "invalid qos" in msg or "qos" in msg and "invalid" in msg:
-            return t("editor.submit_hint_qos") if t("editor.submit_hint_qos") != "[editor.submit_hint_qos]" else "QOS is invalid for this account. Try another QOS/partition."
+            return t("editor.submit_hint_qos")
         if "time limit" in msg or "walltime" in msg or "qosmaxwalldurationperjoblimit" in msg:
-            return t("editor.submit_hint_time") if t("editor.submit_hint_time") != "[editor.submit_hint_time]" else "Requested time is above policy limits. Lower --time or change QOS."
+            return t("editor.submit_hint_time")
         if "more processors requested than permitted" in msg or "assocmaxcpuperjoblimit" in msg:
-            return t("editor.submit_hint_cpu") if t("editor.submit_hint_cpu") != "[editor.submit_hint_cpu]" else "CPU request exceeds allowed limit. Reduce -c/-n or ask for higher limits."
+            return t("editor.submit_hint_cpu")
         if "gres" in msg and ("invalid" in msg or "requested node configuration is not available" in msg):
-            return t("editor.submit_hint_gpu") if t("editor.submit_hint_gpu") != "[editor.submit_hint_gpu]" else "GPU request may be invalid for selected partition. Check --gres and partition."
-        return t("editor.submit_failed_hint") if t("editor.submit_failed_hint") != "[editor.submit_failed_hint]" else "Check account/partition/time/memory and script directives."
+            return t("editor.submit_hint_gpu")
+        return t("editor.submit_failed_hint")

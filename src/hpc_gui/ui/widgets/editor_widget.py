@@ -44,13 +44,11 @@ class EditorWidget(
         self.btn_save = QPushButton(t("editor.save"))
         self.btn_new_template = QPushButton(
             t("editor.new_from_template")
-            if t("editor.new_from_template") != "[editor.new_from_template]"
-            else "New from Template..."
         )
-        self.btn_save_submit = QPushButton(t("editor.save_submit") if t("editor.save_submit") != "[editor.save_submit]" else "Save + Submit")
-        self.btn_save_run = QPushButton(t("editor.save_run") if t("editor.save_run") != "[editor.save_run]" else "Save + Run")
-        self.btn_lint = QPushButton(t("editor.lint") if t("editor.lint") != "[editor.lint]" else "Lint")
-        self.btn_array = QPushButton(t("editor.array") if t("editor.array") != "[editor.array]" else "Array...")
+        self.btn_save_submit = QPushButton(t("editor.save_submit"))
+        self.btn_save_run = QPushButton(t("editor.save_run"))
+        self.btn_lint = QPushButton(t("editor.lint"))
+        self.btn_array = QPushButton(t("editor.array"))
 
         self.btn_load.clicked.connect(self.load_path)
         self.btn_save.clicked.connect(self.save_path)
@@ -199,14 +197,12 @@ class EditorWidget(
         self.btn_load.setText(t("editor.open"))
         self.btn_new_template.setText(
             t("editor.new_from_template")
-            if t("editor.new_from_template") != "[editor.new_from_template]"
-            else "New from Template..."
         )
-        self.btn_lint.setText(t("editor.lint") if t("editor.lint") != "[editor.lint]" else "Lint")
-        self.btn_array.setText(t("editor.array") if t("editor.array") != "[editor.array]" else "Array...")
+        self.btn_lint.setText(t("editor.lint"))
+        self.btn_array.setText(t("editor.array"))
         self.btn_save.setText(t("editor.save"))
-        self.btn_save_submit.setText(t("editor.save_submit") if t("editor.save_submit") != "[editor.save_submit]" else "Save + Submit")
-        self.btn_save_run.setText(t("editor.save_run") if t("editor.save_run") != "[editor.save_run]" else "Save + Run")
+        self.btn_save_submit.setText(t("editor.save_submit"))
+        self.btn_save_run.setText(t("editor.save_run"))
         for button, command in ((self.btn_save_submit, "EDIT-EXECUTE"), (self.btn_save_run, "EDIT-EXECUTE")):
             binding = active_binding(command, current_os())
             button.setToolTip(f"{button.text()} ({binding})" if binding else button.text())

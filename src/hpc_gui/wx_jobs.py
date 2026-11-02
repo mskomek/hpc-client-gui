@@ -663,6 +663,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         ("reason", "jobs.reason"), ("script_path", "jobs.script"),
         ("nodelist", "jobs.nodelist"), ("exit_code", "jobs.exit_code"),
         ("nodes", "jobs.nodes"), ("cpus", "jobs.cpus"),
+        ("user", "jobs.user"), ("time_limit", "jobs.time_limit"),
+        ("submit_time", "jobs.submit_time"), ("eligible_time", "jobs.eligible_time"),
+        ("start_time", "jobs.start_time"), ("end_time", "jobs.end_time"),
+        ("requested_tres", "jobs.requested_tres"),
     )
     for field_key, label_key in advanced_keys:
         row_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -1314,6 +1318,12 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         script_p = str(item.get("script_path", "")).strip() if isinstance(item, dict) else ""
         nodelist = str(item.get("nodelist", "")).strip() if isinstance(item, dict) else ""
         exit_code = str(item.get("exit_code", "")).strip() if isinstance(item, dict) else ""
+        extended_fields = {
+            key: str(item.get(key, "")).strip() for key in (
+                "user", "time_limit", "submit_time", "eligible_time", "start_time",
+                "end_time", "requested_tres",
+            )
+        } if isinstance(item, dict) else {}
         reason = (
             str(item.get("failure_reason", item.get("reason", row.get("reason", "")))).strip()
             if isinstance(item, dict) else row.get("reason", "")
@@ -1325,6 +1335,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         _set_detail("nodelist", nodelist)
         _set_detail("exit_code", exit_code)
         _set_detail("reason", reason)
+        for key, value in extended_fields.items():
+            _set_detail(key, value)
         # Compute resources value
         nodes = row.get("nodes", "")
         cpus = row.get("cpus", "")
@@ -1466,14 +1478,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                             if machine2.stale:
                                 jobs_refresh_label.SetLabel(
                                     f"{t('jobs.refresh_failed_stale')}: {machine2.last_error}"
-                                    if _has_key("jobs.refresh_failed_stale")
-                                    else f"Refresh failed (stale): {machine2.last_error}"
                                 )
                             else:
                                 jobs_refresh_label.SetLabel(
                                     f"{t('jobs.refresh_failed')}: {machine2.last_error}"
-                                    if _has_key("jobs.refresh_failed")
-                                    else f"Refresh failed: {machine2.last_error}"
                                 )
                         except Exception:
                             pass
@@ -1500,8 +1508,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                         try:
                             jobs_refresh_label.SetLabel(
                                 f"{t('jobs.refresh_updated')}: {machine2.last_success_ts}"
-                                if _has_key("jobs.refresh_updated")
-                                else f"Updated: {machine2.last_success_ts}"
                             )
                         except Exception:
                             pass
@@ -1895,13 +1901,22 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     ("stderr_path", "stderr_path"), ("script_path", "script_path"),
                     ("nodelist", "nodelist"), ("exit_code", "exit_code"),
                     ("failure_reason", "failure_reason"),
+                    ("user", "user"), ("time_limit", "time_limit"),
+                    ("submit_time", "submit_time"), ("eligible_time", "eligible_time"),
+                    ("start_time", "start_time"), ("end_time", "end_time"),
+                    ("requested_tres", "requested_tres"),
                 )
                 update_kwargs: dict[str, str] = {}
                 for context_field, detail_field in field_map:
                     value = str(getattr(detail, detail_field, "") or "").strip()
                     if value:
-                        update_kwargs[context_field] = value
                         _set_detail(detail_field, value)
+                        if context_field in {
+                            "name", "state", "partition", "elapsed", "nodes", "cpus",
+                            "reason", "workdir", "stdout_path", "stderr_path",
+                            "script_path", "nodelist", "exit_code", "failure_reason", "user",
+                        }:
+                            update_kwargs[context_field] = value
                 if update_kwargs:
                     model.selected_job_store.update(**update_kwargs)
                     model.set_output(
@@ -2622,15 +2637,51 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     )
             except Exception:
                 pass
-            try:
-                btn_cancel.Enable(True)
-            except Exception:
-                pass
-            # CTRL-008: accepted and already-gone outcomes refresh the listing
-            # so the GUI agrees with the scheduler.
-            if _reflection.should_refresh:
+            if state.get("selected_job") == job_id:
                 try:
-                    refresh_jobs()
+                    btn_cancel.Enable(_reflection.is_error)
+                except Exception:
+                    pass
+            # Reflect accepted cancellation in the current snapshot. A queue
+            # refresh here can block the UI on a slow scheduler response.
+            if _reflection.outcome == "CANCELLED":
+                for index, item in enumerate(state.get("raw_items", ())):
+                    row = _parse_job_row(item)
+                    if row["job_id"] != job_id:
+                        continue
+                    if isinstance(item, dict):
+                        updated_item = dict(item)
+                        updated_item["state"] = "CANCELLED"
+                        state["raw_items"][index] = updated_item
+                    else:
+                        item_text = str(item)
+                        separator = "|" if "|" in item_text else None
+                        parts = item_text.split(separator) if separator else item_text.split(None, 8)
+                        if len(parts) > 4:
+                            parts[4] = "CANCELLED"
+                            state["raw_items"][index] = (separator or " ").join(parts)
+                    break
+                if state.get("selected_job") == job_id:
+                    model.selected_job_store.update(state="CANCELLED")
+                    _set_detail("state", "CANCELLED")
+                _apply_filter()
+            elif _reflection.outcome == "ALREADY_GONE" and _final:
+                try:
+                    from hpc_gui.services.slurm_models import is_terminal_state
+                    final_label = str(_final).strip().upper()
+                    if is_terminal_state(final_label):
+                        for index, item in enumerate(state.get("raw_items", ())):
+                            if _parse_job_row(item)["job_id"] != job_id:
+                                continue
+                            if isinstance(item, dict):
+                                updated_item = dict(item)
+                                updated_item["state"] = final_label
+                                state["raw_items"][index] = updated_item
+                            break
+                        if state.get("selected_job") == job_id:
+                            model.selected_job_store.update(state=final_label)
+                            _set_detail("state", final_label)
+                        _apply_filter()
                 except Exception:
                     pass
 

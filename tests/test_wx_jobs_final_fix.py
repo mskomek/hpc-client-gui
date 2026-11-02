@@ -324,7 +324,10 @@ def test_outputs_no_job_zero_channels_waiting_and_pause_reset():
         ctrls = panel._wx_jobs_controls
         _select(panel)
         assert _pump(lambda: bool(ctrls["output_channel_status"]))
-        assert not ctrls["output_no_channels_label"].IsShown()
+        # The no-channel placeholder is destroyed once the real output tab is
+        # created; inspect the live notebook instead of its stale test handle.
+        assert ctrls["output_channel_notebook"].GetPageCount() == 1
+        assert ctrls["output_channel_notebook"].GetPageText(0) == "Standard Output"
         assert _pump(lambda: "Waiting for file" in next(iter(ctrls["output_channel_status"].values())).GetLabel())
         assert next(iter(ctrls["output_channels"].values())).GetValue() == ""
         _click(ctrls["outputs_pause"])

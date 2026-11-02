@@ -60,7 +60,7 @@ class EditorRemoteIoMixin:
                 if run_in_terminal and path.lower().endswith(".sh"):
                     self.run_in_terminal_requested.emit(path)
                     return
-                QMessageBox.information(self, t("common.info"), t("editor.saved") if t("editor.saved") != "[editor.saved]" else "Saved.")
+                QMessageBox.information(self, t("common.info"), t("editor.saved"))
             except OSError as e:
                 show_exception(self, title=t("common.error"), user_message=t("editor.save_failed").format(err=e), exc=e, area="EDITOR")
             return
@@ -95,11 +95,11 @@ class EditorRemoteIoMixin:
         if not warnings:
             return True
 
-        message = (t("editor.validation_title") if t("editor.validation_title") != "[editor.validation_title]" else "Script validation warnings:") + "\n\n" + "\n".join(warnings)
+        message = (t("editor.validation_title")) + "\n\n" + "\n".join(warnings)
         answer = QMessageBox.question(
             self,
-            t("common.warning") if t("common.warning") != "[common.warning]" else "Warning",
-            message + "\n\n" + (t("editor.validation_continue") if t("editor.validation_continue") != "[editor.validation_continue]" else "Save anyway?"),
+            t("common.warning"),
+            message + "\n\n" + (t("editor.validation_continue")),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -107,19 +107,19 @@ class EditorRemoteIoMixin:
     def _offer_submit_after_save(self, path: str, *, force_submit: bool = False):
         is_slurm = path.lower().endswith((".slurm", ".sbatch"))
         if not is_slurm:
-            QMessageBox.information(self, t("common.info"), t("editor.saved") if t("editor.saved") != "[editor.saved]" else "Saved.")
+            QMessageBox.information(self, t("common.info"), t("editor.saved"))
             return
 
         if not force_submit:
             answer = QMessageBox.question(
                 self,
-                t("editor.submit") if t("editor.submit") != "[editor.submit]" else "Submit (sbatch)",
-                t("editor.ask_submit_after_save") if t("editor.ask_submit_after_save") != "[editor.ask_submit_after_save]" else "Saved. Submit to Slurm now?",
+                t("editor.submit"),
+                t("editor.ask_submit_after_save"),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.Yes,
             )
             if answer != QMessageBox.StandardButton.Yes:
-                QMessageBox.information(self, t("common.info"), t("editor.saved") if t("editor.saved") != "[editor.saved]" else "Saved.")
+                QMessageBox.information(self, t("common.info"), t("editor.saved"))
                 return
 
         slurm = (self.session or {}).get("slurm")
@@ -132,7 +132,7 @@ class EditorRemoteIoMixin:
             job_id = self._extract_job_id(out)
             if job_id:
                 self.script_submitted.emit(job_id, path)
-                msg = (t("editor.submitted_job") if t("editor.submitted_job") != "[editor.submitted_job]" else "Submitted. Job ID: {jobid}").format(jobid=job_id)
+                msg = (t("editor.submitted_job")).format(jobid=job_id)
                 QMessageBox.information(self, t("common.info"), msg + "\n" + (out or ""))
             else:
                 # sbatch can fail and still return output text. Show actionable error.
@@ -141,7 +141,7 @@ class EditorRemoteIoMixin:
                 QMessageBox.critical(
                     self,
                     t("common.error"),
-                    (t("editor.submit_failed") if t("editor.submit_failed") != "[editor.submit_failed]" else "Submission failed.") + "\n\n" + hint + ("\n\n" + details if details else ""),
+                    (t("editor.submit_failed")) + "\n\n" + hint + ("\n\n" + details if details else ""),
                 )
         except Exception as e:
             show_exception(self, title=t("common.error"), user_message=t("editor.submit_error").format(err=e), exc=e, area="SLURM")

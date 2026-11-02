@@ -51,7 +51,7 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
     except Exception:
         pass
     compare_btn = wx.Button(files_page, label=t("ftp.compare_directories"))
-    compare_btn.SetToolTip(t("ftp.compare_directories_tooltip") if t("ftp.compare_directories_tooltip") != "[ftp.compare_directories_tooltip]" else "Compare directories")
+    compare_btn.SetToolTip(t("ftp.compare_directories_tooltip"))
     # keep enabled for seam; handlers check session/connection if needed but allow fake backends in tests
     files_header.Add(transfer_type_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     files_header.Add(transfer_choice, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
@@ -339,7 +339,7 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
             for name, status in sorted(result.remote.items()):
                 lines.append(f"{name}: {status.value} (remote)")
             if not lines:
-                lines.append(t("ftp.compare_directories_tooltip") if t("ftp.compare_directories_tooltip") != "[ftp.compare_directories_tooltip]" else "No differences")
+                lines.append(t("ftp.compare_directories_tooltip"))
             text = "\n".join(lines)
             _compare_result.SetValue(text)
             _compare_result.Show()

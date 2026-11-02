@@ -257,7 +257,7 @@ class TransferActivityPanel(QGroupBox):
     def _update_summary(self, items: list) -> None:
         total_size = sum(self._item_size(item) for item in items)
         self.summary_label.setText(
-            f"{len(items)} files. Total size: {total_size:,} bytes"
+            t("ftp.summary").format(files=len(items), size=f"{total_size:,}")
         )
 
     def _progress_value(self, item, status: str) -> int:
@@ -1062,8 +1062,6 @@ class FtpWidget(QWidget):
         self.btn_compare_directories.setEnabled(False)
         self.btn_compare_directories.setToolTip(
             t("ftp.compare_directories_tooltip")
-            if t("ftp.compare_directories_tooltip") != "[ftp.compare_directories_tooltip]"
-            else ""
         )
         self.btn_compare_directories.toggled.connect(
             self._on_compare_directories_toggled
