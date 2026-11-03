@@ -31,6 +31,7 @@ class TerminalBridgeMixin:
         if (self._closed or self._webview is None
                 or (controller is not None and controller != self._webview)):
             return
+        self._native_created = True
         self._load_terminal_page()
 
     def _on_navigating(self, event):
@@ -99,7 +100,10 @@ class TerminalBridgeMixin:
             except Exception:
                 pass
             return
-        native_failed = self._webview_failure_stage == "native-pending"
+        native_failed = (
+            getattr(self, "_webview_pending_native", False)
+            and not getattr(self, "_native_created", False)
+        )
         try:
             detail = event.GetString() if hasattr(event, "GetString") else ""
             self._webview_failure_stage = (
@@ -218,7 +222,6 @@ class TerminalBridgeMixin:
     def _on_readiness_timeout(self, _evt=None):
         if self._closed or self._ready:
             return
-        previous_stage = self._webview_failure_stage
         self._webview_failure_stage = "bridge-timeout"
         # Readiness timeout — show diagnostic but remain functional if ready arrives later
         try:
@@ -237,7 +240,8 @@ class TerminalBridgeMixin:
                 being_deleted = bool(is_being_deleted())
         except Exception:
             being_deleted = False
-        if (previous_stage == "native-pending"
+        if ((getattr(self, "_webview_pending_native", False)
+                and not getattr(self, "_native_created", False))
                 or getattr(self, "_native_retry_scheduled", False)):
             # Unknown completion state: never start overlapping WebView2
             # controllers while the previous native create is still in flight.
