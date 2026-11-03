@@ -1,7 +1,6 @@
 """wx shell jobs workflows."""
 from __future__ import annotations
 
-from pathlib import PurePosixPath
 import time
 from hpc_gui.core.i18n import t
 from hpc_gui.wx_shell_files import _remote_files_callbacks
@@ -183,8 +182,14 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         files = _resolve_files()
         if not slurm or not files:
             return {}
-        details = _scontrol_details(slurm, job_id)
-        stdout_path, stderr_path = details.stdout_path, details.stderr_path
+        scontrol_error = None
+        try:
+            details = _scontrol_details(slurm, job_id)
+            stdout_path, stderr_path = details.stdout_path, details.stderr_path
+        except Exception as exc:
+            # Completed jobs may disappear from scontrol but remain in sacct.
+            scontrol_error = exc
+            stdout_path = stderr_path = ""
         if not stdout_path and not stderr_path:
             from hpc_gui.services.jobs_history import parse_sacct_history
             history_cache = (session_state or {}).get("_jobs_history_cache", {})
@@ -205,6 +210,8 @@ def _jobs_callbacks(session_state, parent, lifecycle):
                                if str(row.get("job_id", "")) == str(job_id)), None)
             stdout_path = str((cached or {}).get("stdout_path", ""))
             stderr_path = str((cached or {}).get("stderr_path", ""))
+            if not stdout_path and not stderr_path and scontrol_error is not None:
+                raise scontrol_error
         return {
             "stdout": files.read_text(stdout_path) if stdout_path else "",
             "stderr": files.read_text(stderr_path) if stderr_path else "",
@@ -234,10 +241,17 @@ def _jobs_callbacks(session_state, parent, lifecycle):
             return ()
         try:
             if not workdir:
-                details = _scontrol_details(slurm, job_id)
-                workdir = details.workdir
-                if not workdir:
-                    workdir = str(PurePosixPath(details.stdout_path).parent) if details.stdout_path else ""
+                try:
+                    details = _scontrol_details(slurm, job_id)
+                except Exception:
+                    details = None  # Try accounting history for completed jobs.
+                if details is not None:
+                    from hpc_gui.services.job_paths import resolve_job_directory
+                    workdir = resolve_job_directory({
+                        "workdir": details.workdir,
+                        "stdout_path": details.stdout_path,
+                        "stderr_path": details.stderr_path,
+                    }).path
             if not workdir:
                 from hpc_gui.services.jobs_history import parse_sacct_history
                 history_cache = (session_state or {}).get("_jobs_history_cache", {})
@@ -256,7 +270,8 @@ def _jobs_callbacks(session_state, parent, lifecycle):
                 if cached is None and callable(getattr(slurm, "sacct_job", None)):
                     cached = next((row for row in parse_sacct_history(slurm.sacct_job(str(job_id)))
                                    if str(row.get("job_id", "")) == str(job_id)), None)
-                workdir = str((cached or {}).get("workdir", ""))
+                from hpc_gui.services.job_paths import resolve_job_directory
+                workdir = resolve_job_directory(cached or {}).path
             if not workdir:
                 return ()
             return tuple(files.iterdir_entries(workdir))
