@@ -229,3 +229,20 @@ def test_child_destroy_event_object_fallback_is_safe():
     panel._on_destroy(event)
     assert not panel.closed
     assert event.skipped
+
+
+def test_windows_legacy_wx_binding_without_created_or_configuration(monkeypatch):
+    """Current packaged wx may not expose the documented 4.3 async APIs."""
+    monkeypatch.setattr(factory, "_WINDOWS", True)
+
+    class LegacyWebView:
+        @staticmethod
+        def New(parent):
+            return ("legacy-async-edge", parent)
+
+    html2 = SimpleNamespace(WebView=LegacyWebView)
+    view, modern_created_event = factory.new_terminal_webview(
+        "actual-wx-parent", html2, lambda event: None,
+    )
+    assert view == ("legacy-async-edge", "actual-wx-parent")
+    assert modern_created_event is False
