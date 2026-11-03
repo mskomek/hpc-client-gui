@@ -20,7 +20,7 @@ python -c "import sys; print(sys.executable)"
 python -c "import wx; print(wx.version())"
 git grep -n "GUI-FILE-003"
 git grep -n "GUI-FILE-003 measured invariants"
-python -m pytest -q tests/test_wx_file003_final_stress.py -s --cache-clear
+python -m pytest -q tests/test_wx_file003_final_stress.py tests/test_wx_file003_navigation_stress.py tests/test_wx_file003_lifecycle_stress.py tests/test_wx_file003_transfer_stress.py -s --cache-clear
 python -m pytest -q tests/test_wx_*.py --cache-clear
 $wxTests = Get-ChildItem -Path tests -Filter 'test_wx_*.py' | ForEach-Object { $_.FullName }; python -m pytest -q @wxTests --cache-clear
 python -m pytest -q tests/test_wx_packaged_smoke.py --cache-clear

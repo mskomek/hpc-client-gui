@@ -168,14 +168,19 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         session_state["_embedded_terminal_panel"] = None
         page_controls["NAV-TERMINAL"] = {"page": terminal_page, "panel": terminal_page}
 
+        terminal_mounted = False
+
         def mount_terminal():
-            if terminal_page.IsBeingDeleted():
+            nonlocal terminal_mounted
+            if (terminal_mounted or terminal_page.IsBeingDeleted()
+                    or not terminal_page.IsShownOnScreen()):
                 return
             live_session = session_state.get("session") or {}
             live_ssh = live_session.get("ssh") if isinstance(live_session, dict) else None
             real_panel = _build_terminal_panel(
                 terminal_page, ssh=live_ssh or _term_ssh, lifecycle=lifecycle
             )
+            terminal_mounted = True
             terminal_sizer.Add(real_panel, 1, wx.EXPAND)
             terminal_page.Layout()
             session_state["_embedded_terminal_panel"] = real_panel
@@ -191,7 +196,16 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
 
             terminal_page._wx_host_close = close_terminal
 
-        wx.CallLater(1000, mount_terminal)
+        # Edge's native controller must be mounted only when its notebook
+        # page is actually visible, not in a hidden background tab.
+        def on_terminal_page_changed(event):
+            event.Skip()
+            if notebook.GetCurrentPage() is terminal_page:
+                wx.CallAfter(mount_terminal)
+
+        notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, on_terminal_page_changed)
+        if notebook.GetCurrentPage() is terminal_page:
+            wx.CallAfter(mount_terminal)
     else:
         terminal_page = _build_terminal_panel(notebook, ssh=_term_ssh, lifecycle=lifecycle)
         session_state["_embedded_terminal_panel"] = terminal_page

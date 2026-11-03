@@ -66,7 +66,10 @@ def test_list_jobs_uses_and_retains_cached_sacct_when_temporarily_unavailable(mo
             return "9|live|cpu|RUNNING|00:10|1|2||0:0|2026-10-17T10:00:00||/work|/work/o|/work/e"
 
     monotonic = {"value": 0.0}
-    monkeypatch.setattr("hpc_gui.wx_shell_jobs.time.monotonic", lambda: monotonic["value"])
+    monkeypatch.setattr(
+        "hpc_gui.wx_shell_jobs_history.time.monotonic",
+        lambda: monotonic["value"],
+    )
     slurm = Slurm()
     state = {"session": {"slurm": slurm, "profile": {"username": "alice", "id": "c1"}}}
     list_jobs = _jobs_callbacks(state, None, None)["list_jobs"]

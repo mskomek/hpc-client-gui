@@ -10,6 +10,7 @@ from hpc_gui.wx_remote_files_view import show_remote_files
 from mock_hpc_files import MockRemoteFilesBackend
 from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.core.i18n import load_language
+from support.wx_listing_rows import content_rows, select_content_row
 
 def _pump(app, pred, timeout=2):
     dl=time.monotonic()+timeout
@@ -50,7 +51,7 @@ def test_wx_local_ctrl_a_selects_all_active_tab_rows(wx_app, tmp_path: Path):
         (tmp_path/n).write_text("x")
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _pump(wx_app, lambda: listing.GetItemCount()==3)
+    _pump(wx_app, lambda: len(content_rows(listing))==3)
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(ord("A"))
     event.SetControlDown(True)
@@ -62,8 +63,8 @@ def test_wx_local_ctrl_c_copies_selected_paths(wx_app, tmp_path: Path):
     src.write_text("x")
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _pump(wx_app, lambda: listing.GetItemCount()==1)
-    listing.Select(0)
+    _pump(wx_app, lambda: len(content_rows(listing))==1)
+    select_content_row(listing, "src.txt")
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(ord("C"))
     event.SetControlDown(True)
@@ -136,8 +137,8 @@ def test_wx_local_f2_renames_selected_file(wx_app, tmp_path: Path, monkeypatch):
     src.write_text("x")
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _pump(wx_app, lambda: listing.GetItemCount()==1)
-    listing.Select(0)
+    _pump(wx_app, lambda: len(content_rows(listing))==1)
+    select_content_row(listing, "old.txt")
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *a, **k: _Dialog("new.txt"))
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(wx.WXK_F2)
@@ -162,8 +163,8 @@ def test_wx_local_delete_key_deletes_selected_file(wx_app, tmp_path: Path, monke
     t=tmp_path / "del.txt"; t.write_text("x")
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _pump(wx_app, lambda: listing.GetItemCount()==1)
-    listing.Select(0)
+    _pump(wx_app, lambda: len(content_rows(listing))==1)
+    select_content_row(listing, "del.txt")
     monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(wx.WXK_DELETE)
@@ -175,8 +176,9 @@ def test_wx_local_delete_key_handles_multiselection(wx_app, tmp_path: Path, monk
         (tmp_path / n).write_text("x")
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _pump(wx_app, lambda: listing.GetItemCount()==3)
-    listing.Select(0); listing.Select(1)
+    _pump(wx_app, lambda: len(content_rows(listing))==3)
+    listing.Select(next(index for index, name in content_rows(listing) if name == "a.txt"))
+    listing.Select(next(index for index, name in content_rows(listing) if name == "b.txt"))
     monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(wx.WXK_DELETE)
@@ -256,7 +258,7 @@ def test_wx_remote_f2_renames_selected_file(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
     listing=frame._wx_remote_controls["listing"]
-    listing.Select(0)
+    select_content_row(listing, "a.txt")
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *a, **k: _Dialog("renamed.txt"))
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN); event.SetKeyCode(wx.WXK_F2)
     listing.ProcessEvent(event)
@@ -279,7 +281,7 @@ def test_wx_remote_delete_key_deletes_selected_entries(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
     listing=frame._wx_remote_controls["listing"]
-    listing.Select(0)
+    select_content_row(listing, "a.txt")
     monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN); event.SetKeyCode(wx.WXK_DELETE)
     listing.ProcessEvent(event)

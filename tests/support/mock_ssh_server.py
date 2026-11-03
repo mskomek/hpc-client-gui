@@ -1,8 +1,10 @@
 """A local, in-process SSH/SFTP server used only for offline integration
-tests. Binds to 127.0.0.1 on an ephemeral port with a freshly generated,
+tests. Binds to loopback by default, with an optional explicit interface for
+isolated guest acceptance tests, on an ephemeral port with a freshly generated,
 never-persisted host key and a fixed, clearly-fake test account
-(``mockuser`` / ``mockpass123``) — there is no real cluster, no real
-credential, and no network egress involved anywhere in this module.
+(``mockuser`` / ``mockpass123``). It never contacts a real cluster or makes
+outbound network connections; an explicitly configured listener can accept
+connections on an isolated test interface.
 
 Exercises the exact same wire protocol (SSH exec + SFTP subsystem) that
 ``hpc_gui.ssh.client.SSHClientWrapper`` speaks against a real host, so
@@ -382,11 +384,13 @@ class MockSSHServer:
         username: str = MOCK_USERNAME,
         password: str = MOCK_PASSWORD,
         port: int = 0,
+        listen_host: str = "127.0.0.1",
     ) -> None:
         self.root_dir = root_dir
         self.username = username
         self.password = password
         self.listen_port = int(port)
+        self.listen_host = str(listen_host)
         self._host_key = paramiko.RSAKey.generate(2048)
         self._sock: socket.socket | None = None
         self._thread: threading.Thread | None = None
@@ -400,7 +404,7 @@ class MockSSHServer:
         _StubSFTPServer.ROOT = self.root_dir
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._sock.bind(("127.0.0.1", self.listen_port))
+        self._sock.bind((self.listen_host, self.listen_port))
         self._sock.listen(5)
         self.port = self._sock.getsockname()[1]
         self._thread = threading.Thread(target=self._serve_forever, daemon=True)
@@ -415,9 +419,9 @@ class MockSSHServer:
     def _wait_for_readiness(self, timeout_s: float = 5.0) -> None:
         """Wait for the listener thread without opening a fake SSH connection."""
         if not self._ready.wait(timeout_s):
-            raise RuntimeError(f"mock SSH server not ready on 127.0.0.1:{self.port}")
+            raise RuntimeError(f"mock SSH server not ready on {self.listen_host}:{self.port}")
         if self._thread is None or not self._thread.is_alive():
-            raise RuntimeError(f"mock SSH server thread exited on 127.0.0.1:{self.port}")
+            raise RuntimeError(f"mock SSH server thread exited on {self.listen_host}:{self.port}")
 
     def _serve_forever(self) -> None:
         self._sock.settimeout(0.5)
@@ -449,7 +453,11 @@ class MockSSHServer:
             channel = transport.accept(20)
             if channel is None:
                 return
-            server.event.wait(20)
+            # Keep the accepted SSH transport alive for the lifetime of its
+            # client. A fixed event timeout silently dropped long-running SFTP
+            # transfers even though the client was still connected.
+            while transport.is_active() and not self._stop.wait(0.1):
+                pass
         except Exception:
             pass
         finally:

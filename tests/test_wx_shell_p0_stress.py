@@ -104,7 +104,10 @@ def _close(app, frame, lifecycle):
 @pytest.mark.resource
 @pytest.mark.concurrency
 @pytest.mark.slow
-def test_wx_shell_p0_stress_real_wx_paths(wx_shell_runtime):
+def test_wx_shell_p0_stress_real_wx_paths(wx_shell_runtime, tmp_path, monkeypatch):
+    import hpc_gui.core.i18n as i18n
+
+    monkeypatch.setattr(i18n, "app_data_dir", lambda: tmp_path)
     load_language("en")
     app = wx_shell_runtime
     metrics = {

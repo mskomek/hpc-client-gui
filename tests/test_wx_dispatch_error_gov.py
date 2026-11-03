@@ -25,6 +25,7 @@ import re
 import pytest
 
 wx = pytest.importorskip("wx")
+pytestmark = [pytest.mark.gui, pytest.mark.wx]
 
 from hpc_gui import wx_shell  # noqa: E402
 from hpc_gui.core.i18n import load_language  # noqa: E402

@@ -77,6 +77,10 @@ def test_wx_remote_context_target_stress_uses_real_events(wx_app):
     _pump(wx_app, lambda: listing.GetItemCount() >= 4)
     wrong_targets = 0
     captured = []
+    file_row = next(
+        index for index in range(listing.GetItemCount())
+        if listing.GetItemText(index).endswith(".txt")
+    )
 
     def capture(menu):
         captured.append({item.GetItemLabelText() for item in menu.GetMenuItems()})
@@ -104,7 +108,7 @@ def test_wx_remote_context_target_stress_uses_real_events(wx_app):
         else:
             for item_index in range(listing.GetItemCount()):
                 listing.Select(item_index, False)
-            listing.Select(1)
+            listing.Select(file_row)
             position = wx.DefaultPosition
         event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
         event.SetPosition(position)

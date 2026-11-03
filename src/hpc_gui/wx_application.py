@@ -8,6 +8,20 @@ from hpc_gui.core.i18n import load_saved_language, system_default_language
 from hpc_gui.wx_runtime import environment_without_qt_graphics
 
 
+def activate_terminal_for_packaged_smoke(frame) -> bool:
+    """Exercise the real notebook navigation before native WebView2 creation."""
+    controls = getattr(frame, "_wx_shell_controls", {}) or {}
+    notebook = controls.get("notebook")
+    page = (controls.get("pages") or {}).get("NAV-TERMINAL", {}).get("page")
+    if notebook is None or page is None:
+        return False
+    index = notebook.FindPage(page)
+    if index < 0:
+        return False
+    notebook.SetSelection(index)
+    return True
+
+
 def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
     clean_environment = environment_without_qt_graphics()
     for name in set(os.environ) - set(clean_environment):
@@ -25,6 +39,7 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
             app, defer_terminal_webview=True
         )
         frame.Show()
+        activate_terminal_for_packaged_smoke(frame)
         smoke_state = run_packaged_smoke(
             app,
             frame,

@@ -107,12 +107,13 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
             env["HPC_GUI_PACKAGED_SMOKE_SSH_PASSWORD"] = loopback_password
             env["HPC_GUI_PACKAGED_SMOKE_SSH_KNOWN_HOSTS"] = str(Path(loopback_root.name) / "known_hosts")
             env["HPC_GUI_PACKAGED_SMOKE_APP_NAME"] = f"hpc-client-gui-smoke-{os.getpid()}"
-            # wxPython's Edge backend honors the folder variable directly;
-            # keep the browser-argument fallback for older WebView2 builds.
+            # WebView2's documented user data override is authoritative.
+            # Do not also inject Chromium --user-data-dir: duplicated profile
+            # switches can conflict with an explicitly configured environment.
             env["WEBVIEW2_USER_DATA_FOLDER"] = str(runtime_webview_path.resolve())
             browser_args = env.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "").strip()
             env["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = (
-                f"{browser_args} --disable-gpu --user-data-dir={runtime_webview_path.resolve()}"
+                f"{browser_args} --disable-gpu"
             ).strip()
             checks["process_started"] = "PASS"
             # Keep the disposable cwd under .tmp and outside the source tree.

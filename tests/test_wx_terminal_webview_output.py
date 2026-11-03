@@ -8,6 +8,7 @@ pytestmark = pytest.mark.wx
 import pathlib
 
 from hpc_gui.wx_terminal_webview import _is_webview_available
+from support.subprocess_environment import project_python_environment
 from wx_terminal_webview_support import ASSETS, _run_subprocess_test
 
 @pytest.mark.gui
@@ -19,7 +20,6 @@ def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
     import subprocess
     import sys
     import textwrap
-    import os
 
     code = textwrap.dedent("""
         import sys, os
@@ -82,8 +82,7 @@ def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
         except: pass
         os._exit(0)
     """)
-    env = os.environ.copy()
-    env["PYTHONPATH"] = "src"
+    env = project_python_environment(pathlib.Path(__file__).parents[1])
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=15, env=env)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
@@ -97,7 +96,6 @@ def test_wx_terminal_preserves_carriage_return_and_esc():
     import subprocess
     import sys
     import textwrap
-    import os
 
     code = textwrap.dedent("""
         import sys, os
@@ -158,8 +156,7 @@ def test_wx_terminal_preserves_carriage_return_and_esc():
         except: pass
         os._exit(0)
     """)
-    env = os.environ.copy()
-    env["PYTHONPATH"] = "src"
+    env = project_python_environment(pathlib.Path(__file__).parents[1])
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=15, env=env)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
@@ -172,7 +169,6 @@ def test_wx_terminal_clear_focus_font():
     import subprocess
     import sys
     import textwrap
-    import os
 
     code = textwrap.dedent("""
         import sys, os
@@ -240,8 +236,7 @@ def test_wx_terminal_clear_focus_font():
         except: pass
         os._exit(0)
     """)
-    env = os.environ.copy()
-    env["PYTHONPATH"] = "src"
+    env = project_python_environment(pathlib.Path(__file__).parents[1])
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=15, env=env)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
@@ -255,7 +250,6 @@ def test_wx_terminal_output_ordering_with_many_fragments():
     import subprocess
     import sys
     import textwrap
-    import os
 
     code = textwrap.dedent("""
         import sys, os
@@ -340,8 +334,7 @@ def test_wx_terminal_output_ordering_with_many_fragments():
         except: pass
         os._exit(0)
     """)
-    env = os.environ.copy()
-    env["PYTHONPATH"] = "src"
+    env = project_python_environment(pathlib.Path(__file__).parents[1])
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=15, env=env)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
@@ -421,6 +414,11 @@ def test_wx_terminal_large_pre_ready_output():
 import sys, os
 sys.path.insert(0, "src")
 import wx, time
+import hpc_gui.wx_terminal_webview as terminal_webview
+# This case covers pre-ready buffering; do not create a browser controller.
+def _native_view_not_needed():
+    return False
+terminal_webview._is_webview_available = _native_view_not_needed
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
 class FakeSSH:

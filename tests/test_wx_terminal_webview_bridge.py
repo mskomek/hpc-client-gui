@@ -8,6 +8,7 @@ pytestmark = pytest.mark.wx
 import pathlib
 
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel, _is_webview_available
+from support.subprocess_environment import project_python_environment
 from wx_terminal_webview_support import ASSETS, _fake_ssh, _show_frame_with_panel, _wait_for_ready
 
 @pytest.mark.contract
@@ -39,7 +40,6 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
     import subprocess
     import sys
     import textwrap
-    import os
 
     code = textwrap.dedent("""
         import sys, os
@@ -94,8 +94,7 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
         except: pass
         os._exit(0)
     """)
-    env = os.environ.copy()
-    env["PYTHONPATH"] = "src"
+    env = project_python_environment(pathlib.Path(__file__).parents[1])
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=15, env=env)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
@@ -206,7 +205,9 @@ def test_wx_terminal_close_releases_native_webview():
     panel.close()
 
     assert webview.stopped == 1
-    assert webview.destroyed == 1
+    # close() stops the native controller but leaves destruction to its wx
+    # parent. Explicitly destroying WebView2 here can race queued callbacks.
+    assert webview.destroyed == 0
     assert panel._webview is None
     assert panel._is_parity is False
 

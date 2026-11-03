@@ -161,7 +161,6 @@ class TestReleaseGate:
         # Check critical files for known issues
         critical_paths = [
             "services/files_ssh.py",
-            "ssh/client.py",
             "services/private_profile_data.py",
         ]
         for rel_path in critical_paths:
@@ -169,6 +168,10 @@ class TestReleaseGate:
             assert path.is_file(), f"Missing critical file: {rel_path}"
             content = path.read_text(encoding="utf-8")
             assert "utf-8" in content.lower() or "utf8" in content.lower(), f"No UTF-8 handling in {rel_path}"
+        ssh_client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
+        ssh_decoder = ROOT / "src" / "hpc_gui" / "ssh" / "text.py"
+        assert "decode_remote_text" in ssh_client.read_text(encoding="utf-8")
+        assert "utf-8" in ssh_decoder.read_text(encoding="utf-8").lower()
 
     @pytest.mark.audit
     def test_no_visible_mojibake(self):
