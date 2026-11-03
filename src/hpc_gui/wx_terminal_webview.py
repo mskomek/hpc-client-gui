@@ -242,9 +242,31 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
             self._wx_terminal_is_parity = False
             return
 
-        # WebView path: single-shot creation plus bounded recreate on
-        # transient native abort (see _on_readiness_timeout).
+        # Windows WebView2 is asynchronous. Let the terminal panel join its
+        # parent notebook layout before creating the native controller.
+        if wx.Platform == "__WXMSW__":
+            self.SetSizer(root)
+            self._wx_terminal_controls = {
+                "find": self._find_ctrl, "find_btn": self._find_btn,
+                "clear": self._clear_btn, "font_down": self._font_down_btn,
+                "font_up": self._font_up_btn, "output": None,
+                "input": None, "webview": None,
+                "dimensions": self._dimensions_label,
+                "status": self._status_label, "identity": self._identity_label,
+            }
+            self._wx_terminal_is_webview = True
+            self._wx_terminal_is_parity = False
+            wx.CallAfter(self._mount_after_parent_layout, root)
+        else:
+            self._mount_webview(root)
+
+    def _mount_after_parent_layout(self, root):
+        if self._closed:
+            return
+        if callable(getattr(self, "IsBeingDeleted", None)) and self.IsBeingDeleted():
+            return
         self._mount_webview(root)
+        self.Layout()
 
     def _mount_webview(self, root):
         """Create the native WebView controller, bind the bridge, load the
@@ -320,7 +342,8 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         self.Bind(wx.EVT_SIZE, self._on_size)
 
         root.Add(self._webview, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
-        self.SetSizer(root)
+        if self.GetSizer() is not root:
+            self.SetSizer(root)
 
         # Timers
         self._readiness_timer = wx.Timer(self)
@@ -339,8 +362,10 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         # Start readiness timeout
         self._readiness_timer.Start(READINESS_TIMEOUT_MS, oneShot=True)
 
-        # Expose controls for tests
-        self._wx_terminal_controls = {
+        # Preserve dictionary identity for shell consumers while the native
+        # control is mounted after the parent notebook becomes visible.
+        self._wx_terminal_controls = getattr(self, "_wx_terminal_controls", {})
+        self._wx_terminal_controls.update({
             "find": self._find_ctrl,
             "find_btn": self._find_btn,
             "clear": self._clear_btn,
@@ -352,7 +377,7 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
             "dimensions": self._dimensions_label,
             "status": self._status_label,
             "identity": self._identity_label,
-        }
+        })
         self._wx_terminal_is_webview = True
         self._wx_terminal_is_parity = True
         # For compat with old wx_terminal panel seam
