@@ -59,7 +59,9 @@ class TerminalBridgeMixin:
             pass
 
     def _on_loaded(self, event):
-        # Page loaded — xterm will post {type:"ready"} when bridge is ready
+        # The legacy wxPython Edge binding has no CREATED event: page-loaded
+        # is the first proof that its native controller completed creation.
+        self._native_created = True
         self._page_loaded = True
         self._webview_failure_stage = "page-loaded"
         self._update_accessibility_label()
@@ -100,12 +102,19 @@ class TerminalBridgeMixin:
             except Exception:
                 pass
             return
-        native_failed = (
-            getattr(self, "_webview_pending_native", False)
-            and not getattr(self, "_native_created", False)
-        )
         try:
             detail = event.GetString() if hasattr(event, "GetString") else ""
+        except Exception:
+            detail = ""
+        aborted = "operation aborted" in detail.casefold() or "0x80004004" in detail.lower()
+        native_failed = (
+            not getattr(self, "_native_created", False)
+            and (
+                getattr(self, "_webview_pending_native", False)
+                or (getattr(self, "_webview_legacy_edge", False) and aborted)
+            )
+        )
+        try:
             self._webview_failure_stage = (
                 "native-create-error" if native_failed else "navigation-error"
             )
@@ -240,7 +249,8 @@ class TerminalBridgeMixin:
                 being_deleted = bool(is_being_deleted())
         except Exception:
             being_deleted = False
-        if ((getattr(self, "_webview_pending_native", False)
+        if (((getattr(self, "_webview_pending_native", False)
+                 or getattr(self, "_webview_legacy_edge", False))
                 and not getattr(self, "_native_created", False))
                 or getattr(self, "_native_retry_scheduled", False)):
             # Unknown completion state: never start overlapping WebView2
