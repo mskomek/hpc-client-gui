@@ -101,8 +101,7 @@ def test_no_overlapping_create_when_native_pending_times_out():
     assert panel.retries == [False]
 
 
-def test_native_completed_retry_destroys_failed_controller_before_remount(monkeypatch):
-    from hpc_gui.wx_terminal_webview_factory import invalidate_failed_edge_configuration
+def test_native_completed_retry_destroys_failed_controller_before_remount():
 
     class _Old:
         def __init__(self):
