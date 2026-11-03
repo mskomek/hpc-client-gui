@@ -31,6 +31,16 @@ def _edge_configuration(webview_class):
     return config
 
 
+def invalidate_failed_edge_configuration() -> None:
+    """Force the next retry to create a fresh native WebView2 environment.
+
+    Existing controllers retain their own configurations; their data remains
+    untouched. Only the factory cache for future attempts is invalidated.
+    """
+    global _EDGE_CONFIG
+    _EDGE_CONFIG = None
+
+
 def new_terminal_webview(parent, html2, on_created):
     """Return (view, pending_native_creation).
 
