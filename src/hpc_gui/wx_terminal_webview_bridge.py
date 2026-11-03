@@ -282,6 +282,10 @@ class TerminalBridgeMixin:
             )
             if sizer is None:
                 return
+            # A failed WebView2 controller can poison the cached native
+            # environment. Retry with a fresh configuration, not the same one.
+            from hpc_gui.wx_terminal_webview_factory import invalidate_failed_edge_configuration
+            invalidate_failed_edge_configuration()
             self._mount_webview(sizer)
             try:
                 self.Layout()
