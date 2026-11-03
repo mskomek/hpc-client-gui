@@ -295,8 +295,10 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
             err_sizer.Add(diag, 1, wx.EXPAND | wx.ALL, 8)
             err_panel.SetSizer(err_sizer)
             root.Add(err_panel, 1, wx.EXPAND | wx.ALL, 6)
-            self.SetSizer(root)
-            self._wx_terminal_controls = {
+            if self.GetSizer() is not root:
+                self.SetSizer(root)
+            self._wx_terminal_controls = getattr(self, "_wx_terminal_controls", {})
+            self._wx_terminal_controls.update({
                 "find": self._find_ctrl,
                 "find_btn": self._find_btn,
                 "clear": self._clear_btn,
@@ -308,7 +310,7 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
                 "dimensions": self._dimensions_label,
                 "status": self._status_label,
                 "identity": self._identity_label,
-            }
+            })
             self._wx_terminal_is_webview = False
             self._wx_terminal_is_parity = False
             return
