@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import PurePosixPath
-
 
 def make_file_callbacks(context):
     def read_output(job_id):
@@ -11,12 +9,19 @@ def make_file_callbacks(context):
         files = context.resolve_files()
         if not slurm or not files:
             return {}
-        details = context.scontrol_details(slurm, job_id)
-        stdout_path, stderr_path = details.stdout_path, details.stderr_path
+        scontrol_error = None
+        try:
+            details = context.scontrol_details(slurm, job_id)
+            stdout_path, stderr_path = details.stdout_path, details.stderr_path
+        except Exception as exc:
+            scontrol_error = exc
+            stdout_path = stderr_path = ""
         if not stdout_path and not stderr_path:
             cached = context.cached_history_job(job_id) or context.query_sacct_job(job_id)
             stdout_path = str((cached or {}).get("stdout_path", ""))
             stderr_path = str((cached or {}).get("stderr_path", ""))
+            if not stdout_path and not stderr_path and scontrol_error is not None:
+                raise scontrol_error
         return {
             "stdout": files.read_text(stdout_path) if stdout_path else "",
             "stderr": files.read_text(stderr_path) if stderr_path else "",
@@ -46,13 +51,20 @@ def make_file_callbacks(context):
             return ()
         try:
             if not workdir:
-                details = context.scontrol_details(slurm, job_id)
-                workdir = details.workdir
-                if not workdir and details.stdout_path:
-                    workdir = str(PurePosixPath(details.stdout_path).parent)
+                try:
+                    details = context.scontrol_details(slurm, job_id)
+                except Exception:
+                    details = None
+                if details is not None:
+                    from hpc_gui.services.job_paths import resolve_job_directory
+                    workdir = resolve_job_directory({
+                        "workdir": details.workdir, "stdout_path": details.stdout_path,
+                        "stderr_path": details.stderr_path,
+                    }).path
             if not workdir:
+                from hpc_gui.services.job_paths import resolve_job_directory
                 cached = context.cached_history_job(job_id) or context.query_sacct_job(job_id)
-                workdir = str((cached or {}).get("workdir", ""))
+                workdir = resolve_job_directory(cached or {}).path
             if not workdir:
                 return ()
             return tuple(files.iterdir_entries(workdir))

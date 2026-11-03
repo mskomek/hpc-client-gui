@@ -43,13 +43,13 @@ def create_transfer_conflict_dialog(parent, files, item):
     sizer.Add(msg, 0, wx.ALL | wx.EXPAND, 12)
     btn_sizer = wx.WrapSizer(wx.HORIZONTAL)
     # Buttons: Overwrite, Skip, Rename, Cancel, optionally Resume
-    overwrite = wx.Button(panel, label=t("dirs.conflict_overwrite") if t("dirs.conflict_overwrite") != "[dirs.conflict_overwrite]" else "Overwrite")
-    skip = wx.Button(panel, label=t("dirs.conflict_skip") if t("dirs.conflict_skip") != "[dirs.conflict_skip]" else "Skip")
-    rename = wx.Button(panel, label=t("dirs.conflict_rename") if t("dirs.conflict_rename") != "[dirs.conflict_rename]" else "Rename")
-    cancel = wx.Button(panel, label=t("common.cancel") if t("common.cancel") != "[common.cancel]" else "Cancel")
+    overwrite = wx.Button(panel, label=t("dirs.conflict_overwrite"))
+    skip = wx.Button(panel, label=t("dirs.conflict_skip"))
+    rename = wx.Button(panel, label=t("dirs.conflict_rename"))
+    cancel = wx.Button(panel, label=t("common.cancel"))
     resume_btn = None
     if resume_supported:
-        resume_btn = wx.Button(panel, label=t("transfer.conflict_resume") if t("transfer.conflict_resume") != "[transfer.conflict_resume]" else "Resume")
+        resume_btn = wx.Button(panel, label=t("transfer.conflict_resume"))
     conditional_buttons = {
         action: wx.Button(panel, label=t(f"transfer.conflict_{action}"))
         for action in (
@@ -104,7 +104,7 @@ def create_transfer_conflict_dialog(parent, files, item):
         parent_dir = str(target_path.parent) if str(target_path.parent) not in ("", ".") else "/"
         current_name = target_path.name
         while True:
-            name_dlg = wx.TextEntryDialog(dlg, t("dirs.rename_label") if t("dirs.rename_label") != "[dirs.rename_label]" else "New name:", t("dirs.rename_title") if t("dirs.rename_title") != "[dirs.rename_title]" else "Rename", current_name)
+            name_dlg = wx.TextEntryDialog(dlg, t("dirs.rename_label"), t("dirs.rename_title"), current_name)
             try:
                 if name_dlg.ShowModal() != wx.ID_OK:
                     result["value"] = "cancel"
@@ -113,7 +113,7 @@ def create_transfer_conflict_dialog(parent, files, item):
                 new_name = name_dlg.GetValue().strip()
                 # validation
                 if not new_name or new_name in {".", ".."} or "/" in new_name or "\\" in new_name or PurePosixPath(new_name).name != new_name:
-                    wx.MessageBox(t("dirs.rename_invalid") if t("dirs.rename_invalid") != "[dirs.rename_invalid]" else "Enter a valid file name without path separators.", t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                    wx.MessageBox(t("dirs.rename_invalid"), t("login.err_title"), wx.OK | wx.ICON_ERROR)
                     continue
                 candidate = str(PurePosixPath(parent_dir) / new_name)
                 # check existing destination
@@ -123,7 +123,11 @@ def create_transfer_conflict_dialog(parent, files, item):
                 except Exception:
                     exists = False
                 if exists:
-                    wx.MessageBox(t("dirs.new_item_exists").format(path=candidate) if t("dirs.new_item_exists") != "[dirs.new_item_exists]" else f"Exists: {candidate}", t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                    wx.MessageBox(
+                        t("dirs.new_item_exists").format(path=candidate),
+                        t("login.err_title"),
+                        wx.OK | wx.ICON_ERROR,
+                    )
                     continue
                 # valid
                 result["value"] = ("rename", candidate)

@@ -94,7 +94,7 @@ class TransferPreflightDialog(QDialog):
             )
         hidden = len(self._items) - self._MAX_PLAN_ROWS
         if hidden > 0:
-            QTreeWidgetItem(self.plan_list, [f"Remaining: {hidden}", "", ""])
+            QTreeWidgetItem(self.plan_list, [t("transfer.remaining").format(hidden=hidden), "", ""])
         self.plan_list.resizeColumnToContents(0)
         self.plan_list.resizeColumnToContents(1)
 
@@ -142,7 +142,7 @@ class _TransferWorker(QObject):
     def run(self) -> None:
         for idx, item in enumerate(self._items, start=1):
             if self._cancel:
-                self.finished.emit(item, True, t("dirs.cancelled") if t("dirs.cancelled") != "[dirs.cancelled]" else "Cancelled.")
+                self.finished.emit(item, True, t("dirs.cancelled"))
                 return
             self.progress.emit(idx, item)
             try:
@@ -339,7 +339,7 @@ class TransferDialog(QDialog):
     def _append_hidden_count(self, view: QListWidget, total: int) -> None:
         hidden = total - self._MAX_VISIBLE_LIST_ITEMS
         if hidden > 0:
-            view.addItem(f"Remaining: {hidden}")
+            view.addItem(t("transfer.remaining").format(hidden=hidden))
 
     def _schedule_refresh(self) -> None:
         """Coalesce worker bursts into one bounded GUI update."""

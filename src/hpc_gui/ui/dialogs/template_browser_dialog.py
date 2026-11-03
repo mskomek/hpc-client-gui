@@ -41,8 +41,6 @@ class TemplateBrowserDialog(QDialog):
 
         self.setWindowTitle(
             t("templates.dialog_title")
-            if t("templates.dialog_title") != "[templates.dialog_title]"
-            else "Job Templates"
         )
         self.resize(760, 480)
 
@@ -100,10 +98,11 @@ class TemplateBrowserDialog(QDialog):
         if template is None:
             self.description.setText("")
             return
-        self.description.setText(
-            f"{template.description}\n\nplugin: {template.plugin_id} "
-            f"v{template.plugin_version}"
-        )
+        self.description.setText(t("templates.plugin_version_line").format(
+            description=template.description,
+            plugin_id=template.plugin_id,
+            plugin_version=template.plugin_version,
+        ))
         for variable in template.variables:
             label = variable.name
             if variable.description:

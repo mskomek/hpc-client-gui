@@ -10,7 +10,6 @@ from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 from hpc_gui.wx_local_files import show_local_files
 from mock_hpc_files import MockRemoteFilesBackend
-from support.wx_listing_rows import select_content_row
 
 
 def _pump(app, predicate):
@@ -22,6 +21,14 @@ def _pump(app, predicate):
         wx.MilliSleep(5)
     app.ProcessPendingEvents()
     assert predicate()
+
+
+def _first_context_target(listing):
+    """Return a real file row; the parent-navigation row has no context menu."""
+    for index in range(listing.GetItemCount()):
+        if listing.GetItemText(index) not in {"..", "../"}:
+            return index
+    raise AssertionError("The file listing contains no context-menu target")
 
 
 @pytest.fixture
@@ -55,10 +62,11 @@ def test_wx_remote_context_menu_reopens_with_turkish_labels(wx_app):
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
     listing = frame._wx_remote_controls["listing"]
     _pump(wx_app, lambda: listing.GetItemCount() > 0)
-    index = select_content_row(listing, "a.txt")
+    target_index = _first_context_target(listing)
+    listing.Select(target_index)
     labels = []
     listing.PopupMenu = lambda menu: labels.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
-    rect = listing.GetItemRect(index)
+    rect = listing.GetItemRect(target_index)
     position = listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(position)
@@ -83,8 +91,9 @@ def test_wx_local_context_menu_reopens_with_turkish_labels(wx_app, tmp_path: Pat
     labels = []
     listing.PopupMenu = lambda menu: labels.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
     _pump(wx_app, lambda: listing.GetItemCount() > 0)
-    index = select_content_row(listing, "job.slurm")
-    rect = listing.GetItemRect(index)
+    target_index = _first_context_target(listing)
+    listing.Select(target_index)
+    rect = listing.GetItemRect(target_index)
     position = listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
     event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(position)

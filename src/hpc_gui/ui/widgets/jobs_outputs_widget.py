@@ -177,10 +177,7 @@ class _OutputFollowerWidget(QWidget):
         self.lbl_script = QLabel(t("jobs_outputs.no_script"))
         layout.addWidget(self.lbl_script)
         self.cb_auto_scroll = QCheckBox(
-            t("jobs_outputs.auto_scroll")
-            if t("jobs_outputs.auto_scroll") != "[jobs_outputs.auto_scroll]"
-            else "Otomatik kaydır"
-        )
+            t("jobs_outputs.auto_scroll")        )
         self.cb_auto_scroll.setChecked(True)
         self.cb_auto_scroll.toggled.connect(self._on_auto_scroll_toggled)
         layout.addWidget(self.cb_auto_scroll)
@@ -603,14 +600,14 @@ class JobsOutputsWidget(QWidget):
         self.outputs_tab = QWidget(self.section_tabs)
 
         # --- Jobs box
-        self.jobs_box = QGroupBox(t("jobs.title") if t("jobs.title") != "[jobs.title]" else "İşler")
+        self.jobs_box = QGroupBox(t("jobs.title"))
         self.jobs_text = QTextEdit()
         self.jobs_text.setReadOnly(True)
         self._apply_terminal_output_style(self.jobs_text)
         self.jobs_text.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.jobs_text.customContextMenuRequested.connect(self._show_jobs_context_menu)
 
-        self.btn_refresh = QPushButton(t("jobs.refresh") if t("jobs.refresh") != "[jobs.refresh]" else "Yenile")
+        self.btn_refresh = QPushButton(t("jobs.refresh"))
         self.btn_refresh.clicked.connect(self.refresh_jobs)
 
         self.cancel_id = QLineEdit()
@@ -672,7 +669,7 @@ class JobsOutputsWidget(QWidget):
 
         # --- Scratch panel (Files subtab)
         self.scratch_panel = RemoteDirPanel(
-            title=t("jobs_outputs.scratch_title") if t("jobs_outputs.scratch_title") != "[jobs_outputs.scratch_title]" else "Scratch"
+            title=t("jobs_outputs.scratch_title")
         )
         self.scratch_panel.open_file.connect(self.load_one_file)  # double click
         self.scratch_panel.enable_output_menu = True
@@ -704,11 +701,11 @@ class JobsOutputsWidget(QWidget):
         files_layout.addWidget(self.scratch_panel)
 
         # --- Outputs group (2 panels)
-        self.out_group = QGroupBox(t("jobs_outputs.outputs_title") if t("jobs_outputs.outputs_title") != "[jobs_outputs.outputs_title]" else "Çıktılar")
+        self.out_group = QGroupBox(t("jobs_outputs.outputs_title"))
         outputs_layout = QVBoxLayout(self.outputs_tab)
         vg = QVBoxLayout(self.out_group)
 
-        self.lbl_script = QLabel(t("jobs_outputs.no_script") if t("jobs_outputs.no_script") != "[jobs_outputs.no_script]" else "Aktif Slurm Script: (yok)")
+        self.lbl_script = QLabel(t("jobs_outputs.no_script"))
         vg.addWidget(self.lbl_script)
         self.btn_tail_pause = QPushButton()
         self.btn_tail_pause.clicked.connect(self._toggle_tail_pause)
@@ -1868,18 +1865,18 @@ class JobsOutputsWidget(QWidget):
     def retranslate_ui(self):
         details_title = f"{t('jobs.title')} / {t('common.details')}"
         files_title = t("jobs_outputs.files_title")
-        outputs_title = t("jobs_outputs.outputs_title") if t("jobs_outputs.outputs_title") != "[jobs_outputs.outputs_title]" else "Çıktılar"
+        outputs_title = t("jobs_outputs.outputs_title")
         self.section_tabs.setTabText(0, details_title)
         self.section_tabs.setTabText(1, files_title)
         self.section_tabs.setTabText(2, outputs_title)
-        self.jobs_box.setTitle(t("jobs.title") if t("jobs.title") != "[jobs.title]" else "İşler")
+        self.jobs_box.setTitle(t("jobs.title"))
         self.meta_box.setTitle(t("jobs_outputs.accounting_details"))
         self.lssrv_box.setTitle(t("jobs_outputs.lssrv_title"))
         self.out_group.setTitle(outputs_title)
         self.out_box.setTitle(t("jobs_outputs.output_stdout"))
         self.err_box.setTitle(t("jobs_outputs.output_stderr"))
-        self.lbl_script.setText(t("jobs_outputs.no_script") if t("jobs_outputs.no_script") != "[jobs_outputs.no_script]" else "Aktif Slurm Script: (yok)")
-        self.btn_refresh.setText(t("jobs.refresh") if t("jobs.refresh") != "[jobs.refresh]" else "Yenile")
+        self.lbl_script.setText(t("jobs_outputs.no_script"))
+        self.btn_refresh.setText(t("jobs.refresh"))
         self.btn_cancel.setText(t("jobs.cancel"))
         self.cancel_id.setPlaceholderText(t("jobs.job_id"))
         self.meta_job_id.setPlaceholderText(t("jobs.job_id"))

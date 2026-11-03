@@ -860,19 +860,18 @@ class RemoteDirPanel(QWidget):
         self.btn_new_file.clicked.connect(self.create_new_file)
 
         self.btn_template_upload = QPushButton(
-            t("dirs.template_upload") if t("dirs.template_upload") != "[dirs.template_upload]" else "Template Upload"
+            t("dirs.template_upload")
         )
         self.btn_template_upload.clicked.connect(self.show_template_upload_menu)
 
         self.btn_download = QPushButton(
-            t("dirs.download_selected") if t("dirs.download_selected") != "[dirs.download_selected]" else "Seçilenleri İndir"
-        )
+            t("dirs.download_selected")       )
         self.btn_download.clicked.connect(self.download_selected)
 
         self.btn_delete = QPushButton(t("dirs.delete"))
         self.btn_delete.clicked.connect(self.delete_selected)
 
-        self.btn_undo = QPushButton(t("dirs.undo") if t("dirs.undo") != "[dirs.undo]" else "Geri Al")
+        self.btn_undo = QPushButton(t("dirs.undo"))
         self.btn_undo.clicked.connect(self.undo_last)
 
         self.btn_parent = QToolButton()
@@ -884,8 +883,7 @@ class RemoteDirPanel(QWidget):
 
         self.btn_favorites = QToolButton()
         self.btn_favorites.setText(
-            t("dirs.favorites") if t("dirs.favorites") != "[dirs.favorites]" else "★ Favoriler"
-        )
+            t("dirs.favorites")       )
         self.btn_favorites.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.btn_favorites.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self.btn_favorites.setMenu(QMenu(self.btn_favorites))
@@ -893,14 +891,13 @@ class RemoteDirPanel(QWidget):
 
         self.btn_history = QToolButton()
         self.btn_history.setText(
-            t("dirs.history") if t("dirs.history") != "[dirs.history]" else "Geçmiş"
-        )
+            t("dirs.history")       )
         self.btn_history.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.btn_history.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self.btn_history.setMenu(QMenu(self.btn_history))
         self.btn_history.menu().aboutToShow.connect(self._populate_history_menu)
 
-        self.btn_refresh = QPushButton(t("dirs.refresh") if t("dirs.refresh") != "[dirs.refresh]" else "Yenile")
+        self.btn_refresh = QPushButton(t("dirs.refresh"))
         self.btn_refresh.clicked.connect(lambda: self._refresh_from_ui(force=True))
 
         self.refresh_shortcut = QShortcut(QKeySequence.Refresh, self)
@@ -939,15 +936,14 @@ class RemoteDirPanel(QWidget):
             "shell": self._make_view(),
             "other": self._make_view(),
         }
-        self.tabs.addTab(self.views["all"], t("dirs.tab_all") if t("dirs.tab_all") != "[dirs.tab_all]" else "Tümü")
+        self.tabs.addTab(self.views["all"], t("dirs.tab_all"))
         self.tabs.addTab(self.views["folders"], t("dirs.tab_folders"))
-        self.tabs.addTab(self.views["iso"], t("dirs.tab_iso") if t("dirs.tab_iso") != "[dirs.tab_iso]" else "ISO")
+        self.tabs.addTab(self.views["iso"], t("dirs.tab_iso"))
         self.tabs.addTab(
-            self.views["archives"], t("dirs.tab_archives") if t("dirs.tab_archives") != "[dirs.tab_archives]" else "Arşivler"
-        )
-        self.tabs.addTab(self.views["slurm"], t("dirs.tab_slurm") if t("dirs.tab_slurm") != "[dirs.tab_slurm]" else "Slurm")
-        self.tabs.addTab(self.views["shell"], t("dirs.tab_shell") if t("dirs.tab_shell") != "[dirs.tab_shell]" else "SH")
-        self.tabs.addTab(self.views["other"], t("dirs.tab_other") if t("dirs.tab_other") != "[dirs.tab_other]" else "Diğer")
+            self.views["archives"], t("dirs.tab_archives")        )
+        self.tabs.addTab(self.views["slurm"], t("dirs.tab_slurm"))
+        self.tabs.addTab(self.views["shell"], t("dirs.tab_shell"))
+        self.tabs.addTab(self.views["other"], t("dirs.tab_other"))
         self.tabs.currentChanged.connect(self._on_tab_changed)
 
         lay = QVBoxLayout(self)
@@ -959,7 +955,7 @@ class RemoteDirPanel(QWidget):
         lay.addWidget(self.tabs)
 
         # Transfer queue (batch view)
-        self.queue_group = QGroupBox(t("dirs.queue_title") if t("dirs.queue_title") != "[dirs.queue_title]" else "İşlem Kuyruğu")
+        self.queue_group = QGroupBox(t("dirs.queue_title"))
         qlay = QVBoxLayout(self.queue_group)
         self.queue_current = QLabel("-")
         self.queue_list = QListWidget()
@@ -1010,9 +1006,7 @@ class RemoteDirPanel(QWidget):
             t("dirs.col_size"),
             t("dirs.col_type"),
             t("dirs.col_mtime"),
-            t("ftp.comparison_column")
-            if t("ftp.comparison_column") != "[ftp.comparison_column]"
-            else "Comparison",
+            t("ftp.comparison_column"),
         ]
         for view in self.views.values():
             view.setHeaderLabels(headers)
@@ -1022,11 +1016,11 @@ class RemoteDirPanel(QWidget):
         w.setColumnCount(5)
         w.setHeaderLabels(
             [
-                t("dirs.col_name") if t("dirs.col_name") != "[dirs.col_name]" else "Filename",
-                t("dirs.col_size") if t("dirs.col_size") != "[dirs.col_size]" else "Filesize",
-                t("dirs.col_type") if t("dirs.col_type") != "[dirs.col_type]" else "Filetype",
-                t("dirs.col_mtime") if t("dirs.col_mtime") != "[dirs.col_mtime]" else "Last modified",
-                t("ftp.comparison_column") if t("ftp.comparison_column") != "[ftp.comparison_column]" else "Comparison",
+                t("dirs.col_name"),
+                t("dirs.col_size"),
+                t("dirs.col_type"),
+                t("dirs.col_mtime"),
+                t("ftp.comparison_column"),
             ]
         )
         w.hideColumn(4)
@@ -1200,10 +1194,7 @@ class RemoteDirPanel(QWidget):
         store = self._navigation()
         if store is None:
             menu.addAction(
-                t("dirs.favorites_unavailable")
-                if t("dirs.favorites_unavailable") != "[dirs.favorites_unavailable]"
-                else "Favoriler kullanılamıyor (güvenli depolama yok)"
-            ).setEnabled(False)
+                t("dirs.favorites_unavailable")          ).setEnabled(False)
             return
         favorites = store.favorites()
         for item in favorites:
@@ -1218,18 +1209,13 @@ class RemoteDirPanel(QWidget):
         current = self._category_dir or self.current_dir
         if store.is_favorite(current):
             label = (
-                t("dirs.favorite_remove")
-                if t("dirs.favorite_remove") != "[dirs.favorite_remove]"
-                else "Bu dizini favorilerden kaldır"
-            )
+                t("dirs.favorite_remove")            )
             menu.addAction(label).triggered.connect(
                 lambda _checked=False, p=current: store.remove_favorite(p)
             )
         else:
             label = (
                 t("dirs.favorite_add")
-                if t("dirs.favorite_add") != "[dirs.favorite_add]"
-                else "Mevcut dizini favorilere ekle"
             )
             menu.addAction(label).triggered.connect(
                 lambda _checked=False, p=current: store.add_favorite(p, "directory")
@@ -1241,10 +1227,7 @@ class RemoteDirPanel(QWidget):
         store = self._navigation()
         if store is None:
             menu.addAction(
-                t("dirs.history_unavailable")
-                if t("dirs.history_unavailable") != "[dirs.history_unavailable]"
-                else "Geçmiş kullanılamıyor (güvenli depolama yok)"
-            ).setEnabled(False)
+                t("dirs.history_unavailable")        ).setEnabled(False)
             return
         entries = store.history()
         for item in entries:
@@ -1254,10 +1237,7 @@ class RemoteDirPanel(QWidget):
         if entries:
             menu.addSeparator()
         label = (
-            t("dirs.history_clear")
-            if t("dirs.history_clear") != "[dirs.history_clear]"
-            else "Geçmişi temizle"
-        )
+            t("dirs.history_clear")       )
         menu.addAction(label).triggered.connect(lambda _checked=False: store.clear_history())
 
     def set_transfer_mode_provider(
@@ -1439,7 +1419,7 @@ class RemoteDirPanel(QWidget):
         if not self._listing_token_is_current(token):
             return
         self._show_op_error(
-            f"{t('dirs.load_failed') if t('dirs.load_failed') != '[dirs.load_failed]' else 'Dizin okunamadı'}: {error}"
+            f"{t('dirs.load_failed')}: {error}"
         )
         self._finish_render()
 
@@ -1812,7 +1792,7 @@ class RemoteDirPanel(QWidget):
                 entries = self._listdir_entries_cached(category_dir, force=bool(force))
             except Exception as e:
                 self._show_op_error(
-                    f"{t('dirs.load_failed') if t('dirs.load_failed') != '[dirs.load_failed]' else 'Dizin okunamadı'}: {e}"
+                    f"{t('dirs.load_failed')}: {e}"
                 )
                 for v in self.views.values():
                     v.clear()
@@ -2792,7 +2772,7 @@ class RemoteDirPanel(QWidget):
         base = old.split("/")[-1]
         new_name, ok = QInputDialog.getText(
             self,
-            t("dirs.rename") if t("dirs.rename") != "[dirs.rename]" else "Yeniden Adlandır",
+            t("dirs.rename"),
             t("dirs.rename_label"),
             text=base,
         )
@@ -2824,7 +2804,7 @@ class RemoteDirPanel(QWidget):
             msg += f"\n... (+{len(paths)-10})"
         if QMessageBox.question(
             self,
-            t("common.confirm") if t("common.confirm") != "[common.confirm]" else "Onay",
+            t("common.confirm"),
             msg,
         ) != QMessageBox.StandardButton.Yes:
             return False
@@ -4544,7 +4524,7 @@ class RemoteDirPanel(QWidget):
 
         menu = QMenu(self)
         act_extract_iso = menu.addAction(
-            t("dirs.template_extract_iso") if t("dirs.template_extract_iso") != "[dirs.template_extract_iso]" else "extract_iso.py"
+            t("dirs.template_extract_iso")
         )
         chosen = menu.exec(self.btn_template_upload.mapToGlobal(self.btn_template_upload.rect().bottomLeft()))
         if chosen != act_extract_iso:
@@ -4562,9 +4542,7 @@ class RemoteDirPanel(QWidget):
             QMessageBox.warning(
                 self,
                 t("common.error"),
-                t("dirs.template_missing").format(path=str(template_path))
-                if t("dirs.template_missing") != "[dirs.template_missing]"
-                else f"Template file not found: {template_path}",
+                t("dirs.template_missing").format(path=str(template_path)),
             )
             return False
         return self._apply_local_upload_incremental(
@@ -4600,8 +4578,7 @@ class RemoteDirPanel(QWidget):
             QMessageBox.information(self, t("common.info"), t("dirs.no_file_selected"))
             return
         target_dir = QFileDialog.getExistingDirectory(
-            self, t("dirs.download_selected") if t("dirs.download_selected") != "[dirs.download_selected]" else "Seçilenleri İndir"
-        )
+            self, t("dirs.download_selected")       )
         if not target_dir:
             return
         self._apply_remote_download_incremental(sel, target_dir)

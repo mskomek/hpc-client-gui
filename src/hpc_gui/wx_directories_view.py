@@ -119,7 +119,7 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
     def open_external(remote_path, size):
         files = _files()
         if files is None or not callable(getattr(files, "download", None)):
-            wx.MessageBox("Remote download is not available for this connection.", t("login.err_title"), wx.OK | wx.ICON_ERROR, parent)
+            wx.MessageBox(t("dirs.remote_download_unavailable"), t("login.err_title"), wx.OK | wx.ICON_ERROR, parent)
             return
 
         def download(path, local_path, progress_cb):
@@ -242,7 +242,10 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
     # pane titles instead of raw path-only headings).
     scratch_container = wx.Panel(splitter)
     scratch_sizer = wx.BoxSizer(wx.VERTICAL)
-    scratch_label = wx.StaticText(scratch_container, label=f"Scratch — {scratch_dir}")
+    scratch_label = wx.StaticText(
+        scratch_container,
+        label=f"{t('ftp.scratch')} — {scratch_dir}",
+    )
     scratch_sizer.Add(scratch_label, 0, wx.EXPAND | wx.ALL, 4)
     scratch_panel = build_remote_files_panel(
         scratch_container,
@@ -263,7 +266,7 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
 
     home_container = wx.Panel(splitter)
     home_sizer = wx.BoxSizer(wx.VERTICAL)
-    home_label = wx.StaticText(home_container, label=f"Home — {home_dir}")
+    home_label = wx.StaticText(home_container, label=f"{t('ftp.home')} — {home_dir}")
     home_sizer.Add(home_label, 0, wx.EXPAND | wx.ALL, 4)
     home_panel = build_remote_files_panel(
         home_container,
@@ -366,7 +369,7 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
                             except TypeError:
                                 open_editor(target_path)
                     else:
-                        wx.MessageBox(f"Create: {target_path}", t("common.info"), wx.OK)
+                        wx.MessageBox(t("dirs.create_path").format(target_path=target_path), t("common.info"), wx.OK)
                 except Exception as exc:
                     wx.MessageBox(str(exc), t("common.error"), wx.OK | wx.ICON_ERROR)
             wx.CallAfter(done)

@@ -63,7 +63,7 @@ class DirectoriesWidget(DirectoriesSubmissionMixin, QWidget):
         self.splitter.setStretchFactor(1, 1)
 
         self.btn_new_slurm = QPushButton(
-            t("dirs.new_slurm_edit") if t("dirs.new_slurm_edit") != "[dirs.new_slurm_edit]" else "Create/Edit ARF Slurm"
+            t("dirs.new_slurm_edit")
         )
         self.btn_new_slurm.clicked.connect(self.create_slurm_from_template)
 
@@ -140,7 +140,7 @@ class DirectoriesWidget(DirectoriesSubmissionMixin, QWidget):
 
     def retranslate_ui(self):
         self.btn_new_slurm.setText(
-            t("dirs.new_slurm_edit") if t("dirs.new_slurm_edit") != "[dirs.new_slurm_edit]" else "Create/Edit ARF Slurm"
+            t("dirs.new_slurm_edit")
         )
         self.panel_scratch.retranslate_ui()
         self.panel_home.retranslate_ui()
@@ -183,8 +183,8 @@ class DirectoriesWidget(DirectoriesSubmissionMixin, QWidget):
 
         name, ok = QInputDialog.getText(
             self,
-            t("dirs.new_slurm_name_title") if t("dirs.new_slurm_name_title") != "[dirs.new_slurm_name_title]" else "New Slurm Script",
-            t("dirs.new_slurm_name_label") if t("dirs.new_slurm_name_label") != "[dirs.new_slurm_name_label]" else "File name:",
+            t("dirs.new_slurm_name_title"),
+            t("dirs.new_slurm_name_label"),
             text="new_job.slurm",
         )
         if not ok:
@@ -207,7 +207,7 @@ class DirectoriesWidget(DirectoriesSubmissionMixin, QWidget):
                 ans = QMessageBox.question(
                     self,
                     t("dirs.conflict_title"),
-                    (t("dirs.new_slurm_exists") if t("dirs.new_slurm_exists") != "[dirs.new_slurm_exists]" else "File already exists. Overwrite in editor?"),
+                    (t("dirs.new_slurm_exists")),
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.No,
                 )
@@ -219,15 +219,15 @@ class DirectoriesWidget(DirectoriesSubmissionMixin, QWidget):
 
     def _pick_template_key(self) -> str:
         options = [
-            t("dirs.template_core") if t("dirs.template_core") != "[dirs.template_core]" else "Core template",
-            t("dirs.template_cpu") if t("dirs.template_cpu") != "[dirs.template_cpu]" else "CPU template",
-            t("dirs.template_gpu") if t("dirs.template_gpu") != "[dirs.template_gpu]" else "GPU template",
-            t("dirs.template_mpi") if t("dirs.template_mpi") != "[dirs.template_mpi]" else "MPI template",
+            t("dirs.template_core"),
+            t("dirs.template_cpu"),
+            t("dirs.template_gpu"),
+            t("dirs.template_mpi"),
         ]
         choice, ok = QInputDialog.getItem(
             self,
-            t("dirs.template_select_title") if t("dirs.template_select_title") != "[dirs.template_select_title]" else "Slurm template",
-            t("dirs.template_select_label") if t("dirs.template_select_label") != "[dirs.template_select_label]" else "Template type:",
+            t("dirs.template_select_title"),
+            t("dirs.template_select_label"),
             options,
             0,
             False,
@@ -290,13 +290,10 @@ class DirectoriesWidget(DirectoriesSubmissionMixin, QWidget):
         dlg = QDialog(self)
         dlg.setWindowTitle(t("dirs.file_actions"))
 
-        btn_download = QPushButton(t("dirs.download") if t("dirs.download") != "[dirs.download]" else "İndir")
-        btn_edit = QPushButton(t("dirs.edit") if t("dirs.edit") != "[dirs.edit]" else "Düzelt")
+        btn_download = QPushButton(t("dirs.download"))
+        btn_edit = QPushButton(t("dirs.edit"))
         btn_edit_new_window = QPushButton(
-            t("dirs.edit_new_window")
-            if t("dirs.edit_new_window") != "[dirs.edit_new_window]"
-            else "Yeni pencerede düzelt"
-        )
+            t("dirs.edit_new_window"))
         btn_close = QPushButton(t("common.cancel"))
 
         row = QHBoxLayout(dlg)

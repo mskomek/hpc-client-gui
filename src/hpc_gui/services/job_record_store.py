@@ -60,11 +60,18 @@ class JobRecordStore:
         try:
             self._connect()
             self._migrate()
-        except sqlite3.DatabaseError:
+        except sqlite3.DatabaseError as exc:
             try:
                 self._db.close()
             except (AttributeError, sqlite3.DatabaseError):
                 pass
+            # Operational/constraint/locking errors are not corrupt databases.
+            # Never move the original file out of the way for these failures.
+            code = getattr(exc, "sqlite_errorcode", None)
+            if code is None or (code & 0xFF) not in {
+                sqlite3.SQLITE_CORRUPT, sqlite3.SQLITE_NOTADB,
+            }:
+                raise
             suffix = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
             backup = self.path.with_suffix(self.path.suffix + f".corrupt-{suffix}")
             counter = 1
@@ -87,10 +94,37 @@ class JobRecordStore:
         self._db.row_factory = sqlite3.Row
         self._db.execute("PRAGMA busy_timeout=15000")
 
+    def _snapshot_legacy_for_rollback(self) -> None:
+        """Preserve original v2 data before modifying schema; never overwrite backups."""
+        legacy = self._db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='job_records'"
+        ).fetchone()
+        if not legacy:
+            return
+        backup = self.path.with_name(
+            f"{self.path.name}.before-v4-{time.time_ns()}.sqlite3"
+        )
+        fd = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        os.close(fd)
+        try:
+            target = sqlite3.connect(backup)
+            try:
+                self._db.backup(target)
+            finally:
+                target.close()
+            if os.name == "posix":
+                backup.chmod(0o600)
+        except (OSError, sqlite3.DatabaseError):
+            backup.unlink(missing_ok=True)
+            raise
+
     def _migrate(self) -> None:
         version = int(self._db.execute("PRAGMA user_version").fetchone()[0])
         if version > SCHEMA_VERSION:
-            raise sqlite3.DatabaseError("unsupported job record schema")
+            # Do not treat a valid newer database as corrupt or replace it.
+            raise ValueError("unsupported job record schema")
+        if version < SCHEMA_VERSION:
+            self._snapshot_legacy_for_rollback()
         with self._db:
             self._db.execute("""CREATE TABLE IF NOT EXISTS job_workspaces (
                 profile_id TEXT NOT NULL DEFAULT '', cluster_id TEXT NOT NULL DEFAULT '',
@@ -192,6 +226,17 @@ class JobRecordStore:
         json_values = {}
         for key in _JSON_FIELDS:
             incoming = record.get(key)
+            # Preserve the public v2 submission API until every caller is migrated.
+            # Never persist the legacy plaintext script field without redaction.
+            if key == "metadata":
+                legacy = {
+                    field: record[field]
+                    for field in ("script_hash", "script_text", "exit_code")
+                    if field in record
+                }
+                incoming = {**legacy, **dict(incoming or {})}
+            elif key == "paths" and "script_path" in record:
+                incoming = {"script_path": record["script_path"], **dict(incoming or {})}
             merged = dict(old_value.get(key) or {})
             if isinstance(incoming, Mapping):
                 for field, value in incoming.items():
@@ -217,7 +262,9 @@ class JobRecordStore:
         return True
 
     def upsert(self, record: Mapping[str, Any]) -> None:
-        self._write(record, allow_resurrect=_text(record.get("source")) == "submitted")
+        # Explicit submissions may legitimately reuse an ID after local details
+        # were deleted. Passive queue/accounting observations never resurrect it.
+        self._write(record, allow_resurrect=True)
 
     def record_observation(self, record: Mapping[str, Any]) -> bool:
         """Save a queue/accounting observation unless the user deleted details."""

@@ -167,7 +167,27 @@
     "security_unsigned_mac": "Uyarı: bu macOS sürümü Apple Developer ID ile imzalı ve notarize DEĞİLDİR. Gatekeeper ilk açılışta engelleyebilir - uygulamayı denetim tıklayıp \"Aç\" seçin veya Sistem Ayarları > Gizlilik ve Güvenlik > Yine de Aç yolunu kullanın. SHA-256 sağlama değeri ve GitHub yapı kanıtı bütünlüğü doğrular ancak Apple kod imzasının yerine geçmez.",
     "security_signed_mac": "Bu macOS sürümü Developer ID ile imzalandı, notarize edildi, staple'landı ve Gatekeeper değerlendirmesinden geçti (RELEASE_SECURITY.json dosyasına bakın).",
     "security_unknown_mac": "Not: bu sürüm imza durumu üst verisi yayınlamıyor (RELEASE_SECURITY.json eksik); macOS sürümü imzasız kabul edilmelidir.",
-    "skip_updates": "Güncellemeyi Atla"
+    "skip_updates": "Güncellemeyi Atla",
+    "downloaded_bytes": "{bytes} indirildi",
+    "release_notes": "Sürüm notları",
+    "release_notes_title": "Sürüm notları — HPC Client {version}",
+    "no_release_notes": "Sürüm notu bulunmuyor.",
+    "helper_title": "Uygulama güncellemesi",
+    "helper_preparing": "Güncelleme hazırlanıyor...",
+    "helper_updating": "Uygulama güncelleniyor...",
+    "helper_failed": "Güncelleme başarısız.",
+    "helper_failed_detail": "Güncelleme yüklenemedi.\n\n{error}",
+    "helper_copying": "Kopyalanıyor: {path}",
+    "helper_waiting": "Uygulamanın kapanması bekleniyor...",
+    "helper_validating_appimage": "AppImage hedefi doğrulanıyor...",
+    "helper_starting": "Uygulama başlatılıyor...",
+    "helper_complete": "Güncelleme tamamlandı.",
+    "helper_restoring": "Önceki sürüm geri yükleniyor...",
+    "helper_admin_permission": "Yönetici izni isteniyor...",
+    "helper_verifying_version": "Yüklü sürüm doğrulanıyor...",
+    "helper_updating_flatpak": "Uygulama Flatpak ile güncelleniyor...",
+    "helper_verifying_installation": "Kurulum doğrulanıyor...",
+    "helper_mounting_image": "Güncelleme kalıbı bağlanıyor..."
   },
   "splash": {
     "title": "HPC WORKSPACE",
@@ -229,9 +249,6 @@
     "refresh_failed_stale": "Yenileme başarısız (eski veriler)",
     "cancel": "İşi İptal Et",
     "cancel_confirm": "{job_id} işi iptal edilsin mi?",
-    "delete_details": "Ayrıntıları Sil",
-    "delete_details_confirm": "Seçili {count} iş için yerel ayrıntı kayıtları silinsin mi? İşler iptal edilmez ve uzak dosyalar kaldırılmaz.",
-    "delete_details_done": "{count} işin kayıtlı ayrıntıları silindi.",
     "open_output": "Çıktıyı Aç",
     "pause_output": "Canlı Takibi Duraklat",
     "resume_output": "Canlı Takibe Devam Et",
@@ -279,7 +296,10 @@
     "details_header": "İŞ DETAYLARI",
     "back": "Geri",
     "forward": "İleri",
-    "up": "Üst"
+    "up": "Üst",
+    "delete_details": "Ayrıntıları Sil",
+    "delete_details_confirm": "Seçili {count} iş için yerel ayrıntı kayıtları silinsin mi? İşler iptal edilmez ve uzak dosyalar kaldırılmaz.",
+    "delete_details_done": "{count} işin kayıtlı ayrıntıları silindi."
   },
   "raw_viewer": {
     "title": "Ham Komut Çıktısı",
@@ -488,10 +508,10 @@
     "batch_submit_summary_failed": "Toplu gönderim tamamlandı: {ok} gönderildi, {bad} başarısız.",
     "batch_submit_summary_success": "Toplu gönderim tamamlandı: {ok} betik gönderildi.",
     "submit_success": "İş sbatch ile gönderildi. İş kimliği: {jobid}",
-    "submit_failed": "Gönderim (sbatch) başarısız: {err}\nBağlantıyı ve Slurm betiği yönergelerini kontrol edin.",
-    "submit_failed_no_job_id": "Gönderim geçerli bir iş kimliği döndürmedi. Betiği ve Slurm yanıtını kontrol edin.",
+    "submit_failed": "sbatch gönderimi başarısız: {err}\nBağlantıyı ve Slurm betiği yönergelerini kontrol edin.",
+    "submit_failed_no_job_id": "Geçerli bir iş kimliği alınamadı. Betiği ve Slurm yanıtını kontrol edin.",
     "run_shell_success": "Betik terminalde tamamlandı.",
-    "run_shell_failed": "Betik çalıştırma başarısız: {err}",
+    "run_shell_failed": "Betik çalıştırılamadı: {err}",
     "folder_not_editable": "Klasör düzenlenemez.",
     "rename_single_required": "Yeniden adlandırmak için tek bir öğe seçin.",
     "permissions_title": "Dosya izinleri",
@@ -532,15 +552,16 @@
     "not_following": "Takip edilmiyor",
     "permissions_mode": "Mod (oktal):",
     "permissions_unavailable": "Uzak chmod kullanılamıyor.",
-    "delete_confirm_detail": "Secili {count} oge {location} konumundan silinsin mi?\n{names}"
+    "delete_confirm_detail": "Secili {count} oge {location} konumundan silinsin mi?\n{names}",
+    "remote_download_unavailable": "Bu bağlantı için uzaktan indirme kullanılamıyor.",
+    "create_path": "Oluştur: {target_path}",
+    "disconnected_label": "{name} — bağlantı kesildi"
   },
   "jobs_outputs": {
     "auto_scroll": "Otomatik kaydır",
     "scratch_title": "Scratch (/arf/scratch)",
     "files_title": "Dosyalar",
     "outputs_title": "Çıktılar",
-    "directory_unavailable": "Bu iş için çalışma dizini veya güvenli bir yol yedeği bulunamadı.",
-    "main_files_unavailable": "Ana Dosyalar paneli kullanılamıyor.",
     "lssrv_title": "Küme Sunucuları (lssrv)",
     "lssrv_refresh": "lssrv Yenile",
     "lssrv_empty": "lssrv çıktı döndürmedi.",
@@ -612,7 +633,6 @@
     "status_disconnected": "Bağlantı kesildi",
     "status_completed": "Tamamlandı",
     "status_error": "Hata",
-    "status_cached": "{captured_at} zamanlı önbellek görüntüsü (canlı değil)",
     "standard_output": "Standart Çıktı",
     "standard_error": "Standart Hata",
     "combined_output": "Standart Çıktı + Hata",
@@ -639,7 +659,10 @@
     "job_label": "İş",
     "open_main_files": "Ana Dosyalar'da Aç",
     "no_selected_job_files_hint": "Çalışma dizininde gezinmek için İşler sekmesinden bir iş seçin.",
-    "no_selected_job_outputs_hint": "Çıktıları izlemek için İşler sekmesinden bir iş seçin."
+    "no_selected_job_outputs_hint": "Çıktıları izlemek için İşler sekmesinden bir iş seçin.",
+    "directory_unavailable": "Bu iş için çalışma dizini veya güvenli bir yol yedeği bulunamadı.",
+    "main_files_unavailable": "Ana Dosyalar paneli kullanılamıyor.",
+    "status_cached": "{captured_at} zamanlı önbellek görüntüsü (canlı değil)"
   },
   "putty": {
     "downloading": "plink.exe indiriliyor...",
@@ -723,6 +746,7 @@
     "export_diagnostics_hint": "Günlük ve tanı bilgilerini bir pakete aktar",
     "collapse_repeats": "Tekrarları birleştir",
     "repeated_summary": "{count} kez daha tekrarlandı",
+    "command_group_summary": "{command} — {count} çalıştırma{time_range}",
     "select_output_folder": "Çıktı klasörünü seç",
     "diagnostics_title": "Tanı",
     "send_open_failed": "Günlük gönderme penceresi açılamadı. Ayrıntılar günlüklere yazıldı.",
@@ -780,7 +804,6 @@
     "action": "Ayarlar",
     "dialog_title": "Ayarlar",
     "smart_open_reset": "Akıllı Aç tercihlerini sıfırla",
-    "ssh_connection_attempts": "SSH bağlantı deneme sayısı",
     "smart_open_reset_confirm": "Hatırlanan tüm dosya açma tercihleri sıfırlansın mı?",
     "open_failed": "Ayarlar penceresi açılamadı. Ayrıntılar günlüklere yazıldı.",
     "apply_failed": "Ayarlar uygulanamadı. Ayrıntılar günlüklere yazıldı.",
@@ -863,7 +886,8 @@
     "terminal_graphics_not_remembered": "Hatırlanan otomatik uyumluluk tercihi yok.",
     "terminal_graphics_restart_required": "Değişiklikler uygulama yeniden başlatıldıktan sonra geçerli olur.",
     "terminal_graphics_reset": "Otomatik tercihi sıfırla / normal görüntülemeyi yeniden dene",
-    "terminal_graphics_tip": "Terminal boş, bozuk veya saydam görünüyorsa uyumluluk modunu deneyin. Değişiklikler uygulama yeniden başlatıldıktan sonra geçerli olur."
+    "terminal_graphics_tip": "Terminal boş, bozuk veya saydam görünüyorsa uyumluluk modunu deneyin. Değişiklikler uygulama yeniden başlatıldıktan sonra geçerli olur.",
+    "ssh_connection_attempts": "SSH bağlantı deneme sayısı"
   },
   "ftp": {
     "local_title": "Lokal",
@@ -917,7 +941,8 @@
     "cmp_remote_newer": "Uzak daha yeni",
     "waiting_local_folder": "Yerel klasör bekleniyor",
     "waiting_remote_folder": "Uzak klasör bekleniyor",
-    "forward": "İleri"
+    "forward": "İleri",
+    "summary": "{files} dosya. Toplam boyut: {size} bayt."
   },
   "transfer": {
     "ftp_activity_title": "Aktarımlar",
@@ -1004,7 +1029,8 @@
     "col_size": "Boyut",
     "col_progress": "İlerleme",
     "col_priority": "Öncelik",
-    "col_status": "Durum"
+    "col_status": "Durum",
+    "remaining": "Kalan: {hidden}"
   },
   "connection": {
     "dialog_title": "Bağlantı Ekle",
@@ -1178,7 +1204,8 @@
     "test_credential_error": "Kayıtlı kimlik bilgileri nedeniyle test bağlantısı başarısız oldu",
     "master_unlock_error": "Ana şifre çözme başarısız oldu",
     "saved_credential_unavailable": "Kayıtlı kimlik bilgileri çözülemedi. Ana şifrenizi veya işletim sistemi kimlik deposunu kontrol edin.",
-    "credential_unlock_prompt": "Kayıtlı kimlik bilgilerinin kilidini açmak için ana şifreyi girin"
+    "credential_unlock_prompt": "Kayıtlı kimlik bilgilerinin kilidini açmak için ana şifreyi girin",
+    "selected_profile": "Seçili profil"
   },
   "cluster_self_test": {
     "title": "Küme Öz Testi",
@@ -1331,7 +1358,8 @@
   "templates": {
     "dialog_title": "İş Şablonları",
     "list_label": "Kurulu şablonlar:",
-    "none_installed": "Kurulu iş şablonu yok. Eklenti Yöneticisi'nden bir şablon eklentisi kurun."
+    "none_installed": "Kurulu iş şablonu yok. Eklenti Yöneticisi'nden bir şablon eklentisi kurun.",
+    "plugin_version_line": "{description}\n\nEklenti: {plugin_id} v{plugin_version}"
   },
   "ansyslint": {
     "title": "ANSYS Journal Linter",

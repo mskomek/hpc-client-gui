@@ -167,7 +167,27 @@
     "security_unsigned_mac": "Warning: this macOS build is NOT Apple Developer ID signed or notarized. Gatekeeper may block the first launch - control-click the app and choose Open, or use System Settings > Privacy & Security > Open Anyway. The SHA-256 checksum and GitHub build provenance verify integrity and origin, but they are not substitutes for Apple code signing.",
     "security_signed_mac": "This macOS build was Developer ID signed, notarized, stapled, and passed a Gatekeeper assessment (see RELEASE_SECURITY.json).",
     "security_unknown_mac": "Note: this release does not publish signing status metadata (RELEASE_SECURITY.json is missing), so its macOS build must be treated as unsigned.",
-    "skip_updates": "Skip Updates"
+    "skip_updates": "Skip Updates",
+    "downloaded_bytes": "{bytes} downloaded",
+    "release_notes": "Release Notes",
+    "release_notes_title": "Release Notes — HPC Client {version}",
+    "no_release_notes": "No release notes available.",
+    "helper_title": "Application Update",
+    "helper_preparing": "Preparing update...",
+    "helper_updating": "Updating...",
+    "helper_failed": "Update failed.",
+    "helper_failed_detail": "The update could not be installed.\n\n{error}",
+    "helper_copying": "Copying: {path}",
+    "helper_waiting": "Waiting for application to close...",
+    "helper_validating_appimage": "Validating AppImage target...",
+    "helper_starting": "Starting application...",
+    "helper_complete": "Update complete.",
+    "helper_restoring": "Restoring previous version...",
+    "helper_admin_permission": "Requesting administrator permission...",
+    "helper_verifying_version": "Verifying installed version...",
+    "helper_updating_flatpak": "Updating application with Flatpak...",
+    "helper_verifying_installation": "Verifying installation...",
+    "helper_mounting_image": "Mounting update image..."
   },
   "splash": {
     "title": "HPC WORKSPACE",
@@ -232,9 +252,6 @@
     "up": "Up",
     "cancel": "Cancel Job",
     "cancel_confirm": "Cancel job {job_id}?",
-    "delete_details": "Delete Details",
-    "delete_details_confirm": "Delete saved local details for {count} selected job(s)? This does not cancel jobs or remove remote files.",
-    "delete_details_done": "Deleted saved details for {count} job(s).",
     "open_output": "Open Output",
     "pause_output": "Pause Live Follow",
     "resume_output": "Resume Live Follow",
@@ -279,7 +296,10 @@
     "parse_error": "Could not parse accounting data.",
     "parse_error_hint": "The raw scheduler response is still available.",
     "resources_value": "{nodes} nodes, {cpus} CPUs",
-    "details_header": "DETAILS"
+    "details_header": "DETAILS",
+    "delete_details": "Delete Details",
+    "delete_details_confirm": "Delete saved local details for {count} selected job(s)? This does not cancel jobs or remove remote files.",
+    "delete_details_done": "Deleted saved details for {count} job(s)."
   },
   "raw_viewer": {
     "title": "Raw Command Output",
@@ -491,7 +511,7 @@
     "batch_submit_summary_failed": "Batch submit finished: {ok} submitted, {bad} failed.",
     "batch_submit_summary_success": "Batch submit finished: {ok} scripts submitted.",
     "submit_success": "Submitted with sbatch. Job ID: {jobid}",
-    "submit_failed": "Submission with sbatch failed: {err}\nCheck the connection and Slurm script directives.",
+    "submit_failed": "sbatch submission failed: {err}\nCheck the connection and Slurm script directives.",
     "submit_failed_no_job_id": "Submission returned no valid job ID. Check the script and Slurm response.",
     "run_shell_success": "Script completed in terminal.",
     "run_shell_failed": "Script run failed: {err}",
@@ -532,15 +552,16 @@
     "follow_existing": "Assign to Existing Follower",
     "following": "Following",
     "not_following": "Not following",
-    "delete_confirm_detail": "Delete {count} selected item(s) from {location}?\n{names}"
+    "delete_confirm_detail": "Delete {count} selected item(s) from {location}?\n{names}",
+    "remote_download_unavailable": "Remote download is not available for this connection.",
+    "create_path": "Create: {target_path}",
+    "disconnected_label": "{name} — disconnected"
   },
   "jobs_outputs": {
     "auto_scroll": "Auto-scroll",
     "scratch_title": "Scratch (/arf/scratch)",
     "files_title": "Files",
     "outputs_title": "Outputs",
-    "directory_unavailable": "No working directory or safe path fallback is available for this job.",
-    "main_files_unavailable": "The Main Files panel is unavailable.",
     "lssrv_title": "Cluster Servers (lssrv)",
     "lssrv_refresh": "Refresh lssrv",
     "lssrv_empty": "lssrv returned no output.",
@@ -612,7 +633,6 @@
     "status_disconnected": "Disconnected",
     "status_completed": "Completed",
     "status_error": "Error",
-    "status_cached": "Cached snapshot from {captured_at} (not live)",
     "standard_output": "Standard Output",
     "standard_error": "Standard Error",
     "combined_output": "Standard Output + Error",
@@ -639,7 +659,10 @@
     "job_label": "Job",
     "open_main_files": "Open in main Files",
     "no_selected_job_files_hint": "Select a job from the Jobs tab to browse its working directory.",
-    "no_selected_job_outputs_hint": "Select a job from the Jobs tab to monitor its outputs."
+    "no_selected_job_outputs_hint": "Select a job from the Jobs tab to monitor its outputs.",
+    "directory_unavailable": "No working directory or safe path fallback is available for this job.",
+    "main_files_unavailable": "The Main Files panel is unavailable.",
+    "status_cached": "Cached snapshot from {captured_at} (not live)"
   },
   "putty": {
     "downloading": "Downloading plink.exe...",
@@ -723,6 +746,7 @@
     "export_diagnostics_hint": "Export logs and diagnostic information as a bundle",
     "collapse_repeats": "Collapse repeats",
     "repeated_summary": "{count} more occurrences",
+    "command_group_summary": "{command} — {count} runs{time_range}",
     "select_output_folder": "Select output folder",
     "diagnostics_title": "Diagnostics",
     "send_open_failed": "The Send Logs dialog could not be opened. Details were written to the logs.",
@@ -780,7 +804,6 @@
     "action": "Settings",
     "dialog_title": "Settings",
     "smart_open_reset": "Reset Smart Open preferences",
-    "ssh_connection_attempts": "SSH connection attempts",
     "smart_open_reset_confirm": "Reset all remembered file opening choices?",
     "open_failed": "The Settings dialog could not be opened. Details were written to the logs.",
     "apply_failed": "The settings could not be applied. Details were written to the logs.",
@@ -863,7 +886,8 @@
     "terminal_graphics_not_remembered": "No automatic compatibility preference is remembered.",
     "terminal_graphics_restart_required": "Changes take effect after restarting the application.",
     "terminal_graphics_reset": "Reset automatic preference / retry normal rendering",
-    "terminal_graphics_tip": "If the terminal appears blank, corrupted, or transparent, try compatibility mode. Changes take effect after restarting the application."
+    "terminal_graphics_tip": "If the terminal appears blank, corrupted, or transparent, try compatibility mode. Changes take effect after restarting the application.",
+    "ssh_connection_attempts": "SSH connection attempts"
   },
   "ftp": {
     "local_title": "Local",
@@ -917,7 +941,8 @@
     "cmp_remote_newer": "Remote newer",
     "waiting_local_folder": "Waiting for local folder",
     "waiting_remote_folder": "Waiting for remote folder",
-    "forward": "Forward"
+    "forward": "Forward",
+    "summary": "{files} files. Total size: {size} bytes."
   },
   "transfer": {
     "ftp_activity_title": "Transfers",
@@ -1004,7 +1029,8 @@
     "col_size": "Size",
     "col_progress": "Progress",
     "col_priority": "Priority",
-    "col_status": "Status"
+    "col_status": "Status",
+    "remaining": "Remaining: {hidden}"
   },
   "connection": {
     "dialog_title": "Add Connection",
@@ -1178,7 +1204,8 @@
     "test_credential_error": "Test connection failed due to credential error",
     "master_unlock_error": "Master password unlock failed",
     "saved_credential_unavailable": "The saved credential could not be unlocked. Please check your master password or OS credential store.",
-    "credential_unlock_prompt": "Enter master password to unlock saved credentials"
+    "credential_unlock_prompt": "Enter master password to unlock saved credentials",
+    "selected_profile": "Selected profile"
   },
   "cluster_self_test": {
     "title": "Cluster Self-Test",
@@ -1331,7 +1358,8 @@
   "templates": {
     "dialog_title": "Job Templates",
     "list_label": "Installed templates:",
-    "none_installed": "No job templates are installed. Install a template plugin from the Plugin Manager."
+    "none_installed": "No job templates are installed. Install a template plugin from the Plugin Manager.",
+    "plugin_version_line": "{description}\n\nPlugin: {plugin_id} v{plugin_version}"
   },
   "ansyslint": {
     "title": "ANSYS Journal Linter",

@@ -7,7 +7,7 @@ from PySide6.QtCore import QUrl, QTimer, Qt, Signal, Slot
 from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
 from hpc_gui.services.terminal_bridge import TerminalBridge
-from hpc_gui.core.i18n import t
+from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 
 class TerminalWidget(QWidget):
     READINESS_TIMEOUT_MS = 5000
@@ -34,6 +34,11 @@ class TerminalWidget(QWidget):
 
         self.bridge = TerminalBridge(self)
         self.setAccessibleName(t("login.terminal_accessible_name"))
+        self._language_change_cb = self._refresh_accessibility_name
+        subscribe_language_change(self._language_change_cb)
+        self.destroyed.connect(
+            lambda _obj=None: unsubscribe_language_change(self._language_change_cb)
+        )
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setMinimumHeight(240)
         self._ready = False
@@ -75,9 +80,21 @@ class TerminalWidget(QWidget):
             self.failed.emit(t("login.terminal_page_failed"))
             return
         self._readiness_timer.start()
+        self._refresh_accessibility_name()
         self._fit()
         if self._focus_requested:
             self.focus_terminal()
+
+    def _refresh_accessibility_name(self, _language: str | None = None) -> None:
+        label = t("login.terminal_accessible_name")
+        self.setAccessibleName(label)
+        view = getattr(self, "view", None)
+        if view is not None:
+            import json
+            view.page().runJavaScript(
+                "const terminal = document.getElementById('terminal');"
+                f"if (terminal) terminal.setAttribute('aria-label', {json.dumps(label, ensure_ascii=False)});"
+            )
 
     def _load_started(self) -> None:
         self._load_generation += 1
