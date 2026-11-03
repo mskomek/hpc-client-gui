@@ -39,7 +39,9 @@ def run(mode: str, output: Path, timeout: int) -> int:
 
             state["wx"] = wx.version()
             state["edge_available"] = bool(
-                wx.html2.WebView.IsBackendAvailable(wx.html2.WebViewBackendEdge)
+                wx.html2.WebView.IsBackendAvailable(
+                    getattr(wx.html2, "WebViewBackendEdge", wx.html2.WebViewBackendDefault)
+                )
             )
             app = wx.App(False)
             frame = wx.Frame(None, title="WebView2 CI baseline", size=(600, 400))
@@ -55,10 +57,15 @@ def run(mode: str, output: Path, timeout: int) -> int:
                 done = True
                 state["error"] = reason
                 state["result"] = "PASS" if state["created"] and state["loaded"] else "FAIL"
-                try:
-                    frame.Destroy()
-                finally:
-                    wx.CallAfter(app.ExitMainLoop)
+                def end_loop() -> None:
+                    try:
+                        frame.Destroy()
+                    finally:
+                        app.ExitMainLoop()
+
+                # Never destroy the native controller from within its own
+                # LOADED/ERROR callback; that can reenter WebView2 teardown.
+                wx.CallAfter(end_loop)
 
             def on_created(event) -> None:
                 state["created"] = True
