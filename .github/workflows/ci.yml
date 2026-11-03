@@ -80,4 +80,6 @@ jobs:
           tests/test_job_record_store.py
           tests/test_jobs_workspace_controllers.py
           tests/test_jobs_completed_fallback.py
+          tests/test_jobs_history.py
+          tests/test_selected_job_context.py
           -q --tb=short
