@@ -279,6 +279,9 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
             self._webview, self._webview_pending_native = new_terminal_webview(
                 self, wx.html2, self._on_native_created,
             )
+            self._webview_legacy_edge = (
+                wx.Platform == "__WXMSW__" and not self._webview_pending_native
+            )
             if self._webview is None:
                 raise RuntimeError("WebView backend returned no controller")
             if self._webview_pending_native and self._webview.Create(self) is False:
