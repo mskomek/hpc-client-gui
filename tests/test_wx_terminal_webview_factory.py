@@ -55,7 +55,8 @@ def test_windows_uses_one_writable_data_dir_and_binds_before_create(monkeypatch,
     _Backend.config_count = 0
     _Backend.instances = []
     html2 = SimpleNamespace(WebView=_Backend, EVT_WEBVIEW_CREATED="created")
-    handler = lambda event: None
+    def handler(event):
+        return None
 
     first, must_create = factory.new_terminal_webview("frame1", html2, handler)
     assert must_create is True
