@@ -40,6 +40,7 @@ from hpc_gui.wx_terminal_webview_support import (
     _safe_truncate_index as _safe_truncate_index,
 )
 from hpc_gui.wx_terminal_fragment_transport import TerminalFragmentTransportMixin
+from hpc_gui.wx_terminal_webview_factory import new_terminal_webview
 
 def _assets_dir() -> pathlib.Path:
     return pathlib.Path(__file__).resolve().parent / "assets" / "terminal"
@@ -252,7 +253,13 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         self._is_parity = True
         self._webview_failure_stage = "creating"
         try:
-            self._webview = wx.html2.WebView.New(self)
+            self._webview, self._webview_pending_native = new_terminal_webview(
+                self, wx.html2, self._on_native_created,
+            )
+            if self._webview is None:
+                raise RuntimeError("WebView backend returned no controller")
+            if self._webview_pending_native and self._webview.Create(self) is False:
+                raise RuntimeError("WebView2 controller Create() failed")
         except Exception as exc:
             # Fallback if creation fails despite availability check
             self._webview_failure_stage = "creation"
@@ -322,15 +329,13 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         self.Bind(wx.EVT_TIMER, self._on_resize_timer, self._resize_timer)
         self._init_fragment_timer()
 
-        # Load local page
-        index_path = _wx_index_path()
-        url = index_path.as_uri()
-        self._webview_failure_stage = "navigation"
-        try:
-            self._webview.LoadURL(url)
-        except Exception:
-            self._webview_failure_stage = "navigation-call"
-            pass
+        # Windows Edge is asynchronous: defer navigation until CREATED fires.
+        # A premature LoadURL can race native WebView2 controller creation.
+        self._webview_failure_stage = (
+            "native-pending" if self._webview_pending_native else "navigation"
+        )
+        if not self._webview_pending_native:
+            self._load_terminal_page()
         # Start readiness timeout
         self._readiness_timer.Start(READINESS_TIMEOUT_MS, oneShot=True)
 
@@ -352,6 +357,16 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         self._wx_terminal_is_parity = True
         # For compat with old wx_terminal panel seam
         self._wx_terminal_model = None  # no splitlines model; xterm is authority
+
+    def _load_terminal_page(self) -> None:
+        if self._closed or self._webview is None:
+            return
+        self._webview_failure_stage = "navigation"
+        try:
+            self._webview.LoadURL(_wx_index_path().as_uri())
+        except Exception as exc:
+            self._webview_failure_stage = "navigation-call"
+            self._webview_failure_detail = type(exc).__name__
 
     def _build_diagnostic_text(self, reason: str) -> str:
         import platform as _pl
