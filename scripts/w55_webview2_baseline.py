@@ -38,6 +38,10 @@ def run(mode: str, output: Path, timeout: int) -> int:
             import wx.html2
 
             state["wx"] = wx.version()
+            created_event = getattr(wx.html2, "EVT_WEBVIEW_CREATED", None)
+            configuration_api = callable(getattr(wx.html2.WebView, "NewConfiguration", None))
+            state["has_created_event"] = bool(created_event)
+            state["has_configuration_api"] = configuration_api
             state["edge_available"] = bool(
                 wx.html2.WebView.IsBackendAvailable(
                     getattr(wx.html2, "WebViewBackendEdge", wx.html2.WebViewBackendDefault)
@@ -56,7 +60,10 @@ def run(mode: str, output: Path, timeout: int) -> int:
                     return
                 done = True
                 state["error"] = reason
-                state["result"] = "PASS" if state["created"] and state["loaded"] else "FAIL"
+                state["result"] = (
+                    "UNSUPPORTED" if reason.startswith("unsupported:")
+                    else "PASS" if state["created"] and state["loaded"] else "FAIL"
+                )
                 def end_loop() -> None:
                     try:
                         frame.Destroy()
@@ -76,6 +83,10 @@ def run(mode: str, output: Path, timeout: int) -> int:
                 event.Skip()
 
             def on_loaded(event) -> None:
+                # Legacy wxPython bindings have no CREATED event. A loaded
+                # document still proves native creation completed.
+                if not created_event:
+                    state["created"] = True
                 state["loaded"] = True
                 finish()
                 event.Skip()
@@ -89,16 +100,23 @@ def run(mode: str, output: Path, timeout: int) -> int:
                 nonlocal controller
                 try:
                     if mode == "configured":
+                        if not configuration_api or not created_event:
+                            finish("unsupported: configuration or CREATED event missing")
+                            return
                         config = wx.html2.WebView.NewConfiguration()
                         config.SetDataPath(str(profile))
                         controller = wx.html2.WebView.New(config)
                     else:
                         controller = wx.html2.WebView.New(frame)
-                    controller.Bind(wx.html2.EVT_WEBVIEW_CREATED, on_created)
+                    if created_event:
+                        controller.Bind(created_event, on_created)
                     controller.Bind(wx.html2.EVT_WEBVIEW_LOADED, on_loaded)
                     controller.Bind(wx.html2.EVT_WEBVIEW_ERROR, on_error)
                     if mode == "configured" and controller.Create(frame) is False:
                         finish("Create returned False")
+                    elif mode == "default" and not created_event:
+                        # This is the exact legacy API path packaged wx uses.
+                        controller.LoadURL("about:blank")
                 except Exception as exc:
                     finish(f"creation: {type(exc).__name__}: {exc}")
 
