@@ -12,6 +12,7 @@ from hpc_gui.wx_shell_smoke_contract import (
     _PACKAGED_SMOKE_CONTROL_SURFACES, _PACKAGED_SMOKE_SURFACES,
 )
 from hpc_gui.wx_shell_smoke_finalize import finish_packaged_smoke as _finish_packaged_smoke
+from hpc_gui.wx_shell_smoke_readiness import observe_terminal_readiness
 
 
 def _send_linux_smoke_text(keyboard, wx_module, text):
@@ -49,7 +50,7 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
         "phase": 0,
         "result": "FAIL",
         "done": False,
-        "deadline": time.monotonic() + 25,
+        "deadline": time.monotonic() + 35,
         "bridge_input_chars": 0,
         "ssh_input_chars": 0,
         "keyboard_input_at": None,
@@ -75,6 +76,7 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
             wx.CallLater(250, probe)
 
     def probe():
+        panel = observe_terminal_readiness(state, session_state, time.monotonic())
         if time.monotonic() >= state["deadline"]:
             phase = state["phase"]
             timeout = (
@@ -88,10 +90,10 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
                     f"; stage={getattr(panel, '_webview_failure_stage', 'unknown')}"
                     f"; attempts={getattr(panel, '_webview_create_attempts', 'unknown')}"
                     f"; detail={getattr(panel, '_webview_failure_detail', '')}"
+                    f"; ready={getattr(panel, '_ready', None)}; parity={getattr(panel, '_is_parity', None)}; closed={getattr(panel, '_closed', None)}"
                 )
             finish(timeout)
             return
-        panel = session_state.get("_embedded_terminal_panel")
         if panel is None:
             retry()
             return
@@ -131,7 +133,6 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
                 "window.__hpcSmokeInputEvents.input++;},true);"
             )
             import importlib
-
             surface_errors = []
             for check, modules in _PACKAGED_SMOKE_SURFACES.items():
                 try:
