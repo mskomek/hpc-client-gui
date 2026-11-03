@@ -7,6 +7,32 @@ from hpc_gui.wx_terminal_webview_support import _is_local_file_url
 
 
 class TerminalBridgeMixin:
+    def _on_native_created(self, event):
+        """Defer loading until WebView2 has completed native initialization.
+
+        A stale CREATED event from a retired controller must never navigate
+        the replacement. CallAfter also protects synchronous creation paths.
+        """
+        try:
+            controller = event.GetEventObject()
+        except Exception:
+            controller = None
+        try:
+            if not self._closed:
+                import wx
+                wx.CallAfter(self._navigate_after_creation, controller)
+        finally:
+            try:
+                event.Skip()
+            except Exception:
+                pass
+
+    def _navigate_after_creation(self, controller):
+        if (self._closed or self._webview is None
+                or (controller is not None and controller != self._webview)):
+            return
+        self._load_terminal_page()
+
     def _on_navigating(self, event):
         try:
             url = event.GetURL() or ""
