@@ -168,3 +168,64 @@ def test_failed_edge_environment_recreates_configuration_without_data_loss(monke
     assert first_config.path == second_config.path
     assert sentinel.read_text(encoding="utf-8") == "existing browser data"
     assert _Backend.config_count == 2
+
+
+def test_destroying_retired_child_never_closes_live_terminal_panel():
+    from hpc_gui.wx_terminal_webview_lifecycle import TerminalLifecycleMixin
+
+    class Panel(TerminalLifecycleMixin):
+        def __init__(self):
+            self.close_count = 0
+
+        def close(self):
+            self.close_count += 1
+
+    class DestroyEvent:
+        def __init__(self, window):
+            self.window = window
+            self.skipped = False
+
+        def GetWindow(self):
+            return self.window
+
+        def Skip(self):
+            self.skipped = True
+
+    panel = Panel()
+    child_destroy = DestroyEvent(object())
+    panel._on_destroy(child_destroy)
+    assert child_destroy.skipped
+    assert panel.close_count == 0
+
+    own_destroy = DestroyEvent(panel)
+    panel._on_destroy(own_destroy)
+    assert own_destroy.skipped
+    assert panel.close_count == 1
+
+
+def test_child_destroy_event_object_fallback_is_safe():
+    from hpc_gui.wx_terminal_webview_lifecycle import TerminalLifecycleMixin
+
+    class Panel(TerminalLifecycleMixin):
+        def __init__(self):
+            self.closed = False
+
+        def close(self):
+            self.closed = True
+
+    class Event:
+        def __init__(self, target):
+            self.target = target
+            self.skipped = False
+
+        def GetEventObject(self):
+            return self.target
+
+        def Skip(self):
+            self.skipped = True
+
+    panel = Panel()
+    event = Event(object())
+    panel._on_destroy(event)
+    assert not panel.closed
+    assert event.skipped
