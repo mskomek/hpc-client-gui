@@ -144,3 +144,27 @@ def test_native_created_navigates_current_not_retired_controller(monkeypatch):
     panel._closed = True
     panel._on_native_created(Event(current))
     assert scheduled == []
+
+
+def test_failed_edge_environment_recreates_configuration_without_data_loss(monkeypatch, tmp_path):
+    monkeypatch.setattr(factory, "_WINDOWS", True)
+    monkeypatch.setattr(factory, "_EDGE_CONFIG", None)
+    monkeypatch.setenv("WEBVIEW2_USER_DATA_FOLDER", str(tmp_path / "shared"))
+    _Backend.config_count = 0
+    _Backend.instances = []
+    html2 = SimpleNamespace(WebView=_Backend, EVT_WEBVIEW_CREATED="created")
+
+    first, pending = factory.new_terminal_webview("parent", html2, lambda event: None)
+    assert pending and not first.created
+    first_config = _Backend.instances[-1][0]
+    sentinel = tmp_path / "shared" / "preserve.txt"
+    sentinel.write_text("existing browser data", encoding="utf-8")
+
+    factory.invalidate_failed_edge_configuration()
+    second, pending = factory.new_terminal_webview("parent", html2, lambda event: None)
+    assert pending and not second.created
+    second_config = _Backend.instances[-1][0]
+    assert first_config is not second_config
+    assert first_config.path == second_config.path
+    assert sentinel.read_text(encoding="utf-8") == "existing browser data"
+    assert _Backend.config_count == 2
