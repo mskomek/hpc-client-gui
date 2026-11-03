@@ -83,4 +83,5 @@ jobs:
           tests/test_jobs_history.py
           tests/test_selected_job_context.py
           tests/test_wx_terminal_webview_factory.py
+          tests/test_wx_packaged_terminal_activation.py
           -q --tb=short
