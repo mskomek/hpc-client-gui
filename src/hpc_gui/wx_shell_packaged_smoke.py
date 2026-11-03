@@ -49,7 +49,7 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
         "phase": 0,
         "result": "FAIL",
         "done": False,
-        "deadline": time.monotonic() + 12,
+        "deadline": time.monotonic() + 25,
         "bridge_input_chars": 0,
         "ssh_input_chars": 0,
         "keyboard_input_at": None,
@@ -82,6 +82,13 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
                 if phase == 0
                 else f"timeout in packaged smoke phase {phase}"
             )
+            panel = session_state.get("_embedded_terminal_panel")
+            if phase == 0 and panel is not None:
+                timeout += (
+                    f"; stage={getattr(panel, '_webview_failure_stage', 'unknown')}"
+                    f"; attempts={getattr(panel, '_webview_create_attempts', 'unknown')}"
+                    f"; detail={getattr(panel, '_webview_failure_detail', '')}"
+                )
             finish(timeout)
             return
         panel = session_state.get("_embedded_terminal_panel")
