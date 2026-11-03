@@ -273,6 +273,7 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         local terminal page and arm the readiness timer. One attempt."""
         self._webview_create_attempts += 1
         self._is_parity = True
+        self._native_created = False
         self._webview_failure_stage = "creating"
         try:
             self._webview, self._webview_pending_native = new_terminal_webview(
