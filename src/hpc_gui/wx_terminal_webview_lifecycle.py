@@ -184,7 +184,22 @@ class TerminalLifecycleMixin:
             pass
 
     def _on_destroy(self, event):
-        self.close()
+        # wx.WindowDestroyEvent is a CommandEvent: child destruction can
+        # propagate to this panel. Retired WebView2 controls are deliberately
+        # destroyed after replacement reaches ready; their destroy events must
+        # NEVER close the still-live terminal panel.
+        try:
+            destroyed = event.GetWindow()
+        except (AttributeError, RuntimeError):
+            try:
+                destroyed = event.GetEventObject()
+            except (AttributeError, RuntimeError):
+                destroyed = None
+        try:
+            if destroyed is self or (destroyed is not None and destroyed == self):
+                self.close()
+        except RuntimeError:
+            pass
         try:
             event.Skip()
         except Exception:
