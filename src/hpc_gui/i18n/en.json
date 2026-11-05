@@ -293,10 +293,20 @@
     "memory_per_core": "RAM (MB) per Core",
     "advanced": "Advanced",
     "resources": "Resources",
+    "user": "User",
+    "time_limit": "Time limit",
+    "submit_time": "Submitted",
+    "eligible_time": "Eligible",
+    "start_time": "Started",
+    "end_time": "Ends",
+    "requested_tres": "Requested resources",
     "parse_error": "Could not parse accounting data.",
     "parse_error_hint": "The raw scheduler response is still available.",
     "resources_value": "{nodes} nodes, {cpus} CPUs",
-    "details_header": "DETAILS"
+    "details_header": "DETAILS",
+    "delete_details": "Delete Details",
+    "delete_details_confirm": "Delete saved local details for {count} selected job(s)? This does not cancel jobs or remove remote files.",
+    "delete_details_done": "Deleted saved details for {count} job(s)."
   },
   "raw_viewer": {
     "title": "Raw Command Output",
@@ -659,7 +669,10 @@
     "job_label": "Job",
     "open_main_files": "Open in main Files",
     "no_selected_job_files_hint": "Select a job from the Jobs tab to browse its working directory.",
-    "no_selected_job_outputs_hint": "Select a job from the Jobs tab to monitor its outputs."
+    "no_selected_job_outputs_hint": "Select a job from the Jobs tab to monitor its outputs.",
+    "directory_unavailable": "No working directory or safe path fallback is available for this job.",
+    "main_files_unavailable": "The Main Files panel is unavailable.",
+    "status_cached": "Cached snapshot from {captured_at} (not live)"
   },
   "putty": {
     "downloading": "Downloading plink.exe...",

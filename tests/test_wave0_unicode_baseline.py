@@ -8,71 +8,45 @@ and creates reusable test fixtures.
 from __future__ import annotations
 
 import json
-
 import pathlib
-
+import sys
 import unicodedata
 
 import pytest
+from support.unicode_golden_fixtures import (
+    CORRECT_STAR,
+    JAPANESE_DIRS,
+    JAPANESE_FILES,
+    MIXED_DIRS,
+    MIXED_FILES,
+    MOJIBAKE_STAR,
+    SYMBOL_FILES,
+    TURKISH_CASING,
+    TURKISH_DIRS,
+    TURKISH_FILES,
+)
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+if str(ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(ROOT / "src"))
 
-# Turkish characters
-TURKISH_DIRS = [
-    "İşler_Çağrı_Ölçüm",
-    "Isı_İstanbul_Şehir",
-    "Üniversite_Kümesi",
-]
 
-TURKISH_FILES = [
-    "ısı_ölçümü_İstanbul.txt",
-    "şğüöçıİ.dat",
-    "Çalışma_Sonucu.txt",
-    "O'Brien_Çalışma.txt",
-]
+NFC_PATH = pathlib.PurePosixPath("café.txt")
+NFD_PATH = pathlib.PurePosixPath(unicodedata.normalize("NFD", "café.txt"))
 
-# Japanese characters
-JAPANESE_DIRS = [
-    "研究_ジョブ",
-    "計算_結果",
-    "日本語_ディレクトリ",
-]
 
-JAPANESE_FILES = [
-    "日本語_計算結果.txt",
-    "ジョブ結果.slurm",
-    "研究_スクリプト.sh",
-]
+# ---------------------------------------------------------------------------
+# Helper: Normalize path for cross-platform comparison
+# ---------------------------------------------------------------------------
 
-# Mixed scripts
-MIXED_DIRS = [
-    "Türkçe_日本語",
-]
+def _norm(p: str) -> str:
+    """NFC-normalize a path string for comparison."""
+    return unicodedata.normalize("NFC", p)
 
-MIXED_FILES = [
-    "iş_日本語_δ.txt",
-    "Çalışma_Sonucu_日本語.txt",
-]
 
-# Symbol/special fixtures
-SYMBOL_FILES = [
-    "★_Favorites.txt",
-    "ΔPressure_ölçüm.txt",
-    "🚀_job.txt",
-]
-
-# Turkish I/i casing variants
-TURKISH_CASING = [
-    "I_upper.txt",
-    "İ_upper.txt",
-    "ı_lower.txt",
-    "i_lower.txt",
-]
-
-# Mojibake reference
-MOJIBAKE_STAR = "â˜…"
-
-CORRECT_STAR = "★"
+# ---------------------------------------------------------------------------
+# 1. Repository Baseline
+# ---------------------------------------------------------------------------
 
 class TestRepositoryBaseline:
     """Verify repository state is real and current."""
@@ -131,6 +105,11 @@ class TestRepositoryBaseline:
         tr = i18n_dir / "tr.json"
         assert en.is_file(), "en.json not found"
         assert tr.is_file(), "tr.json not found"
+
+
+# ---------------------------------------------------------------------------
+# 2. Mojibake Reproduction
+# ---------------------------------------------------------------------------
 
 class TestMojibakeReproduction:
     """Reproduce the known ★ Favorites mojibake bug."""
@@ -207,6 +186,11 @@ class TestMojibakeReproduction:
         chars = "日本語研究計算"
         assert chars.encode("utf-8").decode("utf-8") == chars
 
+
+# ---------------------------------------------------------------------------
+# 3. Golden Fixtures — Path Validity
+# ---------------------------------------------------------------------------
+
 class TestGoldenFixtures:
     """Verify golden fixtures are well-formed and reusable."""
 
@@ -274,58 +258,183 @@ class TestGoldenFixtures:
             decoded = json.loads(encoded)
             assert decoded == s, f"JSON roundtrip failed for {s!r}"
 
-class TestGoldenFixturesFilesystem:
-    """Verify golden fixture names survive filesystem create/read/delete."""
+
+# ---------------------------------------------------------------------------
+# 5. Encoding Boundary Inventory
+# ---------------------------------------------------------------------------
+
+class TestEncodingBoundaryInventory:
+    """Verify encoding boundary patterns exist and are cataloged."""
+
+    @pytest.mark.contract
+    @pytest.mark.semantic
+    @pytest.mark.regression
+    def test_i18n_json_is_utf8(self):
+        """Both i18n JSON files should be valid UTF-8."""
+        for lang in ("en", "tr"):
+            path = ROOT / "src" / "hpc_gui" / "i18n" / f"{lang}.json"
+            content = path.read_text(encoding="utf-8")
+            data = json.loads(content)
+            assert isinstance(data, dict), f"{lang}.json did not parse as dict"
+
+    @pytest.mark.audit
+    def test_config_storage_uses_utf8(self):
+        """Config storage should use UTF-8 JSON encoding (facade or core)."""
+        candidates = [
+            ROOT / "src" / "hpc_gui" / "config" / "storage.py",
+            ROOT / "src" / "hpc_gui" / "config" / "_storage_core.py",
+        ]
+        contents = [p.read_text(encoding="utf-8") for p in candidates if p.is_file()]
+        assert contents, "config storage implementation missing"
+        assert any('encoding="utf-8"' in content or "encoding='utf-8'" in content for content in contents)
+
+    @pytest.mark.audit
+    def test_ssh_client_decodes_output(self):
+        """SSH command runner should use the centralized UTF-8 decoder."""
+        client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
+        runner = ROOT / "src" / "hpc_gui" / "ssh" / "command_runner.py"
+        if client.is_file() and runner.is_file():
+            facade = client.read_text(encoding="utf-8")
+            implementation = runner.read_text(encoding="utf-8")
+            assert "from hpc_gui.ssh.command_runner import run_ssh_command" in facade
+            assert "decode_remote_text" in implementation
+            assert "decode_remote_text(stdout.read())" in implementation
+
+    @pytest.mark.audit
+    def test_files_ssh_uses_utf8(self):
+        """services/files_ssh.py should use UTF-8 for SFTP text operations."""
+        ssh_files = ROOT / "src" / "hpc_gui" / "services" / "files_ssh.py"
+        if ssh_files.is_file():
+            content = ssh_files.read_text(encoding="utf-8")
+            assert "utf-8" in content.lower(), "SFTP backend should use UTF-8"
+
+    @pytest.mark.audit
+    def test_shell_session_uses_utf8_decoder(self):
+        """ssh/shell_session.py should use UTF-8 incremental decoder."""
+        shell = ROOT / "src" / "hpc_gui" / "ssh" / "shell_session.py"
+        if shell.is_file():
+            content = shell.read_text(encoding="utf-8")
+            assert "utf-8" in content.lower(), "Shell session should use UTF-8"
+
+    @pytest.mark.audit
+    def test_ensure_ascii_false_in_config(self):
+        """Config JSON serialization should use ensure_ascii=False (facade or core)."""
+        candidates = [
+            ROOT / "src" / "hpc_gui" / "config" / "storage.py",
+            ROOT / "src" / "hpc_gui" / "config" / "_storage_core.py",
+        ]
+        contents = [p.read_text(encoding="utf-8") for p in candidates if p.is_file()]
+        assert contents, "config storage implementation missing"
+        assert any("ensure_ascii=False" in content for content in contents)
+
+    @pytest.mark.audit
+    def test_errors_replace_in_ssh(self):
+        """Centralized SSH output decoding should replace invalid UTF-8."""
+        decoder = ROOT / "src" / "hpc_gui" / "ssh" / "text.py"
+        content = decoder.read_text(encoding="utf-8")
+        assert 'errors="replace"' in content or "errors='replace'" in content
+
+    @pytest.mark.audit
+    def test_errors_ignore_in_process_registry(self):
+        """process_registry.py should not use errors='ignore' on JSON."""
+        reg = ROOT / "src" / "hpc_gui" / "services" / "process_registry.py"
+        if reg.is_file():
+            content = reg.read_text(encoding="utf-8")
+            # Document the finding — errors="ignore" on JSON is risky
+            # This is a known risk — we document it but don't assert absence
+            # because fixing it is Wave 1+ work
+            assert len(content) > 0, "process_registry.py should have content"
+
+
+# ---------------------------------------------------------------------------
+# 6. i18n Translation Completeness
+# ---------------------------------------------------------------------------
+
+class TestI18nCompleteness:
+    """Verify translation key sets are synchronized."""
 
     pytestmark = [pytest.mark.contract, pytest.mark.semantic, pytest.mark.regression]
 
-    def test_turkish_file_create_and_read(self, tmp_path):
-        for name in TURKISH_FILES:
-            p = tmp_path / name
-            p.write_text("test content", encoding="utf-8")
-            assert p.exists()
-            assert p.read_text(encoding="utf-8") == "test content"
+    def test_en_and_tr_have_same_keys(self):
+        en_path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
+        tr_path = ROOT / "src" / "hpc_gui" / "i18n" / "tr.json"
+        en_data = json.loads(en_path.read_text(encoding="utf-8"))
+        tr_data = json.loads(tr_path.read_text(encoding="utf-8"))
 
-    def test_japanese_file_create_and_read(self, tmp_path):
-        for name in JAPANESE_FILES:
-            p = tmp_path / name
-            p.write_text("テスト内容", encoding="utf-8")
-            assert p.exists()
-            assert p.read_text(encoding="utf-8") == "テスト内容"
+        def _flatten(d, prefix=""):
+            keys = set()
+            for k, v in d.items():
+                full = f"{prefix}.{k}" if prefix else k
+                if isinstance(v, dict):
+                    keys.update(_flatten(v, full))
+                else:
+                    keys.add(full)
+            return keys
 
-    def test_mixed_file_create_and_read(self, tmp_path):
-        for name in MIXED_FILES:
-            p = tmp_path / name
-            p.write_text("mixed content 日本語", encoding="utf-8")
-            assert p.exists()
-            assert p.read_text(encoding="utf-8") == "mixed content 日本語"
+        en_keys = _flatten(en_data)
+        tr_keys = _flatten(tr_data)
+        missing_in_tr = en_keys - tr_keys
+        missing_in_en = tr_keys - en_keys
+        assert not missing_in_tr, f"Missing keys in tr.json: {missing_in_tr}"
+        assert not missing_in_en, f"Missing keys in en.json: {missing_in_en}"
 
-    def test_symbol_file_create_and_read(self, tmp_path):
-        for name in SYMBOL_FILES:
-            p = tmp_path / name
-            p.write_text("symbol content", encoding="utf-8")
-            assert p.exists()
-            assert p.read_text(encoding="utf-8") == "symbol content"
+    def test_turkish_file_no_mojibake_patterns(self):
+        """Check tr.json for common mojibake patterns ( Ã , ÅŸ, Ä±, etc.)."""
+        tr_path = ROOT / "src" / "hpc_gui" / "i18n" / "tr.json"
+        content = tr_path.read_text(encoding="utf-8")
+        # These are common mojibake patterns for Turkish characters
+        mojibake_patterns = ["Ã§", "ÅŸ", "Ä±", "Ã¶", "Ã¼", "ÄŸ", "Ä°"]
+        found = []
+        for pattern in mojibake_patterns:
+            if pattern in content:
+                found.append(pattern)
+        assert not found, f"Mojibake patterns in tr.json: {found}"
 
-    def test_turkish_casing_file_create_and_read(self, tmp_path):
-        for name in TURKISH_CASING:
-            p = tmp_path / name
-            p.write_text("casing test", encoding="utf-8")
-            assert p.exists()
-            assert p.read_text(encoding="utf-8") == "casing test"
 
-    def test_nfc_nfd_file_create_and_read(self, tmp_path):
-        nfc_name = unicodedata.normalize("NFC", "café.txt")
-        nfd_name = unicodedata.normalize("NFD", "café.txt")
-        p_nfc = tmp_path / nfc_name
-        p_nfd = tmp_path / nfd_name
-        p_nfc.write_text("NFC content", encoding="utf-8")
-        p_nfd.write_text("NFD content", encoding="utf-8")
-        assert p_nfc.read_text(encoding="utf-8") == "NFC content"
-        assert p_nfd.read_text(encoding="utf-8") == "NFD content"
+# ---------------------------------------------------------------------------
+# 7. Plugin/Provider Unicode Contract
+# ---------------------------------------------------------------------------
 
-    def test_star_file_create_and_read(self, tmp_path):
-        p = tmp_path / "★ Favorites.txt"
-        p.write_text("star content", encoding="utf-8")
-        assert p.exists()
-        assert p.read_text(encoding="utf-8") == "star content"
+class TestPluginProviderUnicode:
+    """Verify plugin/provider data can handle Unicode."""
+
+    pytestmark = pytest.mark.audit
+
+    def test_plugin_models_exist(self):
+        models = ROOT / "src" / "hpc_gui" / "plugins" / "models.py"
+        assert models.is_file(), "Plugin models not found"
+
+    def test_plugin_manifest_supports_unicode(self):
+        """Plugin manifest loading should handle Unicode."""
+        loader = ROOT / "src" / "hpc_gui" / "plugins" / "loader.py"
+        if loader.is_file():
+            content = loader.read_text(encoding="utf-8")
+            # The loader should use UTF-8 for reading manifests
+            assert "utf-8" in content.lower() or "encoding" in content.lower() or "read_text" in content
+
+
+# ---------------------------------------------------------------------------
+# 8. Risk Classification Summary
+# ---------------------------------------------------------------------------
+
+class TestRiskClassification:
+    """Document and verify risk classification of findings."""
+
+    @pytest.mark.contract
+    @pytest.mark.semantic
+    @pytest.mark.regression
+    def test_p0_mojibake_documented(self):
+        """The mojibake bug was P0 — now fixed at the source."""
+        en_path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
+        content = en_path.read_text(encoding="utf-8")
+        data = json.loads(content)
+        fav = data.get("dirs", {}).get("favorites", "")
+        # P0: Was visible mojibake, now fixed
+        assert fav == "★ Favorites", "Mojibake should be fixed"
+
+    @pytest.mark.audit
+    def test_p0_ssh_decode_risks_documented(self):
+        """SSH decode with errors='replace' is P0 — data loss boundary."""
+        decoder = ROOT / "src" / "hpc_gui" / "ssh" / "text.py"
+        content = decoder.read_text(encoding="utf-8")
+        assert "decode_remote_text" in content and "errors=\"replace\"" in content

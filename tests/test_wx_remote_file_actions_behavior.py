@@ -1,18 +1,18 @@
 import threading
-
 import time
 
 import pytest
 
 wx = pytest.importorskip("wx")
 
+pytestmark = [pytest.mark.gui, pytest.mark.wx]
+
 from mock_hpc_files import MockRemoteFilesBackend
-
+from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.core.i18n import load_language
-
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
-
 from hpc_gui.wx_remote_files_view import show_remote_files
+
 
 def _pump(app, predicate, timeout=2):
     deadline = time.monotonic() + timeout
@@ -23,6 +23,7 @@ def _pump(app, predicate, timeout=2):
         wx.MilliSleep(5)
     app.ProcessPendingEvents()
     assert predicate()
+
 
 @pytest.fixture
 def wx_app():
@@ -45,11 +46,13 @@ def wx_app():
     assert not wx.GetTopLevelWindows(), "wx top-level windows survived fixture teardown"
     app.Destroy()
 
+
 def _browser(app, backend, model=None, operation=None):
     show_remote_files(model=model, loader=backend.iterdir_entries, operation=operation or backend.operation)
     frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
     _pump(app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
     return frame
+
 
 @pytest.mark.concurrency
 def test_remote_move_and_upload_actions_reach_backend_off_gui_thread(wx_app, monkeypatch):
@@ -66,12 +69,14 @@ def test_remote_move_and_upload_actions_reach_backend_off_gui_thread(wx_app, mon
     assert any(call[0] == "upload" for call in backend.calls)
     assert all(thread_id != gui_thread for thread_id in backend.thread_ids)
 
+
 def test_wx_remote_download_uses_selected_destination_dialog(wx_app, monkeypatch, tmp_path):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
     monkeypatch.setattr(wx, "DirDialog", lambda *_args, **_kwargs: _DestinationDialog(str(tmp_path)))
     frame._wx_remote_run_action("download", ("/work/a.txt",), "/work")
     _pump(wx_app, lambda: ("download", "/work/a.txt", str(tmp_path)) in backend.calls)
+
 
 def test_wx_remote_delete_removes_selected_files_and_directory_only(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
@@ -89,6 +94,7 @@ def test_wx_remote_delete_removes_selected_files_and_directory_only(wx_app, monk
     assert "/work/selected-dir/nested.txt" not in backend.entries
     assert "/work/keep.txt" in backend.entries
 
+
 def test_wx_remote_rename_updates_backend_and_visible_listing(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
@@ -98,6 +104,7 @@ def test_wx_remote_rename_updates_backend_and_visible_listing(wx_app, monkeypatc
     _pump(wx_app, lambda: not frame._wx_remote_state["busy"] and any(frame._wx_remote_controls["listing"].GetItemText(index) == "renamed.txt" for index in range(frame._wx_remote_controls["listing"].GetItemCount())))
     assert "/work/a.txt" not in backend.entries
     assert "/work/renamed.txt" in backend.entries
+
 
 def test_wx_remote_rename_conflict_shows_error_and_preserves_source(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
@@ -111,6 +118,7 @@ def test_wx_remote_rename_conflict_shows_error_and_preserves_source(wx_app, monk
     assert "/work/a.txt" in backend.entries
     assert frame._wx_remote_controls["listing"].IsEnabled()
 
+
 def test_remote_new_folder_uses_clicked_directory_target(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
@@ -118,6 +126,7 @@ def test_remote_new_folder_uses_clicked_directory_target(wx_app, monkeypatch):
     frame._wx_remote_run_action("new_folder", ("/work",), "/work")
     _pump(wx_app, lambda: ("mkdir", "/work/child") in backend.calls)
     assert "/work/child" in backend.entries
+
 
 def test_wx_remote_new_folder_rejects_invalid_name(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
@@ -129,6 +138,7 @@ def test_wx_remote_new_folder_rejects_invalid_name(wx_app, monkeypatch):
     assert errors
     assert "/work/../bad" not in backend.entries
     assert frame._wx_remote_controls["listing"].IsEnabled()
+
 
 def test_wx_remote_new_folder_failure_shows_error_and_recovers(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
@@ -145,6 +155,7 @@ def test_wx_remote_new_folder_failure_shows_error_and_recovers(wx_app, monkeypat
     assert errors == ["mkdir failed"]
     assert frame._wx_remote_controls["listing"].IsEnabled()
 
+
 def test_wx_remote_delete_confirmation_cancel_preserves_selection(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
@@ -154,6 +165,7 @@ def test_wx_remote_delete_confirmation_cancel_preserves_selection(wx_app, monkey
     assert "/work/a.txt" in backend.entries
     assert not backend.calls
     assert frame._wx_remote_controls["listing"].IsEnabled()
+
 
 def test_wx_remote_delete_failure_shows_error_and_recovers(wx_app, monkeypatch):
     errors = []
@@ -167,6 +179,7 @@ def test_wx_remote_delete_failure_shows_error_and_recovers(wx_app, monkeypatch):
     _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
     assert errors[-1] == "delete failed"
     assert frame._wx_remote_controls["listing"].IsEnabled()
+
 
 def test_wx_remote_move_preserves_multi_item_destinations(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
@@ -184,6 +197,171 @@ def test_wx_remote_move_preserves_multi_item_destinations(wx_app, monkeypatch):
     assert "/archive/b.txt" in backend.entries
     assert "/work/a.txt" not in backend.entries
     assert "/work/b.txt" not in backend.entries
+
+
+def test_wx_remote_multi_item_paste_preserves_all_destinations(wx_app):
+    backend = MockRemoteFilesBackend()
+    backend.entries["/work/dest"] = True
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    get_file_clipboard().set("copy", ["/work/a.txt", "/work/b.txt"])
+    frame._wx_remote_run_action("paste", (), "/work/dest")
+    _pump(
+        wx_app,
+        lambda: not frame._wx_remote_state["busy"]
+        and ("copy", "/work/a.txt", "/work/dest/a.txt") in backend.calls
+        and ("copy", "/work/b.txt", "/work/dest/b.txt") in backend.calls,
+    )
+    assert len([call for call in backend.calls if call[0] == "copy"]) == 2
+
+
+def test_wx_remote_ctrl_a_selects_all_rows(wx_app):
+    backend = MockRemoteFilesBackend()
+    backend.entries.update({"/work/folder": True})
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    listing = frame._wx_remote_controls["listing"]
+    event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    event.SetKeyCode(ord("A"))
+    event.SetControlDown(True)
+    listing.ProcessEvent(event)
+    assert all(listing.IsSelected(index) for index in range(listing.GetItemCount()))
+
+
+def test_wx_remote_backspace_navigates_parent_and_f5_refreshes(wx_app):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    listing = frame._wx_remote_controls["listing"]
+    back_event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    back_event.SetKeyCode(wx.WXK_BACK)
+    listing.ProcessEvent(back_event)
+    assert frame._wx_remote_controls["path"].GetValue() == "/"
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"] and listing.GetItemCount() >= 1)
+    calls = backend.list_calls
+    refresh_event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    refresh_event.SetKeyCode(wx.WXK_F5)
+    listing.ProcessEvent(refresh_event)
+    _pump(wx_app, lambda: backend.list_calls > calls)
+
+
+def test_wx_remote_paste_failure_is_visible_and_recovers(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    errors = []
+
+    def failing_operation(_action, _paths, _destination=""):
+        raise RuntimeError("paste failed")
+
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"), failing_operation)
+    listing = frame._wx_remote_controls["listing"]
+    listing.Select(0)
+    get_file_clipboard().set("copy", ["/work/a.txt"])
+    monkeypatch.setattr(wx, "MessageBox", lambda message, *_args, **_kwargs: errors.append(message) or wx.OK)
+    frame._wx_remote_run_action("paste", (), "/work")
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
+    assert errors == ["paste failed"]
+    assert listing.IsEnabled()
+
+
+def test_wx_remote_background_context_shows_directory_actions(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend)
+    listing = frame._wx_remote_controls["listing"]
+    labels = []
+    listing.PopupMenu = lambda menu: labels.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
+    position = listing.ClientToScreen(wx.Point(5, max(5, listing.GetSize().height - 5)))
+    event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
+    event.SetPosition(position)
+    listing.ProcessEvent(event)
+    assert "Upload" in labels
+    assert "New Folder" in labels
+    assert "Refresh" in labels
+    assert "Edit" not in labels and "Rename" not in labels
+
+
+def test_wx_remote_background_upload_targets_current_directory(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend)
+    listing = frame._wx_remote_controls["listing"]
+    monkeypatch.setattr(wx, "FileDialog", lambda *_args, **_kwargs: _FileDialog(("local.txt",)))
+
+    def choose_upload(menu):
+        item = next(item for item in menu.GetMenuItems() if item.GetItemLabelText() == "Upload")
+        event = wx.CommandEvent(wx.wxEVT_MENU, item.GetId())
+        listing.ProcessEvent(event)
+
+    listing.PopupMenu = choose_upload
+    position = listing.ClientToScreen(wx.Point(5, max(5, listing.GetSize().height - 5)))
+    event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
+    event.SetPosition(position)
+    listing.ProcessEvent(event)
+    _pump(wx_app, lambda: ("upload", "local.txt", "/") in backend.calls)
+
+
+def test_wx_remote_background_context_paste_targets_current_directory(wx_app):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    get_file_clipboard().set("copy", ["/work/a.txt"])
+    listing = frame._wx_remote_controls["listing"]
+
+    def choose_paste(menu):
+        item = next(item for item in menu.GetMenuItems() if item.GetItemLabelText() == "Paste")
+        listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
+
+    listing.PopupMenu = choose_paste
+    position = listing.ClientToScreen(wx.Point(5, max(5, listing.GetSize().height - 5)))
+    event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
+    event.SetPosition(position)
+    listing.ProcessEvent(event)
+    _pump(wx_app, lambda: ("copy", "/work/a.txt", "/work/a.txt") in backend.calls)
+
+
+def test_wx_remote_clicked_directory_context_paste_targets_clicked_directory(wx_app):
+    backend = MockRemoteFilesBackend()
+    backend.entries["/work/dest"] = True
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    get_file_clipboard().set("copy", ["/work/a.txt"])
+    listing = frame._wx_remote_controls["listing"]
+    row = next(index for index in range(listing.GetItemCount()) if listing.GetItemText(index) == "dest")
+
+    def choose_paste(menu):
+        item = next(item for item in menu.GetMenuItems() if item.GetItemLabelText() == "Paste")
+        listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
+
+    listing.PopupMenu = choose_paste
+    position = listing.ClientToScreen(listing.GetItemPosition(row))
+    event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
+    event.SetPosition(position)
+    listing.ProcessEvent(event)
+    _pump(wx_app, lambda: ("copy", "/work/a.txt", "/work/dest/a.txt") in backend.calls)
+
+
+def test_wx_remote_clicked_directory_context_cut_paste_moves_to_clicked_directory(wx_app):
+    backend = MockRemoteFilesBackend()
+    backend.entries["/work/dest"] = True
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    get_file_clipboard().set("move", ["/work/a.txt"])
+    listing = frame._wx_remote_controls["listing"]
+    row = next(index for index in range(listing.GetItemCount()) if listing.GetItemText(index) == "dest")
+
+    def choose_paste(menu):
+        item = next(item for item in menu.GetMenuItems() if item.GetItemLabelText() == "Paste")
+        listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
+
+    listing.PopupMenu = choose_paste
+    position = listing.ClientToScreen(listing.GetItemPosition(row))
+    event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
+    event.SetPosition(position)
+    listing.ProcessEvent(event)
+    _pump(wx_app, lambda: ("move", "/work/a.txt", "/work/dest/a.txt") in backend.calls)
+    assert "/work/a.txt" not in backend.entries
+    assert "/work/dest/a.txt" in backend.entries
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
+    undo = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    undo.SetKeyCode(ord("Z"))
+    undo.SetControlDown(True)
+    listing.ProcessEvent(undo)
+    _pump(wx_app, lambda: ("move", "/work/dest/a.txt", "/work/a.txt") in backend.calls)
+    assert "/work/a.txt" in backend.entries
+    assert "/work/dest/a.txt" not in backend.entries
+
 
 def test_wx_remote_new_file_and_chmod_reach_backend(wx_app, monkeypatch):
     class Backend(MockRemoteFilesBackend):
@@ -216,6 +394,48 @@ def test_wx_remote_new_file_and_chmod_reach_backend(wx_app, monkeypatch):
     frame._wx_remote_run_action("chmod", ("/work/test.txt",), "/work")
     _pump(wx_app, lambda: ("chmod", "/work/test.txt", 0o755) in backend.calls)
 
+
+def test_wx_remote_favorite_selected_file_targets_file_path(wx_app):
+    class Store:
+        def __init__(self):
+            self.items = []
+
+        def favorites(self):
+            return list(self.items)
+
+        def toggle_favorite(self, path, kind):
+            self.items.append({"path": path, "kind": kind, "label": path.rsplit("/", 1)[-1]})
+
+    store = Store()
+    backend = MockRemoteFilesBackend()
+    show_remote_files(
+        model=WxRemoteDirectoryModel("/work"), loader=backend.iterdir_entries,
+        operation=backend.operation, navigation_store=store,
+    )
+    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
+    _pump(wx_app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
+    frame._wx_remote_run_action("favorite", ("/work/a.txt",), "/work")
+    assert store.items == [{"path": "/work/a.txt", "kind": "file", "label": "a.txt"}]
+
+
+def test_wx_remote_submit_slurm_uses_selected_remote_path(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    submitted = []
+    messages = []
+    frame = show_remote_files(
+        model=WxRemoteDirectoryModel("/work"), loader=backend.iterdir_entries,
+        operation=backend.operation,
+        submit_slurm=lambda path: submitted.append(path) or "Submitted batch job 77",
+    )
+    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
+    _pump(wx_app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
+    monkeypatch.setattr(wx, "MessageBox", lambda message, *_args, **_kwargs: messages.append(message) or wx.OK)
+    frame._wx_remote_run_action("submit_slurm", ("/work/job.sbatch",), "/work")
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
+    assert submitted == ["/work/job.sbatch"]
+    assert messages == ["Submitted batch job 77"]
+
+
 class _Dialog:
     def __init__(self, value):
         self.value = value
@@ -229,9 +449,11 @@ class _Dialog:
     def Destroy(self):
         pass
 
+
 class _FileDialog(_Dialog):
     def GetPaths(self):
         return self.value
+
 
 class _DestinationDialog(_Dialog):
     def GetPath(self):

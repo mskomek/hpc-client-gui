@@ -7,6 +7,33 @@ from hpc_gui.wx_terminal_webview_support import _is_local_file_url
 
 
 class TerminalBridgeMixin:
+    def _on_native_created(self, event):
+        """Defer loading until WebView2 has completed native initialization.
+
+        A stale CREATED event from a retired controller must never navigate
+        the replacement. CallAfter also protects synchronous creation paths.
+        """
+        try:
+            controller = event.GetEventObject()
+        except Exception:
+            controller = None
+        try:
+            if not self._closed:
+                import wx
+                wx.CallAfter(self._navigate_after_creation, controller)
+        finally:
+            try:
+                event.Skip()
+            except Exception:
+                pass
+
+    def _navigate_after_creation(self, controller):
+        if (self._closed or self._webview is None
+                or (controller is not None and controller != self._webview)):
+            return
+        self._native_created = True
+        self._load_terminal_page()
+
     def _on_navigating(self, event):
         try:
             url = event.GetURL() or ""
@@ -32,7 +59,9 @@ class TerminalBridgeMixin:
             pass
 
     def _on_loaded(self, event):
-        # Page loaded — xterm will post {type:"ready"} when bridge is ready
+        # The legacy wxPython Edge binding has no CREATED event: page-loaded
+        # is the first proof that its native controller completed creation.
+        self._native_created = True
         self._page_loaded = True
         self._webview_failure_stage = "page-loaded"
         self._update_accessibility_label()
@@ -77,19 +106,55 @@ class TerminalBridgeMixin:
         update_dom_label()
 
     def _on_error(self, event):
-        # Page load failed
+        # wxWidgets emits ERROR after its native WebView2 create callback
+        # completes with E_ABORT. Do not mistake it for a page load failure:
+        # only now is the failed controller safe to retire before retrying.
+        try:
+            controller = event.GetEventObject()
+        except Exception:
+            controller = None
+        if controller is not None and controller is not self._webview:
+            try:
+                event.Skip()
+            except Exception:
+                pass
+            return
         try:
             detail = event.GetString() if hasattr(event, "GetString") else ""
-            self._webview_failure_stage = "navigation-error"
+        except Exception:
+            detail = ""
+        aborted = "operation aborted" in detail.casefold() or "0x80004004" in detail.lower()
+        native_failed = (
+            not getattr(self, "_native_created", False)
+            and (
+                getattr(self, "_webview_pending_native", False)
+                or (getattr(self, "_webview_legacy_edge", False) and aborted)
+            )
+        )
+        try:
+            self._webview_failure_stage = (
+                "native-create-error" if native_failed else "navigation-error"
+            )
             self._webview_failure_detail = detail
-            self._diagnostic_text = self._build_diagnostic_text(f"WebView load error: {detail}")
+            self._diagnostic_text = self._build_diagnostic_text(f"WebView error: {detail}")
         except Exception:
             pass
-        # Show diagnostic in dimensions label?
         try:
             self._status_label.SetLabel(t("login.terminal_page_failed"))
         except Exception:
             pass
+        if (native_failed and not self._closed and not self._ready
+                and not getattr(self, "_native_retry_scheduled", False)
+                and self._webview_create_attempts < self._webview_max_attempts):
+            self._native_retry_scheduled = True
+            self._native_create_errors = getattr(self, "_native_create_errors", 0) + 1
+            try:
+                if self._readiness_timer and self._readiness_timer.IsRunning():
+                    self._readiness_timer.Stop()
+            except Exception:
+                pass
+            import wx
+            wx.CallLater(300, self._retry_webview_creation, True)
         try:
             event.Skip()
         except Exception:
@@ -201,11 +266,18 @@ class TerminalBridgeMixin:
                 being_deleted = bool(is_being_deleted())
         except Exception:
             being_deleted = False
+        if (((getattr(self, "_webview_pending_native", False)
+                 or getattr(self, "_webview_legacy_edge", False))
+                and not getattr(self, "_native_created", False))
+                or getattr(self, "_native_retry_scheduled", False)):
+            # Unknown completion state: never start overlapping WebView2
+            # controllers while the previous native create is still in flight.
+            return
         if (not being_deleted and self._webview is not None
                 and self._webview_create_attempts < self._webview_max_attempts):
             self._retry_webview_creation()
 
-    def _retry_webview_creation(self) -> None:
+    def _retry_webview_creation(self, native_completed=False) -> None:
         """Detach a never-ready native controller and mount a fresh one.
 
         Bounded by _webview_max_attempts, never runs after close(), never
@@ -219,6 +291,7 @@ class TerminalBridgeMixin:
         the old control leaves the layout before the new one exists and the
         generation is bumped.
         """
+        self._native_retry_scheduled = False
         try:
             if self._closed or self._ready:
                 return
@@ -260,19 +333,27 @@ class TerminalBridgeMixin:
                         sizer.Detach(old)
                 except Exception:
                     pass
-                # Retire without destroying: the native creation may still be
-                # in flight; Destroy happens in _on_bridge_ready or natively
-                # at panel teardown.
-                try:
+                if native_completed:
+                    # The native ERROR event was queued after the controller's
+                    # completion callback, so its destroy no longer races
+                    # CreateCoreWebView2Controller.
+                    try:
+                        old.Destroy()
+                    except Exception:
+                        pass
+                else:
+                    # Never destroy a controller that might still be creating.
                     self._retired_webviews.append(old)
-                except Exception:
-                    pass
             self._webview_failure_detail = (
                 f"recreate attempt {self._webview_create_attempts + 1}"
                 f"/{self._webview_max_attempts} after stage={self._webview_failure_stage}"
             )
             if sizer is None:
                 return
+            # A failed WebView2 controller can poison the cached native
+            # environment. Retry with a fresh configuration, not the same one.
+            from hpc_gui.wx_terminal_webview_factory import invalidate_failed_edge_configuration
+            invalidate_failed_edge_configuration()
             self._mount_webview(sizer)
             try:
                 self.Layout()

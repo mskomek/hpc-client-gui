@@ -313,6 +313,10 @@ def _details_page(wx, notebook, state: dict[str, Any]) -> DetailsPage:
     advanced_keys = (
         ("reason", "jobs.reason"), ("script_path", "jobs.script"), ("nodelist", "jobs.nodelist"),
         ("exit_code", "jobs.exit_code"), ("nodes", "jobs.nodes"), ("cpus", "jobs.cpus"),
+        ("user", "jobs.user"), ("time_limit", "jobs.time_limit"),
+        ("submit_time", "jobs.submit_time"), ("eligible_time", "jobs.eligible_time"),
+        ("start_time", "jobs.start_time"), ("end_time", "jobs.end_time"),
+        ("requested_tres", "jobs.requested_tres"),
     )
     for key, label_key in advanced_keys:
         row = wx.BoxSizer(wx.HORIZONTAL)

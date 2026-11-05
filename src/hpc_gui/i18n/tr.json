@@ -290,13 +290,23 @@
     "memory_per_core": "Çekirdek başına RAM (MB)",
     "advanced": "Gelişmiş",
     "resources": "Kaynaklar",
+    "user": "Kullanıcı",
+    "time_limit": "Zaman sınırı",
+    "submit_time": "Gönderim zamanı",
+    "eligible_time": "Çalışmaya uygun zaman",
+    "start_time": "Başlangıç zamanı",
+    "end_time": "Bitiş zamanı",
+    "requested_tres": "İstenen kaynaklar",
     "parse_error": "Muhasebe verisi çözümlenemedi.",
     "parse_error_hint": "Ham zamanlayıcı yanıtı hâlâ erişilebilir.",
     "resources_value": "{nodes} düğüm, {cpus} CPU",
     "details_header": "İŞ DETAYLARI",
     "back": "Geri",
     "forward": "İleri",
-    "up": "Üst"
+    "up": "Üst",
+    "delete_details": "Ayrıntıları Sil",
+    "delete_details_confirm": "Seçili {count} iş için yerel ayrıntı kayıtları silinsin mi? İşler iptal edilmez ve uzak dosyalar kaldırılmaz.",
+    "delete_details_done": "{count} işin kayıtlı ayrıntıları silindi."
   },
   "raw_viewer": {
     "title": "Ham Komut Çıktısı",
@@ -659,7 +669,10 @@
     "job_label": "İş",
     "open_main_files": "Ana Dosyalar'da Aç",
     "no_selected_job_files_hint": "Çalışma dizininde gezinmek için İşler sekmesinden bir iş seçin.",
-    "no_selected_job_outputs_hint": "Çıktıları izlemek için İşler sekmesinden bir iş seçin."
+    "no_selected_job_outputs_hint": "Çıktıları izlemek için İşler sekmesinden bir iş seçin.",
+    "directory_unavailable": "Bu iş için çalışma dizini veya güvenli bir yol yedeği bulunamadı.",
+    "main_files_unavailable": "Ana Dosyalar paneli kullanılamıyor.",
+    "status_cached": "{captured_at} zamanlı önbellek görüntüsü (canlı değil)"
   },
   "putty": {
     "downloading": "plink.exe indiriliyor...",

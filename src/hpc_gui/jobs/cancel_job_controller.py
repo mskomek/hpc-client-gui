@@ -27,6 +27,8 @@ class CancelJobBindings:
     post: Callable
     refresh_jobs: Callable
     cancel_button: Any
+    apply_filter: Callable | None = None
+    set_detail: Callable | None = None
 
 
 class CancelJobController:
@@ -122,12 +124,71 @@ class CancelJobController:
             wx.MessageBox(result.message, t("jobs.cancel"), wx.OK | icon)
         except Exception:
             pass
-        try:
-            b.cancel_button.Enable(True)
-        except Exception:
-            pass
+        if state.get("selected_job") == job_id:
+            try:
+                b.cancel_button.Enable(bool(result.is_error))
+            except Exception:
+                pass
+        if result.outcome == "CANCELLED":
+            self._reflect_snapshot_state(job_id, "CANCELLED")
+        elif result.outcome == "ALREADY_GONE" and final:
+            try:
+                from hpc_gui.services.slurm_models import is_terminal_state
+                final_label = str(final).strip().upper()
+                if is_terminal_state(final_label):
+                    self._reflect_snapshot_state(job_id, final_label)
+            except Exception:
+                pass
         if result.should_refresh:
             try:
                 b.refresh_jobs()
             except Exception:
                 pass
+
+    def _reflect_snapshot_state(self, job_id, label):
+        b, state = self.bindings, self.bindings.state
+        try:
+            from hpc_gui.jobs.job_rows import parse_job_row as _parse_row
+        except Exception:
+            return
+        for index, item in enumerate(list(state.get("raw_items", ()))):
+            try:
+                if _parse_row(item)["job_id"] != job_id:
+                    continue
+            except Exception:
+                continue
+            if isinstance(item, dict):
+                updated = dict(item)
+                updated["state"] = label
+                try:
+                    state["raw_items"][index] = updated
+                except Exception:
+                    return
+            else:
+                item_text = str(item)
+                sep = "|" if "|" in item_text else None
+                parts = item_text.split(sep) if sep else item_text.split(None, 8)
+                if len(parts) > 4:
+                    parts[4] = label
+                    try:
+                        state["raw_items"][index] = (sep or " ").join(parts)
+                    except Exception:
+                        return
+            break
+        if state.get("selected_job") == job_id:
+            try:
+                b.model.selected_job_store.update(state=label)
+            except Exception:
+                pass
+            try:
+                setter = getattr(b, "set_detail", None)
+                if callable(setter):
+                    setter("state", label)
+            except Exception:
+                pass
+        try:
+            applier = getattr(b, "apply_filter", None)
+            if callable(applier):
+                applier()
+        except Exception:
+            pass

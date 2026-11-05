@@ -14,7 +14,8 @@ from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer 
 from hpc_gui.services.slurm_ssh import SSHSlurmBackend  # noqa: E402
 from hpc_gui.ssh.client import SSHClientWrapper, SSHConnInfo  # noqa: E402
 from hpc_gui.wx_shell_jobs import _jobs_callbacks  # noqa: E402
-from support.wx_window_cleanup import cleanup_wx_windows
+from support.wx_window_cleanup import cleanup_wx_windows  # noqa: E402
+from hpc_gui.config import storage  # noqa: E402
 
 
 @pytest.mark.gui
@@ -37,6 +38,8 @@ def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
         )
         app = None
         existing_ids = set()
+        previous_hide_finished = storage.get_hide_finished_jobs_enabled()
+        storage.set_hide_finished_jobs_enabled(False)
         try:
             backend = SSHSlurmBackend(ssh)
             state = {
@@ -129,6 +132,7 @@ def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
         finally:
             if app is not None:
                 cleanup_wx_windows(wx, app, existing_ids)
+            storage.set_hide_finished_jobs_enabled(previous_hide_finished)
             ssh.close()
 
     assert [(row["job_id"], row["state"]) for row in result["jobs"]] == [

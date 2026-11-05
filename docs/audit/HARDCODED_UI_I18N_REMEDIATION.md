@@ -5,9 +5,9 @@
 ## Kapsam ve başlangıç durumu
 
 - Repo: `mskomek/hpc-client-gui`
-- Başlangıç branch’i: `develop`; görev branch’i: `codex/i18n-hardcoded-ui` (develop tabanlı)
+- Branch: `develop`
 - Başlangıç HEAD: `b2de2bb8ccc533aa0b0ecb7dd2a798a4fcdf709a`
-- Başlangıç çalışma ağacı zaten kirliydi: `src/hpc_gui/i18n/en.json`, `src/hpc_gui/i18n/tr.json`, `src/hpc_gui/services/parsers.py` ve `src/hpc_gui/wx_jobs.py` içinde değişiklik vardı. Görev branch’i bu değişikliklerden ayrı oluşturuldu; korunan stash kaydı değiştirilmedi.
+- Başlangıç çalışma ağacı zaten kirliydi: `src/hpc_gui/i18n/en.json`, `src/hpc_gui/i18n/tr.json`, `src/hpc_gui/services/parsers.py` ve `src/hpc_gui/wx_jobs.py` içinde değişiklik vardı. Bu değişiklikler korundu.
 - Denetim 329 Python kaynak dosyasını ve 2 terminal HTML dosyasını kapsadı; `src/hpc_gui` altında toplam 362 dosya bulundu. Terminal vendor JavaScript dosyaları kapsam dışı bırakıldı.
 - Genişletilmiş AST/HTML denetleyicisiyle başlangıç HEAD anlık görüntüsü tarandı: **168 kullanıcı arayüzü adayı** bulundu. Güncel kaynakta aynı denetim **0 bulgu** veriyor.
 - `wx_splash.py` ve `ui/splash_screen.py` tarama dışında bırakıldı. `__main2__.py` yalnızca mock startup/update splash akışını çalıştırdığı için dar kapsamlı Splash Screen istisnası olarak dışarıda bırakıldı. Bu üç dosyanın hiçbiri değiştirilmedi.
@@ -34,7 +34,7 @@
 ## Test ve kontrol sonuçları
 
 - `python scripts/check_i18n.py`: **PASS** — anahtar, referans, placeholder ve hardcoded UI kontrolleri temiz.
-- Python kaynak AST parse kontrolü VM’de **PASS** — `src/hpc_gui` içindeki 329 modül ayrıştırıldı. Son denetim ve 141 pytest sonucu, `HEAD` ile yalnızca görev patch’ini birleştiren temiz snapshot üzerinde tekrarlandı.
+- Python kaynak AST parse kontrolü VM’de **PASS** — `src/hpc_gui` içindeki 329 modül ayrıştırıldı.
 - VM regresyon grubu — `test_wx_i18n`, `test_wx_shell_i18n`, `test_startup_i18n`, `test_wave8_i18n_ui_ergonomics`, `test_i18n_ui_messages`, `test_updater_helper`, `test_wx_file_context_i18n`, `test_qt_lgpl_sources` ve `test_qt_removal_gate`: **PASS**, 61 test.
 - VM `test_wx_updater_spec.py`: **PASS**, 23 test.
 - VM `test_wx_transfer_ui_lifecycle.py`: **PASS**, 14 test.
@@ -50,7 +50,7 @@
 ## Kalanlar
 
 - Manuel, bütün ekranları kapsayan canlı dil değiştirme kabul testi yapılmadı; otomatik VM testleri menü, transfer, terminal erişilebilirlik etiketi, updater, Help, Jobs/Settings yüzeyleri ve dinamik mesajları kapsadı.
-- Görev değişiklikleri `codex/i18n-hardcoded-ui` branch’inde yerel commit olarak kaydedildi. Repo talimatı push yapmayı yasakladığından remote'a gönderim yapılmadı; bu nedenle nihai karar PARTIAL.
+- Repo talimatı push yapmayı yasakladığından remote'a gönderim yapılmadı. Başlangıçtaki kullanıcı değişiklikleri kataloglardan ve `wx_jobs.py` dosyasından ayrıştırılarak yalnızca görev değişiklikleri commit için seçildi.
 
 ## Metrikler
 
@@ -73,16 +73,16 @@
 
 ## Dosya bazında değişiklik referansları
 
-Satırlar, görev branch’indeki `git diff --unified=0` hunki başlangıçlarıdır. Başlangıç kullanıcı değişiklikleri bu branch’e alınmamıştır.
-
+Aşağıdaki satırlar `git diff --unified=0` çıktısındaki eklenen/değiştirilen bölümlerin başlangıç satırlarıdır. Başlangıçta kirli olan `i18n/en.json`, `i18n/tr.json`, `services/parsers.py` ve `wx_jobs.py` dosyaları da görünür; bu dosyalardaki kullanıcı değişiklikleri korunmuştur.
 
 | Dosya | Satırlar |
 |---|---:|
 | `scripts/check_i18n.py` | 6, 36, 44, 73, 124, 129, 143, 147, 150, 226, 258, 271, 273, 296 |
 | `src/hpc_gui/assets/terminal/index.html` | 14 |
 | `src/hpc_gui/assets/terminal/wx_index.html` | 14 |
-| `src/hpc_gui/i18n/en.json` | 170, 511, 552, 882, 937, 1025, 1200, 1354 |
-| `src/hpc_gui/i18n/tr.json` | 170, 508, 511, 552, 882, 937, 1025, 1200, 1354 |
+| `src/hpc_gui/i18n/en.json` | 170, 296, 518, 559, 889, 944, 1032, 1207, 1361 |
+| `src/hpc_gui/i18n/tr.json` | 170, 293, 515, 518, 559, 889, 944, 1032, 1207, 1361 |
+| `src/hpc_gui/services/parsers.py` | 45, 66, 94, 145 |
 | `src/hpc_gui/services/updater_helper.py` | 316, 320, 323, 327, 330, 338, 363, 376, 378, 396 |
 | `src/hpc_gui/ui/dialogs/about_dialog.py` | 63, 67, 75, 82, 102, 118, 129 |
 | `src/hpc_gui/ui/dialogs/template_browser_dialog.py` | 43, 101 |
@@ -108,7 +108,7 @@ Satırlar, görev branch’indeki `git diff --unified=0` hunki başlangıçları
 | `src/hpc_gui/wx_directories_session.py` | 6, 129 |
 | `src/hpc_gui/wx_directories_view.py` | 122, 245, 269, 372 |
 | `src/hpc_gui/wx_editor_view.py` | 229, 231, 233, 235, 237, 241, 243, 680, 817 |
-| `src/hpc_gui/wx_jobs.py` | 1468, 1472, 1498 |
+| `src/hpc_gui/wx_jobs.py` | 666, 1321, 1338, 1480, 1484, 1510, 1904, 1912, 1914 |
 | `src/hpc_gui/wx_plugins_view.py` | 120 |
 | `src/hpc_gui/wx_settings_view.py` | 32, 34, 39, 41, 43, 176, 179 |
 | `src/hpc_gui/wx_shell_files_surface.py` | 54, 342 |
@@ -122,5 +122,5 @@ Satırlar, görev branch’indeki `git diff --unified=0` hunki başlangıçları
 | `tests/test_wx_directories.py` | 107, 151 |
 | `tests/test_wx_file_context_i18n.py` | 26, 65, 69, 90, 94 |
 | `tests/test_wx_jobs_final_fix.py` | 327 |
-| `tests/test_i18n_ui_messages.py` | 1 (yeni dosya) |
-| `docs/audit/HARDCODED_UI_I18N_REMEDIATION.md` | 1 (bu rapor) |
+| `tests/test_i18n_ui_messages.py` (yeni) | 1 |
+| `docs/audit/HARDCODED_UI_I18N_REMEDIATION.md` (bu rapor) | 1 |

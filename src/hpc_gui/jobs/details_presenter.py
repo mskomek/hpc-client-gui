@@ -75,10 +75,21 @@ class JobDetailsPresenter:
         nodelist = str(data.get("nodelist", "")).strip()
         exit_code = str(data.get("exit_code", "")).strip()
         reason = str(data.get("failure_reason", data.get("reason", row.get("reason", "")))).strip()
+        user = str(data.get("user", "")).strip()
+        time_limit = str(data.get("time_limit", "")).strip()
+        submit_time = str(data.get("submit_time", "")).strip()
+        eligible_time = str(data.get("eligible_time", "")).strip()
+        start_time = str(data.get("start_time", "")).strip()
+        end_time = str(data.get("end_time", "")).strip()
+        requested_tres = str(data.get("requested_tres", "")).strip()
         for key, value in (
             ("workdir", workdir), ("stdout_path", stdout_path), ("stderr_path", stderr_path),
             ("script_path", script_path), ("nodelist", nodelist),
             ("exit_code", exit_code), ("reason", reason),
+            ("user", user), ("time_limit", time_limit),
+            ("submit_time", submit_time), ("eligible_time", eligible_time),
+            ("start_time", start_time), ("end_time", end_time),
+            ("requested_tres", requested_tres),
         ):
             self.set_field(key, value)
         nodes, cpus = row.get("nodes", ""), row.get("cpus", "")

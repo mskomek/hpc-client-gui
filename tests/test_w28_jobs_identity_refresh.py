@@ -278,6 +278,7 @@ def test_w28_refresh_older_response_cannot_overwrite_newer():
 wx = pytest.importorskip("wx")
 
 from hpc_gui.core.i18n import load_language  # noqa: E402
+from hpc_gui.config import storage  # noqa: E402
 from hpc_gui.wx_jobs import show_jobs  # noqa: E402
 
 
@@ -312,10 +313,13 @@ def _open(app, list_jobs, read_output=None, **kwargs):
 @pytest.fixture
 def wx_app():
     load_language("en")
+    previous_hide_finished = storage.get_hide_finished_jobs_enabled()
+    storage.set_hide_finished_jobs_enabled(False)
     app = wx.App.Get() or wx.App(False)
     existing_ids = {window.GetId() for window in wx.GetTopLevelWindows()}
     yield app
     cleanup_wx_windows(wx, app, existing_ids)
+    storage.set_hide_finished_jobs_enabled(previous_hide_finished)
 
 
 @pytest.mark.gui
@@ -427,7 +431,7 @@ def test_finished_job_moves_below_active_and_selection_survives_transition(wx_ap
 def test_hide_finished_toggle_hides_rows_without_clearing_selection(wx_app, monkeypatch, tmp_path):
     from hpc_gui.config import storage
 
-    monkeypatch.setattr("hpc_gui.config._storage_core._config_path", lambda: tmp_path / "config.json")
+    monkeypatch.setattr(storage, "_config_path", lambda: tmp_path / "config.json")
     backend = {"rows": [
         {"id": "31", "name": "active", "state": "RUNNING"},
         {"id": "30", "name": "done", "state": "COMPLETED", "end_time": "2026-10-18T10:00:00"},

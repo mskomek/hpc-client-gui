@@ -9,10 +9,6 @@ from hpc_gui.services.job_record_store import JobRecordStore
 from hpc_gui.services.job_security import redact_sensitive_text
 
 
-def _redact_script(script_text: str) -> str:
-    return redact_sensitive_text(script_text)
-
-
 def script_hash(script_text: str) -> str:
     return hashlib.sha256(script_text.encode("utf-8")).hexdigest()
 
@@ -21,24 +17,34 @@ class JobProvenanceCapture:
     def __init__(self, store: JobRecordStore):
         self.store = store
 
-    def submitted(self, job_id: str, script_text: str, *, profile_id: str = "", cluster_id: str = "", provider_id: str = "", resources: Mapping[str, Any] | None = None, paths: Mapping[str, str] | None = None) -> dict[str, Any]:
-        safe_script = _redact_script(script_text)
+    def submitted(
+        self, job_id: str, script_text: str, *,
+        profile_id: str = "", cluster_id: str = "", provider_id: str = "",
+        resources: Mapping[str, Any] | None = None,
+        paths: Mapping[str, str] | None = None,
+    ) -> dict[str, Any]:
         record = {
             "job_id": str(job_id), "profile_id": profile_id, "cluster_id": cluster_id,
-            "provider_id": provider_id, "source": "submitted",
+            "provider_id": provider_id,
             "state": "SUBMITTED", "submitted_at": time.time(), "script_path": str((paths or {}).get("script") or ""),
-            "metadata": {"script_hash": script_hash(safe_script), "script_text": safe_script},
-            "paths": {**dict(paths or {}), "script_path": str((paths or {}).get("script") or "")},
+            "script_hash": script_hash(script_text), "script_text": redact_sensitive_text(script_text),
             "resources": dict(resources or {}), "timing": {"app_version": __version__, **dict(paths or {})},
         }
         self.store.upsert(record)
         return record
 
-    def observation(self, job_id: str, *, profile_id: str = "", cluster_id: str = "", provider_id: str = "", state: str = "", elapsed: str = "", exit_code: str = "", max_rss: str = "", nodes: str = "", completed_at: float | None = None) -> None:
-        self.store.update_observation(str(job_id), profile_id=profile_id, cluster_id=cluster_id,
-                                      provider_id=provider_id, state=state,
-                                      timing={"elapsed": elapsed, "completed_at": completed_at},
-                                      resources={"max_rss": max_rss, "nodes": nodes}, exit_code=exit_code)
+    def observation(
+        self, job_id: str, *, profile_id: str = "", cluster_id: str = "",
+        provider_id: str = "", state: str = "", elapsed: str = "",
+        exit_code: str = "", max_rss: str = "", nodes: str = "",
+        completed_at: float | None = None,
+    ) -> None:
+        self.store.update_observation(
+            str(job_id), profile_id=profile_id, cluster_id=cluster_id,
+            provider_id=provider_id, state=state,
+            timing={"elapsed": elapsed, "completed_at": completed_at},
+            resources={"max_rss": max_rss, "nodes": nodes}, exit_code=exit_code,
+        )
 
     @staticmethod
     def analytics_job_id(job_id: str) -> str:

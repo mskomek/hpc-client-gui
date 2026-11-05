@@ -6,13 +6,13 @@ renderer. JS bridge tests verify the full chain:
 """
 
 import json
-import os
 import pathlib
 import subprocess
 import sys
 import textwrap
 
 import pytest
+from support.subprocess_environment import project_python_environment
 
 wx = pytest.importorskip("wx")
 pytestmark = pytest.mark.wx
@@ -26,8 +26,7 @@ ASSETS = pathlib.Path(__file__).parents[1] / "src" / "hpc_gui" / "assets" / "ter
 
 
 def _run(code, timeout=60):
-    env = os.environ.copy()
-    env["PYTHONPATH"] = "src"
+    env = project_python_environment(pathlib.Path(__file__).parents[1])
     return subprocess.run(
         [sys.executable, "-c", code],
         capture_output=True, text=True, timeout=timeout, env=env,

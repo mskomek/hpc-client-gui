@@ -106,4 +106,17 @@ jobs:
           tests/test_hardening_additional.py::test_wx_dispatch_uses_host
           tests/test_wx_smoke_shutdown_contract.py
           tests/test_wx_terminal_url_bridge.py
+          tests/test_job_paths.py
+          tests/test_job_rows.py
+          tests/test_job_security.py
+          tests/test_job_provenance.py
+          tests/test_job_record_store.py
+          tests/test_jobs_workspace_controllers.py
+          tests/test_jobs_completed_fallback.py
+          tests/test_jobs_history.py
+          tests/test_selected_job_context.py
+          tests/test_wx_terminal_webview_factory.py
+          tests/test_wx_packaged_terminal_activation.py
+          tests/test_wx_terminal_mount_order.py
+          tests/test_wx_webview_native_retry.py
           -q --tb=short

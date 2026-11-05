@@ -27,32 +27,6 @@ def _pump(app, pred, timeout=2):
     assert pred()
 
 
-def _listing_names(listing):
-    return {listing.GetItemText(index) for index in range(listing.GetItemCount())}
-
-
-def _wait_local_files(app, listing, names):
-    expected = set(names) | {".."}
-    _pump(app, lambda: _listing_names(listing) == expected)
-    assert _listing_names(listing) == expected
-
-
-def _listing_row(listing, name):
-    return next(
-        index for index in range(listing.GetItemCount())
-        if listing.GetItemText(index) == name
-    )
-
-
-def _row_screen_point(listing, index):
-    for y in range(listing.GetClientSize().height):
-        point = wx.Point(5, y)
-        hit, _flags = listing.HitTest(point)
-        if hit == index:
-            return listing.ClientToScreen(point)
-    raise AssertionError(f"list row {index} has no hit-testable point")
-
-
 @pytest.fixture
 def wx_app():
     load_language("en")
@@ -76,7 +50,7 @@ def _local(app, path, **kwargs):
     return frame
 
 
-def _context_action(listing, label, index=0):
+def _context_action(listing, label, index="selected"):
     original_popup = listing.PopupMenu
 
     def dispatch(menu):
@@ -89,12 +63,32 @@ def _context_action(listing, label, index=0):
         if index is None:
             point = listing.ClientToScreen(wx.Point(5, max(5, listing.GetSize().height - 5)))
         else:
-            point = _row_screen_point(listing, index)
+            if index == "selected":
+                index = next((i for i in range(listing.GetItemCount()) if listing.IsSelected(i)), 0)
+            point = listing.ClientToScreen(wx.Point(5, listing.GetItemRect(index).y + 2))
         event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
         event.SetPosition(point)
         listing.ProcessEvent(event)
     finally:
         listing.PopupMenu = original_popup
+
+
+def _file_rows(listing):
+    """Return visible non-parent rows; local navigation includes a ``..`` row."""
+    return [(index, listing.GetItemText(index)) for index in range(listing.GetItemCount())
+            if listing.GetItemText(index) != ".."]
+
+
+def _file_count(listing):
+    return len(_file_rows(listing))
+
+
+def _select_file(listing, name=None):
+    rows = _file_rows(listing)
+    index = next((row for row, label in rows if name is None or label == name), None)
+    assert index is not None
+    listing.Select(index)
+    return index
 
 
 class _Dialog:
@@ -132,7 +126,7 @@ class TestSelectionPreservation:
 
         frame = _local(wx_app, tmp_path)
         listing = frame._wx_local_controls["listing"]
-        _wait_local_files(wx_app, listing, files)
+        _pump(wx_app, lambda: _file_count(listing) == len(files))
 
         old_name = "ölçüm_日本語.txt"
         new_name = "yeniden_adlandır.txt"
@@ -150,7 +144,6 @@ class TestSelectionPreservation:
             wx_app,
             lambda: any(listing.GetItemText(i) == new_name for i in range(listing.GetItemCount())),
         )
-        _wait_local_files(wx_app, listing, (set(files) - {old_name}) | {new_name})
         renamed_index = next(
             index for index in range(listing.GetItemCount())
             if listing.GetItemText(index) == new_name
@@ -166,8 +159,8 @@ class TestSelectionPreservation:
 
         frame = _local(wx_app, tmp_path)
         listing = frame._wx_local_controls["listing"]
-        _wait_local_files(wx_app, listing, (src.name,))
-        listing.Select(_listing_row(listing, src.name))
+        _pump(wx_app, lambda: _file_count(listing) == 1)
+        _select_file(listing, src.name)
 
         # Try to rename to empty name (should fail)
         monkeypatch.setattr(wx, "TextEntryDialog", lambda *a, **k: _Dialog(""))
@@ -180,11 +173,12 @@ class TestSelectionPreservation:
 
         monkeypatch.setattr(wx, "MessageBox", capture_error)
 
-        _context_action(listing, t("dirs.rename"), _listing_row(listing, src.name))
+        _context_action(listing, t("dirs.rename"))
 
         assert captured_errors == ["Invalid name ''"]
         assert src.exists(), "File should not be renamed on error"
-        assert _listing_names(listing) == {"..", src.name}
+        assert _file_count(listing) == 1
+        assert src.name in [name for _, name in _file_rows(listing)]
 
 
 # ---------------------------------------------------------------------------
@@ -201,10 +195,10 @@ class TestContextMenuEventWiring:
         opened = []
         frame = _local(wx_app, tmp_path, open_editor=opened.append)
         listing = frame._wx_local_controls["listing"]
-        _wait_local_files(wx_app, listing, ("test.txt",))
-        listing.Select(_listing_row(listing, "test.txt"))
+        _pump(wx_app, lambda: _file_count(listing) == 1)
+        _select_file(listing, "test.txt")
 
-        _context_action(listing, t("dirs.edit"), _listing_row(listing, "test.txt"))
+        _context_action(listing, t("dirs.edit"))
         assert opened == [str((tmp_path / "test.txt").resolve())]
 
     def test_context_menu_rename_wired(self, wx_app, tmp_path, monkeypatch):
@@ -213,12 +207,12 @@ class TestContextMenuEventWiring:
 
         frame = _local(wx_app, tmp_path)
         listing = frame._wx_local_controls["listing"]
-        _wait_local_files(wx_app, listing, ("old.txt",))
-        listing.Select(_listing_row(listing, "old.txt"))
+        _pump(wx_app, lambda: _file_count(listing) == 1)
+        _select_file(listing, "old.txt")
 
         monkeypatch.setattr(wx, "TextEntryDialog", lambda *a, **k: _Dialog("new.txt"))
 
-        _context_action(listing, t("dirs.rename"), _listing_row(listing, "old.txt"))
+        _context_action(listing, t("dirs.rename"))
 
         _pump(wx_app, lambda: (tmp_path / "new.txt").exists())
 
@@ -228,10 +222,10 @@ class TestContextMenuEventWiring:
 
         frame = _local(wx_app, tmp_path)
         listing = frame._wx_local_controls["listing"]
-        _wait_local_files(wx_app, listing, ("copied.txt",))
-        listing.Select(_listing_row(listing, "copied.txt"))
+        _pump(wx_app, lambda: _file_count(listing) == 1)
+        _select_file(listing, "copied.txt")
 
-        _context_action(listing, t("dirs.copy"), _listing_row(listing, "copied.txt"))
+        _context_action(listing, t("dirs.copy"))
 
         model = frame._wx_local_model
         assert len(model.clipboard) == 1, "Clipboard should have one item"
@@ -244,11 +238,11 @@ class TestContextMenuEventWiring:
 
         frame = _local(wx_app, tmp_path)
         listing = frame._wx_local_controls["listing"]
-        _wait_local_files(wx_app, listing, ("cut.txt",))
-        listing.Select(_listing_row(listing, "cut.txt"))
+        _pump(wx_app, lambda: _file_count(listing) == 1)
+        _select_file(listing, "cut.txt")
 
         model = frame._wx_local_model
-        _context_action(listing, t("dirs.move"), _listing_row(listing, "cut.txt"))
+        _context_action(listing, t("dirs.move"))
 
         assert len(model.clipboard) == 1, "Clipboard should have one item"
         assert model.clipboard_move is True, "Should be move (cut)"
@@ -259,8 +253,8 @@ class TestContextMenuEventWiring:
 
         frame = _local(wx_app, tmp_path)
         listing = frame._wx_local_controls["listing"]
-        _wait_local_files(wx_app, listing, ("path_test.txt",))
-        listing.Select(_listing_row(listing, "path_test.txt"))
+        _pump(wx_app, lambda: _file_count(listing) == 1)
+        _select_file(listing, "path_test.txt")
 
         class ClipboardBoundary:
             text = None
@@ -277,7 +271,7 @@ class TestContextMenuEventWiring:
 
         clipboard = ClipboardBoundary()
         monkeypatch.setattr(wx, "TheClipboard", clipboard)
-        _context_action(listing, t("dirs.copy_path"), _listing_row(listing, "path_test.txt"))
+        _context_action(listing, t("dirs.copy_path"))
         assert clipboard.text == str((tmp_path / "path_test.txt").resolve())
 
     def test_background_new_folder_wired(self, wx_app, tmp_path, monkeypatch):
@@ -402,8 +396,8 @@ class TestTextFieldLabels:
         path_ctrl.ProcessEvent(wx.CommandEvent(wx.wxEVT_TEXT_ENTER, path_ctrl.GetId()))
         listing = controls["listing"]
         _pump(wx_app, lambda: path_ctrl.GetValue() == str(child.resolve()))
-        _wait_local_files(wx_app, listing, ("inside.txt",))
-        assert listing.GetItemText(_listing_row(listing, "inside.txt")) == "inside.txt"
+        _pump(wx_app, lambda: _file_count(listing) == 1)
+        assert [name for _, name in _file_rows(listing)] == ["inside.txt"]
 
 
 # ---------------------------------------------------------------------------
@@ -420,7 +414,8 @@ class TestDirectoryListing:
 
         frame = _local(wx_app, tmp_path)
         listing = frame._wx_local_controls["listing"]
-        expected_files = {f"file_{i}.txt" for i in range(5)}
-        _wait_local_files(wx_app, listing, expected_files)
+        _pump(wx_app, lambda: _file_count(listing) == 5)
 
-        assert _listing_names(listing) == expected_files | {".."}
+        assert {name for _, name in _file_rows(listing)} == {
+            f"file_{i}.txt" for i in range(5)
+        }

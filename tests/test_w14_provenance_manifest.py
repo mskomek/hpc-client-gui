@@ -95,9 +95,8 @@ def test_provenance_captures_git_identity_and_toolchain() -> None:
     assert re.fullmatch(r"[0-9a-fA-F]{40}", facts["main_commit"])
     assert isinstance(facts["main_status"], str)
     assert re.fullmatch(r"\d+\.\d+.*", facts["toolchain"]["python"])
-    assert facts["toolchain"]["os_arch"] == (
-        f"{platform.system().lower()}/{platform.machine().lower()}"
-    )
+    expected_os_arch = f"{platform.system().lower()}/{platform.machine().lower()}"
+    assert facts["toolchain"]["os_arch"] == expected_os_arch
     assert facts["captured_utc"].endswith("+00:00")
     assert re.fullmatch(r"[0-9a-f]{64}", facts["dependency_lock_sha256"])
 

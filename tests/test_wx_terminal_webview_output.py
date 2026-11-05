@@ -8,6 +8,7 @@ pytestmark = pytest.mark.wx
 import pathlib
 
 from hpc_gui.wx_terminal_webview import _is_webview_available
+from support.subprocess_environment import project_python_environment
 from wx_terminal_webview_support import ASSETS, _run_subprocess_test
 
 @pytest.mark.gui
@@ -16,6 +17,8 @@ from wx_terminal_webview_support import ASSETS, _run_subprocess_test
 def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
+    import subprocess
+    import sys
     import textwrap
 
     code = textwrap.dedent("""
@@ -23,8 +26,9 @@ def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
         sys.path.insert(0, 'src')
         import wx, time
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-        from wx_terminal_webview_support import _wait_for_ready
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -43,7 +47,26 @@ def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
         frame.SetSizer(sizer)
         frame.Layout()
         frame.Show()
-        ready = _wait_for_ready(panel, timeout=6)
+        loop = wx.GUIEventLoop()
+        prev = wx.EventLoop.GetActive()
+        wx.EventLoop.SetActive(loop)
+        start = time.monotonic()
+        ready = False
+        while time.monotonic() - start < 6:
+            if panel._ready:
+                ready = True
+                break
+            try:
+                while loop.Pending():
+                    loop.Dispatch()
+            except: pass
+            try:
+                wx.Yield()
+            except: pass
+            time.sleep(0.05)
+        try:
+            wx.EventLoop.SetActive(prev)
+        except: pass
         assert ready, "not ready"
         time.sleep(0.3)
         wx.Yield()
@@ -59,7 +82,8 @@ def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
         except: pass
         os._exit(0)
     """)
-    result = _run_subprocess_test(code, timeout=15)
+    env = project_python_environment(pathlib.Path(__file__).parents[1])
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=15, env=env)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
@@ -69,6 +93,8 @@ def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
 def test_wx_terminal_preserves_carriage_return_and_esc():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
+    import subprocess
+    import sys
     import textwrap
 
     code = textwrap.dedent("""
@@ -76,8 +102,9 @@ def test_wx_terminal_preserves_carriage_return_and_esc():
         sys.path.insert(0, 'src')
         import wx, time, pathlib
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-        from wx_terminal_webview_support import _wait_for_ready
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -90,7 +117,21 @@ def test_wx_terminal_preserves_carriage_return_and_esc():
         frame.SetSizer(sizer)
         frame.Layout()
         frame.Show()
-        ready = _wait_for_ready(panel, timeout=6)
+        loop = wx.GUIEventLoop()
+        start = time.monotonic()
+        ready = False
+        while time.monotonic() - start < 6:
+            if panel._ready:
+                ready = True
+                break
+            try:
+                while loop.Pending():
+                    loop.Dispatch()
+            except: pass
+            try:
+                wx.Yield()
+            except: pass
+            time.sleep(0.05)
         assert ready, "not ready"
         calls = []
         orig_run = panel._run_js
@@ -115,7 +156,8 @@ def test_wx_terminal_preserves_carriage_return_and_esc():
         except: pass
         os._exit(0)
     """)
-    result = _run_subprocess_test(code, timeout=15)
+    env = project_python_environment(pathlib.Path(__file__).parents[1])
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=15, env=env)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
@@ -124,6 +166,8 @@ def test_wx_terminal_preserves_carriage_return_and_esc():
 def test_wx_terminal_clear_focus_font():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
+    import subprocess
+    import sys
     import textwrap
 
     code = textwrap.dedent("""
@@ -131,8 +175,9 @@ def test_wx_terminal_clear_focus_font():
         sys.path.insert(0, 'src')
         import wx, time
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-        from wx_terminal_webview_support import _wait_for_ready
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -145,7 +190,21 @@ def test_wx_terminal_clear_focus_font():
         frame.SetSizer(sizer)
         frame.Layout()
         frame.Show()
-        ready = _wait_for_ready(panel, timeout=6)
+        loop = wx.GUIEventLoop()
+        start = time.monotonic()
+        ready = False
+        while time.monotonic() - start < 6:
+            if panel._ready:
+                ready = True
+                break
+            try:
+                while loop.Pending():
+                    loop.Dispatch()
+            except: pass
+            try:
+                wx.Yield()
+            except: pass
+            time.sleep(0.05)
         assert ready, "not ready"
         calls = []
         orig_run = panel._run_js
@@ -177,7 +236,8 @@ def test_wx_terminal_clear_focus_font():
         except: pass
         os._exit(0)
     """)
-    result = _run_subprocess_test(code, timeout=15)
+    env = project_python_environment(pathlib.Path(__file__).parents[1])
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=15, env=env)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
@@ -187,6 +247,8 @@ def test_wx_terminal_clear_focus_font():
 def test_wx_terminal_output_ordering_with_many_fragments():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
+    import subprocess
+    import sys
     import textwrap
 
     code = textwrap.dedent("""
@@ -194,8 +256,9 @@ def test_wx_terminal_output_ordering_with_many_fragments():
         sys.path.insert(0, 'src')
         import wx, time
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-        from wx_terminal_webview_support import _wait_for_ready
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -218,7 +281,26 @@ def test_wx_terminal_output_ordering_with_many_fragments():
         frame.SetSizer(sizer)
         frame.Layout()
         frame.Show()
-        ready = _wait_for_ready(panel, timeout=6)
+        loop = wx.GUIEventLoop()
+        prev = wx.EventLoop.GetActive()
+        wx.EventLoop.SetActive(loop)
+        start = time.monotonic()
+        ready = False
+        while time.monotonic() - start < 6:
+            if panel._ready:
+                ready = True
+                break
+            try:
+                while loop.Pending():
+                    loop.Dispatch()
+            except: pass
+            try:
+                wx.Yield()
+            except: pass
+            time.sleep(0.05)
+        try:
+            wx.EventLoop.SetActive(prev)
+        except: pass
         assert ready, "not ready"
         for i in range(5):
             panel.hpc_write(f"new{i}-")
@@ -252,7 +334,8 @@ def test_wx_terminal_output_ordering_with_many_fragments():
         except: pass
         os._exit(0)
     """)
-    result = _run_subprocess_test(code, timeout=15)
+    env = project_python_environment(pathlib.Path(__file__).parents[1])
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=15, env=env)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
@@ -279,7 +362,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -329,6 +414,11 @@ def test_wx_terminal_large_pre_ready_output():
 import sys, os
 sys.path.insert(0, "src")
 import wx, time
+import hpc_gui.wx_terminal_webview as terminal_webview
+# This case covers pre-ready buffering; do not create a browser controller.
+def _native_view_not_needed():
+    return False
+terminal_webview._is_webview_available = _native_view_not_needed
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
 class FakeSSH:
@@ -336,7 +426,9 @@ class FakeSSH:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
 # Write 500KB of data before ready

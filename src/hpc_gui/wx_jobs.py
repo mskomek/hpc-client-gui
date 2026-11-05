@@ -254,6 +254,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         wx=wx, state=state, model=model, kwargs=kwargs, cancel=cancel,
         final_state=final_state, post=post, refresh_jobs=refresh_jobs,
         cancel_button=views.jobs.cancel,
+        apply_filter=_apply_filter, set_detail=_set_detail,
     ))
     cancel_job = cancel_controller.cancel_job
 

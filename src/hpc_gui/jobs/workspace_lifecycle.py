@@ -193,6 +193,7 @@ class JobsWorkspaceLifecycle:
         if not bindings.state["minimized"]:
             bindings.actions.refresh_jobs()
         event.Skip()
+
     def on_page_changed(self, event) -> None:
         bindings = self.bindings
         actions, model, state = bindings.actions, bindings.model, bindings.state

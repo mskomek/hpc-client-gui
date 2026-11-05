@@ -1,6 +1,6 @@
 import pytest
 
-from hpc_gui.services.job_provenance import JobProvenanceCapture, script_hash
+from hpc_gui.services.job_provenance import JobProvenanceCapture
 from hpc_gui.services.job_record_store import JobRecordStore
 
 
@@ -31,25 +31,86 @@ def test_array_parent_identity_and_restart(tmp_path):
 
 
 @pytest.mark.integration
-def test_stored_script_redacts_secret_assignments(tmp_path):
-    store = JobRecordStore(tmp_path / "safe-script.sqlite3")
+def test_submission_redacts_secrets_without_changing_executed_script_hash(tmp_path):
+    from hpc_gui.services.job_provenance import script_hash
+
+    store = JobRecordStore(tmp_path / "provenance-redact.sqlite3")
     capture = JobProvenanceCapture(store)
-    capture.submitted("99", "#!/bin/bash\nexport API_TOKEN=top-secret\n#SBATCH --output=slurm-%j.out\n")
-    script = store.get("99")["script_text"]
-    assert "top-secret" not in script
-    assert "[REDACTED]" in script
-    assert "--output=slurm-%j.out" in script
+    original_script = (
+        '#!/bin/bash\nexport AWS_SECRET_ACCESS_KEY="fake-sentinel"\n'
+        'python solve.py --token="two fake words" --mode=stable\n'
+    )
+    record = capture.submitted(
+        "908", original_script, profile_id="profile-a", provider_id="truba",
+    )
+    saved = store.get("908")
+    for secret in ("fake-sentinel", "two fake words"):
+        assert secret not in saved["script_text"]
+        assert secret not in record["script_text"]
+    assert saved["script_text"].count("[REDACTED]") == 2
+    assert "--mode=stable" in saved["script_text"]
+    assert saved["script_hash"] == script_hash(original_script)
+    assert record["script_hash"] == script_hash(original_script)
+    assert saved["profile_id"] == "profile-a"
+    assert saved["provider_id"] == "truba"
+    assert store._db.execute("PRAGMA user_version").fetchone()[0] == 4
     store.close()
 
 
-def test_provenance_redacts_prefixed_keys_and_quoted_cli_values(tmp_path):
-    store = JobRecordStore(tmp_path / "safe-prefixed-script.sqlite3")
+@pytest.mark.integration
+def test_provenance_keeps_nonsecret_script_intact(tmp_path):
+    store = JobRecordStore(tmp_path / "provenance-safe.sqlite3")
+    script = "#!/bin/bash\n#SBATCH --output=slurm-%j.out\necho ok\n"
+    JobProvenanceCapture(store).submitted("909", script)
+    saved = store.get("909")
+    assert saved["script_text"] == script
+    assert saved["profile_id"] == ""
+    store.close()
+
+
+@pytest.mark.integration
+def test_same_job_id_updates_only_explicit_profile_and_cluster(tmp_path):
+    store = JobRecordStore(tmp_path / "separate-profiles.sqlite3")
     capture = JobProvenanceCapture(store)
-    script = 'export AWS_SECRET_ACCESS_KEY="aws-secret"\napp --token="two words"'
-    capture.submitted("91", script, profile_id="p", cluster_id="c", provider_id="slurm")
-    row = store.get("91", profile_id="p", cluster_id="c", provider_id="slurm")
-    assert "aws-secret" not in row["script_text"]
-    assert "two words" not in row["script_text"]
-    assert row["script_text"].count("[REDACTED]") == 2
-    assert row["script_hash"] == script_hash(row["script_text"])
+    capture.submitted(
+        "42", "echo first", profile_id="arf", cluster_id="cluster-one",
+        provider_id="slurm",
+    )
+    capture.submitted(
+        "42", "echo second", profile_id="arf2", cluster_id="cluster-two",
+        provider_id="slurm",
+    )
+
+    assert store.get("42") is None  # ambiguous ID, never select another profile
+
+    capture.observation(
+        "42", profile_id="arf", cluster_id="cluster-one",
+        provider_id="slurm", state="COMPLETED", exit_code="0:0",
+        elapsed="00:03", max_rss="8G",
+    )
+
+    first = store.get(
+        "42", profile_id="arf", cluster_id="cluster-one", provider_id="slurm",
+    )
+    second = store.get(
+        "42", profile_id="arf2", cluster_id="cluster-two", provider_id="slurm",
+    )
+    assert first["state"] == "COMPLETED"
+    assert first["exit_code"] == "0:0"
+    assert first["resources"]["max_rss"] == "8G"
+    assert second["state"] == "SUBMITTED"
+    assert second["exit_code"] == ""
+    assert second["script_text"] == "echo second"
+    assert len(store.list()) == 2
+    store.close()
+
+
+@pytest.mark.integration
+def test_unscoped_observation_does_not_update_ambiguous_job_id(tmp_path):
+    store = JobRecordStore(tmp_path / "ambiguous-observation.sqlite3")
+    capture = JobProvenanceCapture(store)
+    capture.submitted("42", "echo one", profile_id="p1")
+    capture.submitted("42", "echo two", profile_id="p2")
+    capture.observation("42", state="FAILED", exit_code="1:0")
+    assert {row["state"] for row in store.list()} == {"SUBMITTED"}
     store.close()

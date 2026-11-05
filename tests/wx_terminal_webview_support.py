@@ -1,13 +1,13 @@
 """Shared utilities for the focused wx terminal WebView test modules."""
 from __future__ import annotations
 
-import os
 import pathlib
 import subprocess
 import sys
 import time
 
 import wx
+from support.subprocess_environment import project_python_environment
 
 ASSETS = pathlib.Path(__file__).parents[1] / "src" / "hpc_gui" / "assets" / "terminal"
 
@@ -30,27 +30,22 @@ def _fake_ssh():
 
 
 def _wait_for_ready(panel, timeout=6):
-    """Run wx's native loop until the WebView bridge reports ready or times out."""
-    if getattr(panel, "_ready", False):
-        return True
-    deadline = time.monotonic() + timeout
-    if sys.platform.startswith("linux"):
-        while not getattr(panel, "_ready", False) and time.monotonic() < deadline:
+    """Pump wx events until the WebView bridge reports ready."""
+    start = time.monotonic()
+    loop = wx.GUIEventLoop()
+    while time.monotonic() - start < timeout:
+        if getattr(panel, "_ready", False):
+            return True
+        try:
+            while loop.Pending():
+                loop.Dispatch()
+        except Exception:
+            pass
+        try:
             wx.Yield()
-            time.sleep(0.05)
-        return bool(getattr(panel, "_ready", False))
-    app = wx.App.Get()
-    if app is None:
-        return False
-
-    def check_ready():
-        if getattr(panel, "_ready", False) or time.monotonic() >= deadline:
-            app.ExitMainLoop()
-            return
-        wx.CallLater(25, check_ready)
-
-    wx.CallAfter(check_ready)
-    app.MainLoop()
+        except Exception:
+            pass
+        time.sleep(0.05)
     return bool(getattr(panel, "_ready", False))
 
 
@@ -61,18 +56,18 @@ def _show_frame_with_panel(frame, panel):
     frame.SetSizer(sizer)
     frame.Layout()
     frame.Show()
+    wx.Yield()
+    time.sleep(0.05)
+    wx.Yield()
 
 
-def _run_subprocess_test(code_str, timeout=15, env=None):
-    """Run an isolated wx test with project and test helpers on PYTHONPATH."""
-    child_env = dict(os.environ if env is None else env)
-    child_env["PYTHONPATH"] = os.pathsep.join(
-        ("src", "tests", child_env.get("PYTHONPATH", ""))
-    )
+def _run_subprocess_test(code_str, timeout=15):
+    """Run an isolated wx test with the project source on PYTHONPATH."""
+    env = project_python_environment(pathlib.Path(__file__).parents[1])
     return subprocess.run(
         [sys.executable, "-c", code_str],
         capture_output=True,
         text=True,
         timeout=timeout,
-        env=child_env,
+        env=env,
     )

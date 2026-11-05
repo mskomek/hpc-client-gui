@@ -6,6 +6,7 @@ from pathlib import PurePosixPath
 from hpc_gui.services.transfer_session_controller import TransferSessionController
 from hpc_gui.services.transfer_controller import TransferCancelled
 from hpc_gui.services.transfer_conflict_policy import resolve_conflict_action
+from hpc_gui.services.transfer_controller import TransferCancelled
 import inspect
 import os
 from hpc_gui.core.i18n import t

@@ -1,31 +1,17 @@
-"""Wave 76 — wx terminal panel bridge checks for GUI-TERM-001.
-
-Subprocesses isolate WebView2; fake SSH and a captured JS runner expose the
-panel's bridge payloads without claiming that xterm rendered visible output.
-"""
-
-import os
-
-import subprocess
-
-import sys
-
-import textwrap
+"""Wave 76 — wx terminal bridge payload checks for GUI-TERM-001."""
 
 import pytest
 
+wx = pytest.importorskip("wx")
+
+pytestmark = [pytest.mark.wx, pytest.mark.subprocess]
+
 from hpc_gui.wx_terminal_webview import _is_webview_available
+from support.terminal_parity import _run, _wrap
 
-def _run(code, timeout=15):
-    env = os.environ.copy()
-    env["PYTHONPATH"] = "src"
-    return subprocess.run(
-        [sys.executable, "-c", code],
-        capture_output=True, text=True, timeout=timeout, env=env,
-    )
 
-def _wrap(code):
-    return textwrap.dedent(code)
+# ── Terminal bridge contract/unit checks (subprocess) ──
+
 
 @pytest.mark.contract
 @pytest.mark.semantic
@@ -51,9 +37,17 @@ frame = wx.Frame(None, size=(900,600))
 panel = WxTerminalWebViewPanel(frame, ssh=Fake())
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
 frame.SetSizer(sizer); frame.Layout(); frame.Show()
-sys.path.insert(0, 'tests/support')
-from wx_webview_probe import wait_until_ready
-wait_until_ready(wx, lambda: panel._ready, timeout=6)
+loop = wx.GUIEventLoop(); prev = wx.EventLoop.GetActive(); wx.EventLoop.SetActive(loop)
+start = time.monotonic()
+while time.monotonic()-start < 6:
+    if panel._ready: break
+    try:
+        while loop.Pending(): loop.Dispatch()
+    except: pass
+    try: wx.Yield()
+    except: pass
+    time.sleep(0.05)
+wx.EventLoop.SetActive(prev)
 assert panel._ready, "not ready"
 calls = []
 panel._run_js = lambda c: calls.append(c)
@@ -65,6 +59,7 @@ panel.close(); frame.Destroy()
 os._exit(0)
 """))
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
+
 
 @pytest.mark.contract
 @pytest.mark.semantic
@@ -90,9 +85,17 @@ frame = wx.Frame(None, size=(900,600))
 panel = WxTerminalWebViewPanel(frame, ssh=Fake())
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
 frame.SetSizer(sizer); frame.Layout(); frame.Show()
-sys.path.insert(0, 'tests/support')
-from wx_webview_probe import wait_until_ready
-wait_until_ready(wx, lambda: panel._ready, timeout=6)
+loop = wx.GUIEventLoop(); prev = wx.EventLoop.GetActive(); wx.EventLoop.SetActive(loop)
+start = time.monotonic()
+while time.monotonic()-start < 6:
+    if panel._ready: break
+    try:
+        while loop.Pending(): loop.Dispatch()
+    except: pass
+    try: wx.Yield()
+    except: pass
+    time.sleep(0.05)
+wx.EventLoop.SetActive(prev)
 assert panel._ready, "not ready"
 calls = []
 panel._run_js = lambda c: calls.append(c)
@@ -105,6 +108,7 @@ panel.close(); frame.Destroy()
 os._exit(0)
 """))
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
+
 
 @pytest.mark.contract
 @pytest.mark.semantic
@@ -130,9 +134,17 @@ frame = wx.Frame(None, size=(900,600))
 panel = WxTerminalWebViewPanel(frame, ssh=Fake())
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
 frame.SetSizer(sizer); frame.Layout(); frame.Show()
-sys.path.insert(0, 'tests/support')
-from wx_webview_probe import wait_until_ready
-wait_until_ready(wx, lambda: panel._ready, timeout=6)
+loop = wx.GUIEventLoop(); prev = wx.EventLoop.GetActive(); wx.EventLoop.SetActive(loop)
+start = time.monotonic()
+while time.monotonic()-start < 6:
+    if panel._ready: break
+    try:
+        while loop.Pending(): loop.Dispatch()
+    except: pass
+    try: wx.Yield()
+    except: pass
+    time.sleep(0.05)
+wx.EventLoop.SetActive(prev)
 assert panel._ready, "not ready"
 calls = []
 panel._run_js = lambda c: calls.append(c)
@@ -142,6 +154,7 @@ panel.close(); frame.Destroy()
 os._exit(0)
 """))
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
+
 
 @pytest.mark.contract
 @pytest.mark.semantic
@@ -167,9 +180,17 @@ frame = wx.Frame(None, size=(900,600))
 panel = WxTerminalWebViewPanel(frame, ssh=Fake())
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
 frame.SetSizer(sizer); frame.Layout(); frame.Show()
-sys.path.insert(0, 'tests/support')
-from wx_webview_probe import wait_until_ready
-wait_until_ready(wx, lambda: panel._ready, timeout=6)
+loop = wx.GUIEventLoop(); prev = wx.EventLoop.GetActive(); wx.EventLoop.SetActive(loop)
+start = time.monotonic()
+while time.monotonic()-start < 6:
+    if panel._ready: break
+    try:
+        while loop.Pending(): loop.Dispatch()
+    except: pass
+    try: wx.Yield()
+    except: pass
+    time.sleep(0.05)
+wx.EventLoop.SetActive(prev)
 assert panel._ready, "not ready"
 calls = []
 panel._run_js = lambda c: calls.append(c)
@@ -179,5 +200,56 @@ bridge = pathlib.Path("src/hpc_gui/assets/terminal/wx_bridge.js").read_text(enco
 assert "terminal.paste" in bridge
 panel.close(); frame.Destroy()
 os._exit(0)
+"""))
+    assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
+
+
+@pytest.mark.unit
+@pytest.mark.semantic
+def test_panel_forwards_resize_to_ssh_seam():
+    """The panel forwards changed dimensions once to its SSH adapter."""
+    if not _is_webview_available():
+        pytest.skip("WebView backend unavailable")
+    r = _run(_wrap("""
+import sys, os
+sys.path.insert(0, "src")
+import wx, time
+from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
+
+class Fake:
+    def __init__(self):
+        self._wx_output_subscribers = []
+        self.resizes = []
+    def send_shell_input(self, d): return True
+    def resize_shell_pty(self, c, r): self.resizes.append((c, r))
+
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
+frame = wx.Frame(None, size=(900,600))
+ssh = Fake()
+panel = WxTerminalWebViewPanel(frame, ssh=ssh)
+sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
+frame.SetSizer(sizer); frame.Layout(); frame.Show()
+loop = wx.GUIEventLoop(); prev = wx.EventLoop.GetActive(); wx.EventLoop.SetActive(loop)
+start = time.monotonic()
+while time.monotonic()-start < 6:
+    if panel._ready: break
+    try:
+        while loop.Pending(): loop.Dispatch()
+    except: pass
+    try: wx.Yield()
+    except: pass
+    time.sleep(0.05)
+wx.EventLoop.SetActive(prev)
+assert panel._ready
+ssh.resizes.clear()  # Ignore the initial FitAddon geometry notification.
+panel._handle_resize(132, 44, 1056, 704)
+assert ssh.resizes == [(132, 44)]
+label = panel._dimensions_label.GetLabel()
+assert "132" in label and "44" in label, f"dim: {label}"
+panel._handle_resize(132, 44, 1056, 704)
+assert len(ssh.resizes) == 1
+panel.close(); frame.Destroy(); os._exit(0)
 """))
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"

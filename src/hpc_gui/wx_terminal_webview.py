@@ -40,6 +40,7 @@ from hpc_gui.wx_terminal_webview_support import (
     _safe_truncate_index as _safe_truncate_index,
 )
 from hpc_gui.wx_terminal_fragment_transport import TerminalFragmentTransportMixin
+from hpc_gui.wx_terminal_webview_factory import new_terminal_webview
 
 def _assets_dir() -> pathlib.Path:
     return pathlib.Path(__file__).resolve().parent / "assets" / "terminal"
@@ -241,18 +242,50 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
             self._wx_terminal_is_parity = False
             return
 
-        # WebView path: single-shot creation plus bounded recreate on
-        # transient native abort (see _on_readiness_timeout).
+        # Windows WebView2 is asynchronous. Let the terminal panel join its
+        # parent notebook layout before creating the native controller.
+        if wx.Platform == "__WXMSW__":
+            self.SetSizer(root)
+            self._wx_terminal_controls = {
+                "find": self._find_ctrl, "find_btn": self._find_btn,
+                "clear": self._clear_btn, "font_down": self._font_down_btn,
+                "font_up": self._font_up_btn, "output": None,
+                "input": None, "webview": None,
+                "dimensions": self._dimensions_label,
+                "status": self._status_label, "identity": self._identity_label,
+            }
+            self._wx_terminal_is_webview = True
+            self._wx_terminal_is_parity = False
+            wx.CallAfter(self._mount_after_parent_layout, root)
+        else:
+            self._mount_webview(root)
+
+    def _mount_after_parent_layout(self, root):
+        if self._closed:
+            return
+        if callable(getattr(self, "IsBeingDeleted", None)) and self.IsBeingDeleted():
+            return
         self._mount_webview(root)
+        self.Layout()
 
     def _mount_webview(self, root):
         """Create the native WebView controller, bind the bridge, load the
         local terminal page and arm the readiness timer. One attempt."""
         self._webview_create_attempts += 1
         self._is_parity = True
+        self._native_created = False
         self._webview_failure_stage = "creating"
         try:
-            self._webview = wx.html2.WebView.New(self)
+            self._webview, self._webview_pending_native = new_terminal_webview(
+                self, wx.html2, self._on_native_created,
+            )
+            self._webview_legacy_edge = (
+                wx.Platform == "__WXMSW__" and not self._webview_pending_native
+            )
+            if self._webview is None:
+                raise RuntimeError("WebView backend returned no controller")
+            if self._webview_pending_native and self._webview.Create(self) is False:
+                raise RuntimeError("WebView2 controller Create() failed")
         except Exception as exc:
             # Fallback if creation fails despite availability check
             self._webview_failure_stage = "creation"
@@ -266,8 +299,10 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
             err_sizer.Add(diag, 1, wx.EXPAND | wx.ALL, 8)
             err_panel.SetSizer(err_sizer)
             root.Add(err_panel, 1, wx.EXPAND | wx.ALL, 6)
-            self.SetSizer(root)
-            self._wx_terminal_controls = {
+            if self.GetSizer() is not root:
+                self.SetSizer(root)
+            self._wx_terminal_controls = getattr(self, "_wx_terminal_controls", {})
+            self._wx_terminal_controls.update({
                 "find": self._find_ctrl,
                 "find_btn": self._find_btn,
                 "clear": self._clear_btn,
@@ -279,7 +314,7 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
                 "dimensions": self._dimensions_label,
                 "status": self._status_label,
                 "identity": self._identity_label,
-            }
+            })
             self._wx_terminal_is_webview = False
             self._wx_terminal_is_parity = False
             return
@@ -313,7 +348,8 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         self.Bind(wx.EVT_SIZE, self._on_size)
 
         root.Add(self._webview, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
-        self.SetSizer(root)
+        if self.GetSizer() is not root:
+            self.SetSizer(root)
 
         # Timers
         self._readiness_timer = wx.Timer(self)
@@ -322,20 +358,20 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         self.Bind(wx.EVT_TIMER, self._on_resize_timer, self._resize_timer)
         self._init_fragment_timer()
 
-        # Load local page
-        index_path = _wx_index_path()
-        url = index_path.as_uri()
-        self._webview_failure_stage = "navigation"
-        try:
-            self._webview.LoadURL(url)
-        except Exception:
-            self._webview_failure_stage = "navigation-call"
-            pass
+        # Windows Edge is asynchronous: defer navigation until CREATED fires.
+        # A premature LoadURL can race native WebView2 controller creation.
+        self._webview_failure_stage = (
+            "native-pending" if self._webview_pending_native else "navigation"
+        )
+        if not self._webview_pending_native:
+            self._load_terminal_page()
         # Start readiness timeout
         self._readiness_timer.Start(READINESS_TIMEOUT_MS, oneShot=True)
 
-        # Expose controls for tests
-        self._wx_terminal_controls = {
+        # Preserve dictionary identity for shell consumers while the native
+        # control is mounted after the parent notebook becomes visible.
+        self._wx_terminal_controls = getattr(self, "_wx_terminal_controls", {})
+        self._wx_terminal_controls.update({
             "find": self._find_ctrl,
             "find_btn": self._find_btn,
             "clear": self._clear_btn,
@@ -347,11 +383,21 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
             "dimensions": self._dimensions_label,
             "status": self._status_label,
             "identity": self._identity_label,
-        }
+        })
         self._wx_terminal_is_webview = True
         self._wx_terminal_is_parity = True
         # For compat with old wx_terminal panel seam
         self._wx_terminal_model = None  # no splitlines model; xterm is authority
+
+    def _load_terminal_page(self) -> None:
+        if self._closed or self._webview is None:
+            return
+        self._webview_failure_stage = "navigation"
+        try:
+            self._webview.LoadURL(_wx_index_path().as_uri())
+        except Exception as exc:
+            self._webview_failure_stage = "navigation-call"
+            self._webview_failure_detail = type(exc).__name__
 
     def _build_diagnostic_text(self, reason: str) -> str:
         import platform as _pl

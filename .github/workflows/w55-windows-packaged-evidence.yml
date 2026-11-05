@@ -7,6 +7,12 @@ on:
       - ".github/workflows/w55-windows-packaged-evidence.yml"
       - "src/hpc_gui/wx_jobs.py"
       - "src/hpc_gui/wx_shell_frame.py"
+      - "src/hpc_gui/wx_terminal_webview.py"
+      - "src/hpc_gui/wx_terminal_webview_bridge.py"
+      - "src/hpc_gui/wx_terminal_webview_factory.py"
+      - "src/hpc_gui/wx_shell_packaged_smoke.py"
+      - "scripts/wx_packaged_smoke.py"
+      - "scripts/w55_webview2_baseline.py"
       - "src/hpc_gui/wx_shell_smoke_finalize.py"
       - "src/hpc_gui/wx_lifecycle.py"
       - "tests/test_wx_smoke_shutdown_contract.py"
@@ -116,6 +122,35 @@ jobs:
           } else {
             Write-Host "W55_SHUTDOWN_SUMMARY=runtime evidence missing; never PASS"
           }
+      - name: Compare standalone WebView2 runner baseline (diagnostic only)
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:W55_EVIDENCE | Out-Null
+          $pythonExe = (Get-Command python).Source
+          foreach ($mode in @("default", "configured")) {
+            $json = Join-Path $env:W55_EVIDENCE "standalone-webview2-$mode.json"
+            $log = Join-Path $env:W55_EVIDENCE "standalone-webview2-$mode.log"
+            $err = Join-Path $env:W55_EVIDENCE "standalone-webview2-$mode.stderr.log"
+            $params = @("scripts/w55_webview2_baseline.py", "--mode", $mode, "--output", $json, "--timeout", "25")
+            try {
+              $child = Start-Process -FilePath $pythonExe -ArgumentList $params -Wait -PassThru -NoNewWindow -RedirectStandardOutput $log -RedirectStandardError $err
+              $exit = $child.ExitCode
+            } catch {
+              $exit = -1
+              Write-Host "Standalone $mode start error: $($_.Exception.GetType().Name)"
+            }
+            Write-Host "W55_STANDALONE_${mode}_EXIT=$exit"
+            if (Test-Path $json) {
+              $report = Get-Content -Raw $json | ConvertFrom-Json
+              $summary = "W55_STANDALONE_${mode}=$($report.result) created=$($report.created) loaded=$($report.loaded) error=$($report.error)"
+              Write-Host $summary
+              Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $summary
+            } else {
+              Write-Host "W55_STANDALONE_${mode}=NO_REPORT"
+            }
+          }
+          # Do not change W55 acceptance verdict based on a standalone probe.
       - name: Upload native smoke diagnostics and candidate identity
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

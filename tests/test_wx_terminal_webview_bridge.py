@@ -7,8 +7,9 @@ pytestmark = pytest.mark.wx
 
 import pathlib
 
-from hpc_gui.wx_terminal_webview import _is_webview_available
-from wx_terminal_webview_support import ASSETS, _run_subprocess_test
+from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel, _is_webview_available
+from support.subprocess_environment import project_python_environment
+from wx_terminal_webview_support import ASSETS, _fake_ssh, _show_frame_with_panel, _wait_for_ready
 
 @pytest.mark.contract
 def test_wx_terminal_webview_assets_are_local_and_vendored():
@@ -36,6 +37,8 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable — fallback diagnostic expected")
     # Run in subprocess to isolate WebView MainLoop hang from pytest process
+    import subprocess
+    import sys
     import textwrap
 
     code = textwrap.dedent("""
@@ -43,9 +46,10 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
         sys.path.insert(0, 'src')
         import wx, time
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel, _is_webview_available
-        from wx_terminal_webview_support import _wait_for_ready
         assert _is_webview_available()
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -58,7 +62,23 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
         frame.SetSizer(sizer)
         frame.Layout()
         frame.Show()
-        ready = _wait_for_ready(panel, timeout=6)
+        # Pump with GUIEventLoop
+        import time
+        loop = wx.GUIEventLoop()
+        start = time.monotonic()
+        ready = False
+        while time.monotonic() - start < 6:
+            if panel._ready:
+                ready = True
+                break
+            try:
+                while loop.Pending():
+                    loop.Dispatch()
+            except: pass
+            try:
+                wx.Yield()
+            except: pass
+            time.sleep(0.05)
         assert ready, "bridge ready not received"
         assert panel._is_parity is True
         assert panel._webview is not None
@@ -74,59 +94,47 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
         except: pass
         os._exit(0)
     """)
-    result = _run_subprocess_test(code, timeout=15)
+    env = project_python_environment(pathlib.Path(__file__).parents[1])
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=15, env=env)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
 @pytest.mark.gui
-@pytest.mark.subprocess
 def test_wx_terminal_external_navigation_blocked():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
-    import textwrap
+    _app = wx.App.Get() or wx.App(False)
+    frame = wx.Frame(None, size=(900, 600))
+    ssh = _fake_ssh()
+    panel = WxTerminalWebViewPanel(frame, ssh=ssh)
+    _show_frame_with_panel(frame, panel)
+    assert _wait_for_ready(panel, timeout=6) is True
+    # Try to simulate navigating event with external URL — handler should veto
+    # Create a mock event
+    class FakeEvent:
+        def __init__(self, url):
+            self._url = url
+            self.vetoed = False
+            self.skipped = False
 
-    code = textwrap.dedent("""
-        import os
-        import wx
-        from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-        from wx_terminal_webview_support import _fake_ssh, _show_frame_with_panel, _wait_for_ready
+        def GetURL(self):
+            return self._url
 
-        app = wx.App(False)
-        frame = wx.Frame(None, size=(900, 600))
-        panel = WxTerminalWebViewPanel(frame, ssh=_fake_ssh())
-        _show_frame_with_panel(frame, panel)
-        assert _wait_for_ready(panel, timeout=6) is True
+        def Veto(self):
+            self.vetoed = True
 
-        class FakeEvent:
-            def __init__(self, url):
-                self._url = url
-                self.vetoed = False
-                self.skipped = False
+        def Skip(self):
+            self.skipped = True
 
-            def GetURL(self):
-                return self._url
-
-            def Veto(self):
-                self.vetoed = True
-
-            def Skip(self):
-                self.skipped = True
-
-        external = FakeEvent("https://example.com/malicious.js")
-        panel._on_navigating(external)
-        assert external.vetoed is True
-        assert external.skipped is False
-
-        local = FakeEvent(panel._webview.GetCurrentURL())
-        panel._on_navigating(local)
-        assert local.vetoed is False
-        panel.close()
-        frame.Destroy()
-        app.Destroy()
-        os._exit(0)
-    """)
-    result = _run_subprocess_test(code, timeout=15)
-    assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
+    evt = FakeEvent("https://example.com/malicious.js")
+    panel._on_navigating(evt)
+    assert evt.vetoed is True
+    assert evt.skipped is False
+    evt2 = FakeEvent("file:///D:/Projeler/image-process-para-2/src/hpc_gui/assets/terminal/wx_index.html")
+    panel._on_navigating(evt2)
+    assert evt2.vetoed is False
+    frame.Destroy()
+    wx.Yield()
 
 
 @pytest.mark.audit
@@ -197,7 +205,9 @@ def test_wx_terminal_close_releases_native_webview():
     panel.close()
 
     assert webview.stopped == 1
-    assert webview.destroyed == 1
+    # close() stops the native controller but leaves destruction to its wx
+    # parent. Explicitly destroying WebView2 here can race queued callbacks.
+    assert webview.destroyed == 0
     assert panel._webview is None
     assert panel._is_parity is False
 

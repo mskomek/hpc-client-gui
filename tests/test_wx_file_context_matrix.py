@@ -8,7 +8,7 @@ from hpc_gui.wx_local_files import show_local_files
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 from mock_hpc_files import MockRemoteFilesBackend
-from support.wx_clipboard import read_clipboard_text
+from support.wx_listing_rows import content_rows, content_row, select_content_row
 from hpc_gui.core.i18n import load_language, t
 from hpc_gui.services.file_clipboard import get_file_clipboard
 
@@ -20,30 +20,6 @@ def _pump(app, pred, timeout=2):
         wx.MilliSleep(5)
     app.ProcessPendingEvents()
     assert pred()
-
-def _names(listing):
-    return {listing.GetItemText(i) for i in range(listing.GetItemCount())}
-
-def _row(listing, name):
-    return next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)==name)
-
-def _row_screen_point(listing, index):
-    for y in range(listing.GetClientSize().height):
-        point=wx.Point(5, y)
-        hit, _flags=listing.HitTest(point)
-        if hit==index:
-            return listing.ClientToScreen(point)
-    raise AssertionError(f"list row {index} has no hit-testable point")
-
-def _wait_local_files(app, listing, names):
-    expected=set(names) | {".."}
-    _pump(app, lambda: _names(listing)==expected)
-    assert _names(listing)==expected
-
-def _wait_remote_files(app, listing, names):
-    expected=set(names) | {".."}
-    _pump(app, lambda: _names(listing)==expected)
-    assert _names(listing)==expected
 
 @pytest.fixture
 def wx_app():
@@ -82,20 +58,21 @@ def test_wx_local_context_targets_unselected_row(wx_app, tmp_path: Path):
         (tmp_path/n).write_text(n)
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _wait_local_files(wx_app, listing, {"a.txt", "b.txt"})
-    first=_row(listing, "a.txt"); target=_row(listing, "b.txt")
+    _pump(wx_app, lambda: len(content_rows(listing))==2)
+    first = content_row(listing, "a.txt")
+    idx = content_row(listing, "b.txt")
     listing.Select(first)
     seen=[]
     orig_popup=listing.PopupMenu
     def capture(menu):
         seen.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
     listing.PopupMenu=capture
-    point=_row_screen_point(listing, target)
+    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(idx).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(point)
     listing.ProcessEvent(event)
     assert not listing.IsSelected(first)
-    assert listing.IsSelected(target)
+    assert listing.IsSelected(idx)
     assert sum(1 for i in range(listing.GetItemCount()) if listing.IsSelected(i)) == 1
     listing.PopupMenu=orig_popup
 
@@ -104,29 +81,31 @@ def test_wx_local_context_preserves_multiselection(wx_app, tmp_path: Path):
         (tmp_path/n).write_text(n)
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _wait_local_files(wx_app, listing, {"a.txt", "b.txt", "c.txt"})
-    a_index=_row(listing, "a.txt"); b_index=_row(listing, "b.txt"); c_index=_row(listing, "c.txt")
-    listing.Select(a_index); listing.Select(b_index)
+    _pump(wx_app, lambda: len(content_rows(listing))==3)
+    first = content_row(listing, "a.txt")
+    second = content_row(listing, "b.txt")
+    third = content_row(listing, "c.txt")
+    listing.Select(first); listing.Select(second)
     captured=[]
     orig=listing.PopupMenu
     def cap(menu):
         captured.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
     listing.PopupMenu=cap
     # right click inside existing multiselection (first item)
-    point=_row_screen_point(listing, a_index)
+    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(first).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(point)
     listing.ProcessEvent(event)
-    assert listing.IsSelected(a_index) and listing.IsSelected(b_index)
-    assert not listing.IsSelected(c_index)
+    assert listing.IsSelected(first) and listing.IsSelected(second)
+    assert not listing.IsSelected(third)
     listing.PopupMenu=orig
 
 def test_wx_local_background_context_targets_active_directory(wx_app, tmp_path: Path, monkeypatch):
     folder=tmp_path / "folder"; folder.mkdir()
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _wait_local_files(wx_app, listing, {"folder"})
-    listing.Select(_row(listing, "folder"))
+    _pump(wx_app, lambda: listing.GetItemCount()>=1)
+    select_content_row(listing, "folder")
     # background: click empty area
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *a, **k: _Dialog("child"))
     # capture new_folder target
@@ -157,9 +136,8 @@ def test_wx_local_keyboard_context_uses_focused_selection(wx_app, tmp_path: Path
         (tmp_path/n).write_text(n)
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _wait_local_files(wx_app, listing, {"a.txt", "b.txt"})
-    target=_row(listing, "b.txt")
-    listing.Select(target)
+    _pump(wx_app, lambda: len(content_rows(listing))==2)
+    focused = select_content_row(listing, "b.txt")
     seen=[]
     orig=listing.PopupMenu
     def cap(menu): seen.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
@@ -168,16 +146,15 @@ def test_wx_local_keyboard_context_uses_focused_selection(wx_app, tmp_path: Path
     event.SetPosition(wx.DefaultPosition)
     listing.ProcessEvent(event)
     # keyboard context should keep selection
-    assert listing.IsSelected(target)
+    assert listing.IsSelected(focused)
     listing.PopupMenu=orig
 
 def test_wx_local_context_rename_via_menu(wx_app, tmp_path: Path, monkeypatch):
     src=tmp_path / "old.txt"; src.write_text("x")
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _wait_local_files(wx_app, listing, {"old.txt"})
-    old_index=_row(listing, "old.txt")
-    listing.Select(old_index)
+    _pump(wx_app, lambda: len(content_rows(listing))==1)
+    select_content_row(listing, "old.txt")
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *a, **k: _Dialog("new.txt"))
     # trigger context rename
     orig=listing.PopupMenu
@@ -187,7 +164,7 @@ def test_wx_local_context_rename_via_menu(wx_app, tmp_path: Path, monkeypatch):
                 listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
                 break
     listing.PopupMenu=choose
-    point=_row_screen_point(listing, old_index)
+    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(content_row(listing, "old.txt")).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId()); event.SetPosition(point)
     listing.ProcessEvent(event)
     listing.PopupMenu=orig
@@ -197,19 +174,18 @@ def test_wx_remote_context_targets_unselected_row(wx_app):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
     listing=frame._wx_remote_controls["listing"]
-    _wait_remote_files(wx_app, listing, {"a.txt", "b.txt"})
-    first=_row(listing, "a.txt"); target=_row(listing, "b.txt")
-    listing.Select(first)
+    select_content_row(listing, "a.txt")
     orig=listing.PopupMenu
     visible_labels=[]
     def cap(menu):
         visible_labels.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
     listing.PopupMenu=cap
-    point=_row_screen_point(listing, target)
+    idx=content_row(listing, "b.txt")
+    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(idx).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId()); event.SetPosition(point)
     listing.ProcessEvent(event)
-    assert not listing.IsSelected(first)
-    assert listing.IsSelected(target)
+    assert not listing.IsSelected(content_row(listing, "a.txt"))
+    assert listing.IsSelected(idx)
     assert sum(1 for i in range(listing.GetItemCount()) if listing.IsSelected(i)) == 1
     assert t("dirs.follow_track") not in visible_labels
     assert t("dirs.permissions_title") not in visible_labels
@@ -223,7 +199,6 @@ def test_wx_remote_background_context_paste_targets_current_directory(wx_app):
     frame=_remote(wx_app, backend, "/work")
     get_file_clipboard().set("copy", ["/work/a.txt"])
     listing=frame._wx_remote_controls["listing"]
-    _wait_remote_files(wx_app, listing, {"a.txt", "b.txt", "dest"})
     orig=listing.PopupMenu
     def choose(menu):
         for item in menu.GetMenuItems():
@@ -245,9 +220,7 @@ def test_wx_remote_context_rename_updates_backend(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
     listing=frame._wx_remote_controls["listing"]
-    _wait_remote_files(wx_app, listing, {"a.txt", "b.txt"})
-    target=_row(listing, "a.txt")
-    listing.Select(target)
+    select_content_row(listing, "a.txt")
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *a, **k: _Dialog("renamed.txt"))
     orig=listing.PopupMenu
     def choose(menu):
@@ -256,7 +229,7 @@ def test_wx_remote_context_rename_updates_backend(wx_app, monkeypatch):
                 listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
                 break
     listing.PopupMenu=choose
-    point=_row_screen_point(listing, target)
+    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(content_row(listing, "a.txt")).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId()); event.SetPosition(point)
     listing.ProcessEvent(event)
     listing.PopupMenu=orig
@@ -266,8 +239,8 @@ def test_wx_local_context_new_tab_creates_visible_tab(wx_app, tmp_path: Path):
     a=tmp_path / "A"; a.mkdir(); b=a / "B"; b.mkdir()
     frame=_local(wx_app, a)
     listing=frame._wx_local_controls["listing"]
-    _wait_local_files(wx_app, listing, {"B"})
-    idx=_row(listing, "B")
+    _pump(wx_app, lambda: listing.GetItemCount()>=1)
+    idx=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="B")
     listing.Select(idx)
     nb=frame._wx_local_notebook
     before=nb.GetPageCount()
@@ -278,19 +251,32 @@ def test_wx_local_context_new_tab_creates_visible_tab(wx_app, tmp_path: Path):
                 listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
                 break
     listing.PopupMenu=choose
-    point=_row_screen_point(listing, idx)
+    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(idx).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId()); event.SetPosition(point)
     listing.ProcessEvent(event)
     listing.PopupMenu=orig
     _pump(wx_app, lambda: nb.GetPageCount()==before+1)
 
-def test_wx_remote_context_copy_path_writes_clipboard_without_backend(wx_app):
+def test_wx_remote_context_copy_path_writes_clipboard_without_backend(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
+    class Clipboard:
+        text = ""
+
+        def Open(self):
+            return True
+
+        def SetData(self, value):
+            self.text = value.GetText()
+            return True
+
+        def Close(self):
+            return None
+
+    clipboard = Clipboard()
+    monkeypatch.setattr(wx, "TheClipboard", clipboard)
     listing=frame._wx_remote_controls["listing"]
-    _wait_remote_files(wx_app, listing, {"a.txt", "b.txt"})
-    target=_row(listing, "a.txt")
-    listing.Select(target)
+    select_content_row(listing, "a.txt")
     orig=listing.PopupMenu
     def choose(menu):
         for item in menu.GetMenuItems():
@@ -305,10 +291,10 @@ def test_wx_remote_context_copy_path_writes_clipboard_without_backend(wx_app):
                 listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
                 break
     listing.PopupMenu=choose
-    point=_row_screen_point(listing, target)
+    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(content_row(listing, "a.txt")).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId()); event.SetPosition(point)
     listing.ProcessEvent(event)
     listing.PopupMenu=orig
     # verify clipboard
-    assert "/work" in read_clipboard_text()
+    assert "/work" in clipboard.text
     assert not any(c[0] in ("copy","move") for c in backend.calls)

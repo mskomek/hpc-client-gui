@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time  # noqa: F401 - compatibility hook for legacy Jobs history monkeypatches
+
 from hpc_gui.wx_shell_files import _remote_files_callbacks
 from hpc_gui.wx_shell_jobs_context import JobsCallbackContext
 from hpc_gui.wx_shell_jobs_details import make_details_callbacks

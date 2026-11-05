@@ -73,13 +73,12 @@ class _PlanWorker:
     def __init__(self, action: str = "resume") -> None:
         self.action = action
         self.conflicts: list[tuple[str, bool]] = []
-        self.directions: list[str] = []
 
     def request_conflict_decision(
-        self, _source, target, *, partial: bool = False, direction: str
+        self, _source, target, *, partial: bool = False, direction: str = "download"
     ) -> str:
+        assert direction == "download"
         self.conflicts.append((target.path, partial))
-        self.directions.append(direction)
         return self.action
 
     def request_rename(self, _dst_dir: str, _current_name: str):
@@ -150,7 +149,6 @@ class DownloadCancelWireTests(unittest.TestCase):
         result = self.panel._build_remote_download_plan_background(
             worker, self.files, ["/results/DP_41"], str(self.target)
         )
-        self.assertTrue(all(direction == "download" for direction in worker.directions))
         return list(result["plan"]), worker
 
     def _open_channels(self) -> int:

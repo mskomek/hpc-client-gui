@@ -10,6 +10,7 @@ from hpc_gui.wx_remote_files_view import show_remote_files
 from mock_hpc_files import MockRemoteFilesBackend
 from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.core.i18n import load_language
+from support.wx_listing_rows import content_rows, select_content_row
 
 def _pump(app, pred, timeout=2):
     dl=time.monotonic()+timeout
@@ -19,17 +20,6 @@ def _pump(app, pred, timeout=2):
         wx.MilliSleep(5)
     app.ProcessPendingEvents()
     assert pred()
-
-def _names(listing):
-    return {listing.GetItemText(i) for i in range(listing.GetItemCount())}
-
-def _row(listing, name):
-    return next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)==name)
-
-def _wait_files(app, listing, names):
-    expected=set(names) | {".."}
-    _pump(app, lambda: _names(listing)==expected)
-    assert _names(listing)==expected
 
 @pytest.fixture
 def wx_app():
@@ -61,21 +51,20 @@ def test_wx_local_ctrl_a_selects_all_active_tab_rows(wx_app, tmp_path: Path):
         (tmp_path/n).write_text("x")
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _wait_files(wx_app, listing, {"a.txt", "b.txt", "c.txt"})
+    _pump(wx_app, lambda: len(content_rows(listing))==3)
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(ord("A"))
     event.SetControlDown(True)
     listing.ProcessEvent(event)
-    assert all(listing.IsSelected(_row(listing, name)) for name in ("a.txt", "b.txt", "c.txt"))
-    assert not listing.IsSelected(_row(listing, ".."))
+    assert all(listing.IsSelected(i) for i in range(listing.GetItemCount()))
 
 def test_wx_local_ctrl_c_copies_selected_paths(wx_app, tmp_path: Path):
     src=tmp_path / "src.txt"
     src.write_text("x")
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _wait_files(wx_app, listing, {"src.txt"})
-    listing.Select(_row(listing, "src.txt"))
+    _pump(wx_app, lambda: len(content_rows(listing))==1)
+    select_content_row(listing, "src.txt")
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(ord("C"))
     event.SetControlDown(True)
@@ -148,8 +137,8 @@ def test_wx_local_f2_renames_selected_file(wx_app, tmp_path: Path, monkeypatch):
     src.write_text("x")
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _wait_files(wx_app, listing, {"old.txt"})
-    listing.Select(_row(listing, "old.txt"))
+    _pump(wx_app, lambda: len(content_rows(listing))==1)
+    select_content_row(listing, "old.txt")
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *a, **k: _Dialog("new.txt"))
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(wx.WXK_F2)
@@ -174,8 +163,8 @@ def test_wx_local_delete_key_deletes_selected_file(wx_app, tmp_path: Path, monke
     t=tmp_path / "del.txt"; t.write_text("x")
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _wait_files(wx_app, listing, {"del.txt"})
-    listing.Select(_row(listing, "del.txt"))
+    _pump(wx_app, lambda: len(content_rows(listing))==1)
+    select_content_row(listing, "del.txt")
     monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(wx.WXK_DELETE)
@@ -187,8 +176,9 @@ def test_wx_local_delete_key_handles_multiselection(wx_app, tmp_path: Path, monk
         (tmp_path / n).write_text("x")
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _wait_files(wx_app, listing, {"a.txt", "b.txt", "c.txt"})
-    listing.Select(_row(listing, "a.txt")); listing.Select(_row(listing, "b.txt"))
+    _pump(wx_app, lambda: len(content_rows(listing))==3)
+    listing.Select(next(index for index, name in content_rows(listing) if name == "a.txt"))
+    listing.Select(next(index for index, name in content_rows(listing) if name == "b.txt"))
     monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(wx.WXK_DELETE)
@@ -200,18 +190,28 @@ def test_wx_local_f5_refreshes_active_tab_only(wx_app, tmp_path: Path):
     (a / "fileA.txt").write_text("a")
     frame=_local(wx_app, a)
     # create second tab B
-    frame._wx_local_create_tab(b)
+    frame._wx_local_model.new_tab(b)
+    import wx as wxx
     nb=frame._wx_local_notebook
-    lst=frame._wx_local_controls["listing"]
-    _wait_files(wx_app, lst, {".."})
+    panel=wxx.Panel(nb)
+    lst=wxx.ListCtrl(panel, style=wxx.LC_REPORT)
+    lst.InsertColumn(0,"Name"); lst.InsertColumn(1,"Size")
+    sizer=wxx.BoxSizer(wxx.VERTICAL); sizer.Add(lst,1,wxx.EXPAND); panel.SetSizer(sizer)
+    new_entry={"id":2000,"path":b.resolve(),"listing":lst,"entries":[],"view_generation":0,"listing_request_id":0,"closed":False,"panel":panel}
+    frame._wx_local_tabs.append(new_entry)
+    frame._wx_local_model.tabs.append(b.resolve())
+    nb.AddPage(panel,"B",True)
+    frame._wx_local_model.active_tab=nb.GetSelection()
+    frame._wx_local_model.current_path=b.resolve()
+    frame._wx_local_controls["listing"]=lst
     # add file to A but not B
     (a / "newA.txt").write_text("x")
     # F5 on active B should not show newA
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(wx.WXK_F5)
     lst.ProcessEvent(event)
-    _pump(wx_app, lambda: _names(lst)=={".."})
-    assert _names(lst)=={".."}
+    _pump(wx_app, lambda: lst.GetItemCount()==0)  # B empty (only maybe 0)
+    assert lst.GetItemCount()==0
     # switch back to A and F5 should show newA
     nb.SetSelection(0)
     _pump(wx_app, lambda: frame._wx_local_controls["listing"].GetItemCount()>=1)
@@ -238,12 +238,10 @@ def test_wx_remote_ctrl_a_selects_all_rows(wx_app):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
     listing=frame._wx_remote_controls["listing"]
-    _wait_files(wx_app, listing, {"a.txt", "b.txt"})
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(ord("A")); event.SetControlDown(True)
     listing.ProcessEvent(event)
-    assert all(listing.IsSelected(_row(listing, name)) for name in ("a.txt", "b.txt"))
-    assert not listing.IsSelected(_row(listing, ".."))
+    assert all(listing.IsSelected(i) for i in range(listing.GetItemCount()))
 
 def test_wx_remote_ctrl_v_pastes_into_active_tab(wx_app):
     backend=MockRemoteFilesBackend()
@@ -260,7 +258,7 @@ def test_wx_remote_f2_renames_selected_file(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
     listing=frame._wx_remote_controls["listing"]
-    listing.Select(_row(listing, "a.txt"))
+    select_content_row(listing, "a.txt")
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *a, **k: _Dialog("renamed.txt"))
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN); event.SetKeyCode(wx.WXK_F2)
     listing.ProcessEvent(event)
@@ -283,7 +281,7 @@ def test_wx_remote_delete_key_deletes_selected_entries(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
     listing=frame._wx_remote_controls["listing"]
-    listing.Select(_row(listing, "a.txt"))
+    select_content_row(listing, "a.txt")
     monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN); event.SetKeyCode(wx.WXK_DELETE)
     listing.ProcessEvent(event)

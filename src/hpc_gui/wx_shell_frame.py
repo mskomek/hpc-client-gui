@@ -10,7 +10,7 @@ from hpc_gui.wx_shell_dispatch import _dispatch
 from hpc_gui.wx_shell_files import _editor_action_factory
 from hpc_gui.wx_shell_jobs import _jobs_callbacks
 from hpc_gui.wx_shell_events import _logs_callbacks
-from hpc_gui.wx_shell_terminal import _run_shell_in_terminal, _schedule_terminal_mount
+from hpc_gui.wx_shell_terminal import _run_shell_in_terminal
 from hpc_gui.core.i18n import current_language, set_language, t, unsubscribe_language_change
 from hpc_gui.wx_shell_window_support import (
     _make_tray, _restore_main_window_state, _save_main_window_state,
@@ -167,15 +167,45 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         notebook.AddPage(terminal_page, t("help.section_terminal"), False)
         session_state["_embedded_terminal_panel"] = None
         page_controls["NAV-TERMINAL"] = {"page": terminal_page, "panel": terminal_page}
-        _schedule_terminal_mount(
-            wx,
-            terminal_page=terminal_page,
-            terminal_sizer=terminal_sizer,
-            session_state=session_state,
-            initial_ssh=_term_ssh,
-            lifecycle=lifecycle,
-            page_controls=page_controls,
-        )
+
+        terminal_mounted = False
+
+        def mount_terminal():
+            nonlocal terminal_mounted
+            if (terminal_mounted or terminal_page.IsBeingDeleted()
+                    or not terminal_page.IsShownOnScreen()):
+                return
+            live_session = session_state.get("session") or {}
+            live_ssh = live_session.get("ssh") if isinstance(live_session, dict) else None
+            real_panel = _build_terminal_panel(
+                terminal_page, ssh=live_ssh or _term_ssh, lifecycle=lifecycle
+            )
+            terminal_mounted = True
+            terminal_sizer.Add(real_panel, 1, wx.EXPAND)
+            terminal_page.Layout()
+            session_state["_embedded_terminal_panel"] = real_panel
+            controls = page_controls["NAV-TERMINAL"]
+            term_controls = getattr(real_panel, "_wx_terminal_controls", {})
+            controls.update(term_controls)
+            controls.update({"output": term_controls.get("output"), "panel": real_panel})
+
+            def close_terminal():
+                callback = getattr(real_panel, "_wx_terminal_close", None) or getattr(real_panel, "close", None)
+                if callable(callback):
+                    callback()
+
+            terminal_page._wx_host_close = close_terminal
+
+        # Edge's native controller must be mounted only when its notebook
+        # page is actually visible, not in a hidden background tab.
+        def on_terminal_page_changed(event):
+            event.Skip()
+            if notebook.GetCurrentPage() is terminal_page:
+                wx.CallAfter(mount_terminal)
+
+        notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, on_terminal_page_changed)
+        if notebook.GetCurrentPage() is terminal_page:
+            wx.CallAfter(mount_terminal)
     else:
         terminal_page = _build_terminal_panel(notebook, ssh=_term_ssh, lifecycle=lifecycle)
         session_state["_embedded_terminal_panel"] = terminal_page
@@ -332,9 +362,6 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     menu = menu_menu
     command_items = []
     frame._wx_shell_controls = {"menu": menu, "language_menu": language_menu, "language_items": language_items, "version_menu": version_menu, "notebook": notebook, "pages": page_controls}
-    from hpc_gui.wx_shell_notebook import bind_notebook_page_resize
-
-    bind_notebook_page_resize(wx, frame, notebook)
     frame._wx_shell_chrome_windows = chrome_windows
     frame._wx_shell_shell_ref = shell_ref
     frame._wx_shell_lifecycle = lifecycle
