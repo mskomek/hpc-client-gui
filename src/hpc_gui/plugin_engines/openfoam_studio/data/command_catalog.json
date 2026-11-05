@@ -1,0 +1,57 @@
+{
+  "commands": [
+    {
+      "category": "Mesh",
+      "execution": "draft-only",
+      "name": "blockMesh",
+      "parameters": [],
+      "verification_status": "unverified"
+    },
+    {
+      "category": "Mesh",
+      "execution": "draft-only",
+      "name": "checkMesh",
+      "parameters": [],
+      "verification_status": "unverified"
+    },
+    {
+      "category": "Mesh",
+      "execution": "draft-only",
+      "name": "decomposePar",
+      "parameters": [],
+      "verification_status": "unverified"
+    },
+    {
+      "category": "Solver",
+      "execution": "draft-only",
+      "name": "simpleFoam",
+      "parameters": [],
+      "verification_status": "unverified"
+    },
+    {
+      "category": "Solver",
+      "execution": "draft-only",
+      "name": "icoFoam",
+      "parameters": [],
+      "source": "TRUBA apps/openfoam/v2312-2025; scratch debug job 6860151",
+      "verification_status": "runtime-executed"
+    },
+    {
+      "category": "Post-processing",
+      "execution": "draft-only",
+      "name": "reconstructPar",
+      "parameters": [],
+      "verification_status": "unverified"
+    },
+    {
+      "category": "Post-processing",
+      "execution": "draft-only",
+      "name": "postProcess",
+      "parameters": [],
+      "verification_status": "unverified"
+    }
+  ],
+  "product": "OpenFOAM.com / ESI",
+  "schema_version": 1,
+  "version": "v2312"
+}

@@ -24,6 +24,13 @@ for _temp_var in ("TMP", "TEMP", "TMPDIR"):
 tempfile.tempdir = str(TEMP_ROOT)
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
+_TESTS_DIR = str(Path(__file__).resolve().parent)
+if _TESTS_DIR not in sys.path:
+    # W65 transport adds tests/__init__.py (required by
+    # test_w65_api3_application_loader's `from tests....` import).
+    # Keep legacy top-level test-helper imports working
+    # (e.g. `from _cli_test_support import ...` in test_cli.py).
+    sys.path.insert(0, _TESTS_DIR)
 
 # QtWebEngine's Chromium profile teardown segfaults at interpreter exit in
 # offscreen test runs, so tests use the plain console fallback instead.

@@ -1,0 +1,74 @@
+"""OpenFOAM Linter plugin identity + trusted-tool engine facade (W65 LINT-013).
+
+Version 0.2.1-w65r19.20261027.3. Preserved 0.1.0 rule-ID prefixes; new W65 rules extend
+the same families. Static rules cover the common OpenFOAM.com / ESI v1912 and v2312 subset.
+
+Rule families: OF-DICT / OF-CASE / OF-CTRL / OF-SOLVER / OF-BC / OF-MESH /
+OF-CROSS / OF-PAR / OF-HPC / OF-SEC.
+
+Host engine surface (W65 r12): the application approves this identity in
+``hpc_gui.plugins.trusted_tools`` with entrypoint
+``engine/openfoam_lint/__init__.py``; the host loader records that declared
+path and ``hpc_gui.plugins.linter_tools`` imports it lazily only when a
+user explicitly opens the tool. Static only: linting never executes case
+content, solver commands or dynamic directives. There is no wx page yet:
+``create_plugin`` loads (title/description) but its page factory fails
+closed with an actionable message; use the standalone CLI or the
+``lint_text``/``lint_paths`` engine API until a wx host path is VM-proven.
+"""
+
+from __future__ import annotations
+
+from hpc_gui.openfoam_core.release_support import linter_supports_release, supported_releases
+
+PLUGIN_ID = "openfoam-linter"
+PLUGIN_VERSION = "0.2.1-w65r19.20261027.3"
+PLUGIN_BASE = "0.1.0"
+SUPPORTED_OPENFOAM_RELEASES = supported_releases()
+# Preserved 0.1.0 rule-ID prefixes; new W65 rules extend the same families.
+RULE_FAMILIES = ("OF-DICT", "OF-CASE", "OF-CTRL", "OF-SOLVER", "OF-BC",
+                 "OF-MESH", "OF-CROSS", "OF-PAR", "OF-HPC", "OF-SEC")
+
+# Approved engine entrypoint (mirrors plugins/trusted_tools.py policy).
+ENGINE_ENTRYPOINT = "engine/openfoam_lint/__init__.py"
+
+# OpenFOAM dictionaries are typically extensionless, so suffix routing is
+# explicitly unsupported (empty); tool selection is by case content.
+SUPPORTED_SUFFIXES = frozenset()
+
+
+def _unavailable_page(parent=None):
+    """Fail closed: no wx tool page is implemented for this engine yet."""
+    raise RuntimeError(
+        "OpenFOAM Linter has no wx tool page yet (explicitly unsupported); "
+        "use the standalone openfoam-lint CLI or the lint_text engine API"
+    )
+
+
+def create_plugin() -> dict:
+    """Host trusted-tool descriptor (title/description/page factory)."""
+    return {
+        "title": "OpenFOAM Linter",
+        "description": "Static OpenFOAM case linter (v1912 and v2312, offline)",
+        "page_factory": _unavailable_page,
+    }
+
+
+def lint_text(text: str, file_name: str = "", options=None, *, release: str | None = None):
+    """Lint in-memory text through the canonical host engine."""
+    from hpc_gui.plugins.openfoam_lint.api import lint_text as canonical_facade
+
+    return canonical_facade(file_name or "<buffer>", text, release=release)
+
+
+def lint_paths(paths, options=None, *, release: str | None = None):
+    """Lint bounded file/case inputs through the canonical host engine."""
+    from hpc_gui.plugins.openfoam_lint.api import lint_paths as canonical_facade
+
+    return canonical_facade(paths or [], options=options, release=release)
+
+
+__all__ = ["PLUGIN_ID", "PLUGIN_VERSION", "PLUGIN_BASE", "RULE_FAMILIES",
+           "ENGINE_ENTRYPOINT", "SUPPORTED_SUFFIXES", "SUPPORTED_OPENFOAM_RELEASES",
+           "linter_supports_release", "create_plugin",
+           "lint_text", "lint_paths"]
