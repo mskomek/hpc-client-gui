@@ -38,10 +38,16 @@ from hpc_gui.plugins.models import (
 from hpc_gui.plugins.storage import (
     MANIFEST_NAME,
     plugin_package_dir,
+    plugins_root,
     read_active_versions,
     read_disabled_ids,
 )
 from hpc_gui.plugins.schema_compat import cluster_profile_floor_errors
+from hpc_gui.plugins.trusted_api3 import (
+    api3_application_entrypoint,
+    api3_error_for_dir,
+    api3_linter_entrypoint,
+)
 from hpc_gui.plugins.validator import validate_cluster_profile_dict, validate_manifest_dict
 from hpc_gui.plugins.trusted_tools import trusted_tool_error
 
@@ -227,6 +233,22 @@ def load_installed_plugins(
             )
             continue
 
+        # Plugin API v3: application-owned release-pin gate over the
+        # verified bytes. Runs before any entrypoint payload is read, and
+        # long before any executable could be imported (the loader never
+        # imports plugin code). Missing/unmatched pins fail closed.
+        if manifest.plugin_api == 3:
+            reason = api3_error_for_dir(manifest, package_dir)
+            if reason:
+                result.problems.append(
+                    PluginProblem(
+                        plugin_id,
+                        version,
+                        f"unapproved plugin_api 3 package: {reason}",
+                    )
+                )
+                continue
+
         profiles: list[ClusterProfileDefinition] = []
         profile_failed = False
         cluster_entrypoints = manifest.entrypoints.get("cluster_profiles")
@@ -335,16 +357,29 @@ def load_installed_plugins(
         linter_engine_raw = None
         linter_rel = manifest.entrypoints.get("linter_engine")
         if isinstance(linter_rel, str) and linter_rel:
-            reason = trusted_tool_error({
-                "plugin_api": manifest.plugin_api,
-                "id": manifest.id,
-                "publisher": manifest.publisher,
-                "capabilities": manifest.capabilities,
-                "entrypoints": manifest.entrypoints,
-            })
-            if reason:
-                result.problems.append(PluginProblem(plugin_id, version, f"unapproved trusted tool: {reason}"))
-                continue
+            if manifest.plugin_api == 3:
+                # Pin-exact entrypoint (gate above already passed); never
+                # manifest-derived. Identities without an approved
+                # executable record nothing here.
+                expected = api3_linter_entrypoint(manifest)
+                if expected is None or linter_rel != expected:
+                    result.problems.append(
+                        PluginProblem(
+                            plugin_id, version, "unapproved plugin_api 3 executable entrypoint"
+                        )
+                    )
+                    continue
+            else:
+                reason = trusted_tool_error({
+                    "plugin_api": manifest.plugin_api,
+                    "id": manifest.id,
+                    "publisher": manifest.publisher,
+                    "capabilities": manifest.capabilities,
+                    "entrypoints": manifest.entrypoints,
+                })
+                if reason:
+                    result.problems.append(PluginProblem(plugin_id, version, f"unapproved trusted tool: {reason}"))
+                    continue
             if (
                 linter_rel.startswith("/")
                 or ".." in linter_rel.split("/")
@@ -372,6 +407,31 @@ def load_installed_plugins(
                 continue
             linter_engine_raw = {"module": linter_rel}
 
+        application_tool_raw = None
+        application_rel = manifest.entrypoints.get("application_tool")
+        if isinstance(application_rel, str) and application_rel:
+            expected = api3_application_entrypoint(manifest)
+            if manifest.plugin_api != 3 or expected is None or application_rel != expected:
+                result.problems.append(
+                    PluginProblem(plugin_id, version, "unapproved application-tool entrypoint")
+                )
+                continue
+            declared_roles = {entry.path: entry.role for entry in manifest.files}
+            if declared_roles.get(application_rel) != "application-engine":
+                result.problems.append(
+                    PluginProblem(
+                        plugin_id, version,
+                        "application-tool entrypoint does not match a declared 'application-engine' payload",
+                    )
+                )
+                continue
+            if not (package_dir / application_rel).is_file():
+                result.problems.append(
+                    PluginProblem(plugin_id, version, f"application tool missing: {application_rel}")
+                )
+                continue
+            application_tool_raw = {"module": application_rel}
+
         # Preserve and validate ui_contributions defensively (never crash)
         plugin_menu_contribution = None
         try:
@@ -397,10 +457,12 @@ def load_installed_plugins(
             InstalledPlugin(
                 manifest=manifest,
                 directory=package_dir,
+                plugin_root=plugins_root(root).resolve(),
                 cluster_profiles=tuple(profiles),
                 lint_index=lint_index_raw,
                 job_templates_index=templates_index_raw,
                 linter_engine=linter_engine_raw,
+                application_tool=application_tool_raw,
                 plugin_menu_contribution=plugin_menu_contribution,
             )
         )

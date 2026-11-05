@@ -1,9 +1,49 @@
 """Private wx local-file interactions component."""
 
 from hpc_gui.core.i18n import t
+from hpc_gui.services.file_context_actions import (
+    context_selection as context_selection,
+    dispatch_openfoam_file_context_action as dispatch_openfoam_file_context_action,
+    installed_openfoam_file_context_plugins,
+    is_openfoam_file_context_action as is_openfoam_file_context_action,
+    openfoam_file_context_plugin,
+    visible_actions as visible_actions,
+    visible_actions_with_openfoam as visible_actions_with_openfoam,
+    wx_file_context_host,
+)
 from hpc_gui.wx_local_files_model import LocalEntry
-from hpc_gui.services.file_context_actions import context_selection
 from hpc_gui.wx_smart_file_open import open_local_file
+
+
+def _openfoam_plugins(view) -> tuple:
+    """Discover active OpenFOAM packages through the host's verified loader."""
+    return installed_openfoam_file_context_plugins()
+
+
+def local_menu_actions(selection, plugins, *, upload=True, host=None, session_state=None) -> tuple:
+    """Real local menu composition: base actions + validated of.* ids.
+
+    This is the exact composition used by :func:`context_menu` below.
+    Readiness False yields the legacy base order unchanged. Only of.*
+    ids are ever appended; availability filtering stays with the base.
+    """
+    base = tuple(
+        action for action in visible_actions(selection, remote=False)
+        if action != "upload" or upload
+    )
+    extra = visible_actions_with_openfoam(
+        selection, remote=False, plugins=plugins, host=host, session_state=session_state
+    )
+    of_only = [action for action in extra if is_openfoam_file_context_action(action)]
+    return base + tuple(action for action in of_only if action not in base)
+
+
+def run_openfoam_file_context_action(action, selection, plugins, *, host=None, session_state=None) -> tuple:
+    """Invoke the owning pinned plugin through its host-owned wx callback."""
+    target = openfoam_file_context_plugin(action, plugins)
+    return dispatch_openfoam_file_context_action(
+        action, target, selection, remote=False, host=host, session_state=session_state
+    )
 
 def install_interactions(view):
     active_tab_state = view.active_tab_state
@@ -101,10 +141,26 @@ def install_interactions(view):
             background=index < 0 and not keyboard_context,
         )
         menu = wx.Menu()
-        actions = tuple(action for action in visible_actions(selection, remote=False) if action != "upload" or upload)
+        plugins = _openfoam_plugins(view)
+        plugin_host, session_state = wx_file_context_host(view, selection)
+        actions = local_menu_actions(
+            selection, plugins, upload=bool(upload), host=plugin_host,
+            session_state=session_state,
+        )
         for action in actions:
             item = menu.Append(wx.ID_ANY, t(labels.get(action, "help.help_title")))
-            listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action), item)
+            if is_openfoam_file_context_action(action):
+                def run_openfoam(_event, action=action):
+                    ok, reason = run_openfoam_file_context_action(
+                        action, selection, plugins, host=plugin_host,
+                        session_state=session_state,
+                    )
+                    if not ok:
+                        wx.MessageBox(reason, t("login.err_title"), wx.OK | wx.ICON_WARNING, parent=host)
+
+                listing.Bind(wx.EVT_MENU, run_openfoam, item)
+            else:
+                listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action), item)
         listing.PopupMenu(menu)
         menu.Destroy()
 
@@ -128,7 +184,8 @@ def install_interactions(view):
             return
         if event.ControlDown() and event.GetKeyCode() == ord("A"):
             for index in range(listing.GetItemCount()):
-                listing.Select(index)
+                entry = tstate["entries"][index]
+                listing.Select(index, not is_parent_entry(entry, tstate))
             return
         # REMOVED: Backspace parent navigation for local (per contract)
         actions = {wx.WXK_F2: "rename", wx.WXK_DELETE: "delete", wx.WXK_F5: "refresh"}
