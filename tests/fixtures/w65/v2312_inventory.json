@@ -1,0 +1,74 @@
+[
+  {
+    "name": "blockMesh",
+    "family": "mesh",
+    "tier": "raw",
+    "execution": "draft-only",
+    "provenance": "OpenFOAM.com v2312 tools",
+    "reason": "typed parameter schemas deferred to UNIT C; execution stays draft-only until the UNIT F runtime gate"
+  },
+  {
+    "name": "checkMesh",
+    "family": "mesh",
+    "tier": "raw",
+    "execution": "draft-only",
+    "provenance": "OpenFOAM.com v2312 tools",
+    "reason": "typed parameter schemas deferred to UNIT C; execution stays draft-only until the UNIT F runtime gate"
+  },
+  {
+    "name": "chtMultiRegionSimpleFoam",
+    "family": "solver",
+    "tier": "raw",
+    "execution": "draft-only",
+    "provenance": "OpenFOAM.com v2312 tools",
+    "reason": "typed parameter schemas deferred to UNIT C; execution stays draft-only until the UNIT F runtime gate"
+  },
+  {
+    "name": "decomposePar",
+    "family": "parallel",
+    "tier": "raw",
+    "execution": "draft-only",
+    "provenance": "OpenFOAM.com v2312 tools",
+    "reason": "typed parameter schemas deferred to UNIT C; execution stays draft-only until the UNIT F runtime gate"
+  },
+  {
+    "name": "icoFoam",
+    "family": "solver",
+    "tier": "raw",
+    "execution": "draft-only",
+    "provenance": "OpenFOAM.com v2312 tools",
+    "reason": "typed parameter schemas deferred to UNIT C; execution stays draft-only until the UNIT F runtime gate"
+  },
+  {
+    "name": "postProcess",
+    "family": "post",
+    "tier": "raw",
+    "execution": "draft-only",
+    "provenance": "OpenFOAM.com v2312 tools",
+    "reason": "typed parameter schemas deferred to UNIT C; execution stays draft-only until the UNIT F runtime gate"
+  },
+  {
+    "name": "reconstructPar",
+    "family": "parallel",
+    "tier": "raw",
+    "execution": "draft-only",
+    "provenance": "OpenFOAM.com v2312 tools",
+    "reason": "typed parameter schemas deferred to UNIT C; execution stays draft-only until the UNIT F runtime gate"
+  },
+  {
+    "name": "simpleFoam",
+    "family": "solver",
+    "tier": "raw",
+    "execution": "draft-only",
+    "provenance": "OpenFOAM.com v2312 tools",
+    "reason": "typed parameter schemas deferred to UNIT C; execution stays draft-only until the UNIT F runtime gate"
+  },
+  {
+    "name": "splitMeshRegions",
+    "family": "mesh",
+    "tier": "raw",
+    "execution": "draft-only",
+    "provenance": "OpenFOAM.com v2312 tools",
+    "reason": "typed parameter schemas deferred to UNIT C; execution stays draft-only until the UNIT F runtime gate"
+  }
+]
