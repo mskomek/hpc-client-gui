@@ -1,0 +1,227 @@
+{
+  "release": "v2312",
+  "live_help_build": "Using OpenFOAM-2312, Build _9a9aeb73-20260127",
+  "live_source": "Kole host WSL Ubuntu-24.04, FOAM_API 2312",
+  "captured": "2026-11-04 help batch files",
+  "total_options": 111,
+  "live_executed": {
+    "decision": "user approved 2026-11-04 (1 say): count Kole WSL disposable cavity run as live-executed",
+    "kase": "/tmp/w65_live_20261104T173754Z/case (copy of tutorials/incompressible/icoFoam/cavity/cavity)",
+    "host": "DESKTOP-TMGUAH7 (Kole WSL Ubuntu-24.04)",
+    "tools": [
+      "blockMesh",
+      "checkMesh",
+      "icoFoam"
+    ],
+    "evidence": [
+      ".tmp/w65_kole_work/blockMesh.log (2350 byte, End)",
+      ".tmp/w65_kole_work/checkMesh.log (3309 byte, Mesh OK. + End)",
+      ".tmp/w65_kole_work/icoFoam.log (73834 byte, PISO 0..0.5, End)"
+    ],
+    "conditions": "exit=0 per runner declaration (not inside logs); log Time 18:37:54 vs run TS 17:37:54Z ~1h clock-base note; remote cleanup runner-declared; tutorial untouched; no production/TRUBA work",
+    "guests": "login/compute01/compute02 none, ubuntu-test v1912 only, win11-new none, BLOCKED_ENV (guest side unchanged)"
+  },
+  "guests": "kole-login v2312 dogrulandi + canli cavity exit=0 (G45 konuk BLOCKED kalkti); login/compute01/compute02 yok; ubuntu-test yalniz v1912; win11-new yok; Windows11 Off",
+  "tools": [
+    {
+      "tool": "blockMesh",
+      "category_resolved": "Mesh",
+      "options": [
+        "write-obj",
+        "write-vtk",
+        "verbose",
+        "merge-points",
+        "no-clean",
+        "dict",
+        "sets",
+        "time",
+        "region"
+      ],
+      "option_count": 9,
+      "verification": "LIVE_EXECUTED",
+      "execute_by_default": false,
+      "live_evidence": "blockMesh.log 2350 byte End, case /tmp/w65_live_20261104T173754Z/case"
+    },
+    {
+      "tool": "checkMesh",
+      "category_resolved": "Mesh",
+      "options": [
+        "noTopology",
+        "allGeometry",
+        "allTopology",
+        "writeAllFields",
+        "writeAllSurfaceFields",
+        "writeFields",
+        "meshQuality",
+        "writeSets",
+        "write-edges",
+        "writeChecks",
+        "constant",
+        "noZero",
+        "latestTime",
+        "time",
+        "allRegions",
+        "regions",
+        "region",
+        "decomposeParDict",
+        "parallel"
+      ],
+      "option_count": 19,
+      "verification": "LIVE_EXECUTED",
+      "execute_by_default": false,
+      "live_evidence": "checkMesh.log 3309 byte Mesh OK. + End, 882 points / 400 hexahedra"
+    },
+    {
+      "tool": "decomposePar",
+      "category_resolved": "Mesh",
+      "options": [
+        "decomposeParDict",
+        "dry-run",
+        "verbose",
+        "domains",
+        "method",
+        "no-finite-area",
+        "no-lagrangian",
+        "cellDist",
+        "copyZero",
+        "copyUniform",
+        "fields",
+        "no-fields",
+        "no-sets",
+        "force",
+        "ifRequired",
+        "constant",
+        "noZero",
+        "latestTime",
+        "time",
+        "allRegions",
+        "regions",
+        "region"
+      ],
+      "option_count": 22,
+      "verification": "LIVE_HELP_VERIFIED",
+      "execute_by_default": false
+    },
+    {
+      "tool": "reconstructPar",
+      "category_resolved": "Post-processing",
+      "options": [
+        "verbose",
+        "fields",
+        "no-fields",
+        "lagrangianFields",
+        "no-lagrangian",
+        "no-sets",
+        "newTimes",
+        "constant",
+        "withZero",
+        "noZero",
+        "latestTime",
+        "time",
+        "allRegions",
+        "regions",
+        "region"
+      ],
+      "option_count": 15,
+      "verification": "LIVE_HELP_VERIFIED",
+      "execute_by_default": false
+    },
+    {
+      "tool": "splitMeshRegions",
+      "category_resolved": "Mesh",
+      "options": [
+        "region",
+        "overwrite",
+        "cellZones",
+        "cellZonesOnly",
+        "cellZonesFileOnly",
+        "combineZones",
+        "addZones",
+        "blockedFaces",
+        "makeCellZones",
+        "largestOnly",
+        "insidePoint",
+        "detectOnly",
+        "sloppyCellZones",
+        "useFaceZones",
+        "prefixRegion",
+        "decomposeParDict",
+        "parallel"
+      ],
+      "option_count": 17,
+      "verification": "LIVE_HELP_VERIFIED",
+      "execute_by_default": false
+    },
+    {
+      "tool": "chtMultiRegionSimpleFoam",
+      "category_resolved": "Solver",
+      "options": [
+        "dry-run",
+        "dry-run-write",
+        "decomposeParDict",
+        "parallel",
+        "postProcess"
+      ],
+      "option_count": 5,
+      "verification": "LIVE_HELP_VERIFIED",
+      "execute_by_default": false
+    },
+    {
+      "tool": "simpleFoam",
+      "category_resolved": "Solver",
+      "options": [
+        "dry-run",
+        "dry-run-write",
+        "decomposeParDict",
+        "parallel",
+        "postProcess"
+      ],
+      "option_count": 5,
+      "verification": "LIVE_HELP_VERIFIED",
+      "execute_by_default": false
+    },
+    {
+      "tool": "icoFoam",
+      "category_resolved": "Solver",
+      "options": [
+        "dry-run",
+        "dry-run-write",
+        "decomposeParDict",
+        "parallel",
+        "postProcess"
+      ],
+      "option_count": 5,
+      "verification": "LIVE_EXECUTED",
+      "execute_by_default": false,
+      "live_evidence": "icoFoam.log 73834 byte PISO 0..0.5 End"
+    },
+    {
+      "tool": "postProcess",
+      "category_resolved": "Post-processing",
+      "options": [
+        "constant",
+        "noZero",
+        "latestTime",
+        "time",
+        "profiling",
+        "region",
+        "dict",
+        "field",
+        "fields",
+        "func",
+        "funcs",
+        "list",
+        "decomposeParDict",
+        "parallel"
+      ],
+      "option_count": 14,
+      "verification": "LIVE_HELP_VERIFIED",
+      "execute_by_default": false
+    }
+  ],
+  "amendments": [
+    "Fix2 2026-11-05: decomposeParDict eklendi (cht/simple/ico 4->5); kaynak kole-login kisa -help 2026-11-05T03:31:29Z, build _9a9aeb73-20260127; origin global-runner; sira korundu",
+    "Guest cross 2026-11-05: kole-login v2312 dogrulandi (2312.260127-2, FOAM_API 2312, build birebir WSL ile ayni); 9 arac --help exit=0 timestamp'li; disposable cavity blockMesh/checkMesh/icoFoam exit=0 ayni-shell yakalandi (WSL beyan zafiyeti kapandi)",
+    "Live-executed sayimi: kullanici onayi (1 say); blockMesh+checkMesh+icoFoam LIVE_EXECUTED; diger 6 arac LIVE_HELP_VERIFIED"
+  ]
+}
