@@ -78,6 +78,7 @@ class SSHClientWrapper:
             self._active_transport, log=self.log, opener=lambda: self.open_transfer_sftp()
         )
         self._shell_session: Optional[InteractiveShellSession] = None
+        self._x11_forwarder = None
         self._shell_geometry: Tuple[int, int] = (120, 40)
         self._log = logger or log_cb
         self._shell_output_cb = shell_output_cb
@@ -129,7 +130,55 @@ class SSHClientWrapper:
 
     def _invoke_shell(self, **kwargs):
         assert self.client is not None
-        return self.client.invoke_shell(**kwargs)
+        if not (self.info is not None and getattr(self.info, "x11_forwarding", False)):
+            return self.client.invoke_shell(**kwargs)
+        forwarder = self._prepare_x11_forwarder()
+        if forwarder is None:
+            return self.client.invoke_shell(**kwargs)
+        transport = self.client.get_transport()
+        assert transport is not None
+        channel = transport.open_session()
+        channel.get_pty(kwargs.get("term", "vt100"), kwargs.get("width", 80), kwargs.get("height", 24))
+        try:
+            forwarder.request(channel)
+            self._x11_forwarder = forwarder
+            self.log(f"X11: yönlendirme etkin (yerel ekran {forwarder.display.name})")
+        except Exception as exc:
+            forwarder.close()
+            self.log(f"X11: sunucu X11 yönlendirmeyi reddetti ({exc.__class__.__name__}: {exc})")
+        channel.invoke_shell()
+        return channel
+
+    def _prepare_x11_forwarder(self):
+        """Ensure a local X server and build a forwarder (None -> no X11)."""
+        from hpc_gui.ssh.x11_forward import X11Forwarder, local_display_from_env
+
+        self._close_x11_forwarder()
+        try:
+            from hpc_gui.services import xserver_manager
+
+            if xserver_manager._is_windows():
+                ready = xserver_manager.ensure_x_server_running(self.log, parent=None, allow_download=False)
+            elif xserver_manager._is_macos():
+                ready = xserver_manager.ensure_xquartz_available(self.log)
+            else:
+                ready = xserver_manager.is_local_x_available(self.log)
+        except Exception as exc:
+            self.log(f"X11: yerel X sunucusu denetlenemedi ({exc.__class__.__name__})")
+            ready = False
+        if not ready:
+            self.log("X11: yerel X sunucusu hazır değil; terminal X11 olmadan açılıyor.")
+            return None
+        return X11Forwarder(local_display_from_env(), log=self.log)
+
+    def _close_x11_forwarder(self) -> None:
+        forwarder = getattr(self, "_x11_forwarder", None)
+        self._x11_forwarder = None
+        if forwarder is not None:
+            try:
+                forwarder.close()
+            except Exception:
+                pass
 
     def _on_shell_unexpected_disconnect(self, reason: str) -> None:
         try:
@@ -414,6 +463,7 @@ class SSHClientWrapper:
             self._stop_shell_session()
         except Exception:
             pass
+        self._close_x11_forwarder()
         try:
             self._drop_listing_sftp()
         except Exception:

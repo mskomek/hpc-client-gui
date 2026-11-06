@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from threading import Lock, Thread
+from time import monotonic as _monotonic
 from types import SimpleNamespace
 from typing import Any, Callable
 from uuid import uuid4
@@ -213,7 +214,15 @@ class WxJobsModel:
         return True
 
 
-def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=None, read_path=None, stat_path=None, follower=None, interval_ms: int = 1000, lifecycle=None, on_closed=None) -> int:
+def outputs_refresh_interval_seconds() -> int:
+    """Jobs & Outputs polling interval from settings (fail-safe default 15 s)."""
+    try:
+        return max(1, int(storage.get_jobs_outputs_refresh_interval_seconds()))
+    except Exception:
+        return 15
+
+
+def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=None, read_path=None, stat_path=None, follower=None, interval_ms: int | None = None, lifecycle=None, on_closed=None) -> int:
     """Show a live detached follower; late callbacks are ignored after close."""
     try:
         import wx
@@ -317,7 +326,7 @@ def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=Non
     if lifecycle is not None:
         lifecycle.register_cleanup(closed)
     if follower is not None or read_output:
-        timer.Start(max(100, int(interval_ms)))
+        timer.Start(max(100, int(interval_ms if interval_ms is not None else outputs_refresh_interval_seconds() * 1000)))
         refresh()
     frame.Show()
     return wx.ID_OK
@@ -3124,11 +3133,19 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, _on_notebook_page_changed)
 
     # --- Timer tick ---------------------------------------------------------
+    def _outputs_refresh_due():
+        """Honour Settings → Jobs & Outputs refresh interval (Qt parity)."""
+        now = _monotonic()
+        if now < state.get("_outputs_next_refresh", 0.0):
+            return False
+        state["_outputs_next_refresh"] = now + outputs_refresh_interval_seconds()
+        return True
+
     def tick(event):
         if cb_auto_refresh.GetValue():
             refresh_jobs(event)
         try:
-            if notebook.GetCurrentPage() is outputs_page:
+            if notebook.GetCurrentPage() is outputs_page and _outputs_refresh_due():
                 ctx = model.selected_job_store.context
                 terminal_states = {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY"}
                 is_terminal = ctx.state.upper() in terminal_states if ctx.state else False

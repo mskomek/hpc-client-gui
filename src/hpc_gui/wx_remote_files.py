@@ -37,6 +37,15 @@ class RemoteOperation:
     destination: str = ""
 
 
+def _cache_enabled() -> bool:
+    try:
+        from hpc_gui.config.storage import get_remote_directory_cache_enabled
+
+        return bool(get_remote_directory_cache_enabled())
+    except Exception:
+        return True
+
+
 class WxRemoteDirectoryModel(RemoteDirectoryController):
     def __init__(self, initial_path: str = "/", cache_ttl: float = 60.0) -> None:
         super().__init__(initial_path)
@@ -48,6 +57,10 @@ class WxRemoteDirectoryModel(RemoteDirectoryController):
 
     def list_entries(self, loader: Callable[[str], Iterable[RemoteEntry]], path: str | None = None, *, force: bool = False) -> tuple[RemoteEntry, ...]:
         key = self._normalize(path if path is not None else self.current_path)
+        if not _cache_enabled():
+            # Settings → remote directory cache off (Qt parity): always live.
+            self._cache.pop(key, None)
+            return tuple(loader(key))
         cached = self._cache.get(key)
         if not force and cached and time.monotonic() - cached[0] <= self.cache_ttl:
             return cached[1]

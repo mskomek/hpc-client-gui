@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- wx: X11 forwarding now works from the embedded terminal (`ssh -X`
+  equivalent). When a profile has X11 enabled, the shell channel requests
+  X11, a local X server is checked/started (VcXsrv on Windows, XQuartz on
+  macOS, `DISPLAY` on Linux) and each X11 channel is relayed with the fake
+  cookie replaced by the local cookie or removed for host-based servers.
+  Without a ready local X server the terminal opens without X11 and logs why.
+- wx: the remote directory cache setting is honoured (off = always list live).
+- wx: Jobs & Outputs refresh interval setting drives the outputs tab and
+  detached output viewers instead of a fixed 1 s poll.
+- wx: shell shortcuts (Help, Settings) follow the saved shortcut preferences;
+  F1 remains the Help fallback.
+
 ## v1.5.9
 
 The W61.2 freeze reference is the Windows AMD64 onedir executable with SHA-256
