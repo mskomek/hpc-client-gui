@@ -134,10 +134,9 @@ def install_excepthook() -> None:
 
             write_crash_flag(exc_type, exc, tb)
             try:
-                from PySide6.QtWidgets import QApplication
+                from hpc_gui.core.wx_dialogs import wx_app_available
 
-                app = QApplication.instance()
-                if app is not None:
+                if wx_app_available():
                     show_crash_dialog(None)
             except Exception:
                 pass

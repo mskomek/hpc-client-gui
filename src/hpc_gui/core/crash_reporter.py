@@ -66,22 +66,23 @@ def clear_crash_flag() -> None:
 
 
 def show_crash_dialog(parent) -> None:
+    """Offer the wx Send Logs view shortly after a crash flag is written."""
     try:
-        from PySide6.QtCore import QTimer
+        import wx  # type: ignore[import-not-found]
 
-        from hpc_gui.ui.dialogs.send_logs_dialog import SendLogsDialog
+        if wx.GetApp() is None:
+            return
 
-        def _show():
+        def _show() -> None:
             try:
                 flag = read_crash_flag()
-                dlg = SendLogsDialog(parent, crash_context=True, crash_summary=flag.get("summary", "") if flag else "")
-                dlg.setAttribute(getattr(dlg, "WA_DeleteOnClose", True))
-                dlg.show()
-                dlg.raise_()
-                dlg.activateWindow()
+                summary = flag.get("summary", "") if isinstance(flag, dict) else ""
+                from hpc_gui.wx_send_logs_view import show_send_logs
+
+                show_send_logs(parent, crash_context=True, crash_summary=summary)
             except Exception:
                 pass
 
-        QTimer.singleShot(300, _show)
+        wx.CallAfter(wx.CallLater, 300, _show)
     except Exception:
         pass

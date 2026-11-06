@@ -173,13 +173,12 @@ def _file_lock(path: Path, timeout_s: float = 6.0):
 
 
 def _prompt_install(parent, log: Optional[Callable[[str], None]] = None) -> bool:
-    from PySide6.QtWidgets import QMessageBox
+    from hpc_gui.core.wx_dialogs import ask_yes_no
+
     msg = "VcXsrv is required. Open its official download page?"
-    ret = QMessageBox.question(parent, t("xserver.required_title"), msg, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-    if ret != QMessageBox.StandardButton.Yes:
-        return False
-    webbrowser.open("https://sourceforge.net/projects/vcxsrv/files/vcxsrv/")
-    _log(log, "VcXsrv official download page opened; automatic installer execution is disabled.")
+    if ask_yes_no(msg, t("xserver.required_title"), parent):
+        webbrowser.open("https://sourceforge.net/projects/vcxsrv/files/vcxsrv/")
+        _log(log, "VcXsrv official download page opened; automatic installer execution is disabled.")
     return False
 
 

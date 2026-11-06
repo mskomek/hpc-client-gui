@@ -73,13 +73,12 @@ def supports_remote_target(path: str, *, is_directory: bool) -> bool:
 def dispatch_linter(paths, *, host_window=None, session_state=None) -> bool:
     """Re-discover and revalidate the exact plugin at the action boundary."""
     from hpc_gui.services.plugin_menu_actions import dispatch_plugin_menu_action
-    from hpc_gui.ui.plugin_menu_qt_host import QtPluginMenuHost
+    from hpc_gui.services.wx_plugin_menu_host import WxPluginMenuHost
 
     plugin = active_linter()
     if plugin is None:
         return False
-    host = QtPluginMenuHost(
-        host_window=host_window,
+    host = WxPluginMenuHost(
         initial_paths=tuple(str(path) for path in (paths or ())),
         session_state=session_state,
     )

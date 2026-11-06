@@ -68,7 +68,7 @@ def validate_pip_metadata(pyproject: Path, entry: Path) -> None:
     text = pyproject.read_text(encoding="utf-8")
     if "requires-python" not in text:
         raise PackagingError("pyproject.toml has no requires-python declaration.")
-    for dep in ("PySide6", "paramiko", "cryptography"):
+    for dep in ("wxPython", "paramiko", "cryptography"):
         if dep not in text:
             raise PackagingError(f"pyproject.toml missing dependency {dep}.")
     if not entry.is_file():

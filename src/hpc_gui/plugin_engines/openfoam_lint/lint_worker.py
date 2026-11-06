@@ -4,25 +4,51 @@ from __future__ import annotations
 
 from threading import Event
 
-from PySide6.QtCore import QObject, QRunnable, Signal, Slot
-
 from hpc_gui.openfoam_core.cancellation import ScanCancelledError, raise_if_cancelled
 from .rules import LintResult
 
 
-class LintSignals(QObject):
-    finished = Signal(int, object)
-    failed = Signal(int, str)
-    cancelled = Signal(int)
+class _Signal:
+    """Minimal signal replacement for framework-neutral use."""
+
+    def __init__(self) -> None:
+        self._slots: list = []
+
+    def connect(self, slot) -> None:
+        self._slots.append(slot)
+
+    def disconnect(self, slot=None) -> None:
+        if slot is None:
+            self._slots.clear()
+        else:
+            try:
+                self._slots.remove(slot)
+            except ValueError:
+                pass
+
+    def emit(self, *args, **kwargs) -> None:
+        for slot in list(self._slots):
+            try:
+                slot(*args, **kwargs)
+            except Exception:
+                pass
 
 
-class LintTask(QRunnable):
+class LintSignals:
+    """Framework-neutral signals; wx hosts use direct callbacks, legacy Qt used these."""
+
+    def __init__(self) -> None:
+        self.finished = _Signal()
+        self.failed = _Signal()
+        self.cancelled = _Signal()
+
+
+class LintTask:
     """Run local or SFTP lint without blocking the GUI thread."""
 
     def __init__(self, token: int, paths: tuple[str, ...], *, remote_files=None,
                  cancel_event: Event | None = None,
                  release: str = "v2312") -> None:
-        super().__init__()
         self.token = token
         self.paths = paths
         self.remote_files = remote_files
@@ -30,7 +56,6 @@ class LintTask(QRunnable):
         self.release = release
         self.signals = LintSignals()
 
-    @Slot()
     def run(self) -> None:
         try:
             raise_if_cancelled(self.cancel_event)

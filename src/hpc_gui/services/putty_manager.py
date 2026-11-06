@@ -26,19 +26,10 @@ def plink_path() -> Path:
 
 def _prompt_download_plink(parent) -> bool:
     """Ask user permission before downloading plink.exe."""
-    try:
-        from PySide6.QtWidgets import QMessageBox
-    except Exception:
-        return False
+    from hpc_gui.core.wx_dialogs import ask_yes_no
 
     msg = t("putty.needed_msg").format(url=PUTTY_PLINK_URL)
-    ret = QMessageBox.question(
-        parent,
-        t("putty.needed_title"),
-        msg,
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-    )
-    return ret == QMessageBox.StandardButton.Yes
+    return ask_yes_no(msg, t("putty.needed_title"), parent)
 
 
 def ensure_plink_available(*, log: Optional[Callable[[str], None]] = None, parent=None) -> bool:

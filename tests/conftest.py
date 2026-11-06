@@ -14,7 +14,6 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMP_ROOT = ROOT / ".tmp"
@@ -68,34 +67,6 @@ else:
         wx.Log.SetActiveTarget(wx.LogStderr())
 
     wx.App.__init__ = _wx_app_init_without_modal_logging
-
-try:
-    # Lightweight runs such as the Plugin API contract suite execute without
-    # Qt installed; the startup-popup guard below only applies then.
-    from hpc_gui.ui import main_window as main_window_module  # noqa: E402
-except ImportError:  # pragma: no cover - exercised only in non-Qt environments
-    main_window_module = None
-
-
-@pytest.fixture(autouse=True)
-def _no_main_window_startup_popups():
-    if main_window_module is None:
-        yield
-        return
-    with (
-        patch.object(
-            main_window_module.MainWindow,
-            "_show_changelog_dialog",
-            lambda self, text: None,
-        ),
-        patch.object(
-            main_window_module.MainWindow,
-            "_check_for_updates",
-            lambda self, manual=True: None,
-        ),
-        ):
-            yield
-
 
 @pytest.fixture(autouse=True)
 def _isolate_plugin_data(tmp_path, monkeypatch):

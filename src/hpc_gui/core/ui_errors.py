@@ -81,11 +81,6 @@ def show_exception(
     exc: Optional[BaseException] = None,
     area: str = "GEN",
 ) -> None:
-    try:
-        from PySide6.QtWidgets import QMessageBox
-    except Exception:
-        return
-
     if exc is not None:
         err_id = log_exception_with_id(area, exc)
     else:
@@ -95,4 +90,12 @@ def show_exception(
     label = t("common.error_code")
     hint = t("common.error_code_hint")
     msg = (user_message or t("common.error")) + f"\n\n{label}: {err_id}\n{hint}"
-    QMessageBox.critical(parent, ttl, msg)
+    from hpc_gui.core.wx_dialogs import show_error
+
+    show_error(msg, ttl, parent)
+    try:
+        from hpc_gui.core.logging import get_logger
+
+        get_logger("hpc_gui.ui_errors").error("%s: %s", ttl, msg)
+    except Exception:
+        pass

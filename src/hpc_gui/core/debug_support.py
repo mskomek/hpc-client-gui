@@ -49,13 +49,16 @@ def log_startup_snapshot() -> None:
         loc_s = ""
 
     try:
-        import PySide6
+        import wx
 
-        qt_v = getattr(PySide6.QtCore, "__version__", "") if hasattr(PySide6, "QtCore") else ""
-        pyside_v = getattr(PySide6, "__version__", "")
+        wx_v = getattr(wx, "__version__", "")
+        if not wx_v:
+            try:
+                wx_v = wx.version()  # type: ignore[attr-defined]
+            except Exception:
+                wx_v = ""
     except Exception:
-        qt_v = ""
-        pyside_v = ""
+        wx_v = ""
 
     log.info("=== App startup ===")
     log.info("app_version=%s", __version__)
@@ -66,10 +69,8 @@ def log_startup_snapshot() -> None:
     log.info("arch=%s", arch)
     if loc_s:
         log.info("locale=%s", loc_s)
-    if pyside_v:
-        log.info("pyside6=%s", pyside_v)
-    if qt_v:
-        log.info("qt=%s", qt_v)
+    if wx_v:
+        log.info("wx=%s", wx_v)
 
     # External helpers (best-effort)
     try:

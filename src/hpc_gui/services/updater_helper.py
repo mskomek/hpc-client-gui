@@ -314,83 +314,143 @@ def perform_update(config: HelperConfig, progress: Progress, runner=subprocess.r
 
 def run_helper(config_path: Path) -> int:
     from hpc_gui.core.i18n import load_saved_language, system_default_language, t
-    from PySide6.QtCore import QObject, QThread, Qt, Signal
-    from PySide6.QtWidgets import QApplication, QDialog, QLabel, QProgressBar, QVBoxLayout
+
+    import threading
+
+    import wx  # type: ignore[import-not-found]
 
     load_saved_language(system_default_language())
-    _application = QApplication.instance() or QApplication([])
-    dialog = QDialog()
-    dialog.setWindowTitle(t("updates.helper_title"))
-    dialog.setFixedSize(480, 250)
-    dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-    layout = QVBoxLayout(dialog)
-    title = QLabel(t("updates.helper_title").upper())
-    title.setStyleSheet("font-size: 28px; font-weight: bold;")
-    title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    status = QLabel(t("updates.helper_preparing"))
-    status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    bar = QProgressBar()
-    bar.setRange(0, 100)
-    bar.setValue(0)
-    bar.setTextVisible(True)
-    layout.addStretch()
-    layout.addWidget(title)
-    layout.addWidget(
-        QLabel(t("updates.helper_updating"), alignment=Qt.AlignmentFlag.AlignCenter)
-    )
-    layout.addStretch()
-    layout.addWidget(status)
-    layout.addWidget(bar)
-    layout.addStretch()
+    app = wx.GetApp()
+    created_app = False
+    if app is None:
+        app = wx.App(False)  # type: ignore[call-arg]
+        created_app = True
 
-    class Worker(QObject):
-        changed = Signal(object, str)
-        done = Signal()
-        failed = Signal(str)
+    # No close box: closing mid-copy would leave a half-applied update.
+    frame = wx.Frame(None, title=t("updates.helper_title"), size=(480, 250), style=wx.CAPTION)  # type: ignore[attr-defined]
+    panel = wx.Panel(frame)  # type: ignore[attr-defined]
+    sizer = wx.BoxSizer(wx.VERTICAL)  # type: ignore[attr-defined]
+    title = wx.StaticText(panel, label=t("updates.helper_title").upper(), style=wx.ALIGN_CENTER_HORIZONTAL)  # type: ignore[attr-defined]
+    font = title.GetFont()
+    font.SetPointSize(14)
+    font.SetWeight(wx.FONTWEIGHT_BOLD)  # type: ignore[attr-defined]
+    title.SetFont(font)
+    status = wx.StaticText(panel, label=t("updates.helper_preparing"), style=wx.ALIGN_CENTER_HORIZONTAL)  # type: ignore[attr-defined]
+    gauge = wx.Gauge(panel, range=100, size=(440, 20))  # type: ignore[attr-defined]
+    subtitle = wx.StaticText(panel, label=t("updates.helper_updating"), style=wx.ALIGN_CENTER_HORIZONTAL)  # type: ignore[attr-defined]
+    sizer.AddStretchSpacer(1)
+    sizer.Add(title, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)  # type: ignore[attr-defined]
+    sizer.Add(subtitle, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)  # type: ignore[attr-defined]
+    sizer.AddStretchSpacer(1)
+    sizer.Add(status, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)  # type: ignore[attr-defined]
+    sizer.Add(gauge, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)  # type: ignore[attr-defined]
+    sizer.AddStretchSpacer(1)
+    panel.SetSizer(sizer)
+    frame.Centre()
 
-        def run(self):
-            try:
-                perform_update(HelperConfig.load(config_path), self.changed.emit)
-            except Exception as exc:
-                self.failed.emit(str(exc))
-            else:
-                self.done.emit()
+    result = {"code": 1}
+    done_event = threading.Event()
 
-    worker = Worker()
-    thread = QThread()
-    worker.moveToThread(thread)
-    thread.started.connect(worker.run)
     def update_progress(value, message: str) -> None:
-        status.setText(_localized_progress_text(message, t))
-        if value is None:
-            bar.setRange(0, 0)
-        else:
-            bar.setRange(0, 100)
-            bar.setValue(value)
+        def _do() -> None:
+            try:
+                status.SetLabel(_localized_progress_text(message, t))
+            except Exception:
+                pass
+            try:
+                if value is None:
+                    gauge.Pulse()  # type: ignore[attr-defined]
+                else:
+                    gauge.SetRange(100)
+                    gauge.SetValue(int(value))
+            except Exception:
+                pass
+            try:
+                panel.Layout()
+            except Exception:
+                pass
 
-    worker.changed.connect(update_progress)
-    worker.done.connect(dialog.accept)
+        try:
+            wx.CallAfter(_do)  # type: ignore[attr-defined]
+        except Exception:
+            _do()
+
     def show_failure(message: str) -> None:
-        from PySide6.QtWidgets import QMessageBox
+        def _do() -> None:
+            try:
+                status.SetLabel(t("updates.helper_failed"))
+            except Exception:
+                pass
+            try:
+                gauge.SetRange(100)
+                gauge.SetValue(100)
+            except Exception:
+                pass
+            try:
+                wx.MessageBox(t("updates.helper_failed_detail").format(error=message), t("updates.helper_title"), wx.OK | wx.ICON_ERROR, frame)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+            result["code"] = 1
+            done_event.set()
+            try:
+                frame.Close()
+            except Exception:
+                pass
 
-        status.setText(t("updates.helper_failed"))
-        bar.setRange(0, 100)
-        QMessageBox.critical(
-            dialog,
-            t("updates.helper_title"),
-            t("updates.helper_failed_detail").format(error=message),
-        )
-        dialog.reject()
+        try:
+            wx.CallAfter(_do)  # type: ignore[attr-defined]
+        except Exception:
+            _do()
 
-    worker.failed.connect(show_failure)
-    worker.done.connect(thread.quit)
-    worker.failed.connect(thread.quit)
-    dialog.show()
+    def on_done() -> None:
+        def _do() -> None:
+            result["code"] = 0
+            done_event.set()
+            try:
+                frame.Close()
+            except Exception:
+                pass
+
+        try:
+            wx.CallAfter(_do)  # type: ignore[attr-defined]
+        except Exception:
+            _do()
+
+    def worker() -> None:
+        try:
+            perform_update(HelperConfig.load(config_path), lambda v, m: update_progress(v, m))
+        except Exception as exc:
+            show_failure(str(exc))
+        else:
+            on_done()
+
+    def on_close(event) -> None:
+        if not done_event.is_set() and event.CanVeto():
+            event.Veto()
+            return
+        event.Skip()
+
+    frame.Bind(wx.EVT_CLOSE, on_close)
+    thread = threading.Thread(target=worker, daemon=True)
+    frame.Show()
     config_path.with_suffix(".ready").write_text("ready", encoding="ascii")
     thread.start()
-    result = dialog.exec()
-    thread.wait()
-    return 0 if result else 1
+    if created_app:
+        try:
+            app.MainLoop()  # type: ignore[attr-defined]
+        except Exception:
+            pass
+        thread.join()
+        return int(result["code"])
+    else:
+        while not done_event.is_set():
+            try:
+                wx.Yield()  # type: ignore[attr-defined]
+            except Exception:
+                pass
+            done_event.wait(0.05)
+        thread.join()
+        return int(result["code"])
 
 
 def _localized_progress_text(message: str, translate) -> str:

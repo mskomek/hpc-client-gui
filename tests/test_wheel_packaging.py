@@ -64,7 +64,6 @@ def test_registry_client_uses_pep440_version_support() -> None:
     code = (
         "import sys; sys.path.insert(0, 'src');"
         "from hpc_gui.plugins.registry_client import find_registry_entry;"
-        "from hpc_gui.ui.dialogs import plugin_manager_dialog;"
         "print('ok')"
     )
     result = subprocess.run(

@@ -125,13 +125,10 @@ class TestRepositoryBaseline:
         pyproject = ROOT / "pyproject.toml"
         content = pyproject.read_text(encoding="utf-8")
         assert "wxPython" in content, "wxPython not in dependencies"
-        assert "legacy-qt" in content, "legacy-qt extra missing"
-        assert "PySide6" in content, "PySide6 legacy-qt extra missing"
-        mandatory = content.split("[project.optional-dependencies]")[0]
-        assert "PySide6" not in mandatory, (
-            "PySide6 must not be a mandatory production dependency "
-            "(legacy-qt extra only)"
-        )
+        # 2026-11-06 legacy split: Qt is archived under legacy/qt and is no
+        # longer an optional extra either.
+        assert "legacy-qt" not in content, "legacy-qt extra must be removed"
+        assert "PySide6" not in content, "PySide6 must not be declared at all"
         # requirements.txt is a gate-scanned production dependency file
         # (scripts/qt_removal_gate.py): it must ship the wx runtime, not Qt.
         req_lines = (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()

@@ -25,6 +25,10 @@ Automated evidence only; manual-only behavior is never marked covered.
 | GUI-JOBS-002 | COVERED | jobs_outputs_widget.py | wx_jobs.py | test_wx_jobs_files_outputs.py; test_jobs_outputs_scroll.py; test_wx_jobs.py; test_wx_jobs_behavior.py |
 | GUI-JOBS-003 | COVERED | services/ | wx_jobs.py | test_job_history_dashboard.py |
 | GUI-JOBS-004 | COVERED | walltime_suggestions.py | wx_jobs.py | test_walltime_suggestions.py |
+| GUI-JOBS-005 | COVERED | services/selected_job_context.py | services/selected_job_context.py; wx_jobs.py | tests/test_selected_job_context.py; tests/test_wx_jobs_files_outputs.py::test_wx_jobs_details_latest_selection_wins_over_slow_scontrol |
+| GUI-JOBS-006 | COVERED | wx_jobs.py | wx_jobs.py | tests/test_gui_verification.py (51/51); tests/test_wx_jobs_files_outputs.py |
+| GUI-JOBS-007 | COVERED | services/output_channel_resolver.py | services/output_channel_resolver.py; services/output_follower.py; wx_jobs.py | tests/test_output_channel_resolver.py; tests/test_output_follower.py; tests/test_wx_jobs_files_outputs.py |
+| GUI-JOBS-009 | COVERED | wx_remote_files_view.py | wx_remote_files_view.py; wx_jobs.py | tests/test_wx_jobs_files_outputs.py::test_wx_jobs_files_tab_loads_selected_job_files; tests/test_wx_jobs_files_outputs.py::test_wx_jobs_files_tab_stale_job_result_ignored |
 | GUI-EDIT-001 | COVERED | editor_widget.py | wx_editor.py | test_wx_editor_tabs.py; test_wx_editor.py |
 | GUI-EDIT-002 | COVERED | main_window.py | wx_shell.py; wx_editor_windows.py; wx_editor_view.py | test_wx_editor_tabs.py; test_wx_editor.py; test_wx_editor_window_parity.py; test_wx_remote_editor_flow.py; test_wx_term002.py |
 | GUI-PLUGIN-001 | COVERED | plugin_manager_dialog.py | wx_plugins.py | test_wx_plugins.py |

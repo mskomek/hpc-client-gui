@@ -60,7 +60,6 @@ def test_gui_subcommand_uses_configured_wx_runtime(monkeypatch) -> None:
     wx_shell = types.ModuleType("hpc_gui.wx_shell")
     wx_shell.main = Mock(return_value=0)
     monkeypatch.setitem(sys.modules, "hpc_gui.wx_shell", wx_shell)
-    monkeypatch.setattr("hpc_gui.cli.gui.DEFAULT_GUI_RUNTIME", "wx")
 
     assert launch_gui() == 0
     wx_shell.main.assert_called_once_with()

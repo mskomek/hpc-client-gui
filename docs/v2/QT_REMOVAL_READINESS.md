@@ -46,3 +46,7 @@ packaging blocker files` counts the unique spec files containing them.
 Evidence rules are strict: a test plan is not test evidence, file existence is
 not `PASS`, import smoke is not packaged GUI smoke, Windows `PASS` is not
 Linux/macOS `PASS`, and evidence from another SHA is not current evidence.
+
+## 2026-11-06 legacy split
+
+Qt code moved to `legacy/qt/` (untracked, ignored via `.gitignore`) at base `3d74ee3c`. The archive preserves `src/hpc_gui/ui/`, `src/hpc_gui/app.py`, Qt plugin pages, `services/x11_runner.py`, `services/terminal_bridge.py`, Qt-only tests and `scripts/capture_current_gui_qt.py` / `scripts/generate_qt_lgpl_sources.py` (see `legacy/qt/README.md`). Packaged and manual platform evidence (Windows/Linux/macOS `wx-packaged-smoke` and `wx-manual-parity`) is still required by the gate; Qt removal readiness remains `NO-GO` until that evidence is supplied.

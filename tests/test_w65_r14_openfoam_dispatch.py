@@ -23,7 +23,6 @@ from hpc_gui.plugins.trusted_api3 import (
 )
 from hpc_gui.services import plugin_menu_actions as pma
 from hpc_gui.services.wx_plugin_menu_host import WxPluginMenuHost
-from hpc_gui.ui.plugin_menu_qt_host import QtPluginMenuHost
 
 ENGINE_REL = "engine/openfoam_lint/__init__.py"
 TEMPLATES_REL = "templates/index.json"
@@ -207,43 +206,6 @@ def _wx_frame_context(monkeypatch):
     return editor, frames
 
 
-def _qt_dialog_context(monkeypatch):
-    from PySide6 import QtWidgets
-
-    dialogs = []
-
-    class Dialog:
-        def __init__(self, parent):
-            self.parent = parent
-            self.title = ""
-            self.widget = None
-            self.executed = False
-            dialogs.append(self)
-
-        def setWindowTitle(self, title):
-            self.title = title
-
-        def resize(self, *_size):
-            pass
-
-        def exec(self):
-            self.executed = True
-            return 0
-
-    class Layout:
-        def __init__(self, dialog):
-            self.dialog = dialog
-            self.widget = None
-
-        def addWidget(self, widget):
-            self.widget = widget
-            self.dialog.widget = widget
-
-    monkeypatch.setattr(QtWidgets, "QDialog", Dialog)
-    monkeypatch.setattr(QtWidgets, "QVBoxLayout", Layout)
-    return object(), dialogs
-
-
 def _legacy_short(plugin_id: str) -> models.InstalledPlugin:
     caps = ("application-tools",) if "studio" in plugin_id else ("lint-rules", "linter-tool")
     manifest = models.PluginManifest(
@@ -272,7 +234,6 @@ def test_candidate_version_with_wrong_payload_fails_closed(tmp_path: Path):
     assert api3_error_for_dir(installed.manifest, package) is not None
     assert pma.is_openfoam_dispatch_ready(installed) is False
     assert WxPluginMenuHost().run_openfoam_studio(installed) is False
-    assert QtPluginMenuHost().run_openfoam_studio(installed) is False
 
 
 def test_wrong_ids_never_fall_back(tmp_path: Path, monkeypatch):
@@ -403,32 +364,6 @@ def test_wx_linter_validate_uses_verified_bytes(tmp_path: Path, monkeypatch):
     studio_pkg = _write_package(tmp_path / "s", studio_manifest, {TEMPLATES_REL: TEMPLATES_SRC})
     studio = _installed(studio_manifest, studio_pkg)
     assert host.validate_with_openfoam_linter(studio) is False
-
-
-def test_qt_linter_and_studio_route_through_pinned_descriptors(tmp_path: Path, monkeypatch):
-    import hpc_gui.plugins.trusted_api3 as t3
-
-    manifest, _ = _linter_manifest()
-    manifest_bytes = json.dumps(manifest).encode()
-    studio_manifest = _studio_manifest()
-    studio_bytes = json.dumps(studio_manifest).encode()
-    monkeypatch.setattr(
-        t3, "APPROVED_API3_PINS",
-        _pins_for(manifest, manifest_bytes) | _pins_for(studio_manifest, studio_bytes),
-    )
-    package = _write_package(tmp_path, manifest, {ENGINE_REL: ENGINE_SRC})
-    installed = _installed(manifest, package)
-    window, dialogs = _qt_dialog_context(monkeypatch)
-    qhost = QtPluginMenuHost(editor_widget=None, host_window=window)
-    assert qhost.validate_with_openfoam_linter(installed) is True
-    assert len(dialogs) == 1 and dialogs[0].executed
-    assert dialogs[0].widget is not None
-    studio_package = _write_package(tmp_path / "studio", studio_manifest, {})
-    studio = _installed(studio_manifest, studio_package)
-    assert qhost.run_openfoam_studio(studio) is True
-    assert qhost.new_openfoam_case(studio) is True
-    assert qhost.create_openfoam_job_draft(studio) is True
-    assert len(dialogs) == 4 and all(dialog.widget is not None for dialog in dialogs)
 
 
 def test_wx_studio_routes_to_owned_page(tmp_path: Path, monkeypatch):
