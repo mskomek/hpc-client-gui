@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from hpc_gui.core.i18n import t
-from hpc_gui.core.paths import app_data_dir, app_log_dir
+from hpc_gui.core.paths import app_data_dir, app_log_dir, third_party_dir
 
 # X11 goals:
 # - Third-party executables must be installed by the user from official sources.
@@ -139,12 +139,31 @@ def ensure_xquartz_available(
 
 
 def vcxsrv_executable_path() -> Optional[Path]:
-    """Return a user-installed VcXsrv executable, never an app download cache."""
+    """Return an installed VcXsrv executable without downloading one.
+
+    VcXsrv is normally installed either system-wide (``Program Files``) or
+    per-user (``%LOCALAPPDATA%\\Programs\\VcXsrv``).  The per-user location was
+    missing from discovery, so a normal installer run left X11 disabled even
+    though the server was present.  The app-managed ``third_party`` copy is
+    kept as the final candidate because releases before the downloader was
+    removed installed VcXsrv there; nothing is downloaded or executed from a
+    temporary cache.
+    """
     candidates = [shutil.which("vcxsrv"), shutil.which("XWin")]
     for env_name in ("ProgramFiles", "ProgramFiles(x86)"):
         root = os.environ.get(env_name)
         if root:
             candidates.extend((str(Path(root) / "VcXsrv" / "vcxsrv.exe"), str(Path(root) / "VcXsrv" / "XWin.exe")))
+    for env_name in ("LOCALAPPDATA", "APPDATA"):
+        root = os.environ.get(env_name)
+        if root:
+            per_user = Path(root) / "Programs" / "VcXsrv"
+            candidates.extend((str(per_user / "vcxsrv.exe"), str(per_user / "XWin.exe")))
+    try:
+        managed = third_party_dir() / "vcxsrv"
+        candidates.extend((str(managed / "runtime" / "vcxsrv.exe"), str(managed / "vcxsrv.exe")))
+    except Exception:
+        pass
     return next((Path(value) for value in candidates if value and Path(value).is_file()), None)
 
 
