@@ -28,8 +28,8 @@ def clean_env(monkeypatch, tmp_path):
     return tmp_path
 
 
-def _install(root: Path) -> Path:
-    exe = root / "vcxsrv.exe"
+def _install(root: Path, name: str = "vcxsrv.exe") -> Path:
+    exe = root / name
     exe.parent.mkdir(parents=True, exist_ok=True)
     exe.write_bytes(b"stub")
     return exe
@@ -38,6 +38,20 @@ def _install(root: Path) -> Path:
 def test_per_user_installer_location_is_discovered(clean_env, monkeypatch):
     monkeypatch.setenv("LOCALAPPDATA", str(clean_env / "local"))
     exe = _install(clean_env / "local" / "Programs" / "VcXsrv")
+
+    assert xserver_manager.vcxsrv_executable_path() == exe
+
+
+def test_per_user_xwin_name_is_accepted(clean_env, monkeypatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(clean_env / "local"))
+    exe = _install(clean_env / "local" / "Programs" / "VcXsrv", "XWin.exe")
+
+    assert xserver_manager.vcxsrv_executable_path() == exe
+
+
+def test_roaming_appdata_programs_location_is_discovered(clean_env, monkeypatch):
+    monkeypatch.setenv("APPDATA", str(clean_env / "roaming"))
+    exe = _install(clean_env / "roaming" / "Programs" / "VcXsrv")
 
     assert xserver_manager.vcxsrv_executable_path() == exe
 
