@@ -139,12 +139,17 @@ def ensure_xquartz_available(
 
 
 def vcxsrv_executable_path() -> Optional[Path]:
-    """Return a user-installed VcXsrv executable, never an app download cache."""
+    """Find system-wide or per-user VcXsrv without downloading binaries."""
     candidates = [shutil.which("vcxsrv"), shutil.which("XWin")]
     for env_name in ("ProgramFiles", "ProgramFiles(x86)"):
         root = os.environ.get(env_name)
         if root:
             candidates.extend((str(Path(root) / "VcXsrv" / "vcxsrv.exe"), str(Path(root) / "VcXsrv" / "XWin.exe")))
+    for env_name in ("LOCALAPPDATA", "APPDATA"):
+        root = os.environ.get(env_name)
+        if root:
+            per_user = Path(root) / "Programs" / "VcXsrv"
+            candidates.extend((str(per_user / "vcxsrv.exe"), str(per_user / "XWin.exe")))
     return next((Path(value) for value in candidates if value and Path(value).is_file()), None)
 
 
