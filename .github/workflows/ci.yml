@@ -116,6 +116,7 @@ jobs:
           tests/test_cli_profile_refactor_contracts.py
           tests/test_wx_shell_teardown_contracts.py
           tests/test_wx_shell_sizing.py
+          tests/test_wx_clipboard.py
           tests/test_config_refactor_contracts.py
           tests/test_x11_server_discovery.py
           tests/test_x11_server_startup.py
