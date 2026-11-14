@@ -7,6 +7,7 @@ from typing import Iterator, List, Tuple
 
 from hpc_gui.services.files_base import RESUME_DEST_LARGER, FilesBackend, RemoteEntry
 from hpc_gui.services.files_ssh_support import _raise_on_failed_run, _translate_remote_errors
+from hpc_gui.services.files_ssh_text import SSHTextMixin
 
 _SFTP_CHUNK_SIZE = 8 * 1024 * 1024
 _SFTP_PREFETCH_REQUESTS = 64
@@ -30,7 +31,7 @@ def _enable_sftp_pipelining(stream) -> None:
 from hpc_gui.ssh.client import SSHClientWrapper
 
 
-class SSHFilesBackend(FilesBackend):
+class SSHFilesBackend(SSHTextMixin, FilesBackend):
     supports_progressive_listing = True
     def __init__(self, ssh: SSHClientWrapper):
         if not ssh.sftp:
@@ -114,45 +115,6 @@ class SSHFilesBackend(FilesBackend):
                 listing_sftp.close()
         entries.sort(key=lambda e: (not e.is_dir, e.name.lower()))
         return entries
-    def read_text(self, remote_path: str) -> str:
-        """Decode remote log/output text with replacement for display."""
-        return self._read_text(remote_path, errors="replace")
-
-    def read_text_for_edit(self, remote_path: str) -> str:
-        """Read editable text strictly to prevent replacement-byte data loss."""
-        return self._read_text(remote_path, errors="strict")
-
-    def _read_text(self, remote_path: str, *, errors: str) -> str:
-        with _translate_remote_errors(remote_path):
-            sftp = self.ssh.open_transfer_sftp()
-            try:
-                with sftp.open(remote_path, "rb") as f:
-                    data = f.read()
-                return bytes(data).decode("utf-8", errors=errors)
-            finally:
-                sftp.close()
-
-    def read_text_document(self, remote_path: str) -> tuple[str, str]:
-        from hpc_gui.services.file_open import decode_text_with_encoding
-
-        with _translate_remote_errors(remote_path):
-            sftp = self.ssh.open_transfer_sftp()
-            try:
-                with sftp.open(remote_path, "rb") as source:
-                    data = bytes(source.read())
-                return decode_text_with_encoding(data, name=remote_path)
-            finally:
-                sftp.close()
-
-    def write_text(self, remote_path: str, text: str) -> None:
-        with self.ssh.sftp.open(remote_path, "wb") as f:
-            f.write(text.encode("utf-8"))
-
-    def write_text_document(self, remote_path: str, text: str, encoding: str) -> None:
-        payload = text.encode(encoding)
-        with self.ssh.sftp.open(remote_path, "wb") as target:
-            target.write(payload)
-
     def stat(self, remote_path: str) -> Tuple[int, int]:
         with _translate_remote_errors(remote_path):
             st = self.ssh.sftp.stat(remote_path)
