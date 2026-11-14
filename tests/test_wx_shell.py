@@ -17,7 +17,7 @@ def test_wx_shell_is_optional_and_has_migration_entrypoint():
 def test_wx_shell_uses_shared_commands_and_responsive_start_size():
     source = "".join(path.read_text(encoding="utf-8") for path in Path("src/hpc_gui").glob("wx_shell*.py"))
     # Spec §3: recommended default 1440×900, min 1280×760 (accept legacy 960×640 for backward compat)
-    assert "COMMAND_REGISTRY" in source and ("size=(1440, 900)" in source or "size=(960, 640)" in source)
+    assert "COMMAND_REGISTRY" in source and "shell_sizes(" in source
     assert "TaskBarIcon" in source and "lifecycle.shutdown" in source
 
 
