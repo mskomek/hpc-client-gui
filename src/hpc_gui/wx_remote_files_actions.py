@@ -4,6 +4,7 @@ from pathlib import PurePosixPath
 from threading import Thread
 from hpc_gui.core.i18n import t
 from hpc_gui.services.file_clipboard import get_file_clipboard
+from hpc_gui.wx_clipboard import write_text
 
 
 def install_actions(view):
@@ -57,9 +58,7 @@ def install_actions(view):
             get_file_clipboard().set("move" if action == "cut" else "copy", list(selected))
             return
         if action == "copy_path" and selected:
-            if wx.TheClipboard.Open():
-                wx.TheClipboard.SetData(wx.TextDataObject("\r\n".join(selected)))
-                wx.TheClipboard.Close()
+            write_text(wx, "\r\n".join(selected))
             return
         if action == "follow_track" and selected:
             # Follow/Track: create a submenu with output targets
