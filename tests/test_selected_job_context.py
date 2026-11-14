@@ -206,6 +206,11 @@ class TestSelectedJobStoreThreadSafety:
         subscriptions = []
         errors = []
         start = threading.Barrier(6, timeout=5)
+        # An all-at-once barrier does not guarantee a subscription exists
+        # before 60 fast selections complete; that was a scheduler-dependent
+        # false failure on Linux/Windows CI. Keep subscriber/selector overlap,
+        # but require at least one registered observer before selection.
+        first_subscribed = threading.Event()
 
         def listener(ctx):
             received.append(ctx.generation)
@@ -214,12 +219,15 @@ class TestSelectedJobStoreThreadSafety:
             try:
                 start.wait()
                 subscriptions.append(store.subscribe(listener))
+                first_subscribed.set()
             except BaseException as exc:
                 errors.append(exc)
 
         def selector():
             try:
                 start.wait()
+                if not first_subscribed.wait(5):
+                    raise RuntimeError("no subscriber registered before selection")
                 for _ in range(20):
                     store.select(job_id="x")
             except BaseException as exc:
