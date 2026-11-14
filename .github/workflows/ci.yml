@@ -119,6 +119,7 @@ jobs:
           tests/test_wx_shell_sizing.py
           tests/test_wx_clipboard.py
           tests/test_ssh_files_error_contracts.py
+          tests/test_ssh_files_text_mixin.py
           tests/test_config_refactor_contracts.py
           tests/test_x11_server_discovery.py
           tests/test_x11_server_startup.py
