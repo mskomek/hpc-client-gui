@@ -78,3 +78,28 @@ def _is_local_file_url(url: str) -> bool:
 
 def _safe_json_dumps(obj) -> str:
     return json.dumps(obj, ensure_ascii=False)
+
+
+def build_terminal_diagnostic_text(reason: str, wx_module) -> str:
+    import platform as _pl
+    import sys as _sys
+
+    wx_ver = "unknown"
+    try:
+        wx_ver = wx_module.version()  # type: ignore
+    except Exception:
+        pass
+    backend = "unknown"
+    try:
+        if hasattr(wx_module.html2.WebView, "GetBackendVersionInfo"):
+            backend = str(wx_module.html2.WebView.GetBackendVersionInfo())  # type: ignore
+    except Exception:
+        pass
+    return (
+        f"{reason}\n"
+        f"wxPython: {wx_ver}\n"
+        f"Python: {_sys.version.split()[0]} platform={_pl.system()} {_pl.release()}\n"
+        f"WebView backend: {backend}\n"
+        f"Expected: WebView2/Edge on Windows, WebKit2 on Linux/macOS; install WebView2 Runtime or libwebkit2gtk.\n"
+        f"Assets expected: wx_index.html, wx_bridge.js, xterm.js, xterm.css, addon-fit.js under assets/terminal/ (vendored, no CDN).\n"
+    )
