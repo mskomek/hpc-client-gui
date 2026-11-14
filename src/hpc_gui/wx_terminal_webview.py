@@ -138,6 +138,7 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         self._generation = 0
 
         # Header state — live, updated on connect/disconnect/reconnect
+        self._status_state = "disconnected"
         self._status_text = t("login.status_disconnected")
         self._identity_text = ""
         self._dimensions_text = "--"
@@ -381,6 +382,12 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
 
     def _refresh_labels(self, _lang=None):
         self._update_accessibility_label()
+        try:
+            # The connection status label keeps the state, so it can be
+            # re-translated instead of freezing on the startup string (UI-012).
+            self._refresh_status_language()
+        except Exception:
+            pass
         try:
             self._find_ctrl.SetHint(t("login.terminal_find"))
             self._find_btn.SetLabel(t("login.terminal_find"))

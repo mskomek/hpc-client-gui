@@ -6,7 +6,7 @@ import pytest
 from hpc_gui.plugins.openfoam_studio import solver as solv
 from hpc_gui.plugins.openfoam_studio.monitor import parse_log, restart_args
 from hpc_gui.plugins.openfoam_studio.post import (
-    list_time_dirs, metric_report, render_function_object, residuals_csv, result_status,
+    metric_report, render_function_object, residuals_csv, result_status,
 )
 from hpc_gui.plugins.openfoam_studio.selection import select
 from hpc_gui.plugins.openfoam_studio.workflow import (
@@ -58,7 +58,8 @@ def test_post_missing_vs_present():
 
 def test_dag_guards_and_migration():
     dag = WorkflowDAG()
-    dag.add_node(Node("m", "blockMesh")); dag.add_node(Node("s", "simpleFoam"))
+    dag.add_node(Node("m", "blockMesh"))
+    dag.add_node(Node("s", "simpleFoam"))
     dag.add_edge("m", "s")
     assert find_cycle(dag) is None
     with pytest.raises(ValueError):

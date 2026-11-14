@@ -62,6 +62,46 @@ def test_w24_new_slurm_target_resolves_from_current_session_at_click_time():
 @pytest.mark.unit
 @pytest.mark.wx
 @pytest.mark.semantic
+def test_directories_new_file_uses_remote_files_backend():
+    from hpc_gui.wx_directories_view import _create_remote_empty_file
+
+    class Files:
+        def __init__(self):
+            self.writes = []
+
+        def write_text(self, path, content):
+            self.writes.append((path, content))
+
+    files = Files()
+    _create_remote_empty_file(files, "/scratch/user/new-case.foam")
+    assert files.writes == [("/scratch/user/new-case.foam", "")]
+
+
+@pytest.mark.unit
+@pytest.mark.wx
+@pytest.mark.semantic
+def test_directories_upload_builds_remote_transfer_items(monkeypatch):
+    from hpc_gui import wx_shell
+    from hpc_gui.wx_directories_view import _queue_directories_upload
+
+    recorded = []
+    monkeypatch.setattr(wx_shell, "_start_file_transfers", lambda *args, **kwargs: recorded.append((args, kwargs)))
+    backend = object()
+    parent = object()
+    state = {"session": {}}
+    _queue_directories_upload(state, parent, backend, (r"C:\cases\mesh.msh", r"C:\cases\run.sh"), "/scratch/user")
+    args, kwargs = recorded[0]
+    assert args[:2] == (state, None)
+    assert [(item.op, item.src, item.dst) for item in args[2]] == [
+        ("upload", r"C:\cases\mesh.msh", "/scratch/user/mesh.msh"),
+        ("upload", r"C:\cases\run.sh", "/scratch/user/run.sh"),
+    ]
+    assert kwargs == {"files_backend": backend, "parent": parent}
+
+
+@pytest.mark.unit
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_w24_directories_backend_rebind_prefers_live_session_files():
     """REQ HPC-W06-DIR-008 / SESSION-REBIND-002: live backend wins over snapshot."""
     from hpc_gui.wx_directories_view import _resolve_live_files

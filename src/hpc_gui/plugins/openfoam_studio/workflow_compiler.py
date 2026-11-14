@@ -18,6 +18,7 @@ from hpc_gui.plugins.openfoam_studio import (
     cht,
     command_schemas,
     mesh_regions,
+    numerics_text,
     numerics,
     physics,
     post,
@@ -33,6 +34,7 @@ from hpc_gui.plugins.openfoam_studio.workflow import (
     solver_before_mesh,
     Node,
 )
+
 
 SOLVER_TOOLS = frozenset(solver.SOLVER_BINARIES)
 MESH_TOOLS = frozenset({"blockMesh", "snappyHexMesh", "meshConverter"})
@@ -103,17 +105,17 @@ def _solver_files(tool: str, params: dict) -> list[tuple[str, str, bool]]:
     write_interval = params.get("writeInterval", 10.0)
     files = [("system/controlDict",
               numerics.render_control_dict(tool, 0.0, end_time, delta_t, write_interval), False)]
-    nu_entries = {"ddt": "Euler" if family == "transient" else "steadyState",
+    nu_entries = {"ddt": numerics_text.ddt_scheme(tool),
                   "grad": "Gauss linear", "div": "Gauss linear",
                   "laplacian": "Gauss linear corrected", "family": family}
     numerics.validate_fv_schemes(nu_entries["ddt"], nu_entries["grad"],
                                  nu_entries["div"], nu_entries["laplacian"],
-                                 nu_entries["family"])
-    files.append(("system/fvSchemes", _fv_schemes_text(tool, family), False))
+                                 nu_entries["family"], tool=tool)
+    files.append(("system/fvSchemes", numerics_text.fv_schemes_text(tool, family), False))
     numerics.validate_fv_solution("GAMG",
                                   {"nCorrectors": 2} if family == "transient" else None,
                                   {"p": 0.3, "U": 0.7})
-    files.append(("system/fvSolution", _fv_solution_text(tool, family), False))
+    files.append(("system/fvSolution", numerics_text.fv_solution_text(tool, family), False))
     internal = {"U": "(0 0 0)", "p": "0", "T": "300",
                 "k": "0.1", "epsilon": "0.01", "omega": "1.0",
                 "alpha.water": "0", "p_rgh": "0"}
@@ -141,30 +143,6 @@ def _solver_files(tool: str, params: dict) -> list[tuple[str, str, bool]]:
         files.append(("constant/thermophysicalProperties",
                       advanced_physics.thermophysical_properties_dict(family), False))
     return files
-
-
-def _fv_schemes_text(tool: str, family: str) -> str:
-    ddt = "Euler" if family == "transient" else "steadyState"
-    return ("FoamFile\n{\n    version 2.0;\n    format ascii;\n    class dictionary;\n"
-            f"    object fvSchemes; // {tool}\n}}\n"
-            f"ddtSchemes {{ default {ddt}; }}\n"
-            "gradSchemes { default Gauss linear; }\n"
-            "divSchemes { default Gauss linear; }\n"
-            "laplacianSchemes { default Gauss linear corrected; }\n"
-            "interpolationSchemes { default linear; }\n"
-            "snGradSchemes { default corrected; }\n")
-
-
-def _fv_solution_text(tool: str, family: str) -> str:
-    if family == "transient":
-        algo = "PIMPLE\n{\n    nCorrectors 2;\n    nNonOrthogonalCorrectors 0;\n}\n"
-    else:
-        algo = "SIMPLE\n{\n    nNonOrthogonalCorrectors 0;\n}\n"
-    return ("FoamFile\n{\n    version 2.0;\n    format ascii;\n    class dictionary;\n"
-            f"    object fvSolution; // {tool}\n}}\n"
-            "solvers\n{\n    p { solver GAMG; tolerance 1e-06; relTol 0.1; }\n"
-            "    U { solver smoothSolver; tolerance 1e-05; relTol 0.1; }\n}\n"
-            + algo + "relaxationFactors { equations { U 0.7; } }\n")
 
 
 def _ops_for_tool(node: Node) -> list[PatchOp]:

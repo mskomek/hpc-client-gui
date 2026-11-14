@@ -1,18 +1,31 @@
 """Wave 51 multi-document real-event tests."""
 import pytest
+import time
 wx = pytest.importorskip("wx")
 
 pytestmark = [pytest.mark.gui, pytest.mark.wx]
 
 from hpc_gui.wx_editor_view import build_editor_panel
+import hpc_gui.wx_editor_view as editor_view
 
-def _make_panel():
+def _make_panel(path="/tmp/a.sh", save_remote=None):
     app = wx.App.Get() or wx.App(False)
     frame = wx.Frame(None)
-    panel = build_editor_panel(frame, path="/tmp/a.sh", content="hello", is_local=True)
+    panel = build_editor_panel(
+        frame, path=path, content="hello", is_local=True, save_remote=save_remote
+    )
     frame.Show()
     wx.Yield()
     return app, frame, panel
+
+
+def _wait_for(predicate):
+    deadline = time.monotonic() + 3
+    while not predicate() and time.monotonic() < deadline:
+        wx.Yield()
+        time.sleep(0.01)
+    wx.Yield()
+    return predicate()
 
 def _close_panel(frame):
     try:
@@ -38,6 +51,8 @@ def test_wx_editor_open_second_document_creates_tab():
         wx.Yield()
         assert tabs.GetPageCount() == 2
         assert tabs.GetPageText(1) == "b.sh"
+        from wx.lib.agw import aui
+        assert tabs.GetWindowStyleFlag() & aui.AUI_NB_CLOSE_ON_ALL_TABS
     finally:
         _close_panel(frame)
 
@@ -118,10 +133,12 @@ def test_wx_editor_save_clears_dirty_marker(monkeypatch):
     finally:
         _close_panel(frame)
 
-def test_wx_editor_close_dirty_tab_save(monkeypatch):
-    app, frame, panel = _make_panel()
+def test_wx_editor_close_dirty_background_tab_saves_before_close(monkeypatch, tmp_path):
+    first_path = tmp_path / "a.sh"
+    second_path = tmp_path / "b.sh"
+    app, frame, panel = _make_panel(str(first_path))
     try:
-        panel._wx_editor_load_document("/tmp/b.sh", "b", is_local=True)
+        panel._wx_editor_load_document(str(second_path), "b", is_local=True)
         wx.Yield()
         tabs = panel._wx_editor_controls["doc_tabs"]
         # make first tab dirty
@@ -136,14 +153,112 @@ def test_wx_editor_close_dirty_tab_save(monkeypatch):
         editor.GetEventHandler().ProcessEvent(evt2)
         wx.Yield()
         assert "*" in tabs.GetPageText(0)
-        monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)
-        # close first tab (dirty) with save
-        result = panel._wx_editor_close_tab(0)
+        tabs.SetSelection(1)
+        switch = wx.BookCtrlEvent(wx.wxEVT_NOTEBOOK_PAGE_CHANGED, tabs.GetId())
+        switch.SetSelection(1)
+        switch.SetOldSelection(0)
+        tabs.GetEventHandler().ProcessEvent(switch)
         wx.Yield()
+        monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)
+        # Closing a background tab must save its own content before removal.
+        result = panel._wx_editor_close_tab(0)
         assert result is True
+        assert _wait_for(lambda: tabs.GetPageCount() == 1)
         assert tabs.GetPageCount() == 1
-        # remaining should be b.sh
         assert "b.sh" in tabs.GetPageText(0)
+        assert first_path.read_text(encoding="utf-8") == "dirty a"
+    finally:
+        _close_panel(frame)
+
+
+def test_wx_editor_close_dirty_remote_tab_saves_before_close(monkeypatch, tmp_path):
+    saved = []
+    app, frame, panel = _make_panel(str(tmp_path / "a.sh"), save_remote=lambda path, text: saved.append((path, text)))
+    try:
+        panel._wx_editor_load_document("/remote/c.sh", "remote original", is_local=False)
+        wx.Yield()
+        tabs = panel._wx_editor_controls["doc_tabs"]
+        tabs.SetSelection(1)
+        switch = wx.BookCtrlEvent(wx.wxEVT_NOTEBOOK_PAGE_CHANGED, tabs.GetId())
+        switch.SetSelection(1)
+        switch.SetOldSelection(0)
+        tabs.GetEventHandler().ProcessEvent(switch)
+        wx.Yield()
+        editor = panel._wx_editor_controls["editor"]
+        editor.SetValue("remote edited")
+        changed = wx.CommandEvent(wx.wxEVT_TEXT, editor.GetId())
+        editor.GetEventHandler().ProcessEvent(changed)
+        wx.Yield()
+        monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)
+        assert panel._wx_editor_close_tab(1) is True
+        assert _wait_for(lambda: tabs.GetPageCount() == 1)
+        assert saved == [("/remote/c.sh", "remote edited")]
+    finally:
+        _close_panel(frame)
+
+
+def test_wx_editor_close_cancelled_external_change_keeps_tab_enabled(monkeypatch, tmp_path):
+    first_path = tmp_path / "a.sh"
+    first_path.write_text("initial disk", encoding="utf-8")
+    app, frame, panel = _make_panel(str(first_path))
+    try:
+        panel._wx_editor_load_document(str(tmp_path / "b.sh"), "b", is_local=True)
+        wx.Yield()
+        tabs = panel._wx_editor_controls["doc_tabs"]
+        tabs.SetSelection(0)
+        switch = wx.BookCtrlEvent(wx.wxEVT_NOTEBOOK_PAGE_CHANGED, tabs.GetId())
+        switch.SetSelection(0)
+        switch.SetOldSelection(1)
+        tabs.GetEventHandler().ProcessEvent(switch)
+        editor = panel._wx_editor_controls["editor"]
+        editor.SetValue("dirty edit")
+        changed = wx.CommandEvent(wx.wxEVT_TEXT, editor.GetId())
+        editor.GetEventHandler().ProcessEvent(changed)
+        first_path.write_text("external edit", encoding="utf-8")
+        choices = iter((wx.YES, wx.NO))
+        monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: next(choices))
+
+        assert panel._wx_editor_close_tab(0) is False
+        assert tabs.IsEnabled()
+        assert tabs.GetPageCount() == 2
+        assert "*" in tabs.GetPageText(0)
+        assert first_path.read_text(encoding="utf-8") == "external edit"
+    finally:
+        _close_panel(frame)
+
+
+def test_wx_editor_thread_start_failure_keeps_dirty_tab_open(monkeypatch, tmp_path):
+    class FailedThread:
+        def __init__(self, **_kwargs):
+            pass
+
+        def start(self):
+            raise RuntimeError("thread start failed")
+
+    app, frame, panel = _make_panel(str(tmp_path / "a.sh"), save_remote=lambda *_: None)
+    try:
+        panel._wx_editor_load_document("/remote/b.sh", "remote", is_local=False)
+        wx.Yield()
+        tabs = panel._wx_editor_controls["doc_tabs"]
+        tabs.SetSelection(1)
+        switch = wx.BookCtrlEvent(wx.wxEVT_NOTEBOOK_PAGE_CHANGED, tabs.GetId())
+        switch.SetSelection(1)
+        switch.SetOldSelection(0)
+        tabs.GetEventHandler().ProcessEvent(switch)
+        editor = panel._wx_editor_controls["editor"]
+        editor.SetValue("dirty remote")
+        changed = wx.CommandEvent(wx.wxEVT_TEXT, editor.GetId())
+        editor.GetEventHandler().ProcessEvent(changed)
+        wx.Yield()
+        monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)
+        monkeypatch.setattr(editor_view, "Thread", FailedThread)
+
+        assert panel._wx_editor_close_tab(1) is False
+        assert panel._wx_editor_state["in_flight"] is False
+        assert tabs.IsEnabled()
+        assert editor.IsEnabled()
+        assert tabs.GetPageCount() == 2
+        assert "*" in tabs.GetPageText(1)
     finally:
         _close_panel(frame)
 

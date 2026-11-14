@@ -12,6 +12,7 @@ import re
 from dataclasses import dataclass
 
 from hpc_gui.openfoam_core.release_support import OPENFOAM_EDITION, release_profile
+from hpc_gui.openfoam_core.shell_safety import render_exec_line
 
 
 _JOB_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
@@ -199,7 +200,7 @@ def render_slurm_wrapper(
         'printf \'%s  %s\\n\' "$expected_allrun_sha256" ./Allrun | sha256sum --check --status || {',
         '  echo "Allrun does not match the reviewed workflow draft" >&2; exit 1',
         "}",
-        "exec bash -- ./Allrun",
+        "exec " + render_exec_line(["bash", "--", "./Allrun"]),
     ]
     return "\n".join(header + guard) + "\n"
 

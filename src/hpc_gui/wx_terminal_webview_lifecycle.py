@@ -155,13 +155,27 @@ class TerminalLifecycleMixin:
 
     def _update_status(self, state: str):
         """Update the connection status label. States: disconnected, connecting, connected, reconnecting."""
+        self._status_state = state
+        self._status_text = self._status_text_for(state)
+        try:
+            self._status_label.SetLabel(self._status_text)
+        except Exception:
+            pass
+
+    def _status_text_for(self, state: str) -> str:
+        """Translate a connection state, keeping the state itself for re-renders."""
         label_map = {
             "disconnected": t("login.status_disconnected"),
             "connecting": t("login.status_connecting"),
             "connected": t("login.status_connected"),
             "reconnecting": t("login.status_reconnecting"),
         }
-        self._status_text = label_map.get(state, state)
+        return label_map.get(state, state)
+
+    def _refresh_status_language(self) -> None:
+        """Re-render the status label after a language change (W65 UI-012)."""
+        state = getattr(self, "_status_state", "disconnected")
+        self._status_text = self._status_text_for(state)
         try:
             self._status_label.SetLabel(self._status_text)
         except Exception:

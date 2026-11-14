@@ -312,6 +312,7 @@ def context_selection(
 FILE_CONTEXT_LABEL_KEYS = {
     "open": "editor.open", "open_with": "files.open_with", "edit": "dirs.edit",
     "edit_new_window": "dirs.edit_new_window", "upload": "dirs.upload", "download": "dirs.download",
+    "download_as": "dirs.download_as",
     "rename": "dirs.rename", "delete": "dirs.delete", "copy": "dirs.copy", "cut": "dirs.move",
     "move": "dirs.move", "paste": "dirs.paste", "copy_path": "dirs.copy_path", "refresh": "dirs.refresh",
     "new_tab": "dirs.new_tab", "new_folder": "dirs.new_folder", "new_file": "dirs.new_file",

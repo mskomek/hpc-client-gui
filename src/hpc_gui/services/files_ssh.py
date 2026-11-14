@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import contextlib
-import errno
 import os
-import re
 import shlex
 import stat as pystat
 from typing import Iterator, List, Tuple
@@ -30,52 +27,11 @@ def _enable_sftp_pipelining(stream) -> None:
     if callable(pipelined):
         pipelined(True)
 from hpc_gui.ssh.client import SSHClientWrapper
+from .files_ssh_support import _raise_on_failed_run, _translate_remote_errors
+from .files_ssh_text import SSHTextMixin
 
 
-@contextlib.contextmanager
-def _translate_remote_errors(remote_path: str):
-    """Re-raise a typed FileNotFoundError/PermissionError with `remote_path`
-    attached as `.filename`, so callers always get a path-bearing message
-    instead of paramiko's bare `[Errno N] ...` text."""
-    try:
-        yield
-    except (FileNotFoundError, PermissionError) as exc:
-        raise type(exc)(exc.errno, exc.strerror or str(exc), remote_path) from exc
-
-
-_QUOTED_PATH_RE = re.compile(r"'([^']+)'")
-
-
-def _raise_on_failed_run(code: int, err: str, operation: str, path: str | None = None) -> None:
-    """Translate a remote shell result into a typed failure.
-
-    A socket timeout in ``SSHClientWrapper.run`` surfaces as exit code 124;
-    surface that as ``TimeoutError`` so the CLI can route it to ``TIMEOUT``.
-
-    When `path` is given, classify a non-zero, non-timeout failure as
-    ``FileNotFoundError``/``PermissionError`` by matching well-known GNU
-    coreutils stderr wording, attaching whichever path the stderr text
-    quotes (falling back to `path` itself when the text quotes nothing) as
-    ``.filename`` so the CLI can render a path-bearing message. Omitting
-    `path` preserves today's plain ``RuntimeError`` behavior exactly.
-    """
-    if code == 124:
-        raise TimeoutError(f"{operation} timed out")
-    if code == 0:
-        return
-    text = err.strip() or f"{operation} failed (exit={code})"
-    if path is not None:
-        lowered = text.lower()
-        match = _QUOTED_PATH_RE.search(text)
-        reported_path = match.group(1) if match else path
-        if "no such file or directory" in lowered:
-            raise FileNotFoundError(errno.ENOENT, text, reported_path)
-        if "permission denied" in lowered:
-            raise PermissionError(errno.EACCES, text, reported_path)
-    raise RuntimeError(text)
-
-
-class SSHFilesBackend(FilesBackend):
+class SSHFilesBackend(SSHTextMixin, FilesBackend):
     supports_progressive_listing = True
     def __init__(self, ssh: SSHClientWrapper):
         if not ssh.sftp:
@@ -159,45 +115,6 @@ class SSHFilesBackend(FilesBackend):
                 listing_sftp.close()
         entries.sort(key=lambda e: (not e.is_dir, e.name.lower()))
         return entries
-    def read_text(self, remote_path: str) -> str:
-        """Decode remote log/output text with replacement for display."""
-        return self._read_text(remote_path, errors="replace")
-
-    def read_text_for_edit(self, remote_path: str) -> str:
-        """Read editable text strictly to prevent replacement-byte data loss."""
-        return self._read_text(remote_path, errors="strict")
-
-    def _read_text(self, remote_path: str, *, errors: str) -> str:
-        with _translate_remote_errors(remote_path):
-            sftp = self.ssh.open_transfer_sftp()
-            try:
-                with sftp.open(remote_path, "rb") as f:
-                    data = f.read()
-                return bytes(data).decode("utf-8", errors=errors)
-            finally:
-                sftp.close()
-
-    def read_text_document(self, remote_path: str) -> tuple[str, str]:
-        from hpc_gui.services.file_open import decode_text_with_encoding
-
-        with _translate_remote_errors(remote_path):
-            sftp = self.ssh.open_transfer_sftp()
-            try:
-                with sftp.open(remote_path, "rb") as source:
-                    data = bytes(source.read())
-                return decode_text_with_encoding(data, name=remote_path)
-            finally:
-                sftp.close()
-
-    def write_text(self, remote_path: str, text: str) -> None:
-        with self.ssh.sftp.open(remote_path, "wb") as f:
-            f.write(text.encode("utf-8"))
-
-    def write_text_document(self, remote_path: str, text: str, encoding: str) -> None:
-        payload = text.encode(encoding)
-        with self.ssh.sftp.open(remote_path, "wb") as target:
-            target.write(payload)
-
     def stat(self, remote_path: str) -> Tuple[int, int]:
         with _translate_remote_errors(remote_path):
             st = self.ssh.sftp.stat(remote_path)
@@ -211,6 +128,20 @@ class SSHFilesBackend(FilesBackend):
         """
         with _translate_remote_errors(remote_path):
             st = self.ssh.sftp.stat(remote_path)
+        mode = int(getattr(st, "st_mode", 0) or 0)
+        return RemoteEntry(
+            name=os.path.basename(remote_path.rstrip("/")) or "/",
+            path=remote_path,
+            is_dir=pystat.S_ISDIR(mode),
+            size=int(getattr(st, "st_size", 0) or 0),
+            mtime=int(getattr(st, "st_mtime", 0) or 0),
+            mode=mode,
+        )
+
+    def lstat_entry(self, remote_path: str) -> RemoteEntry:
+        """Return remote metadata without following the final symlink."""
+        with _translate_remote_errors(remote_path):
+            st = self.ssh.sftp.lstat(remote_path)
         mode = int(getattr(st, "st_mode", 0) or 0)
         return RemoteEntry(
             name=os.path.basename(remote_path.rstrip("/")) or "/",

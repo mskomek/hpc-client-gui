@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.local_navigation_store import LocalNavigationStore
 
 
@@ -94,6 +95,7 @@ def build_local_files_navigation(wx, parent, browser, translate):
     heading.SetFont(heading_font)
     navigation.Add(heading, 0, wx.LEFT | wx.TOP | wx.RIGHT, 12)
     navigation.AddSpacer(8)
+    label_widgets = [(heading, "ftp.local_nav_title")]
 
     home = Path.home()
     model = getattr(browser, "_wx_local_model", None)
@@ -137,11 +139,13 @@ def build_local_files_navigation(wx, parent, browser, translate):
         button.SetToolTip(str(target))
         button.Bind(wx.EVT_BUTTON, lambda _event, path=target: open_location(path))
         navigation.Add(button, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
+        label_widgets.append((button, label_key))
 
     navigation.AddSpacer(4)
     navigation.Add(wx.StaticLine(sidebar), 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 8)
     drives = wx.Button(sidebar, label=translate("ftp.local_nav_drives"), style=wx.BU_LEFT)
     drives.SetMinSize(wx.Size(150, 34))
+    label_widgets.append((drives, "ftp.local_nav_drives"))
 
     def show_drives(_event=None):
         control = getattr(browser, "_wx_local_controls", {}).get("btn_drives")
@@ -152,6 +156,8 @@ def build_local_files_navigation(wx, parent, browser, translate):
     navigation.Add(drives, 0, wx.EXPAND | wx.ALL, 5)
     favorites = wx.Button(sidebar, label=translate("dirs.favorites"), style=wx.BU_LEFT)
     history = wx.Button(sidebar, label=translate("dirs.history"), style=wx.BU_LEFT)
+    label_widgets.append((favorites, "dirs.favorites"))
+    label_widgets.append((history, "dirs.history"))
     for button in (favorites, history):
         button.SetMinSize(wx.Size(150, 34))
         navigation.Add(button, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
@@ -165,6 +171,22 @@ def build_local_files_navigation(wx, parent, browser, translate):
     )
     navigation.AddStretchSpacer(1)
     sidebar.SetSizer(navigation)
+
+    def refresh_navigation_labels(_language=None):
+        for widget, label_key in label_widgets:
+            try:
+                widget.SetLabel(t(label_key))
+            except Exception:
+                pass
+
+    subscribe_language_change(refresh_navigation_labels)
+    workspace.Bind(
+        wx.EVT_WINDOW_DESTROY,
+        lambda event: (
+            unsubscribe_language_change(refresh_navigation_labels),
+            event.Skip(),
+        ),
+    )
 
     browser.Reparent(workspace)
     layout.Add(sidebar, 0, wx.EXPAND | wx.RIGHT, 6)

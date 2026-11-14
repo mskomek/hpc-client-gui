@@ -4,10 +4,6 @@ import contextlib
 from pathlib import Path
 from typing import Callable, Optional, Tuple
 
-import socket
-
-from hpc_gui.core.debug_support import timed
-
 import paramiko
 
 from hpc_gui.core.logging import get_logger
@@ -21,6 +17,8 @@ from hpc_gui.ssh.auth_strategy import (
     _discoverable_key_sources,
     load_private_key_with_certificate,
 )
+from hpc_gui.ssh.client_exec import CommandExecutionMixin
+from hpc_gui.ssh.client_shell import ShellBridgeMixin
 from hpc_gui.ssh.contracts import (
     SSHConnInfo,
     SocketLike,
@@ -37,14 +35,13 @@ from hpc_gui.ssh.host_keys import (
     HostKeyRejectedError,  # noqa: F401 - compatibility re-export
     configure_known_hosts,
 )
-from hpc_gui.services.command_history_store import is_sensitive_command
 from hpc_gui.ssh.sftp_channels import (
     SFTPChannelManager,
     _SFTP_LISTING_TIMEOUT_SECONDS,  # noqa: F401  (re-exported facade constant)
     _SFTP_TRANSFER_TIMEOUT_SECONDS,  # noqa: F401  (re-exported facade constant)
 )
 from hpc_gui.ssh.retry import retry_connection
-from hpc_gui.ssh.shell_session import InteractiveShellSession, _sanitize_terminal_text
+from hpc_gui.ssh.shell_session import InteractiveShellSession
 from hpc_gui.ssh.text import decode_remote_text as _decode_remote_text
 
 class _ConnectionAuthStrategy(_BaseConnectionAuthStrategy):
@@ -59,7 +56,7 @@ class _ConnectionAuthStrategy(_BaseConnectionAuthStrategy):
         )
 
 
-class SSHClientWrapper:
+class SSHClientWrapper(ShellBridgeMixin, CommandExecutionMixin):
     def __init__(
         self,
         info: Optional[SSHConnInfo] = None,
@@ -114,8 +111,8 @@ class SSHClientWrapper:
         self._close_jump_connection()
 
     # ---------- interactive shell facade ----------
-    # The lifecycle lives in InteractiveShellSession; these bridges keep the
-    # historical attribute surface (tests inject channels/decoders directly).
+    # The lifecycle lives in InteractiveShellSession; the attribute bridges
+    # (channel, decoder, X11 forwarder, PTY sizing) live in ShellBridgeMixin.
 
     def _ensure_shell_session(self) -> InteractiveShellSession:
         if self._shell_session is None:
@@ -127,86 +124,6 @@ class SSHClientWrapper:
                 log=self.log,
             )
         return self._shell_session
-
-    def _invoke_shell(self, **kwargs):
-        assert self.client is not None
-        if not (self.info is not None and getattr(self.info, "x11_forwarding", False)):
-            return self.client.invoke_shell(**kwargs)
-        forwarder = self._prepare_x11_forwarder()
-        if forwarder is None:
-            return self.client.invoke_shell(**kwargs)
-        transport = self.client.get_transport()
-        assert transport is not None
-        channel = transport.open_session()
-        channel.get_pty(kwargs.get("term", "vt100"), kwargs.get("width", 80), kwargs.get("height", 24))
-        try:
-            forwarder.request(channel)
-            self._x11_forwarder = forwarder
-            self.log(f"X11: yönlendirme etkin (yerel ekran {forwarder.display.name})")
-        except Exception as exc:
-            forwarder.close()
-            self.log(f"X11: sunucu X11 yönlendirmeyi reddetti ({exc.__class__.__name__}: {exc})")
-        channel.invoke_shell()
-        return channel
-
-    def _prepare_x11_forwarder(self):
-        """Ensure a local X server and build a forwarder (None -> no X11)."""
-        from hpc_gui.ssh.x11_forward import X11Forwarder, local_display_from_env
-
-        self._close_x11_forwarder()
-        try:
-            from hpc_gui.services import xserver_manager
-
-            if xserver_manager._is_windows():
-                ready = xserver_manager.ensure_x_server_running(self.log, parent=None, allow_download=False)
-            elif xserver_manager._is_macos():
-                ready = xserver_manager.ensure_xquartz_available(self.log)
-            else:
-                ready = xserver_manager.is_local_x_available(self.log)
-        except Exception as exc:
-            self.log(f"X11: yerel X sunucusu denetlenemedi ({exc.__class__.__name__})")
-            ready = False
-        if not ready:
-            self.log("X11: yerel X sunucusu hazır değil; terminal X11 olmadan açılıyor.")
-            return None
-        return X11Forwarder(local_display_from_env(), log=self.log)
-
-    def _close_x11_forwarder(self) -> None:
-        forwarder = getattr(self, "_x11_forwarder", None)
-        self._x11_forwarder = None
-        if forwarder is not None:
-            try:
-                forwarder.close()
-            except Exception:
-                pass
-
-    def _on_shell_unexpected_disconnect(self, reason: str) -> None:
-        try:
-            self.close()
-        except Exception:
-            pass
-        self._notify_disconnect(reason)
-
-    @property
-    def _shell_channel(self):
-        return self._shell_session.channel if self._shell_session else None
-
-    @_shell_channel.setter
-    def _shell_channel(self, channel) -> None:
-        if channel is None:
-            if self._shell_session is not None:
-                self._shell_session.channel = None
-            return
-        session = self._ensure_shell_session()
-        session.channel = channel
-
-    @property
-    def _shell_decoder(self):
-        return self._ensure_shell_session().decoder
-
-    @_shell_decoder.setter
-    def _shell_decoder(self, decoder) -> None:
-        self._ensure_shell_session().decoder = decoder
 
     def connect(
         self,
@@ -404,37 +321,6 @@ class SSHClientWrapper:
             return
         self._shell_session = session
 
-    def activate_shell_output(self) -> None:
-        """Release shell startup output after a terminal view subscribes."""
-        if self._shell_session is not None:
-            self._shell_session.activate_output()
-
-    def resize_shell_pty(self, cols: int, rows: int) -> None:
-        cols = max(1, int(cols))
-        rows = max(1, int(rows))
-        self._shell_geometry = (cols, rows)
-        if self._shell_session is not None:
-            self._shell_session.resize(cols, rows)
-
-    def send_shell_text(self, text: str) -> bool:
-        return self._ensure_shell_session().send_text(text)
-
-    def send_shell_input(self, data: str) -> bool:
-        return self._ensure_shell_session().send_input(data)
-
-    def _send_shell_payload(self, payload: bytes) -> bool:
-        return self._ensure_shell_session().send_payload(payload)
-
-    def _decode_shell_bytes(self, data: bytes, *, final: bool = False) -> None:
-        self._ensure_shell_session().decode_bytes(data, final=final)
-
-    def _stop_shell_session(self) -> None:
-        if self._shell_session is not None:
-            try:
-                self._shell_session.stop()
-            finally:
-                self._shell_session = None
-
     def _notify_disconnect(self, reason: str) -> None:
         if not self._disconnect_cb:
             return
@@ -503,48 +389,3 @@ class SSHClientWrapper:
     def supports_transfer_sftp_channels(self) -> bool:
         """Probe whether the active connection can create isolated channels."""
         return self._sftp_channels.supports_transfer_sftp_channels()
-
-    def run(
-        self,
-        command: str,
-        *,
-        timeout_s: Optional[float] = None,
-        log_output: bool = True,
-    ) -> Tuple[int, str, str]:
-        if not self.client:
-            raise RuntimeError("SSH client not connected")
-        t0 = timed()
-        # Never echo secrets into the UI/logs.
-        if is_sensitive_command(command):
-            self.log("SSH$ <redacted>")
-        else:
-            self.log(f"SSH$ {command}")
-        stdin, stdout, stderr = self.client.exec_command(command)
-        if timeout_s is None and getattr(self.info, "timeout", None) is not None:
-            timeout_s = self.info.timeout
-        if timeout_s is not None:
-            try:
-                stdout.channel.settimeout(timeout_s)
-                stderr.channel.settimeout(timeout_s)
-            except Exception:
-                pass
-        try:
-            out = _decode_remote_text(stdout.read())
-            err = _decode_remote_text(stderr.read())
-            code = stdout.channel.recv_exit_status()
-            timed_out = False
-        except socket.timeout:
-            out = ""
-            err = ""
-            code = 124
-            timed_out = True
-        if log_output and out.strip():
-            self.log(_sanitize_terminal_text(out).rstrip("\n"))
-        if log_output and err.strip():
-            self.log("STDERR:\n" + _sanitize_terminal_text(err).rstrip("\n"))
-        dt = timed() - t0
-        if timed_out:
-            self.log(f"[timeout after {dt:.1f}s exit={code}]")
-        else:
-            self.log(f"[exit={code} duration={dt:.2f}s]")
-        return code, out, err

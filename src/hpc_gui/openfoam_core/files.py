@@ -235,6 +235,16 @@ def _remote_names(files: Any, directory: str) -> list[str]:
     return sorted(names)
 
 
+def remote_entry_names(
+    files: Any, directory: str, *, maximum_entries: int | None = None,
+) -> tuple[list[str], bool]:
+    """Sorted names of one remote directory; the flag reports truncation."""
+    names = _remote_names(files, directory)
+    if maximum_entries is None or len(names) <= maximum_entries:
+        return names, False
+    return names[:maximum_entries], True
+
+
 def _remote_read(files: Any, path: str, *, maximum: int) -> bytes:
     import tempfile
 

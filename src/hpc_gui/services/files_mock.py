@@ -50,6 +50,21 @@ class MockFilesBackend(FilesBackend):
     def _touch(self, path: str) -> None:
         self._mt[_norm(path)] = int(time.time())
 
+    def lstat_entry(self, remote_path: str) -> RemoteEntry:
+        """Return mock metadata; the mock tree contains no symlinks."""
+        path = _norm(remote_path)
+        if path not in self._mode:
+            raise FileNotFoundError(path)
+        mode = self._mode[path]
+        return RemoteEntry(
+            name=posixpath.basename(path) or "/",
+            path=path,
+            is_dir=bool(stat.S_ISDIR(mode)),
+            size=len(self._files.get(path, b"")),
+            mtime=self._mt.get(path, 0),
+            mode=mode,
+        )
+
     def _ensure_parent_dirs(self, path: str) -> None:
         cur = posixpath.dirname(_norm(path))
         pending = []

@@ -4,6 +4,7 @@ from __future__ import annotations
 from threading import Event, Thread
 from pathlib import PurePosixPath
 from hpc_gui.services.transfer_session_controller import TransferSessionController
+from hpc_gui.services.transfer_controller import TransferCancelled
 from hpc_gui.services.transfer_conflict_policy import resolve_conflict_action
 import inspect
 import os
@@ -35,12 +36,18 @@ def _run_file_view_item(files, item, progress, *, conflict_decision=None):
         method = files.resume_upload if conflict_decision == "resume" else files.upload
         try:
             _call_transfer_with_progress(method, item.src, item.dst, progress)
+        except TransferCancelled:
+            # A mid-chunk cancel must reach the engine as a cancellation, not
+            # as a generic upload failure.
+            raise
         except Exception as error:
             raise RuntimeError(f"Upload failed ({item.src} -> {item.dst}): {error}") from error
     elif item.op == "download":
         method = files.resume_download if conflict_decision == "resume" else files.download
         try:
             _call_transfer_with_progress(method, item.src, item.dst, progress)
+        except TransferCancelled:
+            raise
         except Exception as error:
             raise RuntimeError(f"Download failed ({item.src} -> {item.dst}): {error}") from error
     elif item.op == "mkdir_remote":

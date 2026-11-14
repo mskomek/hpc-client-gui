@@ -1,4 +1,9 @@
-"""Boundary/physics lint bindings (W65 LINT-013, G37)."""
+"""Legacy prototypes for boundary/physics lint bindings (W65 LINT-013, G37).
+
+Library-only: no production module imports this file. OF-SOLVER-010 is owned
+by the canonical engine with warning/contextual semantics; the error/definite
+variant here is not shipped.
+"""
 
 from __future__ import annotations
 

@@ -10,6 +10,30 @@ from dataclasses import dataclass
 SUPPORTED_FUNCTION_OBJECTS = ("probes", "forces", "forceCoeffs", "fieldAverage",
                               "yPlus", "wallShearStress", "patchAverage")
 
+_LOG_TIME = re.compile(r"^Time = ([0-9.eE+-]+)\s*$")
+_LOG_RESIDUAL = re.compile(r"Solving for ([A-Za-z0-9_]+), Initial residual = ([0-9.eE+-]+)")
+
+
+def parse_residual_series(log_text: str) -> dict[str, list[tuple[float, float]]]:
+    """Return {field: [(time, initial residual), ...]} from a solver log.
+
+    Only lines the solver actually wrote are used: a "Time =" header sets the
+    current time and each "Solving for <field>, Initial residual = <value>"
+    appends a point. Pressure loops can record several points per time, and that
+    is kept rather than averaged away (W65 POST-010).
+    """
+    series: dict[str, list[tuple[float, float]]] = {}
+    current = None
+    for line in log_text.splitlines():
+        match = _LOG_TIME.match(line.strip())
+        if match:
+            current = float(match.group(1))
+            continue
+        match = _LOG_RESIDUAL.search(line)
+        if match and current is not None:
+            series.setdefault(match.group(1), []).append((current, float(match.group(2))))
+    return series
+
 
 def render_function_object(name: str, params: dict) -> str:
     if name not in SUPPORTED_FUNCTION_OBJECTS:
@@ -64,3 +88,31 @@ def metric_report(kind: str, value: float, units: str, formula: str,
                 "detail": "required sampled quantities absent; value not computed"}
     return {"kind": kind, "value": value, "units": units,
             "formula": formula, "provenance": "computed-from-case-data"}
+
+
+def parse_probe_series(text: str, *, component: int = 0) -> tuple[list[float], list[float]]:
+    """Return (times, values) from a probes file for one component.
+
+    Lines starting with # are the probes header; every other line is a time
+    followed by a scalar or a vector. Nothing is interpolated: a malformed line
+    is skipped rather than turned into a point (W65 POST-010).
+    """
+    times: list[float] = []
+    values: list[float] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        parts = stripped.replace("(", " ").replace(")", " ").split()
+        if len(parts) < 2:
+            continue
+        try:
+            time_value = float(parts[0])
+            numbers = [float(p) for p in parts[1:]]
+        except ValueError:
+            continue
+        if not 0 <= component < len(numbers):
+            continue
+        times.append(time_value)
+        values.append(numbers[component])
+    return times, values

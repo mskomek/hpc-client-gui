@@ -499,7 +499,14 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     status = wx.StaticText(panel, label=t("login.status_disconnected"))
     # Active profile distinction
     active_label = wx.StaticText(panel, label="")
-    active_label.SetForegroundColour(wx.Colour(70, 70, 70))
+    # Muted text must follow the theme: on a dark GTK theme a hardcoded
+    # dark grey is unreadable, so prefer the system greytext colour.
+    try:
+        active_label.SetForegroundColour(
+            wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
+        )
+    except Exception:
+        active_label.SetForegroundColour(wx.Colour(70, 70, 70))
     status_row = wx.BoxSizer(wx.HORIZONTAL)
     status_row.Add(status, 0, wx.RIGHT, 12)
     status_row.Add(active_label, 1, wx.EXPAND)
@@ -728,6 +735,18 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     # Language refresh
     def refresh_labels(_language=None):
         try:
+            # The connection stage text remembers its key, so it can follow the
+            # language instead of freezing on the startup string (UI-012).
+            connection_progress.refresh_language()
+        except Exception:
+            pass
+        try:
+            # The status line is state driven; re-running the state renderer is
+            # what re-translates it after a language change.
+            _update_button_states()
+        except Exception:
+            pass
+        try:
             host.set_host_title(t("tabs.connection"))
         except Exception:
             pass
@@ -869,17 +888,17 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             msg = str(exc)
             if "os_secret_store_required" in msg:
                 wx.MessageBox(t("connection.password_no_prompt_store_required"), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-                connection_progress.set_stage(t("connection.progress_failed"))
+                connection_progress.set_stage_key("connection.progress_failed")
             elif "saved_password_unavailable" in msg:
                 wx.MessageBox(t("connection.saved_password_unavailable"), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             elif "password_store_failed" in msg:
                 wx.MessageBox(t("connection.password_store_failed").format(error=msg.split(":",1)[-1]), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             elif "master_cancelled" in msg:
-                connection_progress.set_stage(t("connection.progress_cancelled"))
+                connection_progress.set_stage_key("connection.progress_cancelled")
                 return None
             else:
                 wx.MessageBox(msg, t("login.err_title"), wx.OK | wx.ICON_ERROR)
-                connection_progress.set_stage(t("connection.progress_failed"))
+                connection_progress.set_stage_key("connection.progress_failed")
             return None
         except ValueError as exc:
             msg = str(exc)
@@ -1098,7 +1117,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             wx.MessageBox(t("connection.profile_not_found").format(name=sel), t("login.err_title"), wx.OK | wx.ICON_WARNING)
             return False
         connection_progress.reset()
-        connection_progress.set_stage(t("connection.progress_credentials"), 4)
+        connection_progress.set_stage_key("connection.progress_credentials", 4)
         # Typed password for Connect Selected is empty (wx panel has no typed field);
         # stored["password"] is always empty for persisted profiles, so we rely on
         # shared resolver. For typed-override tests the caller may have set
@@ -1155,7 +1174,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             return False
         if resolved_password is None:
             wx.MessageBox(t("connection.saved_password_unavailable"), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-            connection_progress.set_stage(t("connection.progress_failed"))
+            connection_progress.set_stage_key("connection.progress_failed")
             status.SetLabel(t("connection.status_failed"))
             try:
                 model.controller.fail()
@@ -1163,7 +1182,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 pass
             _update_button_states()
             return False
-        connection_progress.set_stage(t("connection.progress_preparing"), 12)
+        connection_progress.set_stage_key("connection.progress_preparing", 12)
         # Build transient profile with resolved password – never persisted
         transient = dict(stored)
         transient["password"] = resolved_password if resolved_password is not None else ""
@@ -1183,7 +1202,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         cancel_button.Enable(True)
         status.SetLabel(t("login.status_connecting"))
         model.progress_callback = connection_progress.on_ssh_message
-        connection_progress.set_stage(t("connection.progress_network"), 18)
+        connection_progress.set_stage_key("connection.progress_network", 18)
         active_label.SetLabel("")
         try:
             model.controller.begin_connect()
@@ -1252,7 +1271,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 except Exception:
                     pass
                 cancelled_msg = t("connection.auth_cancelled")
-                connection_progress.set_stage(t("connection.progress_cancelled"))
+                connection_progress.set_stage_key("connection.progress_cancelled")
                 model.progress_callback = None
                 status.SetLabel(cancelled_msg)
                 _update_button_states()
@@ -1275,7 +1294,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                     msg = describe_wx_connect_failure(error, resolved_password=resolved_password or "")
                 except Exception:
                     msg = "Connection failed"
-                connection_progress.set_stage(t("connection.progress_failed"))
+                connection_progress.set_stage_key("connection.progress_failed")
                 connection_progress.set_stage(msg)
                 model.progress_callback = None
                 # Map safe known errors to translated messages
@@ -1297,7 +1316,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 wx.MessageBox(msg, t("login.err_title"), wx.OK | wx.ICON_ERROR)
             else:
                 status.SetLabel(t("login.status_connected"))
-                connection_progress.set_stage(t("connection.progress_ready"), 100)
+                connection_progress.set_stage_key("connection.progress_ready", 100)
                 model.progress_callback = None
                 _update_button_states()
                 if on_connected and model.controller.session:

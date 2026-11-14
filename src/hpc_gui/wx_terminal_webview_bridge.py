@@ -1,9 +1,17 @@
 """WebView event bridge and readiness recovery for the wx terminal panel."""
 
 import json
+import sys
 
 from hpc_gui.core.i18n import t
 from hpc_gui.wx_terminal_webview_support import _is_local_file_url
+ 
+#: WebKitGTK refuses wxWebView.RunScript under the terminal page CSP
+#: (script-src 'self') and surfaces the refusal as a user-visible
+#: "Error running JavaScript" dialog, so the in-page aria-label is only
+#: applied where script evaluation is allowed. The wx-level name below is
+#: what assistive technology reads on every platform.
+_IN_PAGE_LABEL_SUPPORTED = not sys.platform.startswith("linux")
 
 
 class TerminalBridgeMixin:
@@ -51,6 +59,8 @@ class TerminalBridgeMixin:
             webview.SetAccessibleName(label)
         except Exception:
             pass
+        if not _IN_PAGE_LABEL_SUPPORTED:
+            return
         try:
             webview.RunScript(
                 "const terminal = document.getElementById('terminal');"

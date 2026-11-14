@@ -238,6 +238,8 @@ def install_interactions(view):
             host=plugin_host,
             session_state=session_state,
         )
+        if "download" in actions and len(selected_entries) == 1 and not selected_entries[0].is_dir:
+            actions += ("download_as",)
         labels = FILE_CONTEXT_LABEL_KEYS
         for action in actions:
             item = menu.Append(wx.ID_ANY, t(labels.get(action, f"dirs.{action}")))

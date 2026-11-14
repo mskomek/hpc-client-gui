@@ -68,6 +68,11 @@ def is_dictionary_name(relative: str) -> bool:
         return True
     if leaf.endswith("Dict") or leaf.endswith("Properties"):
         return True
+    # ESI thermophysical includes carry their own species/transport lists and
+    # are named like constant/thermo.compressibleGas; a dotted leaf under
+    # constant/ is otherwise not a dictionary name.
+    if parts[0] == "constant" and leaf.startswith("thermo."):
+        return True
     if parts[0] in ("system", "constant") and "." not in leaf:
         return True
     return False

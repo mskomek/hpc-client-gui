@@ -214,14 +214,33 @@ def install_operations(view):
                 dialog.Destroy()
         elif from_paste:
             destination = str(PurePosixPath(target_dir or tstate["path"]))
-        elif action == "download":
-            dialog = wx.DirDialog(host, t("dirs.local_destination"))
+        elif action == "download_as" and len(selected) == 1:
+            dialog = wx.FileDialog(
+                host, t("dirs.download_as"),
+                defaultFile=PurePosixPath(selected[0]).name,
+                style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+            )
             try:
                 if dialog.ShowModal() != wx.ID_OK:
                     return
                 destination = dialog.GetPath()
             finally:
                 dialog.Destroy()
+        elif action == "download":
+            local_dir = getattr(panel, "_local_download_dir", None)
+            if callable(local_dir):
+                destination = str(local_dir() or "")
+                if not destination:
+                    return
+            else:
+                # Standalone remote browser has no local pane to target.
+                dialog = wx.DirDialog(host, t("dirs.local_destination"))
+                try:
+                    if dialog.ShowModal() != wx.ID_OK:
+                        return
+                    destination = dialog.GetPath()
+                finally:
+                    dialog.Destroy()
         elif action == "upload":
             dialog = wx.FileDialog(host, t("ftp.upload_selected"), style=wx.FD_OPEN | wx.FD_MULTIPLE)
             try:

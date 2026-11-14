@@ -16,20 +16,22 @@ from pathlib import Path
 
 def _lint_paths(paths: list[str], *, release: str = "v2312") -> list[dict]:
     from hpc_gui.plugins.openfoam_lint import api
-    diagnostics = []
+    selected = []
     for raw in paths:
         path = Path(raw).expanduser()
         if not path.exists() and not path.is_symlink():
             raise ValueError(f"selected path does not exist: {path}")
         # Use the canonical bounded, link-rejecting scanner. A CLI path is
         # a filesystem selector, never an untrusted lint_text file_name.
-        for diag in api.lint_paths([path], release=release):
-            diagnostics.append({"rule": diag.rule, "severity": diag.severity,
-                                "certainty": diag.certainty, "file": diag.file,
-                                "line": diag.line, "column": diag.column,
-                                "message": diag.message,
-                                "fix_preview": diag.fix_preview})
-    return diagnostics
+        selected.append(path)
+    result = api.lint_paths(selected, release=release)
+    return [
+        {"rule": diag.rule, "severity": diag.severity,
+         "certainty": diag.certainty, "file": diag.file,
+         "line": diag.line, "column": diag.column,
+         "message": diag.message, "fix_preview": diag.fix_preview}
+        for diag in result
+    ]
 
 
 def main(argv: list[str] | None = None) -> int:

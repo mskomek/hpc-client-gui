@@ -5,36 +5,15 @@ from __future__ import annotations
 from threading import Thread
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
-from hpc_gui.wx_host import make_host
 from hpc_gui.wx_plugins import WxPluginManagerModel
-
-_VIEW_IDS = ("discover", "installed", "updates")
-
-
-def _view_label(view: str) -> str:
-    mapping = {
-        "discover": t("plugins.tab_discover"),
-        "installed": t("plugins.tab_installed"),
-        "updates": t("plugins.tab_updates"),
-    }
-    label = mapping.get(view, view)
-    return label if label and not label.startswith("[plugins.") else view
-
-
-def _status_label_for_source(source: str) -> str:
-    if source == "network":
-        text = t("plugins.status_online")
-        return text if text != "[plugins.status_online]" else "Online"
-    if source == "cache":
-        text = t("plugins.status_cached")
-        return text if text != "[plugins.status_cached]" else "Cached"
-    text = t("plugins.status_offline")
-    return text if text != "[plugins.status_offline]" else "Offline"
-
-
-def _loading_label() -> str:
-    text = t("plugins.status_loading")
-    return text if text != "[plugins.status_loading]" else "Loading..."
+from hpc_gui.wx_plugins_layout import (
+    VIEW_IDS as _VIEW_IDS,
+    attach_plugins_state,
+    build_plugins_chrome,
+    loading_label as _loading_label,
+    status_label_for_source as _status_label_for_source,
+    view_label as _view_label,
+)
 
 
 def _build_plugins(
@@ -62,71 +41,22 @@ def _build_plugins(
     normalized_tab = str(initial_tab or "discover").strip().lower()
     if normalized_tab not in _VIEW_IDS:
         normalized_tab = "discover"
-    # Spec §91: Plugins 800×600 resizable, §92 split 30-35% / 65-70%
-    host, finish = make_host(parent, title=t("plugins.dialog_title"), size=(800, 600), embedded=embedded)
-    panel = wx.Panel(host)
-    root_sizer = wx.BoxSizer(wx.VERTICAL)
-
-    title = wx.StaticText(panel, label=t("plugins.dialog_title"))
-    title.SetFont(title.GetFont().Bold())
-
-    search = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER)
-    try:
-        search.SetHint(t("plugins.search_placeholder"))
-    except Exception:
-        pass
-    status = wx.StaticText(panel, label="")
-
-    view_choice = wx.Choice(panel, choices=[_view_label(v) for v in _VIEW_IDS])
-    try:
-        view_choice.SetSelection(_VIEW_IDS.index(normalized_tab))
-    except Exception:
-        try:
-            view_choice.SetSelection(0)
-        except Exception:
-            pass
-
-    list_ctrl = wx.ListCtrl(panel, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
-    list_ctrl.InsertColumn(0, t("plugins.action"))
-    list_ctrl.InsertColumn(1, t("common.details"))
-
-    btn_refresh = wx.Button(panel, label=t("plugins.refresh"))
-    btn_install = wx.Button(panel, label=t("plugins.install"))
-    btn_disable = wx.Button(panel, label=t("plugins.disable"))
-    btn_remove = wx.Button(panel, label=t("plugins.remove"))
-    btn_close = wx.Button(panel, label=t("common.close"))
-
-    top = wx.BoxSizer(wx.HORIZONTAL)
-    top.Add(title, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 12)
-    top.AddStretchSpacer(1)
-    top.Add(view_choice, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 12)
-    top.Add(search, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 12)
-    top.Add(status, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 12)
-
-    btn_row = wx.BoxSizer(wx.HORIZONTAL)
-    btn_row.Add(btn_refresh, 0, wx.RIGHT, 8)
-    btn_row.Add(btn_install, 0, wx.RIGHT, 8)
-    btn_row.Add(btn_disable, 0, wx.RIGHT, 8)
-    btn_row.Add(btn_remove, 0, wx.RIGHT, 8)
-    btn_row.AddStretchSpacer(1)
-    btn_row.Add(btn_close, 0)
-
-    root_sizer.Add(top, 0, wx.EXPAND)
-    root_sizer.Add(list_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
-    # W33 (HPC-W08-LIFE-005): state the real enable/disable behavior where
-    # the toggle is offered; a bare checkbox is misleading.
-    effect_note = wx.StaticText(
-        panel,
-        label=t("plugins.lifecycle_effect_note"),
+    chrome = build_plugins_chrome(
+        wx, parent, embedded=embedded, normalized_tab=normalized_tab
     )
-    try:
-        effect_note.Wrap(760)
-    except Exception:
-        pass
-    root_sizer.Add(effect_note, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
-    # Spec §16 footer 12-16px
-    root_sizer.Add(btn_row, 0, wx.EXPAND | wx.ALL, 16)
-    panel.SetSizer(root_sizer)
+    host = chrome.host
+    finish = chrome.finish
+    title = chrome.title
+    search = chrome.search
+    status = chrome.status
+    view_choice = chrome.view
+    list_ctrl = chrome.listing
+    effect_note = chrome.effect_note
+    btn_refresh = chrome.refresh
+    btn_install = chrome.install
+    btn_disable = chrome.disable
+    btn_remove = chrome.remove
+    btn_close = chrome.close
 
     state = {"closed": False, "in_flight": False, "gen": 0, "view": normalized_tab}
     visible: list = []
@@ -510,21 +440,7 @@ def _build_plugins(
     subscribe_language_change(refresh_labels)
     host.bind_host_close(on_close)
 
-    host._wx_plugins_controls = {
-        "title": title,
-        "search": search,
-        "status": status,
-        "view": view_choice,
-        "listing": list_ctrl,
-        "lifecycle_note": effect_note,
-        "refresh": btn_refresh,
-        "install": btn_install,
-        "disable": btn_disable,
-        "remove": btn_remove,
-        "close": btn_close,
-    }
-    host._wx_plugins_model = model
-    host._wx_plugins_state = state
+    attach_plugins_state(host, chrome, model, state)
 
     _refresh_list()
     finish()

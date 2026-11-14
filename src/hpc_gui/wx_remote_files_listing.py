@@ -151,26 +151,31 @@ def install_listing(view):
             path_label.SetLabel(t("dirs.path"))
         except Exception:
             pass
+        # These widgets exist once per view, not once per tab, so relabelling
+        # them must not depend on a tab's listing still being alive.
+        try:
+            btn_back.SetLabel(t("dirs.back"))
+            btn_forward.SetLabel(t("dirs.forward"))
+            btn_up.SetLabel(t("dirs.up"))
+            btn_back.SetToolTip(t("dirs.back"))
+            btn_forward.SetToolTip(t("dirs.forward"))
+            btn_up.SetToolTip(t("dirs.up"))
+        except Exception:
+            pass
+        for te in tabs:
+            fb = te.get("filter_notebook")
+            if fb is not None:
+                for idx2, fid in enumerate(te.get("filter_ids", _registry_filter_ids())):
+                    try:
+                        fb.SetPageText(idx2, _filter_label(file_filter_registry.get(fid)))
+                    except Exception:
+                        pass
         for te in tabs:
             try:
                 te["listing"].SetColumn(0, t("dirs.col_name"))
                 te["listing"].SetColumn(1, t("dirs.col_size"))
                 te["listing"].SetColumn(2, t("dirs.col_type"))
                 te["listing"].SetColumn(3, t("dirs.col_mtime"))
-                btn_back.SetLabel(t("dirs.back"))
-                btn_forward.SetLabel(t("dirs.forward"))
-                btn_up.SetLabel(t("dirs.up"))
-                btn_back.SetToolTip(t("dirs.back"))
-                btn_forward.SetToolTip(t("dirs.forward"))
-                btn_up.SetToolTip(t("dirs.up"))
-                # update filter tab labels
-                fb = te.get("filter_notebook")
-                if fb is not None:
-                    for idx2, fid in enumerate(te.get("filter_ids", _registry_filter_ids())):
-                        try:
-                            fb.SetPageText(idx2, _filter_label(file_filter_registry.get(fid)))
-                        except Exception:
-                            pass
             except RuntimeError:
                 continue
             idx = tabs.index(te)

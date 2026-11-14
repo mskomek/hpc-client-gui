@@ -46,6 +46,15 @@ def test_boundary_matrix():
         render_field_file("U", "(1 0 0)", {"inlet": ("inlet", "noSlip")})
     with pytest.raises(ValueError):
         render_field_file("nope", "0", {})
+    for value in ("0; #include /tmp/evil", "0\n#include /tmp/evil", "nan", "1e9999"):
+        with pytest.raises(ValueError):
+            render_field_file("p", value, {})
+    for value in ("(1 0)", "(1 0 0); #calc \"1\""):
+        with pytest.raises(ValueError):
+            render_field_file("U", value, {})
+    for patch in ("inlet }\n# include /tmp/evil", "bad;#include", "../outside"):
+        with pytest.raises(ValueError):
+            render_field_file("p", "0", {patch: ("inlet", "fixedValue")})
     gaps = coverage_gaps(["U", "p"], {"U": {"inlet"}}, ["inlet", "outlet"])
     assert "U:outlet" in gaps and "p:inlet" in gaps
     assert "noSlip" in allowed_bc("wall")
@@ -56,6 +65,23 @@ def test_numerics_time_and_schemes():
     assert "application simpleFoam" in text
     with pytest.raises(ValueError):
         num.render_control_dict("simpleFoam", 0, 100, 0, 10)
+    for bad_application in ("simpleFoam; #include /tmp/evil", "simple Foam", ""):
+        with pytest.raises(ValueError):
+            num.render_control_dict(bad_application, 0, 100, 1, 10)
+    for values in ((0, float("nan"), 1, 10), (0, float("inf"), 1, 10),
+                   (0, 100, float("nan"), 10), (10, 10, 1, 10),
+                   (0, 100, 1, float("inf")), (0, 10**10000, 1, 10)):
+        with pytest.raises(ValueError):
+            num.render_control_dict("simpleFoam", *values)
+    with pytest.raises(ValueError):
+        num.render_control_dict("simpleFoam", 0, 100, 1, 10, float("nan"))
+
+    class UnsafeFormat:
+        def __format__(self, _spec):
+            raise AssertionError("maxCo was formatted before validation")
+
+    with pytest.raises(ValueError):
+        num.render_control_dict("simpleFoam", 0, 100, 1, 10, UnsafeFormat())
     num.validate_fv_schemes("steadyState", "Gauss linear", "Gauss upwind",
                             "Gauss linear corrected", "rans-steady")
     with pytest.raises(ValueError):

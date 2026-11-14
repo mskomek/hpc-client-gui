@@ -8,6 +8,7 @@ from hpc_gui.wx_file_list_style import alternate_row_colour
 from hpc_gui.wx_file_type_icons import file_type_icon_index, install_file_type_icons
 from hpc_gui.wx_local_files_model import LocalEntry, format_local_size
 from hpc_gui.wx_local_files_support import _format_mtime, _type_label
+from hpc_gui.services.remote_entry_format import natural_sort_key
 
 _COLUMN_FLOORS = (140, 70, 110, 120)
 
@@ -73,7 +74,26 @@ def install_listing(view):
         selected_paths = set(selected_paths)
         path = tab_entry["path"]
         parent = path.parent
-        visible_entries = ([LocalEntry(parent, True, 0)] if parent != path else []) + list(entries)
+        base_entries = list(entries)
+        tab_entry["full_entries"] = base_entries
+        sort_col = tab_entry.get("sort_col", -1)
+        reverse = tab_entry.get("sort_reverse", False)
+        if sort_col >= 0:
+            def _sort_key(entry):
+                if sort_col == 0:
+                    return natural_sort_key(entry.path.name)
+                if sort_col == 1:
+                    return int(getattr(entry, "size", 0) or 0)
+                if sort_col == 2:
+                    return _type_label(entry).casefold()
+                return float(getattr(entry, "mtime", 0.0) or 0.0)
+
+            directories = [entry for entry in base_entries if entry.is_dir]
+            files = [entry for entry in base_entries if not entry.is_dir]
+            directories.sort(key=_sort_key, reverse=reverse)
+            files.sort(key=_sort_key, reverse=reverse)
+            base_entries = directories + files
+        visible_entries = ([LocalEntry(parent, True, 0)] if parent != path else []) + base_entries
         tab_entry["entries"][:] = visible_entries
         listing = tab_entry["listing"]
         try:
@@ -222,13 +242,26 @@ def install_listing(view):
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(listing, 1, wx.EXPAND)
         panel.SetSizer(sizer)
-        tab_entry = {"id": next_tab_id[0], "path": target_path, "listing": listing, "entries": [], "view_generation": 0, "listing_request_id": 0, "closed": False, "panel": panel, "image_list": image_list}
+        tab_entry = {"id": next_tab_id[0], "path": target_path, "listing": listing, "entries": [], "full_entries": [], "sort_col": -1, "sort_reverse": False, "view_generation": 0, "listing_request_id": 0, "closed": False, "panel": panel, "image_list": image_list}
         next_tab_id[0] += 1
         tabs.append(tab_entry)
         # sync model
         # caller will handle notebook insertion
         # bind events for this listing
         listing.Bind(wx.EVT_LIST_ITEM_ACTIVATED, activate)
+        def _on_col_click(event):
+            col = event.GetColumn()
+            if col < 0:
+                return
+            if tab_entry["sort_col"] == col:
+                tab_entry["sort_reverse"] = not tab_entry["sort_reverse"]
+            else:
+                tab_entry["sort_col"] = col
+                tab_entry["sort_reverse"] = False
+            render_entries(tab_entry, tab_entry.get("full_entries", ()))
+            event.Skip()
+
+        listing.Bind(wx.EVT_LIST_COL_CLICK, _on_col_click)
         listing.Bind(wx.EVT_CONTEXT_MENU, context_menu)
         listing.Bind(wx.EVT_KEY_DOWN, key_down)
         listing.Bind(wx.EVT_MIDDLE_DOWN, middle_click)

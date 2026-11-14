@@ -8,7 +8,7 @@ from __future__ import annotations
 import pytest
 
 from hpc_gui.plugins.openfoam_studio.solver import SOLVER_BINARIES, check_solver_compat
-from hpc_gui.plugins.openfoam_studio.solver_effects import solver_effect_paths
+from hpc_gui.plugins.openfoam_studio.solver_effects import bound_state, solver_effect_paths
 from hpc_gui.plugins.openfoam_studio.workflow import (
     FUNCTION_OBJECTS,
     SOLVER_TOOLS,
@@ -98,6 +98,15 @@ def test_cht_custom_regions_effects_equal_compiler_targets():
                  "constant/solidA/thermophysicalProperties"])
     assert compile_to_effects(dag)["s"] == expected
     assert _mutating_solver_targets("chtMultiRegionSimpleFoam", params) == expected
+
+
+@pytest.mark.parametrize("regions", [
+    {"fluid": ["fluid"], "solid": []},
+    ["fluid"],
+])
+def test_cht_effects_reject_missing_solid_region(regions):
+    with pytest.raises(ValueError, match="at least one solid region"):
+        bound_state("chtMultiRegionSimpleFoam", {"regions": regions})
 
 
 @pytest.mark.parametrize("tool", ["reactingFoam", "potentialFoam"])

@@ -23,62 +23,18 @@ if str(ROOT / "src") not in sys.path:
 # Golden Fixtures — Reusable Unicode test data
 # ---------------------------------------------------------------------------
 
-# Turkish characters
-TURKISH_DIRS = [
-    "İşler_Çağrı_Ölçüm",
-    "Isı_İstanbul_Şehir",
-    "Üniversite_Kümesi",
-]
-TURKISH_FILES = [
-    "ısı_ölçümü_İstanbul.txt",
-    "şğüöçıİ.dat",
-    "Çalışma_Sonucu.txt",
-    "O'Brien_Çalışma.txt",
-]
-
-# Japanese characters
-JAPANESE_DIRS = [
-    "研究_ジョブ",
-    "計算_結果",
-    "日本語_ディレクトリ",
-]
-JAPANESE_FILES = [
-    "日本語_計算結果.txt",
-    "ジョブ結果.slurm",
-    "研究_スクリプト.sh",
-]
-
-# Mixed scripts
-MIXED_DIRS = [
-    "Türkçe_日本語",
-]
-MIXED_FILES = [
-    "iş_日本語_δ.txt",
-    "Çalışma_Sonucu_日本語.txt",
-]
-
-# Symbol/special fixtures
-SYMBOL_FILES = [
-    "★_Favorites.txt",
-    "ΔPressure_ölçüm.txt",
-    "🚀_job.txt",
-]
-
-# Turkish I/i casing variants
-TURKISH_CASING = [
-    "I_upper.txt",
-    "İ_upper.txt",
-    "ı_lower.txt",
-    "i_lower.txt",
-]
-
-# NFC/NFD normalization variants
-NFC_PATH = pathlib.PurePosixPath("café.txt")  # NFC: é = U+00E9
-NFD_PATH = pathlib.PurePosixPath(unicodedata.normalize("NFD", "café.txt"))  # NFD: e + combining acute
-
-# Mojibake reference
-MOJIBAKE_STAR = "â˜…"
-CORRECT_STAR = "★"
+from support.unicode_baseline_data import (  # noqa: E402
+    TURKISH_DIRS,
+    TURKISH_FILES,
+    JAPANESE_DIRS,
+    JAPANESE_FILES,
+    MIXED_DIRS,
+    MIXED_FILES,
+    SYMBOL_FILES,
+    TURKISH_CASING,
+    MOJIBAKE_STAR,
+    CORRECT_STAR,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -383,8 +339,8 @@ class TestEncodingBoundaryInventory:
 
     @pytest.mark.audit
     def test_config_storage_uses_utf8(self):
-        """config/storage.py should use encoding='utf-8' for JSON."""
-        storage = ROOT / "src" / "hpc_gui" / "config" / "storage.py"
+        """config/store_io.py owns the JSON writer and must use encoding='utf-8'."""
+        storage = ROOT / "src" / "hpc_gui" / "config" / "store_io.py"
         if storage.is_file():
             content = storage.read_text(encoding="utf-8")
             assert 'encoding="utf-8"' in content or "encoding='utf-8'" in content
@@ -415,8 +371,8 @@ class TestEncodingBoundaryInventory:
 
     @pytest.mark.audit
     def test_ensure_ascii_false_in_config(self):
-        """Config JSON serialization should use ensure_ascii=False."""
-        storage = ROOT / "src" / "hpc_gui" / "config" / "storage.py"
+        """Config JSON serialization lives in store_io.py and must use ensure_ascii=False."""
+        storage = ROOT / "src" / "hpc_gui" / "config" / "store_io.py"
         if storage.is_file():
             content = storage.read_text(encoding="utf-8")
             assert "ensure_ascii=False" in content, (

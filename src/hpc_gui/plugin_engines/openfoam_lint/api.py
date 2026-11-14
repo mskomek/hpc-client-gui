@@ -26,8 +26,12 @@ from hpc_gui.openfoam_core.local_paths import require_local_path_without_links
 from hpc_gui.openfoam_core.cancellation import raise_if_cancelled
 
 from .includes import include_diagnostics
+from .mesh_freshness import stale_mesh_findings
 from .rules import LintResult
 from .rules_case import lint_case_layout
+from .rules_numerics import lint_solver_scheme_consistency
+from .rules_snappy import lint_snappy_dict
+from .shell_scripts import shell_script_findings
 from .rules_dictionary import RULES as DICTIONARY_RULES, lint_dictionary
 from .rules_boundary import RULES as BOUNDARY_RULES, lint_boundary_requirements
 from .rules_mesh import lint_mesh_patch_consistency
@@ -248,6 +252,8 @@ def lint_files(
         case_context = root is not None or "system/controlDict" in parsed
     if case_context:
         findings.extend(lint_case_layout(parsed))
+        findings.extend(lint_solver_scheme_consistency(parsed))
+        findings.extend(lint_snappy_dict(parsed))
         findings.extend(lint_boundary_requirements(parsed))
         findings.extend(lint_mesh_patch_consistency(parsed, mesh_sources))
     return LintResult(
@@ -259,9 +265,27 @@ def lint_paths(paths: Iterable[str | Path], options=None, *, cancel_event=None,
                release: str | None = None) -> LintResult:
     """Lint selected dictionaries or case folders; bounded and read-only."""
     _check_release(release)
-    selected = tuple(Path(item).expanduser() for item in paths)
+    selected: list[Path] = []
+    selection_limited = False
+    path_iter = iter(paths)
+    while len(selected) <= MAX_CASE_FILES:
+        raise_if_cancelled(cancel_event)
+        try:
+            item = next(path_iter)
+        except StopIteration:
+            break
+        if len(selected) == MAX_CASE_FILES:
+            selection_limited = True
+            break
+        selected.append(Path(item).expanduser())
     findings: list[Diagnostic] = []
     files_checked: list[str] = []
+    if selection_limited:
+        findings.append(Diagnostic(
+            "OF-CASE-005", "warning", "heuristic", "<selection>", 1, 1,
+            f"Selected path limit reached ({MAX_CASE_FILES}); remaining paths were not inspected.",
+            "Select at most the configured number of files or case roots.",
+        ))
     for item in selected:
         raise_if_cancelled(cancel_event)
         try:
@@ -271,6 +295,7 @@ def lint_paths(paths: Iterable[str | Path], options=None, *, cancel_event=None,
             item = require_local_path_without_links(item)
             if item.is_dir():
                 root = item.resolve(strict=True)
+                findings.extend(shell_script_findings(root, cancel_event))
                 discovered = discover_case_files(root, cancel_event=cancel_event)
                 if not discovered:
                     findings.append(Diagnostic(
@@ -289,6 +314,7 @@ def lint_paths(paths: Iterable[str | Path], options=None, *, cancel_event=None,
                 ))
                 result = lint_files(content, root=root, case_context=True, release=release)
                 findings.extend(result.diagnostics)
+                findings.extend(stale_mesh_findings(root))
                 files_checked.extend(str(root / file) for file in result.files_checked)
             elif item.is_file():
                 raise_if_cancelled(cancel_event)
@@ -326,6 +352,12 @@ def rule_catalog() -> dict[str, dict[str, str]]:
     merged["OF-CASE-005"] = {"title": "File size bound", "severity": "warning", "confidence": "heuristic", "verification_level": "static"}
     merged["OF-CASE-006"] = {"title": "Selected path", "severity": "warning", "confidence": "certain", "verification_level": "contextual"}
     merged["OF-SEC-003"] = {"title": "Include cycle", "severity": "warning", "confidence": "structural", "verification_level": "contextual"}
+    merged["OF-SEC-005"] = {"title": "Untrusted shell script", "severity": "warning", "confidence": "certain", "verification_level": "contextual"}
+    merged["OF-NUM-010"] = {"title": "Solver time-scheme mismatch", "severity": "error", "confidence": "definite", "verification_level": "static"}
+    merged["OF-MESH-010"] = {"title": "Incomplete snappy dictionary", "severity": "warning", "confidence": "structural", "verification_level": "static"}
+    merged["OF-CROSS-005"] = {"title": "CHT region groups", "severity": "warning", "confidence": "contextual", "verification_level": "contextual"}
+    merged["OF-SOLVER-010"] = {"title": "Solver initial fields", "severity": "warning", "confidence": "contextual", "verification_level": "contextual"}
+    merged["OF-CROSS-006"] = {"title": "Surface newer than mesh", "severity": "info", "confidence": "contextual", "verification_level": "contextual"}
     for metadata in merged.values():
         metadata.setdefault("source", SOURCE_DOCS)
         metadata.setdefault("verification_level", "static")

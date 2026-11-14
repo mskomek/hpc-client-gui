@@ -71,6 +71,10 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
     local_workspace = build_local_files_navigation(wx, top_splitter, local_panel, t)
     remote_panel = build_remote_files_panel(top_splitter, **_remote)
     session_state["_embedded_remote_files_panel"] = remote_panel
+    def _local_download_directory():
+        local_model = getattr(local_panel, "_wx_local_model", None) or getattr(local_panel, "_local_model", None)
+        return str(getattr(local_model, "current_path", "") or "")
+    remote_panel._local_download_dir = _local_download_directory
     top_splitter.SplitVertically(local_workspace, remote_panel, 340)
     top_splitter.SetMinimumPaneSize(300)
     session_state["_embedded_files_panes_splitter"] = top_splitter

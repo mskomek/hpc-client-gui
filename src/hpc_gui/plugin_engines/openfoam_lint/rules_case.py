@@ -7,6 +7,7 @@ from pathlib import PurePosixPath
 from hpc_gui.openfoam_core import (
     Diagnostic, Entry, ParsedDictionary, SOURCE_DOCS, parse_region_properties,
 )
+from .rules_solver_fields import lint_solver_fields
 
 
 def _first(parsed: ParsedDictionary | None, key: str, scope: tuple[str, ...] = ()) -> str | None:
@@ -132,7 +133,17 @@ def _control_time_checks(control: ParsedDictionary | None) -> list[Diagnostic]:
 def _region_checks(files: dict[str, ParsedDictionary]) -> list[Diagnostic]:
     relative = "constant/regionProperties"
     parsed = files.get(relative)
+    application = _first(files.get("system/controlDict"), "application")
+    cht = application in {"chtMultiRegionFoam", "chtMultiRegionSimpleFoam"}
     if parsed is None:
+        if cht:
+            return [Diagnostic(
+                "OF-CROSS-005", "warning", "contextual", relative, 1, 1,
+                f"CHT solver {application} has no constant/regionProperties dictionary.",
+                "Add regionProperties with the fluid and solid region groups, or confirm the case is "
+                "intentionally single-region before running the CHT solver.",
+                SOURCE_DOCS, verification_level="contextual",
+            )]
         return []
     entries = parsed.find("regions", scope=())
     line = entries[0].line if len(entries) == 1 else 1
@@ -154,6 +165,18 @@ def _region_checks(files: dict[str, ParsedDictionary]) -> list[Diagnostic]:
         f"Static multi-region declaration found: {groups}.",
         "Confirm the declared region names and their material and field dictionaries.", SOURCE_DOCS, verification_level="contextual",
     )]
+    if cht:
+        region_types = {group.region_type for group in metadata.groups}
+        missing_groups = sorted({"fluid", "solid"} - region_types)
+        if missing_groups:
+            missing_text = " or ".join(missing_groups)
+            findings.append(Diagnostic(
+                "OF-CROSS-005", "warning", "contextual", relative, line, column,
+                f"CHT solver {application} does not declare a {missing_text} region group.",
+                "Declare both fluid and solid region groups in regionProperties, or confirm the case is "
+                "intentionally single-region before running the CHT solver.",
+                SOURCE_DOCS, verification_level="contextual",
+            ))
     declared = set(metadata.names)
     initial_paths = [
         PurePosixPath(name) for name in files
@@ -268,4 +291,5 @@ def lint_case_layout(files: dict[str, ParsedDictionary], *, root_label: str = "c
             ))
         findings.extend(_parallel_layout_check(decompose))
     findings.extend(_region_checks(files))
+    findings.extend(lint_solver_fields(files, application))
     return tuple(findings)

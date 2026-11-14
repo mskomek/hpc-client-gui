@@ -9,6 +9,7 @@ from pathlib import Path
 from hpc_gui.core.i18n import current_language, load_language, t
 from hpc_gui.services.updater_helper import _localized_progress_text
 from hpc_gui.wx_terminal_webview_bridge import TerminalBridgeMixin
+import hpc_gui.wx_terminal_webview_bridge as bridge_module
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -31,7 +32,7 @@ def test_dynamic_ui_messages_follow_selected_language():
         load_language(previous)
 
 
-def test_wx_terminal_accessible_label_tracks_live_language_changes():
+def _label_harness():
     class FakeWebView:
         def __init__(self):
             self.name = ""
@@ -50,9 +51,14 @@ def test_wx_terminal_accessible_label_tracks_live_language_changes():
         def __init__(self):
             self._webview = FakeWebView()
 
+    return Harness()
+
+
+def test_wx_terminal_accessible_label_tracks_live_language_changes(monkeypatch):
+    monkeypatch.setattr(bridge_module, "_IN_PAGE_LABEL_SUPPORTED", True)
     previous = current_language()
     try:
-        harness = Harness()
+        harness = _label_harness()
         load_language("en")
         harness._update_accessibility_label()
         assert harness._webview.name == "Remote terminal"
@@ -64,6 +70,21 @@ def test_wx_terminal_accessible_label_tracks_live_language_changes():
         assert "Uzak terminal" in harness._webview.script
     finally:
         load_language(previous)
+
+
+def test_wx_terminal_accessible_label_skips_in_page_script_on_webkit(monkeypatch):
+    """WebKitGTK refuses RunScript under the terminal CSP and shows a dialog."""
+    monkeypatch.setattr(bridge_module, "_IN_PAGE_LABEL_SUPPORTED", False)
+    previous = current_language()
+    try:
+        harness = _label_harness()
+        load_language("en")
+        harness._update_accessibility_label()
+        assert harness._webview.name == "Remote terminal"
+        assert harness._webview.script == ""
+    finally:
+        load_language(previous)
+
 
 
 def test_independent_updater_progress_uses_saved_language_catalog():

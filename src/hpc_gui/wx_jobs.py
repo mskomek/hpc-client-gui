@@ -2884,6 +2884,17 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         outputs_no_selection_label.SetLabel(t("jobs_outputs.no_selected_job"))
         outputs_no_selection_hint.SetLabel(t("jobs_outputs.no_selected_job_outputs_hint"))
         outputs_go_to_jobs.SetLabel(t("jobs.go_to_jobs"))
+        # The outputs search row carries five labels of its own; they were built
+        # once with t() and never relabelled, so a language change left them in
+        # the previous language (W65 UI-012 residual).
+        try:
+            search_label.SetLabel(f"{t('jobs_outputs.search')}:")
+            btn_find_next.SetLabel(t("jobs_outputs.find_next"))
+            btn_jump_latest.SetLabel(t("jobs_outputs.jump_to_latest"))
+            btn_open_window.SetLabel(t("jobs_outputs.open_in_window"))
+            btn_show_files.SetLabel(t("jobs_outputs.show_in_files"))
+        except Exception:
+            pass
         _update_summary_header()
         for field_key, label_key in detail_keys:
             if field_key in detail_labels:
@@ -2891,6 +2902,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         for field_key in ("nodes", "cpus"):
             if field_key in detail_labels:
                 detail_labels[field_key].SetLabel(t(f"jobs.{field_key}"))
+        for field_key, label_key in advanced_keys:
+            if field_key in detail_labels:
+                detail_labels[field_key].SetLabel(t(label_key))
         if "resources" in detail_labels:
             detail_labels["resources"].SetLabel(t("jobs.resources"))
         if details_warning_label.IsShown():

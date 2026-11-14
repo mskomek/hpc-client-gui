@@ -28,6 +28,7 @@ from hpc_gui.openfoam_core.files import (
     read_dictionary_file,
     scan_remote_dictionaries,
     scan_remote_mesh_boundaries,
+    remote_entry_names,
 )
 from hpc_gui.openfoam_core.lexer import LexToken, lex
 from hpc_gui.openfoam_core.limits import (
@@ -50,7 +51,7 @@ from hpc_gui.openfoam_core.paths import (
     is_mesh_boundary_path,
     safe_relative_path,
 )
-from hpc_gui.openfoam_core.physics import required_fields_for
+from hpc_gui.openfoam_core.physics import required_fields_for, time_treatment_for
 from hpc_gui.openfoam_core.regions import (
     RegionGroup,
     RegionProperties,
@@ -99,10 +100,12 @@ __all__ = [
     "preferred_newline",
     "read_dictionary_file",
     "required_fields_for",
+    "time_treatment_for",
     "safe_relative_path",
     "scan_case",
     "scan_remote_dictionaries",
     "scan_remote_mesh_boundaries",
+    "remote_entry_names",
     "sha256_bytes",
     "single_token_patch",
 ]

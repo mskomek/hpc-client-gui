@@ -13,9 +13,12 @@ from hpc_gui.openfoam_core import (
     MAX_REMOTE_DICTIONARY_BYTES,
     REMOTE_CASE_SKIP_DIRS,
     DecodedSource,
+    Diagnostic,
+    SOURCE_DOCS,
     is_dictionary_name,
     scan_remote_dictionaries,
     scan_remote_mesh_boundaries,
+    remote_entry_names,
 )
 from hpc_gui.openfoam_core.cancellation import raise_if_cancelled
 from hpc_gui.openfoam_core.remote_paths import (
@@ -25,12 +28,96 @@ from hpc_gui.openfoam_core.remote_paths import (
 )
 
 from .api import _check_release, lint_files
+from .shell_scripts import script_diagnostics, script_name_matches
 
 MAX_FILE_BYTES = MAX_REMOTE_DICTIONARY_BYTES
 MAX_CASE_BYTES = MAX_REMOTE_CASE_BYTES
 MAX_FILES = MAX_REMOTE_CASE_FILES
 MAX_DEPTH = MAX_REMOTE_CASE_DEPTH
 SKIP_DIRS = REMOTE_CASE_SKIP_DIRS
+MAX_REMOTE_SCRIPT_ENTRIES = 4096
+MAX_REMOTE_SURFACE_ENTRIES = 64
+_SURFACE_SUFFIXES = {".stl", ".obj", ".tri"}
+
+
+def _remote_mtime(files, path: str) -> float | None:
+    try:
+        _size, mtime = files.stat(path)
+        return float(mtime)
+    except (OSError, KeyError, TypeError, ValueError):
+        return None
+
+
+def _remote_mesh_freshness(root: PurePosixPath, files) -> tuple:
+    """Report remote surfaces newer than the remote mesh points file."""
+    points_time = _remote_mtime(files, str(root / "constant" / "polyMesh" / "points"))
+    if points_time is None:
+        return ()
+    try:
+        names, truncated = remote_entry_names(
+            files, str(root / "constant" / "triSurface"),
+            maximum_entries=MAX_REMOTE_SURFACE_ENTRIES,
+        )
+    except (OSError, KeyError, NotImplementedError, ValueError):
+        return ()
+    findings = []
+    for name in sorted(names):
+        if PurePosixPath(name).suffix.lower() not in _SURFACE_SUFFIXES:
+            continue
+        path = root / "constant" / "triSurface" / name
+        try:
+            entry = remote_lstat_entry(files, str(path))
+            mode = int(getattr(entry, "mode", 0) or 0)
+        except (OSError, KeyError, ValueError):
+            continue
+        if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
+            continue
+        surface_time = _remote_mtime(files, str(path))
+        if surface_time is None or surface_time <= points_time:
+            continue
+        findings.append(Diagnostic(
+            "OF-CROSS-006", "info", "contextual",
+            f"constant/triSurface/{name}", 1, 1,
+            f"Surface {name!r} is newer than constant/polyMesh/points; "
+            "the mesh may have been generated from older geometry.",
+            "Regenerate the mesh from the current surface, or confirm the points file is "
+            "intentionally older than the geometry.",
+            SOURCE_DOCS, verification_level="contextual",
+        ))
+    if truncated:
+        findings.append(Diagnostic(
+            "OF-CROSS-006", "info", "contextual", "constant/triSurface", 1, 1,
+            "More remote surfaces were found than the comparison covers; "
+            "the remaining files were not inspected.",
+            "Reduce the geometry set or compare the remaining surfaces manually.",
+            SOURCE_DOCS, verification_level="contextual",
+        ))
+    return tuple(findings)
+
+
+def _remote_script_diagnostics(root: PurePosixPath, files, cancel_event=None) -> tuple:
+    """Report case-root Allrun/Allclean names from the remote listing only."""
+    try:
+        names, truncated = remote_entry_names(
+            files, str(root), maximum_entries=MAX_REMOTE_SCRIPT_ENTRIES,
+        )
+    except (OSError, NotImplementedError, ValueError):
+        return ()
+    raise_if_cancelled(cancel_event)
+    matches: list[str] = []
+    for name in names:
+        raise_if_cancelled(cancel_event)
+        if not script_name_matches(name):
+            continue
+        try:
+            entry = remote_lstat_entry(files, str(root / name))
+            mode = int(getattr(entry, "mode", 0) or 0)
+        except (OSError, ValueError):
+            continue
+        if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
+            continue
+        matches.append(name)
+    return script_diagnostics(matches, truncated=truncated)
 
 
 def _read_bytes(files, path: PurePosixPath, *, cancel_event=None) -> bytes:
@@ -80,6 +167,8 @@ def lint_remote_path(path: str, files, *, cancel_event=None, release: str | None
     _check_release(release)
     selected = PurePosixPath(path)
     root, selected_file = _selected_root(selected, files)
+    script_findings = _remote_script_diagnostics(root, files, cancel_event)
+    freshness = _remote_mesh_freshness(root, files)
     contents = scan_remote_dictionaries(
         str(root),
         files,
@@ -113,10 +202,23 @@ def lint_remote_path(path: str, files, *, cancel_event=None, release: str | None
             contents, case_context=selected_file is None or bool(contents), release=release,
         )
     base = root
+
+    def _prefixed(path: str) -> str:
+        # Pseudo-paths such as <scripts:cap> are markers, not case files.
+        if path in ("", "<memory>") or path.startswith("<"):
+            return path
+        return str(base / path)
+
     return type(result)(
         tuple(
-            replace(item, path=str(base / item.path) if item.path not in ("", "<memory>") else item.path)
+            replace(item, path=_prefixed(item.path))
             for item in result.diagnostics
+        ) + tuple(
+            replace(item, path=_prefixed(item.path))
+            for item in script_findings
+        ) + tuple(
+            replace(item, path=_prefixed(item.path))
+            for item in freshness
         ),
         tuple(str(base / relative) for relative in result.files_checked),
         level=result.level,

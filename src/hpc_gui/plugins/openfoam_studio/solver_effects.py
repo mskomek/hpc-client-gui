@@ -50,7 +50,11 @@ def bound_state(tool: str, params: dict | None = None, *, release: str = "v2312"
     the compiler would refuse to produce.
     """
     params = dict(params or {})
-    family = solver_family(tool, release=release)
+    try:
+        family = solver_family(tool, release=release)
+    except ValueError as exc:
+        raise ValueError(
+            f"solver '{tool}' is RAW-ADVANCED/UNSUPPORTED; {exc}") from exc
     allowed = SOLVER_FAMILIES.get(family, {}).get("models", [])
     if not allowed:
         raise ValueError(
@@ -78,6 +82,8 @@ def bound_state(tool: str, params: dict | None = None, *, release: str = "v2312"
             regions = {"fluid": list(raw), "solid": []}
         if not regions["fluid"]:
             raise ValueError("CHT missing fluid region (regionProperties invalid)")
+        if not regions["solid"]:
+            raise ValueError("CHT requires at least one solid region (regionProperties invalid)")
     return family, model, fields, regions
 
 

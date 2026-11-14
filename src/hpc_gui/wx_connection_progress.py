@@ -10,8 +10,17 @@ class ConnectionProgressView:
         self.wx = wx
         self.history: list[str] = []
         self.value = 0
+        # Remember which i18n key produced the current stage text so a language
+        # change can re-render it; a caller-supplied string has no key.
+        self.stage_key: str | None = "connection.progress_idle"
         self.stage = wx.StaticText(parent, label=self._text("connection.progress_idle"))
-        self.stage.SetForegroundColour(wx.Colour(90, 90, 90))
+        # Follow the theme: a fixed dark grey disappears on a dark GTK theme.
+        try:
+            self.stage.SetForegroundColour(
+                wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
+            )
+        except Exception:
+            self.stage.SetForegroundColour(wx.Colour(90, 90, 90))
         self.bar = self._create_bar(parent)
         self.log = wx.TextCtrl(
             parent,
@@ -67,6 +76,16 @@ class ConnectionProgressView:
 
         return GradientProgressBar(parent)
 
+    def set_stage_key(self, key: str, percent: int | None = None) -> None:
+        """Set the stage from an i18n key so it survives a language change."""
+        self.stage_key = key
+        self.set_stage(self._text(key), percent)
+
+    def refresh_language(self) -> None:
+        """Re-render the current stage text in the current language."""
+        if self.stage_key:
+            self.set_stage(self._text(self.stage_key))
+
     def set_stage(self, label: str, percent: int | None = None) -> None:
         def apply() -> None:
             if percent is not None:
@@ -102,17 +121,17 @@ class ConnectionProgressView:
                 18,
             )
         elif "connecting to" in lower:
-            self.set_stage(self._text("connection.progress_network"), 24)
+            self.set_stage_key("connection.progress_network", 24)
         elif "negotiating transport" in lower:
-            self.set_stage(self._text("connection.progress_handshake"), 48)
+            self.set_stage_key("connection.progress_handshake", 48)
         elif "authentication completed" in lower:
-            self.set_stage(self._text("connection.progress_authenticated"), 68)
+            self.set_stage_key("connection.progress_authenticated", 68)
         elif "opening remote shell and sftp" in lower:
-            self.set_stage(self._text("connection.progress_sftp"), 86)
+            self.set_stage_key("connection.progress_sftp", 86)
         elif "connected, sftp ready" in lower:
-            self.set_stage(self._text("connection.progress_ready"), 100)
+            self.set_stage_key("connection.progress_ready", 100)
         elif "using configured key" in lower:
-            self.set_stage(self._text("connection.progress_authentication"), 34)
+            self.set_stage_key("connection.progress_authentication", 34)
         else:
             self.set_stage(str(message))
 

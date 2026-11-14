@@ -16,6 +16,18 @@ class LintResult:
     edition: str = "OpenFOAM.com / ESI"
     version: str = "v2312"
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "diagnostics",
+            tuple(sorted(self.diagnostics, key=_diagnostic_sort_key)),
+        )
+        object.__setattr__(
+            self,
+            "files_checked",
+            tuple(sorted(self.files_checked, key=lambda path: (path.casefold(), path))),
+        )
+
     @property
     def errors(self) -> int:
         return sum(item.severity == "error" for item in self.diagnostics)
@@ -51,3 +63,12 @@ class LintResult:
 
 def rule_catalog() -> dict[str, dict[str, str]]:
     return {key: dict(value) for key, value in RULES.items()}
+
+
+def _diagnostic_sort_key(item) -> tuple[object, ...]:
+    path = item.path.replace("\\", "/")
+    return (
+        path.casefold(), path, item.line, item.column, item.rule_id,
+        item.severity, item.message, item.confidence, item.suggested_fix,
+        item.source_url, item.verification_level,
+    )

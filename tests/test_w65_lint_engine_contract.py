@@ -80,6 +80,37 @@ def test_facade_contract_names():
     assert isinstance(Diagnostic("R", "info", "certain", "p", 1, 1, "m"), Diagnostic)
 
 
+def test_thermo_include_counts_as_a_case_dictionary():
+    # ESI keeps chemistry in constant/thermo.*; discovery must treat that leaf
+    # as a case dictionary so the species rule can read it.
+    assert is_dictionary_name("constant/thermo.compressibleGas")
+    assert not is_dictionary_name("constant/.thermo.hidden")
+    assert not is_dictionary_name("constant/polyMesh/thermo.points")
+    assert not is_dictionary_name("system/thermo.control")
+
+
+def test_discovery_reaches_the_thermo_include(tmp_path):
+    case = tmp_path / "case"
+    (case / "system").mkdir(parents=True)
+    (case / "system" / "controlDict").write_text("application reactingFoam;\n", encoding="utf-8")
+    (case / "constant").mkdir()
+    (case / "constant" / "thermophysicalProperties").write_text(
+        '#include "thermo.compressibleGas"\n', encoding="utf-8"
+    )
+    (case / "constant" / "thermo.compressibleGas").write_text(
+        "species ( CH4 O2 );\n\nCH4 { specie { molWeight 16; } }\n", encoding="utf-8"
+    )
+    (case / "0").mkdir()
+    (case / "0" / "U").write_text("dimensions [0 1 -1 0 0 0 0];\n", encoding="utf-8")
+
+    names = {entry.relative_path for entry in discover_case_files(case)}
+
+    # A real filesystem walk must reach the include; the mapping-level test
+    # alone would stay green if discovery were reverted.
+    assert "constant/thermo.compressibleGas" in names
+    assert "constant/thermophysicalProperties" in names
+
+
 def test_legacy_parse_text_preserved():
     ok = parse_text("FoamFile\n{\n    version 2.0;\n}\napplication simpleFoam;\n")
     assert "application" in ok.entries and not ok.issues

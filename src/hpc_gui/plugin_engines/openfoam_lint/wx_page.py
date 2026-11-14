@@ -103,7 +103,7 @@ class WxLinterPage:
             self._mark_existing_results_stale()
         else:
             self.status.SetLabel(
-                f"OpenFOAM.com / ESI {self.target_release}; static common-rule profile."
+                t("openfoam.lint_status_profile").format(version=self.target_release)
             )
 
     def open_paths(self, paths, *, remote=False, action=None):
@@ -210,7 +210,7 @@ class WxLinterPage:
             self.diagnostics.SetItem(index, 3, f"{finding.path}:{finding.line}:{finding.column}")
             self.diagnostics.SetItem(index, 4, finding.message)
         self.status.SetLabel(
-            f"OpenFOAM.com / ESI {result.version}; "
+            t("openfoam.lint_status_version").format(version=result.version)
             + t("openfoam.lint_summary").format(
                 files=len(result.files_checked), errors=result.errors,
                 warnings=result.warnings,

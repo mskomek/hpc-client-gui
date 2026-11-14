@@ -32,7 +32,7 @@ def test_manifest_fragment_parses_for_studio_identity():
 def test_fragment_carries_both_plugins_and_requires_app():
     ident = host_adapter.owning_identity()
     assert ident["id"] == "openfoam-case-studio"
-    assert ident["version"] == "0.3.0-w65r17-auditfix1"
+    assert ident["version"] == "0.3.1-w65r19.20261027.3"
     assert ident["requires_app"] == ">=1.5.9"
     ids = [item["id"] for item in
            host_adapter.manifest_ui_contributions()["plugins_menu"]["items"]]
@@ -43,8 +43,8 @@ def test_fragment_carries_both_plugins_and_requires_app():
     assert "of.linter" in [entry["id"] for entry in host_adapter.PLUGIN_MENU]
     versions = {entry["plugin"]: entry["version"] for entry in host_adapter.PLUGIN_MENU}
     assert versions == {
-        "openfoam-case-studio": "0.3.0-w65r17-auditfix1",
-        "openfoam-linter": "0.2.0-w65r17-auditfix1",
+        "openfoam-case-studio": "0.3.1-w65r19.20261027.3",
+        "openfoam-linter": "0.2.1-w65r19.20261027.3",
     }
 
 

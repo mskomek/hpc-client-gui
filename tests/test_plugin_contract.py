@@ -25,12 +25,7 @@ from hpc_gui.plugins.compatibility import (
 )
 from hpc_gui.plugins.installer import InstallError, install_plugin_from_registry
 from hpc_gui.plugins.loader import load_installed_plugins
-from hpc_gui.plugins.registry_client import (
-    OFFICIAL_RAW_BASE,
-    OFFICIAL_REGISTRY_URL,
-    find_registry_entry,
-    parse_registry,
-)
+from hpc_gui.plugins.registry_client import find_registry_entry
 from hpc_gui.plugins.schema_compat import (
     MIN_APP_VERSION_FOR_SCHEMA,
     app_supports_schema,
@@ -38,6 +33,8 @@ from hpc_gui.plugins.schema_compat import (
 )
 from hpc_gui.plugins.state import activate_version
 from hpc_gui.plugins.validator import validate_registry_dict
+
+pytest_plugins = ["support.plugin_contract_env"]
 
 # Current application release line under test (first schema-3/4 capable).
 CONTRACT_APP_VERSION = "1.5.9"
@@ -51,32 +48,6 @@ pytestmark = pytest.mark.skipif(
     not REPO or not Path(REPO).is_dir(),
     reason="HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout",
 )
-
-
-@pytest.fixture(scope="module")
-def plugins_repo() -> Path:
-    return Path(REPO).resolve()
-
-
-@pytest.fixture(scope="module")
-def local_fetcher(plugins_repo: Path):
-    def fetch(url: str, max_bytes: int) -> bytes:
-        if url == OFFICIAL_REGISTRY_URL:
-            payload = (plugins_repo / "registry.json").read_bytes()
-        elif url.startswith(OFFICIAL_RAW_BASE):
-            payload = (plugins_repo / url[len(OFFICIAL_RAW_BASE):]).read_bytes()
-        else:
-            raise OSError(f"unexpected URL outside the official raw base: {url}")
-        if len(payload) > max_bytes:
-            raise OSError("response exceeds size limit")
-        return payload
-
-    return fetch
-
-
-@pytest.fixture(scope="module")
-def registry(plugins_repo: Path) -> dict:
-    return parse_registry((plugins_repo / "registry.json").read_bytes())
 
 
 @pytest.mark.contract

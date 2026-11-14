@@ -16,8 +16,14 @@ def test_wx_shell_is_optional_and_has_migration_entrypoint():
 @pytest.mark.audit
 def test_wx_shell_uses_shared_commands_and_responsive_start_size():
     source = "".join(path.read_text(encoding="utf-8") for path in Path("src/hpc_gui").glob("wx_shell*.py"))
-    # Spec §3: recommended default 1440×900, min 1280×760 (accept legacy 960×640 for backward compat)
-    assert "COMMAND_REGISTRY" in source and ("size=(1440, 900)" in source or "size=(960, 640)" in source)
+    # Spec §3 numbers now live in wx_shell_sizing and are clamped to the display;
+    # the shell must use that helper rather than a literal size.
+    from hpc_gui.wx_shell_sizing import MINIMUM_SIZE, PREFERRED_SIZE
+
+    assert PREFERRED_SIZE == (1440, 900)
+    assert MINIMUM_SIZE == (1280, 760)
+    assert "COMMAND_REGISTRY" in source
+    assert "shell_sizes(" in source
     assert "TaskBarIcon" in source and "lifecycle.shutdown" in source
 
 
@@ -26,7 +32,7 @@ def test_wx_shell_dispatches_core_views():
     source = "".join(path.read_text(encoding="utf-8") for path in Path("src/hpc_gui").glob("wx_shell*.py"))
     assert 'command_id == "NAV-FILES"' in source
     assert '"open_editor_new_window": lambda path: open_local(path, True)' in source
-    assert "Path(path).read_text" in source and "manager.open_primary" in source
+    assert '"read_text": read_text' in source and "manager.open_primary" in source
     assert '"upload": upload_local' in source and "_start_file_transfers" in source
     assert "_editor_action_factory" in source and "current.is_local" in source
     assert 'command_id == "NAV-EDITOR"' in source

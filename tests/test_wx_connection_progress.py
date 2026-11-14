@@ -5,7 +5,12 @@ import pytest
 
 def test_connection_progress_view_shows_stages_and_monotonic_gradient():
     wx = pytest.importorskip("wx")
+    # The view renders i18n keys, so the catalog has to be loaded the way the
+    # application loads it at startup; a bare pytest process has no catalog.
+    from hpc_gui.core import i18n
     from hpc_gui.wx_connection_progress import ConnectionProgressView
+
+    i18n.set_language("en")
 
     app = wx.App.Get() or wx.App(False)
     frame = wx.Frame(None, title="connection-progress-test")

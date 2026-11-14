@@ -72,6 +72,7 @@ EXPECTED_OPENFOAM_KEYS = BASE_OPENFOAM_KEYS | frozenset({
     "solver", "source", "starter_readme", "tasks", "undo", "unknown_solver",
     "unsaved_draft_blocked", "validation_complete", "validation_failed",
     "validation_unavailable", "visual_flow", "walltime", "workflow_added",
+    "lint_status_profile", "lint_status_version",
     "workflow_drag_hint", "workflow_removed", "wrapper_created",
     "wrapper_preserved", "wrapper_save_failed",
 })

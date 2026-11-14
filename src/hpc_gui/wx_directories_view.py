@@ -56,6 +56,28 @@ def _resolve_live_files(session_state, snapshot_files=None):
     return snapshot_files
 
 
+def _create_remote_empty_file(files, path: str) -> None:
+    """Create an empty remote file through the active Files backend."""
+    writer = getattr(files, "write_text", None) if files is not None else None
+    if not callable(writer):
+        raise RuntimeError(t("dirs.remote_file_service_unavailable"))
+    writer(str(path), "")
+
+
+def _queue_directories_upload(session_state, parent, files, local_paths, remote_dir: str) -> None:
+    """Route Directories uploads through the shared transfer queue."""
+    from pathlib import Path, PurePosixPath
+
+    from hpc_gui.services.transfer_controller import TransferItem
+    from hpc_gui.wx_shell import _start_file_transfers
+
+    items = tuple(
+        TransferItem("upload", str(local_path), str(PurePosixPath(remote_dir) / Path(local_path).name))
+        for local_path in local_paths
+    )
+    _start_file_transfers(session_state or {}, None, items, files_backend=files, parent=parent)
+
+
 def _resolve_new_slurm_target(session_state, name: str) -> str:
     """Resolve a New-Slurm destination at click time from CURRENT storage.
 
@@ -67,7 +89,7 @@ def _resolve_new_slurm_target(session_state, name: str) -> str:
     return live_scratch.rstrip("/") + "/" + clean
 
 
-def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None, submit_slurm=None, submit_slurm_supported=None, embedded):
+def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None, submit_slurm=None, submit_slurm_supported=None, navigation_store=None, embedded):
     try:
         import wx
     except ImportError as exc:
@@ -168,8 +190,14 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
                 ]
                 _start_file_transfers(session_state or {}, None, items, files_backend=files, parent=parent)
                 return
+            if action == "upload" and files and destination:
+                _queue_directories_upload(session_state, parent, files, paths, destination)
+                return
             if action == "new_folder" and files and destination:
                 files.mkdir(destination)
+                return
+            if action == "new_file" and files and destination:
+                _create_remote_empty_file(files, destination)
                 return
             raise RuntimeError(f"Remote action is not available from this view: {action}")
 
@@ -260,6 +288,7 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
         run_shell=run_shell,
         submit_slurm=submit_slurm or submit,
         submit_slurm_supported=submit_slurm_supported,
+        navigation_store=navigation_store,
     )
     scratch_sizer.Add(scratch_panel, 1, wx.EXPAND)
     scratch_container.SetSizer(scratch_sizer)
@@ -281,6 +310,7 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
         run_shell=run_shell,
         submit_slurm=submit_slurm or submit,
         submit_slurm_supported=submit_slurm_supported,
+        navigation_store=navigation_store,
     )
     home_sizer.Add(home_panel, 1, wx.EXPAND)
     home_container.SetSizer(home_sizer)
@@ -412,7 +442,7 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
     return host
 
 
-def build_directories_panel(parent, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None, submit_slurm=None, submit_slurm_supported=None):
+def build_directories_panel(parent, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None, submit_slurm=None, submit_slurm_supported=None, navigation_store=None):
     """Embedded panel factory. Returns the wx.Panel host."""
     return _build_directories(
         parent,
@@ -427,11 +457,12 @@ def build_directories_panel(parent, *, session_state=None, workspace: WxDirector
         submit=submit,
         submit_slurm=submit_slurm,
         submit_slurm_supported=submit_slurm_supported,
+        navigation_store=navigation_store,
         embedded=True,
     )
 
 
-def show_directories(parent=None, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None, submit_slurm=None, submit_slurm_supported=None) -> int:
+def show_directories(parent=None, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None, submit_slurm=None, submit_slurm_supported=None, navigation_store=None) -> int:
     try:
         import wx
     except ImportError as exc:
@@ -449,6 +480,7 @@ def show_directories(parent=None, *, session_state=None, workspace: WxDirectorie
         submit=submit,
         submit_slurm=submit_slurm,
         submit_slurm_supported=submit_slurm_supported,
+        navigation_store=navigation_store,
         embedded=False,
     )
     return wx.ID_OK

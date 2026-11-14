@@ -21,6 +21,7 @@ def _directories_callbacks(session_state, parent, lifecycle):
         "submit": submit,
         "submit_slurm": submit,
         "submit_slurm_supported": remote_callbacks["submit_slurm_supported"],
+        "navigation_store": remote_callbacks["navigation_store"],
     }
 
 

@@ -10,6 +10,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from hpc_gui.plugins.openfoam_studio.security import render_exec_line
+
 
 _JOB_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
 _PARTITION_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z")
@@ -71,7 +73,7 @@ def render_slurm_job(job_name: str, res: SlurmResources, *, allrun_sha256: str) 
         'printf \'%s  %s\\n\' "$expected_allrun_sha256" ./Allrun | sha256sum --check --status || {',
         '  echo "Allrun does not match the reviewed workflow draft" >&2; exit 1',
         "}",
-        "exec bash -- ./Allrun",
+        "exec " + render_exec_line(["bash", "--", "./Allrun"]),
     ]
     return "\n".join(header + [f"module load {res.module}"] + run_guard) + "\n"
 

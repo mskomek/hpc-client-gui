@@ -2,50 +2,11 @@
 import time
 import pytest
 wx = pytest.importorskip("wx")
-from hpc_gui.wx_jobs import build_jobs_panel
 from hpc_gui.core.i18n import t
 from mock_hpc_files import MockRemoteFilesBackend
 from hpc_gui.services.output_channel_resolver import definitions_from_provider
+from support.wx_jobs_outputs_env import (_build_panel, _close)
 
-def _fake_jobs():
-    return [
-        {"id": "1001", "state": "RUNNING", "name": "jobA", "workdir": "/work", "stdout_path": "/out/1001.out", "stderr_path": "/out/1001.err"},
-        {"id": "1002", "state": "PENDING", "name": "jobB", "workdir": "/work"},
-    ]
-
-def _build_panel(list_jobs=None, read_output=None, list_job_files=None, lifecycle=None, **kwargs):
-    app = wx.App.Get() or wx.App(False)
-    frame = wx.Frame(None)
-    session_state = kwargs.get("session_state")
-    if isinstance(session_state, dict) and "remote_files_callbacks" not in kwargs:
-        from hpc_gui.wx_shell import _remote_files_callbacks
-        kwargs["remote_files_callbacks"] = _remote_files_callbacks(session_state, frame, lifecycle)
-    panel = build_jobs_panel(frame, list_jobs=list_jobs or (lambda: _fake_jobs()), read_output=read_output or (lambda j: {"stdout": f"out {j}", "stderr": f"err {j}"}), list_job_files=list_job_files or (lambda j: [{"name": f"file_{j}.txt", "size": "123", "path": f"/work/{j}/file.txt"}]), lifecycle=lifecycle, **kwargs)
-    frame.Show()
-    wx.Yield()
-    return app, frame, panel
-
-def _close(frame):
-    try:
-        for child in frame.GetChildren():
-            if hasattr(child, "_wx_jobs_state"):
-                try:
-                    child.Hide()
-                    child.Destroy()
-                except Exception:
-                    pass
-        frame.Close()
-    except Exception:
-        pass
-    for _ in range(3):
-        wx.Yield()
-    try:
-        if not frame.IsBeingDeleted():
-            frame.Destroy()
-    except Exception:
-        pass
-    for _ in range(3):
-        wx.Yield()
 
 @pytest.mark.gui
 @pytest.mark.wx
@@ -78,6 +39,7 @@ def test_wx_jobs_files_tab_loads_selected_job_files():
         assert "a.txt" in names and "b.txt" in names
     finally:
         _close(frame)
+
 
 @pytest.mark.gui
 @pytest.mark.wx
@@ -124,6 +86,7 @@ def test_wx_jobs_files_tab_stale_job_result_ignored():
     finally:
         _close(frame)
 
+
 @pytest.mark.gui
 @pytest.mark.wx
 def test_wx_jobs_outputs_tab_loads_stdout_stderr():
@@ -158,6 +121,7 @@ def test_wx_jobs_outputs_tab_loads_stdout_stderr():
     finally:
         _close(frame)
 
+
 @pytest.mark.gui
 @pytest.mark.wx
 def test_wx_jobs_outputs_live_follow():
@@ -191,6 +155,7 @@ def test_wx_jobs_outputs_live_follow():
     finally:
         _close(frame)
 
+
 @pytest.mark.gui
 @pytest.mark.wx
 def test_wx_jobs_outputs_pause_resume():
@@ -208,6 +173,7 @@ def test_wx_jobs_outputs_pause_resume():
         assert panel._wx_jobs_state["outputs_paused"] is False
     finally:
         _close(frame)
+
 
 @pytest.mark.gui
 @pytest.mark.wx
@@ -240,6 +206,7 @@ def test_wx_jobs_provider_status_is_visible_only_when_backend_supports_it():
         assert ctrls["cluster_status_text"].GetLabel() == t("jobs_outputs.cluster_status_loaded")
     finally:
         _close(frame)
+
 
 @pytest.mark.gui
 @pytest.mark.wx
@@ -280,6 +247,7 @@ def test_wx_jobs_switch_job_rejects_old_completion():
         assert "old out" not in all_text
     finally:
         _close(frame)
+
 
 @pytest.mark.gui
 @pytest.mark.wx
@@ -437,237 +405,5 @@ def test_wx_jobs_provider_output_definitions_refresh_after_reconnect():
             if set(ctrls["output_channels"]) == {"stdout", "stderr"}:
                 break
         assert set(ctrls["output_channels"]) == {"stdout", "stderr"}
-    finally:
-        _close(frame)
-
-
-@pytest.mark.gui
-@pytest.mark.wx
-def test_wx_jobs_manual_follow_reads_its_arbitrary_path():
-    contents = {
-        "/work/stdout.log": "STDOUT DATA\n",
-        "/work/stderr.log": "",
-        "/scratch/solver.log": "SOLVER DATA\n",
-    }
-    jobs = [{"id": "1001", "state": "RUNNING", "name": "solver", "workdir": "/work",
-             "stdout_path": "/work/stdout.log", "stderr_path": "/work/stderr.log"}]
-    app, frame, panel = _build_panel(
-        list_jobs=lambda: jobs,
-        read_remote_path=lambda path: contents[path],
-    )
-    try:
-        ctrls = panel._wx_jobs_controls
-        panel._wx_jobs_refresh_jobs()
-        for _ in range(30):
-            wx.Yield()
-            if ctrls["jobs"].GetItemCount() >= 1:
-                break
-            wx.MilliSleep(10)
-        evt = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, ctrls["jobs"].GetId())
-        evt.SetIndex(0)
-        ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
-        for _ in range(40):
-            wx.Yield()
-            wx.MilliSleep(10)
-        ctrls["files_browser"]._follow_callback("/scratch/solver.log")
-        for _ in range(60):
-            wx.Yield()
-            wx.MilliSleep(10)
-        matching = [tc.GetValue() for cid, tc in ctrls["output_channels"].items()
-                    if cid.startswith("follower-")]
-        assert matching and any("SOLVER DATA" in text for text in matching)
-        assert all("STDOUT DATA" not in text for text in matching)
-    finally:
-        _close(frame)
-
-
-@pytest.mark.gui
-@pytest.mark.wx
-def test_wx_jobs_detached_follower_updates_after_remote_append():
-    contents = {"/work/stdout.log": "first\n"}
-    jobs = [{"id": "1001", "state": "RUNNING", "name": "solver", "workdir": "/work",
-             "stdout_path": "/work/stdout.log"}]
-    app, frame, panel = _build_panel(
-        list_jobs=lambda: jobs,
-        read_remote_path=lambda path: contents[path],
-    )
-    detached = None
-    try:
-        ctrls = panel._wx_jobs_controls
-        panel._wx_jobs_refresh_jobs()
-        for _ in range(30):
-            wx.Yield()
-            if ctrls["jobs"].GetItemCount() >= 1:
-                break
-            wx.MilliSleep(10)
-        evt = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, ctrls["jobs"].GetId())
-        evt.SetIndex(0)
-        ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
-        ctrls["notebook"].SetSelection(4)
-        for _ in range(50):
-            wx.Yield()
-            wx.MilliSleep(10)
-            if ctrls["output_channels"]:
-                break
-        button_event = wx.CommandEvent(wx.wxEVT_BUTTON, ctrls["output_open_window"].GetId())
-        ctrls["output_open_window"].ProcessEvent(button_event)
-        for _ in range(50):
-            wx.Yield()
-            wx.MilliSleep(10)
-            detached = next((window for window in wx.GetTopLevelWindows()
-                             if hasattr(window, "_wx_output_controls") and window is not frame), None)
-            if detached is not None and "first" in detached._wx_output_controls["output"].GetValue():
-                break
-        assert detached is not None
-        assert "first" in detached._wx_output_controls["output"].GetValue()
-        contents["/work/stdout.log"] += "second\n"
-        detached._wx_output_controls["follower"].state.paused = False
-        detached._wx_output_refresh()
-        for _ in range(150):
-            wx.Yield()
-            wx.MilliSleep(10)
-            if "second" in detached._wx_output_controls["output"].GetValue():
-                break
-        assert "second" in detached._wx_output_controls["output"].GetValue()
-    finally:
-        if detached is not None:
-            try:
-                detached.Close()
-            except Exception:
-                pass
-        _close(frame)
-
-
-@pytest.mark.gui
-@pytest.mark.wx
-def test_wx_jobs_existing_follower_reassigns_to_new_remote_path():
-    contents = {"/work/a.log": "A DATA\n", "/work/b.log": "B DATA\n"}
-    jobs = [{"id": "1001", "state": "RUNNING", "name": "solver", "workdir": "/work"}]
-    app, frame, panel = _build_panel(
-        list_jobs=lambda: jobs, read_remote_path=lambda path: contents.get(path, ""),
-    )
-    try:
-        ctrls = panel._wx_jobs_controls
-        panel._wx_jobs_refresh_jobs()
-        for _ in range(30):
-            wx.Yield()
-            if ctrls["jobs"].GetItemCount() >= 1:
-                break
-            wx.MilliSleep(10)
-        evt = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, ctrls["jobs"].GetId())
-        evt.SetIndex(0)
-        ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
-        browser = ctrls["files_browser"]
-        browser._follow_callback("/work/a.log")
-        for _ in range(60):
-            wx.Yield()
-            wx.MilliSleep(10)
-            if any("A DATA" in tc.GetValue() for tc in ctrls["output_channels"].values()):
-                break
-        tracked_id = panel._wx_jobs_state["tracked_outputs"][0].tracking_id
-        assert tracked_id.startswith("follower-")
-        browser._follow_callback("/work/b.log", "existing", tracked_id)
-        for _ in range(60):
-            wx.Yield()
-            wx.MilliSleep(10)
-            if any("B DATA" in tc.GetValue() for tc in ctrls["output_channels"].values()):
-                break
-        matching = [tc.GetValue() for cid, tc in ctrls["output_channels"].items() if cid == tracked_id]
-        assert matching and "B DATA" in matching[0]
-        assert "A DATA" not in matching[0]
-        assert panel._wx_jobs_state["tracked_outputs"][0].tracking_id == tracked_id
-    finally:
-        _close(frame)
-
-
-@pytest.mark.gui
-@pytest.mark.wx
-def test_wx_jobs_manual_follow_new_window_is_live():
-    contents = {"/work/solver.log": "first\n"}
-    jobs = [{"id": "1001", "state": "RUNNING", "name": "solver", "workdir": "/work"}]
-    app, frame, panel = _build_panel(
-        list_jobs=lambda: jobs, read_remote_path=lambda path: contents.get(path, ""),
-    )
-    detached = None
-    try:
-        ctrls = panel._wx_jobs_controls
-        panel._wx_jobs_refresh_jobs()
-        for _ in range(30):
-            wx.Yield()
-            if ctrls["jobs"].GetItemCount() >= 1:
-                break
-            wx.MilliSleep(10)
-        evt = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, ctrls["jobs"].GetId())
-        evt.SetIndex(0)
-        ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
-        ctrls["files_browser"]._follow_callback("/work/solver.log", "new_window")
-        for _ in range(60):
-            wx.Yield()
-            wx.MilliSleep(10)
-            detached = next((window for window in wx.GetTopLevelWindows()
-                             if hasattr(window, "_wx_output_controls") and window is not frame), None)
-            if detached is not None and "first" in detached._wx_output_controls["output"].GetValue():
-                break
-        assert detached is not None
-        pause_event = wx.CommandEvent(wx.wxEVT_BUTTON, detached._wx_output_controls["pause"].GetId())
-        detached._wx_output_controls["pause"].ProcessEvent(pause_event)
-        contents["/work/solver.log"] += "second\n"
-        detached._wx_output_refresh()
-        for _ in range(20):
-            wx.Yield()
-            wx.MilliSleep(10)
-        assert "second" not in detached._wx_output_controls["output"].GetValue()
-        detached._wx_output_controls["pause"].ProcessEvent(pause_event)
-        detached._wx_output_refresh()
-        for _ in range(100):
-            wx.Yield()
-            wx.MilliSleep(10)
-            if "second" in detached._wx_output_controls["output"].GetValue():
-                break
-        assert "second" in detached._wx_output_controls["output"].GetValue()
-    finally:
-        if detached is not None:
-            detached.Close()
-        _close(frame)
-
-
-@pytest.mark.gui
-@pytest.mark.wx
-def test_wx_jobs_output_scroll_does_not_force_user_back_to_latest():
-    contents = {"/work/stdout.log": "".join(f"line-{index}\n" for index in range(300))}
-    jobs = [{"id": "1001", "state": "RUNNING", "name": "solver", "workdir": "/work",
-             "stdout_path": "/work/stdout.log"}]
-    app, frame, panel = _build_panel(
-        list_jobs=lambda: jobs, read_remote_path=lambda path: contents.get(path, ""),
-    )
-    try:
-        ctrls = panel._wx_jobs_controls
-        panel._wx_jobs_refresh_jobs()
-        for _ in range(30):
-            wx.Yield()
-            if ctrls["jobs"].GetItemCount() >= 1:
-                break
-            wx.MilliSleep(10)
-        evt = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, ctrls["jobs"].GetId())
-        evt.SetIndex(0)
-        ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
-        ctrls["notebook"].SetSelection(4)
-        panel._wx_jobs_refresh_outputs()
-        for _ in range(60):
-            wx.Yield()
-            wx.MilliSleep(10)
-            if ctrls["output_channels"] and any("line-299" in tc.GetValue() for tc in ctrls["output_channels"].values()):
-                break
-        output = next(iter(ctrls["output_channels"].values()))
-        output.ShowPosition(0)
-        contents["/work/stdout.log"] += "line-300\n"
-        panel._wx_jobs_refresh_outputs()
-        for _ in range(60):
-            wx.Yield()
-            wx.MilliSleep(10)
-            if "line-300" in output.GetValue():
-                break
-        assert "line-300" in output.GetValue()
-        assert output.GetScrollPos(wx.VERTICAL) < output.GetScrollRange(wx.VERTICAL)
     finally:
         _close(frame)

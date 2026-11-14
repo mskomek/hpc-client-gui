@@ -38,6 +38,31 @@ def test_cht_and_scheme_bindings():
     diags = lint_case_files({"system/controlDict": "application simpleFoam;\n",
                              "system/fvSchemes": "ddtSchemes { default Euler; }\n"})
     assert any(d.rule == "OF-NUM-010" for d in diags)
+    commented = lint_case_files({
+        "system/controlDict": "application simpleFoam;\n",
+        "system/fvSchemes": "// steadyState mentioned in comment\nddtSchemes { default Euler; }\n",
+    })
+    numeric = [d for d in commented if d.rule == "OF-NUM-010"]
+    assert len(numeric) == 1 and numeric[0].line == 2
+    valid = lint_case_files({
+        "system/controlDict": "application simpleFoam;\n",
+        "system/fvSchemes": "ddtSchemes\n{\n    default steadyState;\n}\n",
+    })
+    assert not [d for d in valid if d.rule == "OF-NUM-010"]
+
+
+def test_cht_region_properties_checks_static_fluid_and_solid_groups():
+    files = {
+        "system/controlDict": "application chtMultiRegionSimpleFoam;\n",
+        "constant/regionProperties": "regions (fluid (water air));\n",
+    }
+    missing_solid = [d for d in lint_case_files(files) if d.rule == "OF-PHYS-010"]
+    assert len(missing_solid) == 1 and "solid" in missing_solid[0].message
+
+    files["constant/regionProperties"] = (
+        "regions (fluid (water air) solid (steel));\n"
+    )
+    assert not [d for d in lint_case_files(files) if d.rule == "OF-PHYS-010"]
 
 
 def test_boundary_and_solver_bindings():

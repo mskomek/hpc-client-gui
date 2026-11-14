@@ -57,8 +57,8 @@ def test_lint_files_unsupported_names_are_diagnosed_not_dropped():
     result = lint_files({"notes.txt": "hello\n", "Allrun": "#!/bin/sh\n"})
     assert result.files_checked == ()
     assert [(d.rule_id, d.path) for d in result.diagnostics] == [
-        ("OF-CASE-007", "notes.txt"),
         ("OF-CASE-007", "Allrun"),
+        ("OF-CASE-007", "notes.txt"),
     ]
     assert rule_catalog()["OF-CASE-007"]["title"] == "Unsupported input file"
 

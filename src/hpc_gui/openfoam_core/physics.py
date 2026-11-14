@@ -20,6 +20,34 @@ SOLVER_FAMILIES = {
     "reacting": {"solvers": ["reactingFoam"], "models": []},  # RAW-ADVANCED only
 }
 
+#: Canonical steady/transient treatment per classified v2312 solver. The
+#: case generator and the linter both read this map so generated cases and
+#: lint findings cannot disagree.
+SOLVER_TIME_TREATMENT = {
+    "icoFoam": "transient",
+    "pisoFoam": "transient",
+    "pimpleFoam": "transient",
+    "rhoPimpleFoam": "transient",
+    "buoyantPimpleFoam": "transient",
+    "interFoam": "transient",
+    "reactingFoam": "transient",
+    "sonicFoam": "transient",
+    "rhoCentralFoam": "transient",
+    "multiphaseEulerFoam": "transient",
+    "chtMultiRegionFoam": "transient",
+    "simpleFoam": "steady",
+    "rhoSimpleFoam": "steady",
+    "buoyantSimpleFoam": "steady",
+    "buoyantBoussinesqSimpleFoam": "steady",
+    "potentialFoam": "steady",
+    "chtMultiRegionSimpleFoam": "steady",
+}
+
+
+def time_treatment_for(solver: str) -> str | None:
+    """Return 'steady' or 'transient' for a classified solver, else None."""
+    return SOLVER_TIME_TREATMENT.get(solver)
+
 
 def required_fields_for(family: str, model: str) -> list[str]:
     base = {"laminar": ["U", "p"], "rans-steady": ["U", "p"],

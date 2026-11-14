@@ -150,8 +150,8 @@ class TestEncodingBoundaryJustification:
     """Verify all encode/decode uses are justified."""
 
     def test_config_json_ensure_ascii_false(self):
-        """Config JSON should use ensure_ascii=False for Turkish support."""
-        storage = ROOT / "src" / "hpc_gui" / "config" / "storage.py"
+        """Config JSON (written by store_io.py) should use ensure_ascii=False for Turkish support."""
+        storage = ROOT / "src" / "hpc_gui" / "config" / "store_io.py"
         if storage.is_file():
             content = storage.read_text(encoding="utf-8")
             assert "ensure_ascii=False" in content

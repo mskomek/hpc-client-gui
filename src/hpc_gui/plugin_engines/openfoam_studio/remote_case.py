@@ -5,6 +5,7 @@ import hashlib
 import os
 from pathlib import Path, PurePosixPath
 import re
+import stat
 import tempfile
 import uuid
 
@@ -75,7 +76,50 @@ def scan_remote_case(root: str, files, *, read_only: bool = False) -> dict[str, 
     }
 
 
+def _reject_symlink(files, path: str, relative: str) -> None:
+    """Refuse to save through a remote symlink instead of swapping it.
+
+    A link trap would otherwise redirect the read, let the swap replace the
+    link with a regular file and drop the link target's content from the
+    case. Adapters without lstat keep the previous behaviour.
+    """
+    probe = getattr(files, "lstat_entry", None)
+    if not callable(probe):
+        return
+    try:
+        entry = probe(path)
+    except NotImplementedError:
+        # An adapter that exposes lstat but cannot answer keeps the previous
+        # behaviour rather than failing every save.
+        return
+    if stat.S_ISLNK(int(getattr(entry, "mode", 0) or 0)):
+        raise OSError(f"refusing to save through a symlinked remote target: {relative}")
+
+
 def save_remote_case(root: str, files, documents: dict[str, CaseDocument]) -> SaveReport:
+    """Stage, verify, commit and roll back remote case documents."""
+
+    def _present(path: str) -> bool:
+        """Is a staged/backup artifact still on the remote side?
+
+        The backend exists() helper swallows every error, so it cannot tell an
+        absent artifact from an unreachable one. Probe with stat() and keep
+        the path whenever the answer is uncertain: an extra recovery path is
+        harmless, a dropped one can strand a half-written case.
+        """
+        probe = getattr(files, "stat", None)
+        if not callable(probe):
+            return True
+        try:
+            probe(path)
+            return True
+        except FileNotFoundError:
+            return False
+        except Exception as exc:
+            if getattr(exc, "errno", None) in (2, 20):
+                return False
+            return "no such file" not in str(exc).lower()
+
     remote_root = _root_path(root)
     if any(document.read_only for document in documents.values()):
         return SaveReport(False, False, (), errors=("case workspace is a read-only snapshot",))
@@ -98,6 +142,7 @@ def save_remote_case(root: str, files, documents: dict[str, CaseDocument]) -> Sa
             target = remote_root.joinpath(*PurePosixPath(relative).parts)
             if not _inside(remote_root, target) or not files.exists(str(target)) or files.is_dir(str(target)):
                 raise OSError(f"unsafe or missing remote target: {relative}")
+            _reject_symlink(files, str(target), relative)
             current = _read_remote_bytes(files, str(target), maximum=MAX_FILE_BYTES)
             if hashlib.sha256(current).hexdigest() != document.expected_sha256:
                 raise SaveConflictError(f"remote file changed after it was opened: {relative}")
@@ -158,18 +203,23 @@ def save_remote_case(root: str, files, documents: dict[str, CaseDocument]) -> Sa
             target = str(remote_root.joinpath(*PurePosixPath(relative).parts))
             backup = backups.get(relative)
             try:
-                if files.exists(target):
+                if _present(target):
                     files.remove(target)
-                if backup and files.exists(backup):
+                if backup and _present(backup):
                     files.rename(backup, target)
             except Exception as rollback_error:
                 errors.append(f"rollback failed for {relative}: {rollback_error}")
                 if backup:
                     recovery.append(backup)
         for relative in sorted(attempted_backups):
-            recovery.append(backups[relative])
+            # A backup that was never created (its rename failed first) is not
+            # recoverable material; listing it would send recover() after a
+            # file that does not exist.
+            if _present(backups[relative]):
+                recovery.append(backups[relative])
         for relative in sorted(attempted_stages):
-            recovery.append(staged[relative])
+            if _present(staged[relative]):
+                recovery.append(staged[relative])
         recovery_paths = tuple(dict.fromkeys(recovery))
         preserve_recovery_artifacts = bool(recovery_paths)
         return SaveReport(

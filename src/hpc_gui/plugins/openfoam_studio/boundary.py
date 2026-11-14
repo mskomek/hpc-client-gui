@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import math
+import re
+
 from hpc_gui.openfoam_core.boundary import (
     BC_TYPES,
     FIELD_DIMS,
@@ -10,14 +13,37 @@ from hpc_gui.openfoam_core.boundary import (
 )
 
 
+_SCALAR = re.compile(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\Z")
+_PATCH_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_.-]*\Z")
+
+
+def _is_scalar(value: str) -> bool:
+    return bool(_SCALAR.fullmatch(value)) and math.isfinite(float(value))
+
+
+def _valid_internal_value(field: str, value: str) -> bool:
+    if field != "U":
+        return _is_scalar(value)
+    if not value.startswith("(") or not value.endswith(")"):
+        return False
+    components = value[1:-1].split()
+    return len(components) == 3 and all(_is_scalar(item) for item in components)
+
+
 def render_field_file(field: str, internal: str, patches: dict[str, tuple[str, str]]) -> str:
     if field not in FIELD_DIMS:
         raise ValueError(f"field '{field}' has no dimension entry (RAW-ADVANCED only)")
+    if not isinstance(internal, str) or not _valid_internal_value(field, internal):
+        raise ValueError(f"field '{field}' internal value must be a numeric scalar/vector")
+    if not isinstance(patches, dict):
+        raise ValueError("patches must be a mapping of patch names to boundary conditions")
     lines = ["FoamFile", "{", "    version 2.0;", "    format ascii;",
              "    class volScalarField;" if field not in ("U",) else "    class volVectorField;",
              f"    object {field};", "}", f"dimensions {FIELD_DIMS[field]};",
              f"internalField uniform {internal};", "boundaryField", "{"]
     for patch, (kind, bc) in patches.items():
+        if not isinstance(patch, str) or not _PATCH_NAME.fullmatch(patch):
+            raise ValueError(f"invalid patch name '{patch}'")
         if bc not in BC_TYPES:
             raise ValueError(f"BC type '{bc}' unsupported in v2312 typed set")
         if bc not in allowed_bc(kind):

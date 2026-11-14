@@ -116,6 +116,15 @@ class FilesBackend(ABC):
         """
         raise NotImplementedError
 
+    def lstat_entry(self, remote_path: str) -> RemoteEntry:
+        """Return metadata without following the final symlink.
+
+        Optional and deliberately separate from stat_entry: callers that must
+        fail closed on links (the OpenFOAM remote linter) require this, and a
+        backend that can only follow links must not fake it.
+        """
+        raise NotImplementedError
+
     def sha256(self, remote_path: str) -> str:
         """Return the SHA-256 hex digest of the remote file.
 

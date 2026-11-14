@@ -335,6 +335,10 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
             items = [TransferItem("download", remote_path, str(Path(destination) / PurePosixPath(remote_path).name)) for remote_path in paths]
             _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
             return
+        if action == "download_as" and files and destination and len(paths) == 1:
+            items = [TransferItem("download", paths[0], destination)]
+            _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
+            return
         if action == "upload" and files and destination:
             items = [TransferItem("upload", local_path, str(PurePosixPath(destination) / Path(local_path).name)) for local_path in paths]
             _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)

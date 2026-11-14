@@ -58,19 +58,20 @@ def test_wx_local_context_targets_unselected_row(wx_app, tmp_path: Path):
         (tmp_path/n).write_text(n)
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _pump(wx_app, lambda: listing.GetItemCount()==2)
-    listing.Select(0)
+    _pump(wx_app, lambda: listing.GetItemCount()==3)
+    old_index=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="a.txt")
+    idx=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="b.txt")
+    listing.Select(old_index)
     seen=[]
     orig_popup=listing.PopupMenu
     def capture(menu):
         seen.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
     listing.PopupMenu=capture
-    idx=1
     point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(idx).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(point)
     listing.ProcessEvent(event)
-    assert not listing.IsSelected(0)
+    assert not listing.IsSelected(old_index)
     assert listing.IsSelected(idx)
     assert sum(1 for i in range(listing.GetItemCount()) if listing.IsSelected(i)) == 1
     listing.PopupMenu=orig_popup
@@ -80,20 +81,23 @@ def test_wx_local_context_preserves_multiselection(wx_app, tmp_path: Path):
         (tmp_path/n).write_text(n)
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _pump(wx_app, lambda: listing.GetItemCount()==3)
-    listing.Select(0); listing.Select(1)
+    _pump(wx_app, lambda: listing.GetItemCount()==4)
+    a_index=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="a.txt")
+    b_index=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="b.txt")
+    c_index=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="c.txt")
+    listing.Select(a_index); listing.Select(b_index)
     captured=[]
     orig=listing.PopupMenu
     def cap(menu):
         captured.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
     listing.PopupMenu=cap
     # right click inside existing multiselection (first item)
-    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(0).y+2))
+    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(a_index).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(point)
     listing.ProcessEvent(event)
-    assert listing.IsSelected(0) and listing.IsSelected(1)
-    assert not listing.IsSelected(2)
+    assert listing.IsSelected(a_index) and listing.IsSelected(b_index)
+    assert not listing.IsSelected(c_index)
     listing.PopupMenu=orig
 
 def test_wx_local_background_context_targets_active_directory(wx_app, tmp_path: Path, monkeypatch):
@@ -132,8 +136,9 @@ def test_wx_local_keyboard_context_uses_focused_selection(wx_app, tmp_path: Path
         (tmp_path/n).write_text(n)
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _pump(wx_app, lambda: listing.GetItemCount()==2)
-    listing.Select(1)
+    _pump(wx_app, lambda: listing.GetItemCount()==3)
+    b_index=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="b.txt")
+    listing.Select(b_index)
     seen=[]
     orig=listing.PopupMenu
     def cap(menu): seen.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
@@ -142,15 +147,16 @@ def test_wx_local_keyboard_context_uses_focused_selection(wx_app, tmp_path: Path
     event.SetPosition(wx.DefaultPosition)
     listing.ProcessEvent(event)
     # keyboard context should keep selection
-    assert listing.IsSelected(1)
+    assert listing.IsSelected(b_index)
     listing.PopupMenu=orig
 
 def test_wx_local_context_rename_via_menu(wx_app, tmp_path: Path, monkeypatch):
     src=tmp_path / "old.txt"; src.write_text("x")
     frame=_local(wx_app, tmp_path)
     listing=frame._wx_local_controls["listing"]
-    _pump(wx_app, lambda: listing.GetItemCount()==1)
-    listing.Select(0)
+    _pump(wx_app, lambda: listing.GetItemCount()==2)
+    old_index=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="old.txt")
+    listing.Select(old_index)
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *a, **k: _Dialog("new.txt"))
     # trigger context rename
     orig=listing.PopupMenu
@@ -160,7 +166,7 @@ def test_wx_local_context_rename_via_menu(wx_app, tmp_path: Path, monkeypatch):
                 listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
                 break
     listing.PopupMenu=choose
-    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(0).y+2))
+    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(old_index).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId()); event.SetPosition(point)
     listing.ProcessEvent(event)
     listing.PopupMenu=orig
@@ -170,17 +176,18 @@ def test_wx_remote_context_targets_unselected_row(wx_app):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
     listing=frame._wx_remote_controls["listing"]
-    listing.Select(0)
+    old_index=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="a.txt")
+    listing.Select(old_index)
     orig=listing.PopupMenu
     visible_labels=[]
     def cap(menu):
         visible_labels.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
     listing.PopupMenu=cap
-    idx=1
+    idx=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="b.txt")
     point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(idx).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId()); event.SetPosition(point)
     listing.ProcessEvent(event)
-    assert not listing.IsSelected(0)
+    assert not listing.IsSelected(old_index)
     assert listing.IsSelected(idx)
     assert sum(1 for i in range(listing.GetItemCount()) if listing.IsSelected(i)) == 1
     assert t("dirs.follow_track") not in visible_labels
@@ -216,7 +223,8 @@ def test_wx_remote_context_rename_updates_backend(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
     listing=frame._wx_remote_controls["listing"]
-    listing.Select(0)
+    a_index=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="a.txt")
+    listing.Select(a_index)
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *a, **k: _Dialog("renamed.txt"))
     orig=listing.PopupMenu
     def choose(menu):
@@ -225,7 +233,7 @@ def test_wx_remote_context_rename_updates_backend(wx_app, monkeypatch):
                 listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
                 break
     listing.PopupMenu=choose
-    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(0).y+2))
+    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(a_index).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId()); event.SetPosition(point)
     listing.ProcessEvent(event)
     listing.PopupMenu=orig
@@ -257,7 +265,8 @@ def test_wx_remote_context_copy_path_writes_clipboard_without_backend(wx_app):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
     listing=frame._wx_remote_controls["listing"]
-    listing.Select(0)
+    file_index=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="a.txt")
+    listing.Select(file_index)
     orig=listing.PopupMenu
     def choose(menu):
         for item in menu.GetMenuItems():
@@ -272,7 +281,7 @@ def test_wx_remote_context_copy_path_writes_clipboard_without_backend(wx_app):
                 listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
                 break
     listing.PopupMenu=choose
-    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(0).y+2))
+    point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(file_index).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId()); event.SetPosition(point)
     listing.ProcessEvent(event)
     listing.PopupMenu=orig

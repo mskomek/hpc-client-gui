@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import math
+import re
+
+from hpc_gui.openfoam_core import time_treatment_for
+
 DDT = {"Euler", "backward", "CrankNicolson", "steadyState"}
 GRAD = {"Gauss linear", "Gauss pointLinear", "leastSquares", "fourth"}
 DIV = {"Gauss linear", "Gauss upwind", "Gauss linearUpwind", "Gauss vanLeer", "Gauss MUSCL"}
@@ -10,15 +15,33 @@ SOLVERS = {"PCG", "PBiCGStab", "smoothSolver", "GAMG"}
 PRECOND = {"DIC", "DILU", "diagonal", "GAMG"}
 
 
+def _finite_number(value: object) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
 def render_control_dict(application: str, start_time: float, end_time: float,
                         delta_t: float, write_interval: float,
                         max_co: float | None = None) -> str:
-    for name, value in (("endTime", end_time), ("deltaT", delta_t), ("writeInterval", write_interval)):
+    if not isinstance(application, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", application):
+        raise ValueError("application must be a solver identifier")
+    values = (("startTime", start_time), ("endTime", end_time),
+              ("deltaT", delta_t), ("writeInterval", write_interval))
+    for name, value in values:
+        if not _finite_number(value):
+            raise ValueError(f"invalid time control: {name} must be a finite number")
+    if end_time <= start_time:
+        raise ValueError("endTime must be greater than startTime")
+    for name, value in (("deltaT", delta_t), ("writeInterval", write_interval)):
         if value <= 0:
             raise ValueError(f"invalid time control: {name}={value} must be positive")
+    if max_co is not None and (not _finite_number(max_co) or max_co <= 0):
+        raise ValueError("maxCo must be a positive finite number")
     max_co_line = f"maxCo {max_co};\n" if max_co is not None else ""
-    if max_co is not None and max_co <= 0:
-        raise ValueError("maxCo must be positive")
     return (
         "FoamFile\n{\n    version 2.0;\n    format ascii;\n    class dictionary;\n    object controlDict;\n}\n"
         f"application {application};\nstartFrom startTime;\nstartTime {start_time};\n"
@@ -26,11 +49,16 @@ def render_control_dict(application: str, start_time: float, end_time: float,
         f"writeControl timeStep;\nwriteInterval {write_interval};\n{max_co_line}")
 
 
-def validate_fv_schemes(ddt: str, grad: str, div: str, laplacian: str, solver_family: str) -> None:
-    if solver_family in ("rans-steady",) and ddt != "steadyState":
-        raise ValueError("steady RANS requires ddtSchemes steadyState")
-    if solver_family in ("transient",) and ddt == "steadyState":
-        raise ValueError("transient solver is incompatible with steadyState ddt")
+def validate_fv_schemes(ddt: str, grad: str, div: str, laplacian: str, solver_family: str,
+                        *, tool: str | None = None) -> None:
+    """Validate schemes; a classified tool wins over the family heuristic."""
+    treatment = time_treatment_for(tool) if tool else None
+    if treatment is None and solver_family in ("rans-steady", "transient"):
+        treatment = "steady" if solver_family == "rans-steady" else "transient"
+    if treatment == "steady" and ddt != "steadyState":
+        raise ValueError(f"{tool or solver_family} requires ddtSchemes steadyState")
+    if treatment == "transient" and ddt == "steadyState":
+        raise ValueError(f"{tool or solver_family} is transient and is incompatible with steadyState ddt")
     if ddt not in DDT:
         raise ValueError(f"unsupported ddt scheme '{ddt}'")
     if grad not in GRAD:

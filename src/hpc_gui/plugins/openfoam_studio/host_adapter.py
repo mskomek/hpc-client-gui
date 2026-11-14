@@ -4,10 +4,13 @@
 with the current host loader and its keys are not host-contract keys.
 ``manifest_ui_contributions()`` (r9) emits a host-validator-clean
 ``ui_contributions`` fragment for the manifest ``ui_contributions`` field,
-so a future W65 package can embed it without validator rework. Manifest
-packaging, trusted-tool approval and install/upgrade/rollback/VM proof
-remain BLOCKED_ENV (G47); host action dispatch is registered (r10
-allowlist) but inert until plugin/host readiness is verified.
+so a W65 package can embed it without validator rework. The production
+dispatcher derives readiness dynamically in
+``hpc_gui.services.plugin_menu_actions.is_openfoam_dispatch_ready`` from
+the active, application-pinned API 3 package and its host callback.
+Manifest packaging and install/upgrade/rollback/VM proof remain BLOCKED_ENV
+(G47). ``DISPATCH_READY`` below is a compatibility diagnostic only; it is
+not consulted by the production menu dispatcher.
 """
 
 from __future__ import annotations
@@ -53,9 +56,9 @@ REQUESTED_ACTIONS = (
 # Must stay in sync with the host allowlist subset for OpenFOAM actions.
 HOST_ACTION_IDS = tuple(entry["action"] for entry in REQUESTED_ACTIONS)
 
-# Code-owned readiness mirror: False until the host flag flips after a
-# VM-proven host path. Reactivation trigger: G47 package install plus a
-# real wx/Qt execution path verified in Windows11/Ubuntu-Test guests.
+# Compatibility diagnostic retained for existing tests/consumers. Runtime
+# menu readiness is derived from the active API 3 pin and a callable host
+# path by ``plugin_menu_actions.is_openfoam_dispatch_ready``.
 DISPATCH_READY = False
 
 
@@ -65,13 +68,15 @@ def host_action_ids() -> tuple[str, ...]:
 
 
 def dispatch_readiness() -> dict:
-    """Return the N-side dispatch readiness status (W65 r10, inert)."""
+    """Return the legacy diagnostic mirror; production dispatch ignores it."""
     return {
         "ready": bool(DISPATCH_READY),
-        "reason": ("ready" if DISPATCH_READY else
-                   "openfoam host binding pending readiness "
-                   "(menu stays disabled; no execution)"),
-        "reactivation": "G47 package install + VM-proven wx/Qt host path",
+        "reason": ("legacy diagnostic mirror enabled; not the production gate"
+                   if DISPATCH_READY else
+                   "legacy diagnostic mirror is false; production readiness "
+                   "is computed from the active pinned package and host callback"),
+        "reactivation": "Production readiness is computed by "
+                        "plugin_menu_actions.is_openfoam_dispatch_ready",
     }
 
 
