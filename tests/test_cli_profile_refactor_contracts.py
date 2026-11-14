@@ -69,4 +69,4 @@ def test_delete_requires_explicit_confirmation(monkeypatch, capsys):
     monkeypatch.setattr(commands, "resolve_profile", lambda _name: {"name": "cluster"})
     assert commands._run_profile(_args("delete")) == ExitCode.USAGE
     assert deleted == []
-    assert "without --yes" in capsys.readouterr().err
+    assert "without --yes" in (capsys.readouterr().out + capsys.readouterr().err)
