@@ -27,9 +27,20 @@ def test_small_desktop_is_clamped_to_the_work_area():
 
 
 @pytest.mark.unit
-def test_never_goes_below_the_floor():
-    assert clamp_size(PREFERRED_SIZE, (640, 480)) == FLOOR_SIZE
-    assert clamp_size(MINIMUM_SIZE, (800, 500)) == FLOOR_SIZE
+def test_floor_is_respected_when_the_work_area_can_fit_it():
+    assert clamp_size((800, 500), (1920, 1080)) == FLOOR_SIZE
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("available", [(800, 600), (640, 480), (320, 200), (1, 1)])
+def test_small_work_area_is_never_exceeded(available):
+    assert clamp_size(PREFERRED_SIZE, available) == available
+    assert clamp_size(MINIMUM_SIZE, available) == available
+
+
+@pytest.mark.unit
+def test_invalid_zero_area_does_not_create_a_zero_size_frame():
+    assert clamp_size(PREFERRED_SIZE, (0, 0)) == (1, 1)
 
 
 class _Area:
@@ -63,6 +74,13 @@ def test_shell_sizes_follows_the_display():
     default, minimum = shell_sizes(_FakeWx(_Area(1920, 1080)))
     assert default == PREFERRED_SIZE
     assert minimum == MINIMUM_SIZE
+
+
+@pytest.mark.unit
+def test_shell_sizes_for_very_small_display():
+    preferred, minimum = shell_sizes(_FakeWx(_Area(640, 480)))
+    assert preferred == (640, 480)
+    assert minimum == (640, 480)
 
 
 @pytest.mark.unit
