@@ -11,7 +11,8 @@ from hpc_gui.wx_shell_files import _editor_action_factory
 from hpc_gui.wx_shell_jobs import _jobs_callbacks
 from hpc_gui.wx_shell_events import _logs_callbacks
 from hpc_gui.wx_shell_terminal import _run_shell_in_terminal
-from hpc_gui.core.i18n import current_language, set_language, t, unsubscribe_language_change
+from hpc_gui.wx_shell_teardown import build_shell_close_handler
+from hpc_gui.core.i18n import current_language, set_language, t
 from hpc_gui.wx_shell_window_support import (
     _make_tray, _restore_main_window_state, _save_main_window_state,
     _update_shell_status_text,
@@ -368,75 +369,10 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     frame._wx_shell_session_state = session_state
     frame._wx_shell_tray = tray
 
-    def close(_event):
-        # W55 PKGREG-SHUTDOWN-BISTABLE-NON-TERMINATION closed-owner repair:
-        # the former frame.Hide() before shutdown/Destroy was observed hung
-        # on the main thread (py-spy inside Hide) while the same bytes also
-        # exited cleanly, i.e. a bistable teardown race. Hide() is redundant
-        # (Destroy hides/removes the window) so it no longer gates shutdown.
-        # Order is now: page teardown -> chrome close -> lifecycle.shutdown
-        # (bounded, never blocks) -> child close -> Destroy. Reentrant closes
-        # are ignored via lifecycle.shutdown_started.
-        if lifecycle.shutdown_started:
-            try:
-                frame.Destroy()
-            except Exception:
-                pass
-            return
-        # Persist main-window layout first (best-effort; shutdown never blocks
-        # on it) so save/restart restores size/position/maximized/selected tab.
-        _save_main_window_state(frame, notebook)
-        # Invoke every embedded page's close callback before shutdown
-        for _key, controls in list(page_controls.items()):
-            # For Files splitter, local/remote/transfers are stored separately
-            candidates = []
-            if "page" in controls:
-                candidates.append(controls["page"])
-            if "local" in controls:
-                candidates.append(controls["local"])
-            if "remote" in controls:
-                candidates.append(controls["remote"])
-            if "transfers" in controls:
-                candidates.append(controls["transfers"])
-            for host in candidates:
-                cb = getattr(host, "_wx_host_close", None)
-                if callable(cb):
-                    try:
-                        cb()
-                    except Exception:
-                        # ponytail: swallowed so one bad page cannot block shutdown;
-                        # hides page-teardown faults from the leak counters - route to
-                        # the lifecycle diagnostics channel if the stress campaign needs them.
-                        pass
-        unsubscribe_language_change(refresh_labels)
-        lifecycle.set_tray_notifier(None)
-        # Close chrome windows first (Part 3 Rule 3) before lifecycle.shutdown
-        for win in list(chrome_windows):
-            try:
-                win.Close()
-            except Exception:
-                pass
-        chrome_windows.clear()
-        # invalidate shell_ref so future handlers abort parenting
-        try:
-            shell_ref[0] = None
-        except Exception:
-            pass
-        # Bounded lifecycle teardown first so SSH/timers/threads are released
-        # even if a later native window call misbehaves. shutdown() itself is
-        # time-boxed per cleanup (see WxLifecycleController).
-        lifecycle.shutdown()
-        for child in wx.GetTopLevelWindows():
-            if child is not frame and child.GetParent() is frame:
-                try:
-                    child.Close()
-                except Exception:
-                    pass
-        frame._wx_shell_destroy_invoked = True
-        try:
-            frame._wx_shell_destroy_return = bool(frame.Destroy())
-        except Exception as exc:
-            frame._wx_shell_destroy_error_type = type(exc).__name__
+    close = build_shell_close_handler(
+        wx, frame, notebook, lifecycle, page_controls, chrome_windows,
+        shell_ref, refresh_labels, _save_main_window_state,
+    )
 
     # W55 A1/A2 (HPC-W10-GJ2-029/038): keyboard accelerators for shell
     # navigation. Ctrl+1..7 selects notebook tabs; F1 opens Help. The table
