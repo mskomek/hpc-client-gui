@@ -4,7 +4,7 @@ The shell asks for 1440x900 and a 1280x760 minimum, but a 1024x768 desktop
 (the Kole Ubuntu guest, small laptops) cannot honour either, and the window is
 then clipped: the status bar falls off the screen and the layout squeezes the
 chrome. These helpers fit both numbers into the display work area while keeping
-a floor that still leaves the shell usable.
+a usability floor whenever the display is large enough.
 """
 
 from __future__ import annotations
@@ -21,13 +21,15 @@ def clamp_size(
     available: Tuple[int, int],
     floor: Tuple[int, int] = FLOOR_SIZE,
 ) -> Tuple[int, int]:
-    """Fit preferred into available, never going below the floor."""
+    """Fit the window to the work area; use the floor only when it fits."""
     preferred_w, preferred_h = preferred
     available_w, available_h = available
     floor_w, floor_h = floor
-    width = max(floor_w, min(int(preferred_w), int(available_w)))
-    height = max(floor_h, min(int(preferred_h), int(available_h)))
-    return int(width), int(height)
+    # The usability floor applies only when there is enough display space.
+    # Never request a window wider or taller than the available work area.
+    width = min(max(floor_w, int(preferred_w)), max(1, int(available_w)))
+    height = min(max(floor_h, int(preferred_h)), max(1, int(available_h)))
+    return width, height
 
 
 def display_available(wx) -> Tuple[int, int]:
