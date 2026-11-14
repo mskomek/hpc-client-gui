@@ -35,6 +35,7 @@ from hpc_gui.wx_terminal_webview_support import (
     MAX_PENDING_PASTE_BYTES as MAX_PENDING_PASTE_BYTES,
     READINESS_TIMEOUT_MS,
     TerminalSize,
+    build_terminal_diagnostic_text,
     _is_local_file_url as _is_local_file_url,
     _safe_json_dumps as _safe_json_dumps,
     _safe_truncate_index as _safe_truncate_index,
@@ -400,28 +401,7 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
             self._webview_failure_detail = type(exc).__name__
 
     def _build_diagnostic_text(self, reason: str) -> str:
-        import platform as _pl
-        import sys as _sys
-
-        wx_ver = "unknown"
-        try:
-            wx_ver = wx.version()  # type: ignore
-        except Exception:
-            pass
-        backend = "unknown"
-        try:
-            if hasattr(wx.html2.WebView, "GetBackendVersionInfo"):
-                backend = str(wx.html2.WebView.GetBackendVersionInfo())  # type: ignore
-        except Exception:
-            pass
-        return (
-            f"{reason}\n"
-            f"wxPython: {wx_ver}\n"
-            f"Python: {_sys.version.split()[0]} platform={_pl.system()} {_pl.release()}\n"
-            f"WebView backend: {backend}\n"
-            f"Expected: WebView2/Edge on Windows, WebKit2 on Linux/macOS; install WebView2 Runtime or libwebkit2gtk.\n"
-            f"Assets expected: wx_index.html, wx_bridge.js, xterm.js, xterm.css, addon-fit.js under assets/terminal/ (vendored, no CDN).\n"
-        )
+        return build_terminal_diagnostic_text(reason, wx)
 
     # ---------- Language ----------
 

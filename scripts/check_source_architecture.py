@@ -1,4 +1,4 @@
-"""Combine the shared Agent Core LOC gate with project dependency/API contracts."""
+"""Check local Python LOC, dependency cycles and public API contracts."""
 
 from __future__ import annotations
 
@@ -6,9 +6,7 @@ import argparse
 import ast
 import hashlib
 import json
-import os
 import subprocess
-import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -250,29 +248,32 @@ def _cycles(graph: dict[str, set[str]]) -> list[list[str]]:
     return sorted(found)
 
 
-def _core_root(root: Path, explicit: Path | None) -> Path:
-    candidates = [explicit] if explicit else []
-    if os.environ.get("AC_CORE_ROOT"):
-        candidates.append(Path(os.environ["AC_CORE_ROOT"]))
-    candidates.extend(parent / ".agents-core" for parent in root.parents)
-    for candidate in candidates:
-        if candidate and (candidate / ".opencode/scripts/validate-source-architecture.py").is_file():
-            return candidate.resolve()
-    raise FileNotFoundError("shared Agent Core validator not found; set AC_CORE_ROOT to its checkout")
-
-
-def _run_shared_loc(root: Path, core: Path, scope: str, base: str) -> dict[str, Any]:
-    validator = core / ".opencode/scripts/validate-source-architecture.py"
-    command = [sys.executable, str(validator), "--root", str(root), "--scope", scope]
-    if scope == "changed":
-        command.extend(["--base", base])
-    result = subprocess.run(command, cwd=root, text=True, capture_output=True, check=False)
-    try:
-        report = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"shared architecture validator returned invalid JSON: {result.stderr}") from exc
-    report["exit_code"] = result.returncode
-    return report
+def _run_local_loc(scan: dict[str, Any], root: Path, scope: str, base: str) -> dict[str, Any]:
+    """Apply the 500-line limit using only files in this repository."""
+    files = scan["files"]
+    if scope == "project":
+        selected = sorted(files)
+    else:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "--diff-filter=ACMR", base, "HEAD", "--", "*.py"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        selected = sorted(set(result.stdout.splitlines()) & files.keys())
+    errors = [
+        f"{path}: {files[path]['loc']} physical lines exceeds {LIMIT}"
+        for path in selected
+        if files[path]["loc"] > LIMIT
+    ]
+    return {
+        "status": "FAIL" if errors else "PASS",
+        "scope": scope,
+        "source_count": len(selected),
+        "errors": errors,
+        "exit_code": 1 if errors else 0,
+    }
 
 
 def _baseline(scan: dict[str, Any], root: Path) -> dict[str, Any]:
@@ -296,8 +297,8 @@ def _write_reports(report: dict[str, Any], json_path: Path, markdown_path: Path)
         "# Source Architecture Gate", "",
         f"- Mode: `{report['mode']}`",
         f"- Source commit: `{report['source_commit']}`",
-        f"- Shared LOC scope: `{report['loc_gate']['scope']}`",
-        f"- Shared source count: {report['loc_gate']['source_count']}",
+        f"- LOC scope: `{report['loc_gate']['scope']}`",
+        f"- Checked source count: {report['loc_gate']['source_count']}",
         f"- Files over 500 lines in current inventory: {report['over_limit_python_count']}",
         f"- Dependency errors: {len(report['dependency_errors'])}",
         f"- Current cycles: {len(report['current_cycles'])}",
@@ -321,7 +322,6 @@ def _write_reports(report: dict[str, Any], json_path: Path, markdown_path: Path)
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd())
-    parser.add_argument("--core-root", type=Path)
     parser.add_argument("--baseline", type=Path, default=BASELINE_PATH)
     parser.add_argument("--api-contract", type=Path, default=Path("docs/architecture/public-api-contracts.json"))
     parser.add_argument("--mode", choices=("baseline", "gate", "full"), required=True)
@@ -330,11 +330,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--markdown-report", type=Path, default=Path(".tmp/source-architecture.md"))
     args = parser.parse_args(argv)
     root = args.root.resolve()
-    core = _core_root(root, args.core_root)
     baseline_path = args.baseline if args.baseline.is_absolute() else root / args.baseline
     scan = _scan_project(root)
     scope = "project" if args.mode in {"baseline", "full"} else "changed"
-    loc_gate = _run_shared_loc(root, core, scope, args.base)
+    loc_gate = _run_local_loc(scan, root, scope, args.base)
     baseline = json.loads(baseline_path.read_text(encoding="utf-8")) if baseline_path.is_file() else None
     api_contract_path = args.api_contract if args.api_contract.is_absolute() else root / args.api_contract
     api_contract = None
@@ -381,7 +380,7 @@ def main(argv: list[str] | None = None) -> int:
             ["git", "rev-parse", "HEAD"], cwd=root, check=True, text=True, capture_output=True
         ).stdout.strip(),
         "loc_gate": loc_gate,
-        "shared_loc_passed": loc_gate["status"] == "PASS",
+        "loc_passed": loc_gate["status"] == "PASS",
         "file_count_python": len(scan["files"]),
         "over_limit_python_count": sum(data["loc"] > LIMIT for data in scan["files"].values()),
         "files": scan["files"],
@@ -397,6 +396,19 @@ def main(argv: list[str] | None = None) -> int:
     markdown_path = args.markdown_report if args.markdown_report.is_absolute() else root / args.markdown_report
     _write_reports(report, json_path, markdown_path)
     print(f"{report['status']}: {report['file_count_python']} Python files; {report['over_limit_python_count']} over 500 lines")
+    if report["status"] == "FAIL":
+        for category, problems in (
+            ("LOC", loc_gate["errors"]),
+            ("Dependency", new_dependency_errors),
+            ("API", api_errors),
+            ("Cycle", cycle_errors),
+        ):
+            if problems:
+                print(f"{category} errors ({len(problems)}):")
+                for problem in problems[:20]:
+                    print(f"  - {problem}")
+                if len(problems) > 20:
+                    print(f"  ... {len(problems) - 20} more (see report)")
     print(f"JSON report: {json_path}\nMarkdown report: {markdown_path}")
     return 0 if args.mode == "baseline" or passed else 1
 

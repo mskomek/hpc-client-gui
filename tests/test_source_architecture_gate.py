@@ -81,23 +81,17 @@ def test_public_symbols_honor_explicit_all_instead_of_imported_names() -> None:
     assert architecture._public_symbols(tree) == {"build"}
 
 
-def test_baseline_report_keeps_shared_loc_failure_distinct(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_baseline_report_keeps_local_loc_failure_distinct(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _git_repo(tmp_path)
     _write(tmp_path / "src/hpc_gui/api.py", "def retained(): pass\n")
-    _write(
-        tmp_path / ".agents-core/.opencode/scripts/validate-source-architecture.py",
-        "print('{}')\n",
-    )
-
-    def fake_run(root: Path, core: Path, scope: str, base: str) -> dict[str, object]:
+    def fake_run(scan: dict, root: Path, scope: str, base: str) -> dict[str, object]:
         assert scope == "project"
         return {"status": "FAIL", "scope": scope, "source_count": 1, "errors": ["existing LOC debt"], "exit_code": 1}
 
-    monkeypatch.setattr(architecture, "_run_shared_loc", fake_run)
+    monkeypatch.setattr(architecture, "_run_local_loc", fake_run)
     monkeypatch.chdir(tmp_path)
     code = architecture.main([
         "--mode", "baseline",
-        "--core-root", str(tmp_path / ".agents-core"),
         "--json-report", ".tmp/report.json",
         "--markdown-report", ".tmp/report.md",
     ])
@@ -106,7 +100,32 @@ def test_baseline_report_keeps_shared_loc_failure_distinct(tmp_path: Path, monke
     api_contract = json.loads((tmp_path / "docs/architecture/public-api-contracts.json").read_text(encoding="utf-8"))
     assert code == 0
     assert report["status"] == "BASELINE_RECORDED"
-    assert report["shared_loc_passed"] is False
+    assert report["loc_passed"] is False
     assert (tmp_path / "docs/architecture/source-loc-baseline.json").is_file()
     assert len(api_contract["baseline_commit"]) == 40
     assert api_contract["modules"] == {}
+
+
+def test_local_loc_gate_enforces_500_physical_lines(tmp_path: Path) -> None:
+    _git_repo(tmp_path)
+    _write(tmp_path / "src/hpc_gui/large.py", "value = 1\n" * 501)
+    _write(tmp_path / "src/hpc_gui/small.py", "value = 1\n" * 500)
+
+    scan = architecture._scan_project(tmp_path)
+    result = architecture._run_local_loc(scan, tmp_path, "project", "HEAD")
+
+    assert result["status"] == "FAIL"
+    assert result["source_count"] == 2
+    assert result["errors"] == ["src/hpc_gui/large.py: 501 physical lines exceeds 500"]
+
+
+def test_local_loc_gate_passes_within_limit(tmp_path: Path) -> None:
+    _git_repo(tmp_path)
+    _write(tmp_path / "src/hpc_gui/small.py", "value = 1\n" * 500)
+
+    result = architecture._run_local_loc(
+        architecture._scan_project(tmp_path), tmp_path, "project", "HEAD"
+    )
+
+    assert result["status"] == "PASS"
+    assert result["errors"] == []
