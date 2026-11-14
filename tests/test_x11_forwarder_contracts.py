@@ -168,3 +168,89 @@ def test_relay_channel_count_is_bounded_and_closed_requests_rejected(monkeypatch
     relay._on_x11_channel(after_close, None)
     assert after_close.closed is True
     assert len(starts) == 8
+
+
+class _FakeLocalDisplay:
+    screen = 0
+    host = "127.0.0.1"
+    unix_path = ""
+    name = "localhost:0"
+    display = 0
+
+    def __init__(self):
+        self.connections = []
+
+    def connect(self, timeout=5.0):
+        local = _CaptureLocalSocket()
+        self.connections.append(local)
+        return local
+
+
+class _CaptureLocalSocket:
+    def __init__(self):
+        self.written = []
+        self.closed = False
+
+    def sendall(self, data):
+        self.written.append(data)
+
+    def close(self):
+        self.closed = True
+
+
+class _FakeChannel:
+    def __init__(self, packets):
+        self.packets = iter(packets)
+        self.closed = False
+        self.timeouts = []
+
+    def recv(self, _size):
+        return next(self.packets, b"")
+
+    def settimeout(self, value):
+        self.timeouts.append(value)
+
+    def close(self):
+        self.closed = True
+
+
+def test_relay_rewrites_fragmented_x11_setup_before_forwarding():
+    display = _FakeLocalDisplay()
+    real = b"R" * 16
+    relay = X11Forwarder(display, cookie_reader=lambda _: real)
+    packet = _setup_packet(relay._fake_cookie)
+    channel = _FakeChannel([packet[:11], packet[11:]])
+    pumped = []
+    relay._pump = lambda remote, local: pumped.append((remote, local))
+    relay._relay(channel)
+    local = display.connections[0]
+    assert local.written == [_setup_packet(real)]
+    assert channel.timeouts == [10.0, None]
+    assert pumped == [(channel, local)]
+    assert channel.closed is True
+    assert local.closed is True
+    relay.close()
+
+
+def test_relay_rejects_invalid_x11_cookie_without_pumping():
+    display = _FakeLocalDisplay()
+    relay = X11Forwarder(display, cookie_reader=lambda _: b"R" * 16)
+    channel = _FakeChannel([_setup_packet(b"X" * 16)])
+    pumped = []
+    relay._pump = lambda *_: pumped.append(True)
+    relay._relay(channel)
+    assert display.connections[0].written == []
+    assert display.connections[0].closed
+    assert channel.closed
+    assert pumped == []
+    relay.close()
+
+
+def test_closed_forwarder_refuses_new_channel_without_local_connection():
+    display = _FakeLocalDisplay()
+    relay = X11Forwarder(display, cookie_reader=lambda _: b"R" * 16)
+    relay.close()
+    channel = _FakeChannel([_setup_packet(relay._fake_cookie)])
+    relay._relay(channel)
+    assert display.connections == []
+    assert channel.closed
