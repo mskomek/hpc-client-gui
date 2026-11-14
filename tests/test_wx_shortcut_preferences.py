@@ -26,6 +26,11 @@ class _Wx:
     WXK_RETURN = 13
 
 
+def test_parser_retains_modifiers_and_literal_plus_key():
+    assert parse_binding("Ctrl+Shift+N") == (frozenset({"ctrl", "shift"}), "N")
+    assert parse_binding("Ctrl++") == (frozenset({"ctrl"}), "+")
+
+
 def test_ctrl_shift_named_and_punctuation_shortcuts():
     wx = _Wx()
     assert to_wx_accel(wx, "Ctrl+Shift+H") == (5, ord("H"))
