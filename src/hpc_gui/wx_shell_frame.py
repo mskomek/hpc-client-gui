@@ -405,24 +405,44 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
             _wx_shell_accel_spec.append(
                 (int(wx.ACCEL_CTRL), ord(str(_tab_index + 1)), int(_tab_cmd))
             )
-        _help_cmd = wx.NewIdRef()
-        _wx_shell_accel_ids[int(_help_cmd)] = "help"
-
-        def _on_accel_help(_evt):
-            try:
-                if frame.IsBeingDeleted():
-                    return
-                _dispatch("APP-HELP", frame, lifecycle, session_state)
-            except Exception:
-                pass
-
-        frame.Bind(wx.EVT_MENU, _on_accel_help, id=int(_help_cmd))
-        _accel_entries.append(
-            wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F1, int(_help_cmd))
+        # Bridge the stored shortcut preferences into native wx accelerators.
+        # Existing Ctrl+1..7 tab navigation has priority over remapped keys.
+        try:
+            from hpc_gui.core.platform import current_os
+            from hpc_gui.wx_shortcuts import shell_accelerators, shell_bindings
+            _shell_accels = shell_accelerators(wx, shell_bindings(current_os()))
+        except Exception:
+            _shell_accels = []
+        _used_accels = {(flags, key) for flags, key, _cmd in _wx_shell_accel_spec}
+        _available_help = any(
+            cmd == "APP-HELP" and (flags, key) not in _used_accels
+            for cmd, flags, key in _shell_accels
         )
-        _wx_shell_accel_spec.append(
-            (int(wx.ACCEL_NORMAL), int(wx.WXK_F1), int(_help_cmd))
-        )
+        if not _available_help:
+            _shell_accels.insert(0, ("APP-HELP", int(wx.ACCEL_NORMAL), int(wx.WXK_F1)))
+
+        def _make_command_handler(command_id):
+            def _on_accel_command(_evt):
+                try:
+                    if frame.IsBeingDeleted():
+                        return
+                    _dispatch(command_id, frame, lifecycle, session_state)
+                except Exception:
+                    pass
+            return _on_accel_command
+
+        for _cmd_id, _flags, _key in _shell_accels:
+            _shortcut = (int(_flags), int(_key))
+            if _shortcut in _used_accels:
+                continue
+            _used_accels.add(_shortcut)
+            _accel_cmd = wx.NewIdRef()
+            _wx_shell_accel_ids[int(_accel_cmd)] = {
+                "APP-HELP": "help", "APP-SETTINGS": "settings",
+            }.get(_cmd_id, _cmd_id)
+            frame.Bind(wx.EVT_MENU, _make_command_handler(_cmd_id), id=int(_accel_cmd))
+            _accel_entries.append(wx.AcceleratorEntry(_flags, _key, int(_accel_cmd)))
+            _wx_shell_accel_spec.append((int(_flags), int(_key), int(_accel_cmd)))
         frame.SetAcceleratorTable(wx.AcceleratorTable(_accel_entries))
     except Exception:
         pass
