@@ -138,6 +138,20 @@ class SSHFilesBackend(SSHTextMixin, FilesBackend):
             mode=mode,
         )
 
+    def lstat_entry(self, remote_path: str) -> RemoteEntry:
+        """Return remote metadata without following the final symlink."""
+        with _translate_remote_errors(remote_path):
+            st = self.ssh.sftp.lstat(remote_path)
+        mode = int(getattr(st, "st_mode", 0) or 0)
+        return RemoteEntry(
+            name=os.path.basename(remote_path.rstrip("/")) or "/",
+            path=remote_path,
+            is_dir=pystat.S_ISDIR(mode),
+            size=int(getattr(st, "st_size", 0) or 0),
+            mtime=int(getattr(st, "st_mtime", 0) or 0),
+            mode=mode,
+        )
+
     def download(self, remote_path: str, local_path: str, progress_cb=None) -> None:
         self._download(remote_path, local_path, progress_cb, resume=False)
 
