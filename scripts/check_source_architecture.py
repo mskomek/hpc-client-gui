@@ -396,6 +396,19 @@ def main(argv: list[str] | None = None) -> int:
     markdown_path = args.markdown_report if args.markdown_report.is_absolute() else root / args.markdown_report
     _write_reports(report, json_path, markdown_path)
     print(f"{report['status']}: {report['file_count_python']} Python files; {report['over_limit_python_count']} over 500 lines")
+    if report["status"] == "FAIL":
+        for category, problems in (
+            ("LOC", loc_gate["errors"]),
+            ("Dependency", new_dependency_errors),
+            ("API", api_errors),
+            ("Cycle", cycle_errors),
+        ):
+            if problems:
+                print(f"{category} errors ({len(problems)}):")
+                for problem in problems[:20]:
+                    print(f"  - {problem}")
+                if len(problems) > 20:
+                    print(f"  ... {len(problems) - 20} more (see report)")
     print(f"JSON report: {json_path}\nMarkdown report: {markdown_path}")
     return 0 if args.mode == "baseline" or passed else 1
 
