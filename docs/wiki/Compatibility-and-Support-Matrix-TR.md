@@ -33,9 +33,9 @@ bağımlılıkları gerekir.
 | Python 3.14.x | Gerekmez | Gerekir |
 | wxWidgets çalışma zamanı (wxPython 4.3.1) | Birlikte gelir | `wxPython>=4.3.1` gerekir |
 | Qt/PySide6 | Gönderilmez (yalnızca eski kullanım için `legacy-qt` extrası) | İsteğe bağlı, yalnızca eski kullanım, gerekmez |
-| `plink.exe` (PuTTY) | İsteğe bağlı, yalnızca X11, Windows | İsteğe bağlı, yalnızca X11 |
+| `plink.exe` (PuTTY) | Gerekmez | Gerekmez |
 | VcXsrv | İsteğe bağlı, yalnızca X11, Windows | İsteğe bağlı, yalnızca X11 |
-| Sistem OpenSSH istemcisi | Windows'ta X11 için kullanılmaz | Linux'ta X11 için gerekir |
+| Sistem OpenSSH istemcisi | Entegre X11 için gerekmez | Entegre X11 için gerekmez |
 | XQuartz | Gerekmez | Yalnızca macOS X11 için gerekir |
 
 ## Küme tarafı gereksinimleri
@@ -56,10 +56,8 @@ yürütmek yerine yumuşak biçimde başarısız olmak ve ayrıntıyı günlüğ
 |---|---|---|
 | Anahtar tabanlı kimlik doğrulama | Destekleniyor | Ana oturum yolu |
 | Parola ile kimlik doğrulama | Destekleniyor | Profilde korunarak saklanabilir |
-| plink + VcXsrv ile X11 (Windows) | Önerilen | Windows'ta en güvenilir yol |
-| Anahtarla OpenSSH üzerinden X11 | Destekleniyor | `ssh -X/-Y` kullanır |
-| Parolayla OpenSSH üzerinden X11 | Sınırlı | Gizli TTY istemleri kilitleyebilir; plink tercih edilir |
-| macOS X11 ve parola | Sınırlı | SSH anahtarı veya agent gerekir; yalnızca parolalı X11 başlatılmaz |
+| Paramiko + VcXsrv ile X11 (Windows) | Destekleniyor | Loopback dinleyicisi ve MIT çerezi gerekir |
+| Paramiko + masaüstü X sunucusu (Linux/macOS) | Destekleniyor | `DISPLAY` ve yerel MIT çerezi gerekir |
 | Ana bilgisayar anahtarı ilkesi `accept-new` | Destekleniyor | Bilinmeyen anahtarlar için güvenip kaydet, bir kerelik güven veya iptal sorulur |
 | Ana bilgisayar anahtarı ilkesi `strict` | Destekleniyor | Bilinmeyen anahtarlar reddedilir; değişen anahtarlar her zaman reddedilir |
 

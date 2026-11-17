@@ -19,58 +19,57 @@ Bağlantı formundaki **Enable X11 forwarding (for GUI apps)** seçeneği. İlgi
   gerekli yardımcılar denetlenir ve eksikse onayınızla indirilip başlatılır.
 - **Close VcXsrv when the app exits** — VcXsrv'i uygulama başlattıysa PID ile
   kapatılır.
-- **Close X11/SSH processes on exit** — uygulamanın başlattığı plink/ssh
-  süreçleri sonlandırılır.
+- **Close X11/SSH processes on exit** — uygulamanın başlattığı X11 yardımcıları
+  kapatılır; SSH aktarma kanalları terminalle birlikte kapanır.
 
-## Windows: plink + VcXsrv
+## Windows: Paramiko + VcXsrv
 
-Windows'ta yol, `127.0.0.1:6000` üzerinde dinleyen **VcXsrv** X sunucusuyla
-birlikte `plink.exe -X` şeklindedir.
+Etkin Paramiko SSH terminali, uzak PTY ve kabuğu açmadan önce X11 yönlendirme
+isteği gönderir. Uzak pencereleri yerel ekranda **VcXsrv** gösterir. Plink veya
+ikinci bir SSH süreci kullanılmaz.
 
-**İkisi de çalıştırılabilir dosyayla birlikte gelmez.** Biri eksik olduğunda
-hiçbir şey indirilmeden önce size sorulur — istem dosyanın adını ve boyutunu
-belirtir — ve dilerseniz onları kendiniz kurabilirsiniz. Bir kurulum dosyası
-için kararlı bir sağlama toplamı veya imza yoksa uygulama bunu söyler ve
-çalıştırmadan önce yeniden sorar; reddetmek, sessizce devam etmek yerine
-doğrulanmamış kurulum dosyasını geri çevirir.
+VcXsrv uygulamayla birlikte gelmez; resmi kaynağından kurun. Uygulama VcXsrv'i
+başlatırsa özel MIT-MAGIC-COOKIE yetki dosyası sağlar ve `-ac` kullanmaz.
+VcXsrv tüm arayüzlerde dinliyorsa uygulama yalnızca kendi sürecini, yetki
+dosyasını, ilgili çalıştırılabilir dosyanın güvenlik duvarı kurallarını, etkin
+güvenlik duvarı profillerini ve gelen bağlantılar için engelleme varsayılanını
+doğrularsa kabul eder. Aksi durumda sunucuyu reddeder; başka bir wildcard
+dinleyici hiçbir zaman kabul edilmez.
 
-Sık karşılaşılan hatalar ayrı ayrı bildirilir: `plink.exe` hazırlanamadı,
-VcXsrv başlatılamadı (güvenlik duvarı veya izin sorunu), VcXsrv başlayıp hemen
-çıktı ya da VcXsrv çalışıyor görünüyor ama 6000 portu hiç açılmadı.
+Profildeki SSH anahtarı, agent, parola ve host-key ilkesi korunur. Parola veya
+çerez uygulama günlüğüne yazılmaz. Yerel X sunucusu veya MIT çerezi yoksa
+X11 seçiliyse kabuk açılmaz; uygulama yönlendirmesiz kabuğa sessizce geçmez.
+X11 kapalıyken normal SSH kullanılabilir. Uzak sunucuda X11 yönlendirmesi etkin ve `xauth` kurulu olmalıdır; istek başarılı olunca
+`DISPLAY` değerini `sshd` atar (genelde `localhost:10.0`).
 
-Uzak bir grafiksel uygulamayı başlatmadan önce VcXsrv'i çalıştırın. Oturum
-başladığında çalıştırılan komut ekrana yazılır ve pencere ayrı olarak açılır.
+Yalnızca etkileşimli SSH terminaline yazılan komutlar X11'i kullanır. Uzak
+`exec_command` çağrıları ve toplu işler bu DISPLAY'i devralmaz.
 
-## Linux: sistem OpenSSH
+## Linux ve macOS: yerel masaüstü X sunucusu
 
-Linux'ta X11 yönlendirme **sistem OpenSSH istemcisini** `-X` veya `-Y` ile
-kullanır. Windows'un plink/VcXsrv yolunu **kullanmaz** ve hiçbir şey
-indirilmez.
+Etkin Paramiko terminali yerel masaüstü X sunucusunu kullanır. Linux masaüstü
+Xorg veya Xwayland sağlayabilir; macOS'ta XQuartz gerekir. Süreç geçerli bir
+`DISPLAY` ve `XAUTHORITY` veya `xauth` ile erişilen MIT çerezini devralmalıdır.
+Entegre terminal yönlendirmesi için sistem OpenSSH gerekmez.
 
-Gereksinimler: OpenSSH istemcisinin kurulu olması, zaten çalışan bir X sunucusu
-(masaüstü oturumunuz) ve ortamda ayarlı bir `DISPLAY` değişkeni.
+## Kimlik doğrulama ve güven
 
-Başlatma bilinçli olarak etkileşimsizdir: yönlendirme hataları X11 olmadan
-sessizce devam etmek yerine açıkça bildirilir ve ana bilgisayar anahtarı
-denetimi profilin ilkesini izler — `strict` katı denetime, aksi hâlde
-`accept-new` değerine karşılık gelir. Bu yolda parola ile kimlik doğrulama
-denenmez, çünkü istem gizli bir konsolda görünüp kilitlenirdi; **Linux'ta
-anahtar kullanın**.
-
-## Hangi bayrak: `-X` mi `-Y` mi
-
-`-Y` güvenilen yönlendirme, `-X` ise güvenilmeyen yönlendirmedir.
-Güvenilmeyen yönlendirme daha kısıtlayıcıdır ve bazı uygulamalar altında
-çalışmaz; güvenilen yönlendirme uzak uygulamaya yerel X sunucunuz üzerinde daha
-fazla erişim verir. Bu seçimi bağlantı taşır.
+Varsayılan olarak uygulama, X11 SECURITY uzantısıyla yerel X sunucusundan
+**güvenilmeyen** çerez ister. Uzantı yoksa yönlendirme kapalı kalır. Profildeki
+ayrı **Güvenilir X11 kullan** seçeneği, güvenilir yönlendirme gerektiren
+sunucular içindir; uzak programın yerel ekranı denetleyebileceği konusunda
+uyarır. SSH kanalı rastgele çerezi yalnızca bağlantı paketi eşleşince değiştirir.
+MIT çerez doğrulaması kimliği kanıtlar; güvenilmeyen SECURITY çerezinin
+sağladığı yalıtımı sağlamaz. `xhost +` veya kimlik doğrulamasız X sunucusu
+kullanmayın.
 
 ## Destek özeti
 
 | Senaryo | Durum | Notlar |
 |---|---|---|
-| Windows, plink + VcXsrv | Önerilen | Windows'ta en güvenilir yol |
-| Herhangi bir platform, anahtarla OpenSSH | Destekleniyor | `ssh -X/-Y` |
-| Parolayla OpenSSH | Sınırlı | Gizli istemler kilitleyebilir; Windows'ta plink, Linux'ta anahtar tercih edilir |
+| Windows, Paramiko + VcXsrv | Destekleniyor | Kimlik doğrulamalı; wildcard dinleme için firewall izolasyonu doğrulanır |
+| Linux/macOS masaüstü X sunucusu | Destekleniyor | `DISPLAY`, `xauth` ve trusted modu seçilmediyse SECURITY desteği gerekir |
+| X11 yönlendirmesi kapalı SSH sunucusu | Desteklenmiyor | X11 seçili kabuk reddedilir; X11 kapalı bağlantı etkilenmez |
 
 ## Başarım
 
@@ -81,10 +80,9 @@ veya web tabanlı bir seçeneği olup olmadığını sorun.
 
 ## Temizlik
 
-Yardımcı süreçler uygulama kapanırken temizlenir ve sahipsiz kalan süreçler
-savunmacı biçimde ele alınır. Yukarıdaki iki Ayarlar seçeneği, VcXsrv ile
-X11/SSH süreçlerinin uygulamayla birlikte kapatılıp kapatılmayacağını
-belirler.
+Etkileşimli SSH oturumu kapanınca X11 aktarma kanalları da kapanır. Uygulama
+VcXsrv'i başlattıysa mevcut Ayarlar seçeneği, uygulama kapanırken bu sürecin
+kapatılıp kapatılmayacağını belirler.
 
 ## Ayrıca bkz.
 

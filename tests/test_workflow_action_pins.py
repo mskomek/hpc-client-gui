@@ -35,12 +35,18 @@ def test_source_and_diagnostic_workflows_exist_without_publishing():
     assert {path.name for path in files} == {
         "ci.yml",
         "release.yml",
+        "v2-jobs-broad-preflight.yml",
         "w19-ubuntu-webkit-diagnostic.yml",
         "w55-windows-packaged-evidence.yml",
     }
     root = WORKFLOWS_DIR.parents[1]
     assert (root / "docs" / "ci-disabled" / "ci.yml").is_file()
-    for name in ("ci.yml", "w19-ubuntu-webkit-diagnostic.yml", "w55-windows-packaged-evidence.yml"):
+    for name in (
+        "ci.yml",
+        "v2-jobs-broad-preflight.yml",
+        "w19-ubuntu-webkit-diagnostic.yml",
+        "w55-windows-packaged-evidence.yml",
+    ):
         text = (WORKFLOWS_DIR / name).read_text(encoding="utf-8").lower()
         assert "softprops/action-gh-release" not in text
         assert "create-release" not in text

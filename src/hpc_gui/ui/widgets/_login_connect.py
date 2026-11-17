@@ -259,6 +259,7 @@ def connect_clicked(widget: LoginWidget, transient_password: str = "") -> bool:
         key_path=widget.key_path.text().strip(),
         host_key_policy=widget._profile_host_key_policy,
         x11_forwarding=widget.cb_x11.isChecked(),
+        x11_trusted=bool(getattr(widget, "_profile_x11_trusted", False)),
         dry_run=use_ftp_mock,
         keepalive_interval_seconds=widget._profile_keepalive,
         transfer_parallelism=coerce_profile_transfer_parallelism(widget._profile_transfer_parallelism),
@@ -282,13 +283,11 @@ def connect_clicked(widget: LoginWidget, transient_password: str = "") -> bool:
         QMessageBox.warning(widget, t("login.err_title"), t("login.err_host_required"))
         return False
 
-    # X11 preflight: if X11 forwarding is enabled and the user asked for
-    # auto dependency management, ensure plink and VcXsrv are available
-    # BEFORE connecting.
+    # X11 preflight checks the local display before starting an SSH session.
     app_settings = _storage.load_settings()
     if cfg.x11_forwarding and (not cfg.dry_run) and bool(app_settings.get("x11_autodeps", True)):
         if not widget._x11_runner.preflight(enabled=True, parent=widget, allow_download=True):
-            QMessageBox.warning(widget, t("login.x11_title"), t("login.err_x11_plink_needed"))
+            QMessageBox.warning(widget, t("login.x11_title"), t("login.err_x11_server_needed"))
             return False
 
     target = f"{cfg.username}@{cfg.host}" if cfg.username else cfg.host
@@ -337,12 +336,8 @@ def run_command_text(widget: LoginWidget, cmd: str) -> None:
         widget.append_console(t("login.ssh_not_connected_mock"))
         return
 
-    info = getattr(ssh, "info", None)
-    if widget._x11_runner.run_if_x11(info, cmd, parent=widget):
-        _history.append_event({"type": "x11_cmd", "cmd": cmd})
-        return
-
-    # Normal terminal commands go through the live shell session.
+    # Keep commands on this authenticated SSH shell. X11, when enabled, uses
+    # the shell's own Paramiko X11 channels instead of a second SSH process.
     try:
         if hasattr(ssh, "send_shell_text") and ssh.send_shell_text(cmd):
             _history.append_event({"type": "ssh_cmd", "cmd": cmd})

@@ -46,7 +46,7 @@ VALID_REGISTRY = {
         },
     ],
 }
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="module")
 def qapp():
     from PySide6.QtCore import QCoreApplication, QEvent
     from PySide6.QtWidgets import QApplication

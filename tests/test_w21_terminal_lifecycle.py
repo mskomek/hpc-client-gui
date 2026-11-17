@@ -95,6 +95,9 @@ frame = wx.Frame(None, size=(900, 600))
 
 # Panel under native teardown: close must Stop (best-effort) but never Destroy.
 panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
+frame.Show()
+wx.Yield()
+wx.SafeYield()
 webview = panel._webview
 assert webview is not None
 stops, destroys = [], []
@@ -109,14 +112,16 @@ assert panel._webview is None and panel._is_parity is False
 panel.close()
 assert stops == ["Stop"] and destroys == []
 
-# Normal close follows the same parent-owned native teardown contract.
+# A normal close explicitly destroys the controller while its parent is live.
 panel2 = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
+wx.Yield()
+wx.SafeYield()
 webview2 = panel2._webview
 stops2, destroys2 = [], []
 webview2.Stop = lambda *a, **k: stops2.append("Stop")
 webview2.Destroy = lambda *a, **k: destroys2.append("Destroy")
 panel2.close()
-assert stops2 == ["Stop"] and destroys2 == [], (stops2, destroys2)
+assert stops2 == ["Stop"] and destroys2 == ["Destroy"], (stops2, destroys2)
 frame.Destroy()
 import os; os._exit(0)
 """

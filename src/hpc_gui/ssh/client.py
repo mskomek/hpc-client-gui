@@ -42,6 +42,7 @@ from hpc_gui.ssh.sftp_channels import (
 from hpc_gui.ssh.retry import retry_connection
 from hpc_gui.ssh.command_runner import run_ssh_command
 from hpc_gui.ssh.shell_session import InteractiveShellSession
+from hpc_gui.ssh.x11_shell import X11ShellController
 from hpc_gui.ssh.text import decode_remote_text as _decode_remote_text
 
 class _ConnectionAuthStrategy(_BaseConnectionAuthStrategy):
@@ -75,6 +76,7 @@ class SSHClientWrapper:
             self._active_transport, log=self.log, opener=lambda: self.open_transfer_sftp()
         )
         self._shell_session: Optional[InteractiveShellSession] = None
+        self._x11_shell = X11ShellController(log=self.log)
         self._shell_geometry: Tuple[int, int] = (120, 40)
         self._log = logger or log_cb
         self._shell_output_cb = shell_output_cb
@@ -126,7 +128,7 @@ class SSHClientWrapper:
 
     def _invoke_shell(self, **kwargs):
         assert self.client is not None
-        return self.client.invoke_shell(**kwargs)
+        return self._x11_shell.invoke_shell(self.client, self.info, kwargs)
 
     def _on_shell_unexpected_disconnect(self, reason: str) -> None:
         try:
@@ -189,6 +191,7 @@ class SSHClientWrapper:
         info = info or self.info
         if info is None:
             raise ValueError('SSH connection info not provided')
+        self.info = info
         target = f"{info.username}@{info.host}" if info.username else info.host
         self.log(f"SSH: connecting to {target}:{info.port} ...")
         self.client = paramiko.SSHClient()
@@ -386,6 +389,7 @@ class SSHClientWrapper:
         self._ensure_shell_session().decode_bytes(data, final=final)
 
     def _stop_shell_session(self) -> None:
+        self._x11_shell.close()
         if self._shell_session is not None:
             try:
                 self._shell_session.stop()

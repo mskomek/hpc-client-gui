@@ -30,6 +30,8 @@ class _ConnectionDialogProfileMixin:
         self.account.setText(str(profile.get("account", "")))
         self.key_path.setText(str(profile.get("key_path", "")))
         self.cb_x11.setChecked(bool(profile.get("x11_forwarding", False)))
+        self.cb_x11_trusted.setChecked(bool(profile.get("x11_trusted", False)))
+        self.cb_x11_trusted.setEnabled(self.cb_x11.isChecked())
         host_key_policy = str(profile.get("host_key_policy") or "accept-new").strip()
         if host_key_policy not in {"accept-new", "strict"}:
             host_key_policy = "accept-new"

@@ -48,9 +48,9 @@ olduğunu doğrulayın. Bkz. [[Katkıda Bulunma|Contributing-TR]].
 ## Üçüncü taraf bileşenler
 
 Birlikte gelen üçüncü taraf bileşenler kendi lisanslarını taşır ve
-`THIRD_PARTY_NOTICES.md` dosyasında kayıtlıdır. İsteğe bağlı X11 yardımcıları —
-PuTTY'nin `plink.exe` dosyası ve VcXsrv — birlikte gelmez; onayınızla indirilir
-ya da sizin tarafınızdan kurulur ve kendi lisanslarına tabidir.
+`THIRD_PARTY_NOTICES.md` dosyasında kayıtlıdır. İsteğe bağlı Windows X sunucusu
+VcXsrv uygulamayla birlikte gelmez; resmi kaynağından kurun ve kendi lisansına
+uyun. Entegre X11 yolu PuTTY'nin `plink.exe` dosyasını gerektirmez.
 
 ## Bağımsızlık
 

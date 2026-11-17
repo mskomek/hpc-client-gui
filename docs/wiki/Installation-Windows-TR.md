@@ -31,16 +31,12 @@ mevcut kurulumlarla uyumluluk için korunmaktadır.
 X11 yönlendirmesi yalnızca uzak **grafiksel** uygulamalar için gereklidir.
 Terminal iş yükleri, dosya aktarımları veya Slurm iş yönetimi için gerekmez.
 
-Windows'ta iki dış bileşen devreye girer ve **ikisi de EXE ile birlikte
-gelmez**:
+Yerel X sunucusu isteğe bağlıdır ve **EXE ile birlikte gelmez**:
 
-- PuTTY'den `plink.exe` — uygulama X11 oturumları için `plink.exe -X`
-  çalıştırır.
-- **VcXsrv** — uzak uygulamayı görüntüleyen X sunucusu.
+- **VcXsrv** — uzak uygulamaları gösteren X sunucusu.
 
-X11'i etkinleştirdiğinizde uygulama bu yardımcıları indirmeden önce onay
-ister; dilerseniz kendiniz de kurabilirsiniz. Uzak bir grafiksel uygulamayı
-başlatmadan önce VcXsrv'i çalıştırın. Ayrıntılar:
+Etkin Paramiko SSH terminali yönlendirmeyi sağlar; Plink gerekmez. Uygulama
+başlatırsa VcXsrv loopback dinleyicisi ve MIT çerezi kullanır. Ayrıntılar:
 [[X11 Yönlendirme|X11-Forwarding-TR]].
 
 ## Kurumsal ortamlar

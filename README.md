@@ -253,30 +253,25 @@ X11 support is **optional** and is not required for normal SSH, file-transfer, t
 
 ### Windows
 
-Remote X11 applications can use optional components such as:
-
-* PuTTY / plink
-* VcXsrv
-
-These components are only relevant when running graphical remote applications.
-
-Install them from their official pages; the application does not automatically
-download and execute third-party installers. SSH keys are preferred. With Plink
-password authentication, the password is redacted from application logs and
-diagnostics, although the live Windows process command line may remain visible
-to other same-user processes.
+The active SSH terminal can forward remote X11 applications through the same
+Paramiko session. Windows needs an installed local X server such as VcXsrv.
+Forwarding uses a local MIT-MAGIC-COOKIE and a loopback-only VcXsrv listener;
+Plink is not required. The application does not download third-party installers.
 
 ### Linux
 
-Linux X11 forwarding uses the **system OpenSSH client** together with the local Linux graphical environment.
+Linux uses the local desktop X server together with the active Paramiko SSH
+terminal. The desktop session must expose `DISPLAY` and a valid Xauthority
+cookie.
 
-PuTTY/plink and VcXsrv are not used on Linux.
+VcXsrv and Plink are not used on Linux.
 
 Actual X11 availability also depends on the remote cluster's SSH configuration and installed software.
 
 ### macOS
 
-macOS X11 uses the user-installed XQuartz application and system OpenSSH.
+macOS X11 uses the user-installed XQuartz application with the active Paramiko
+SSH terminal.
 XQuartz must provide a valid `DISPLAY` and `/opt/X11/bin/xauth`. Password-only
 X11 is not started; use an SSH key or agent. The application never downloads or
 stops XQuartz.

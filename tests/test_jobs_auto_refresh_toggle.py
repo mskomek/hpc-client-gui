@@ -19,9 +19,15 @@ def wx_app():
     yield app
     for window in list(wx.GetTopLevelWindows()):
         try:
-            window.Destroy()
+            if not window.IsBeingDeleted():
+                window.Close()
         except Exception:
-            pass
+            try:
+                window.Destroy()
+            except Exception:
+                pass
+    for _ in range(3):
+        wx.Yield()
     app.ProcessPendingEvents()
 
 

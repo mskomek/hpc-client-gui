@@ -75,6 +75,7 @@ def load_profile_into_fields(widget: LoginWidget, prof: dict) -> None:
     widget.account.setText(prof.get("account", ""))
     widget.key_path.setText(prof.get("key_path", ""))
     widget.cb_x11.setChecked(bool(prof.get("x11_forwarding", False)))
+    widget._profile_x11_trusted = bool(prof.get("x11_trusted", False))
     host_key_policy = str(prof.get("host_key_policy") or "accept-new").strip()
     if host_key_policy not in {"accept-new", "strict"}:
         host_key_policy = "accept-new"
@@ -293,6 +294,7 @@ def profile_patch_base(widget: LoginWidget, port: int, name: str) -> dict[str, A
         "key_path": widget.key_path.text().strip(),
         "host_key_policy": widget._profile_host_key_policy,
         "x11_forwarding": widget.cb_x11.isChecked(),
+        "x11_trusted": bool(getattr(widget, "_profile_x11_trusted", False)),
         "cli_allowed": getattr(widget, "_profile_cli_allowed", False),
         "keepalive_interval_seconds": widget._profile_keepalive,
         "transfer_parallelism": int(widget.sp_transfer_parallelism.value()),

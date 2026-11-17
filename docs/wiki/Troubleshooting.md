@@ -95,13 +95,13 @@ that operation is what to attach to an issue.
 
 ## X11 applications do not appear
 
-**On Windows.** Start VcXsrv before launching the remote application, and
-confirm `plink.exe` is available. Both are optional helpers and neither is
-bundled in the executable.
+**On Windows.** Confirm VcXsrv is installed and started with loopback access
+and a MIT cookie. The app's X11 log says when the server or cookie is
+unavailable; normal SSH remains usable.
 
-**On Linux.** X11 uses the system OpenSSH client. Confirm it is installed and
-that `DISPLAY` is set in your session. The Windows plink/VcXsrv path does not
-apply here.
+**On Linux.** Confirm `DISPLAY` and `XAUTHORITY` are set in the desktop session
+and that `xauth` can read the MIT cookie. The system OpenSSH client is not
+required.
 
 **Everything connects but the window is slow.** X11 responsiveness depends
 heavily on network quality; there is no client-side setting that compensates

@@ -160,7 +160,7 @@ class TestReleaseGate:
         """Verify no known P0 Unicode bugs in critical paths."""
         # Check critical files for known issues
         critical_paths = [
-            "services/files_ssh.py",
+            "services/files_ssh_text.py",
             "ssh/text.py",
             "ssh/shell_session.py",
             "services/private_profile_data.py",

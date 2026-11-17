@@ -24,6 +24,42 @@ def _directories_callbacks(session_state, parent, lifecycle):
     }
 
 
+def bind_notebook_native_repaint(wx, notebook) -> None:
+    """Flush GTK's deferred page paint after a notebook selection changes.
+
+    On wxGTK/Xwayland, the selected page and its visibility can update before
+    the native notebook surface is repainted. Queueing Refresh/Update after
+    the page-change event keeps the visible tab and its page content in sync.
+    """
+
+    def on_page_changed(event):
+        event.Skip()
+
+        def repaint_selected_page():
+            try:
+                if not notebook or notebook.IsBeingDeleted():
+                    return
+                page = notebook.GetCurrentPage()
+                frame = notebook.GetTopLevelParent()
+                windows = (notebook, page, frame)
+                for window in windows:
+                    if window and not window.IsBeingDeleted():
+                        window.Refresh(False)
+                for window in windows:
+                    if window and not window.IsBeingDeleted():
+                        window.Update()
+            except Exception:
+                # Page transitions can race with shell teardown.
+                return
+
+        try:
+            wx.CallAfter(repaint_selected_page)
+        except Exception:
+            return
+
+    notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, on_page_changed)
+
+
 def _select_embedded_page(session_state, parent, key: str) -> bool:
     """Select the existing embedded notebook page for ``key`` (SHELL-NAV-002).
 

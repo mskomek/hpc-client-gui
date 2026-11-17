@@ -71,6 +71,59 @@ def test_wx_terminal_accessible_label_tracks_live_language_changes():
         load_language(previous)
 
 
+def test_loaded_event_defers_sync_accessible_label_script(monkeypatch):
+    scheduled = []
+
+    class FakeWx:
+        @staticmethod
+        def CallAfter(callback):
+            scheduled.append(callback)
+
+    class FakeWebView:
+        def __init__(self):
+            self.name = ""
+            self.script = ""
+
+        def SetName(self, value):
+            self.name = value
+
+        def SetAccessibleName(self, value):
+            self.name = value
+
+        def RunScript(self, value):
+            self.script = value
+
+    class Harness(TerminalBridgeMixin):
+        def __init__(self):
+            self._webview = FakeWebView()
+            self._closed = False
+            self._ready = False
+
+    class Event:
+        skipped = False
+
+        def Skip(self):
+            self.skipped = True
+
+    previous = current_language()
+    monkeypatch.setitem(sys.modules, "wx", FakeWx)
+    harness = Harness()
+    event = Event()
+
+    try:
+        load_language("en")
+        harness._on_loaded(event)
+
+        assert event.skipped
+        assert harness._webview.name == "Remote terminal"
+        assert harness._webview.script == ""
+        assert len(scheduled) == 1
+        scheduled.pop()()
+        assert "Remote terminal" in harness._webview.script
+    finally:
+        load_language(previous)
+
+
 def test_independent_updater_progress_uses_saved_language_catalog():
     previous = current_language()
     try:

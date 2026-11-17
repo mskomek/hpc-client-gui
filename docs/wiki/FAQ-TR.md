@@ -47,10 +47,9 @@ duymaz.
 
 ## X11 neden Windows ve Linux'ta farklı çalışıyor?
 
-Gerçekten farklı mekanizmalar kullanırlar. Windows, X sunucusu olarak
-VcXsrv ile `plink.exe -X` çalıştırır; Linux, sistem OpenSSH istemcisini
-(`ssh -X/-Y`) kullanır. Windows yardımcılarının hiçbiri Linux'ta kullanılmaz.
-Bkz. [[X11 Yönlendirme|X11-Forwarding-TR]].
+Etkin Paramiko SSH terminali iki platformda da aynı X11 kanal protokolünü
+kullanır. Windows pencereleri VcXsrv'te gösterir; Linux masaüstü X sunucusunu
+kullanır. Bkz. [[X11 Yönlendirme|X11-Forwarding-TR]].
 
 ## Parolalarım güvende mi?
 

@@ -147,6 +147,10 @@ class ConnectionDialog(
         self.sp_ssh_timeout.setSuffix(" s")
 
         self.cb_x11 = QCheckBox(t("login.x11_enable"))
+        self.cb_x11_trusted = QCheckBox(t("login.x11_trusted"))
+        self.cb_x11_trusted.setToolTip(t("login.x11_trusted_tip"))
+        self.cb_x11_trusted.setEnabled(False)
+        self.cb_x11.toggled.connect(self.cb_x11_trusted.setEnabled)
         self.cb_host_key_policy = QComboBox()
         self.cb_host_key_policy.addItem(t("connection.host_key_accept_new"), "accept-new")
         self.cb_host_key_policy.addItem(t("connection.host_key_strict"), "strict")
@@ -336,6 +340,7 @@ class ConnectionDialog(
         other_group = QGroupBox(t("connection.other_group"))
         other_form = QFormLayout(other_group)
         other_form.addRow("", self.cb_x11)
+        other_form.addRow("", self.cb_x11_trusted)
         other_form.addRow("", self.cb_cli_allowed)
         file_browser_group = QGroupBox(t("connection.file_browser_group"))
         browser_form = QFormLayout(file_browser_group)

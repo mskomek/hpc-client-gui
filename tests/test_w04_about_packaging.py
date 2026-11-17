@@ -33,7 +33,9 @@ def wx_app():
 def test_about__visible_contract_fields(wx_app):
     """W01-E replacement-dialog proof: the About dialog carries the required
     visible contract (version + legal actions + close)."""
+    original_show_modal = vars(wx.Dialog)["ShowModal"]
     seen, version = _collect_about_labels()
+    assert vars(wx.Dialog)["ShowModal"] is original_show_modal
     assert any(version in text for text in seen["texts"]), seen["texts"]
     for required in ("Project Repository", "License", "Third-Party Notices", "Close"):
         assert required in seen["buttons"], seen["buttons"]

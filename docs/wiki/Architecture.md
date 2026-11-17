@@ -15,7 +15,7 @@ inspect diagnostics and logs.
 | Package | Owns | Does not own |
 |---|---|---|
 | `src/hpc_gui/ui/` | Windows, dialogs, widgets, user interaction, progress and status display | Reusable Slurm parsing, deep session logic, hidden business rules |
-| `src/hpc_gui/services/` | Slurm service abstractions, remote file operations, the process registry, X11 helper orchestration, integration with PuTTY and VcXsrv | — |
+| `src/hpc_gui/services/` | Slurm service abstractions, remote file operations, the process registry, and local X server management | — |
 | `src/hpc_gui/ssh/` | Remote client behavior and connection-level wrappers | — |
 | `src/hpc_gui/config/` | Local configuration models, storage of user preferences, safe persistence helpers | — |
 | `src/hpc_gui/core/` | Logging setup, i18n, diagnostics helpers, path and resource helpers | — |

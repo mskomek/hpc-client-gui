@@ -20,6 +20,8 @@ from support.test_plugin_manager_ui_shared import (
     t,
 )
 
+pytestmark = pytest.mark.usefixtures("qapp")
+
 @pytest.mark.unit
 def test_install_summary_reports_capability_counts(qapp, frozen_thread_pool):
     dialog = PluginManagerDialog(fetcher=registry_fetcher())

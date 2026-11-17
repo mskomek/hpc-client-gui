@@ -101,10 +101,14 @@ def test_wx_shell_exposes_navigation_tabs_and_terminal(shell_i18n):
         assert expected in page_texts, f"missing {expected} in {page_texts}"
     # Terminal is wx-only, should be present
     assert "Terminal" in page_texts
-    assert controls["pages"]["NAV-TERMINAL"]["output"].IsEnabled()
+    terminal_panel = controls["pages"]["NAV-TERMINAL"]["panel"]
+    _pump(
+        _app,
+        lambda: getattr(terminal_panel, "_wx_terminal_controls", {}).get("output") is not None,
+    )
+    terminal_output = terminal_panel._wx_terminal_controls["output"]
+    assert terminal_output.IsEnabled()
     # GUI-WORKSPACE-001: no primary page may be a bare launcher button.
-    import wx
-
     for index in range(7):
         page = notebook.GetPage(index)
         descendants = list(page.GetChildren())

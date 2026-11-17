@@ -151,6 +151,17 @@ class KeepaliveAndTimeoutTests(unittest.TestCase):
         assert collected is not None
         self.assertEqual(collected["ssh_timeout"], 12.5)
 
+    @pytest.mark.gui
+    @pytest.mark.qt
+    def test_trusted_x11_requires_explicit_profile_choice(self) -> None:
+        dialog = self._dialog({"x11_forwarding": True})
+        self.assertFalse(dialog.cb_x11_trusted.isChecked())
+        self.assertTrue(dialog.cb_x11_trusted.isEnabled())
+        dialog.cb_x11_trusted.setChecked(True)
+        collected = dialog._collect_profile()
+        assert collected is not None
+        self.assertTrue(collected["x11_trusted"])
+
 
 class ProfilePreservationAfterAdvancedEditTests(unittest.TestCase):
     @classmethod

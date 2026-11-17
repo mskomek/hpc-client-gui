@@ -88,6 +88,12 @@ def test_w55_shell_tab_and_help_accelerators():
         table = frame.GetAcceleratorTable()
         assert table is not None and table.IsOk(), "shell frame must carry an AcceleratorTable"
         spec = list(getattr(frame, "_wx_shell_accel_spec", []))
+        id_refs = tuple(getattr(frame, "_wx_shell_accel_id_refs", ()))
+        ref_ids = [int(ref) for ref in id_refs]
+        spec_ids = [int(command_id) for _flags, _key, command_id in spec]
+        assert len(ref_ids) == len(spec_ids), "accelerator ID references must live with the frame"
+        assert len(set(ref_ids)) == len(ref_ids), "accelerator command IDs must be unique"
+        assert set(ref_ids) == set(spec_ids), "every accelerator command ID must stay reserved"
         flags_keys = {(flags, key) for flags, key, _cmd in spec}
         assert (int(wx.ACCEL_CTRL), ord("1")) in flags_keys, "Ctrl+1 tab accelerator missing"
         assert (int(wx.ACCEL_CTRL), ord("7")) in flags_keys, "Ctrl+7 tab accelerator missing"

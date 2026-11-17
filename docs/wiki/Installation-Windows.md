@@ -31,15 +31,13 @@ retained for compatibility with existing installations.
 X11 forwarding is only needed for remote **graphical** applications. It is not
 needed for terminal workloads, file transfers, or Slurm job management.
 
-Two external components are involved on Windows, and **neither is bundled in
-the EXE**:
+The local X server is optional and **not bundled in the EXE**:
 
-- `plink.exe` from PuTTY — the application runs `plink.exe -X` for X11 sessions.
-- **VcXsrv** — the X server that displays the remote application.
+- **VcXsrv** — the X server that displays remote applications.
 
-When you enable X11, the application asks for approval before downloading these
-helpers; you may also install them yourself. Start VcXsrv before launching a
-remote graphical application. Details: [[X11 Forwarding|X11-Forwarding]].
+The active Paramiko SSH terminal provides forwarding; Plink is not required.
+When started by the application, VcXsrv uses a loopback listener and MIT
+cookie authentication. Details: [[X11 Forwarding|X11-Forwarding]].
 
 ## Institutional environments
 

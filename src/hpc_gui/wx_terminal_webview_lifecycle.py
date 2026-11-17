@@ -1,11 +1,24 @@
 """SSH attachment and teardown behavior for the wx WebView terminal panel."""
 
 from hpc_gui.core.i18n import t, unsubscribe_language_change
+from hpc_gui.wx_terminal_diagnostics import record_terminal_event
 
 
 class TerminalLifecycleMixin:
     def _attach_ssh(self, ssh):
         self._ssh = ssh
+        subscribers = getattr(ssh, "_wx_output_subscribers", None) if ssh is not None else None
+        shell = getattr(ssh, "_shell_session", None) if ssh is not None else None
+        channel = getattr(shell, "channel", None) if shell is not None else None
+        reader = getattr(shell, "_thread", None) if shell is not None else None
+        record_terminal_event(
+            "terminal-ssh-attached",
+            ssh_id=id(ssh) if ssh is not None else None,
+            subscriber_count=len(subscribers) if isinstance(subscribers, list) else None,
+            shell_active=shell is not None,
+            channel_active=bool(channel is not None and not getattr(channel, "closed", False)),
+            reader_alive=bool(reader is not None and reader.is_alive()),
+        )
         if ssh is None:
             self._update_status("disconnected")
             return
@@ -84,9 +97,16 @@ class TerminalLifecycleMixin:
         if self._closed:
             return
         webview = self._webview
+        record_terminal_event(
+            "terminal-close-start",
+            ready=self._ready,
+            page_loaded=self._page_loaded,
+            closed=self._closed,
+        )
         self._closed = True
         self._webview = None
         self._is_parity = False
+        self._webview_mount_pending = False
         # Drop retired controllers without touching them: still-attached
         # children are destroyed natively at panel teardown, and an explicit
         # Destroy here would repeat the in-flight-teardown race.

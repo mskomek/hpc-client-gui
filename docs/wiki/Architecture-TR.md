@@ -15,7 +15,7 @@ durumunu gözle, tanılama ile günlükleri incele.
 | Paket | Sahip olduğu | Sahip olmadığı |
 |---|---|---|
 | `src/hpc_gui/ui/` | Pencereler, iletişim kutuları, bileşenler, kullanıcı etkileşimi, ilerleme ve durum gösterimi | Yeniden kullanılabilir Slurm ayrıştırma, derin oturum mantığı, gizli iş kuralları |
-| `src/hpc_gui/services/` | Slurm servis soyutlamaları, uzak dosya işlemleri, süreç kaydı, X11 yardımcı düzenlemesi, PuTTY ve VcXsrv tümleştirmesi | — |
+| `src/hpc_gui/services/` | Slurm servis soyutlamaları, uzak dosya işlemleri, süreç kaydı ve yerel X sunucusu yönetimi | — |
 | `src/hpc_gui/ssh/` | Uzak istemci davranışı ve bağlantı düzeyi sarmalayıcılar | — |
 | `src/hpc_gui/config/` | Yerel yapılandırma modelleri, kullanıcı tercihlerinin saklanması, güvenli kalıcılık yardımcıları | — |
 | `src/hpc_gui/core/` | Günlük kurulumu, i18n, tanılama yardımcıları, yol ve kaynak yardımcıları | — |

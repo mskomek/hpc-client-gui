@@ -292,29 +292,42 @@ def test_shell_can_defer_terminal_panel_mount(monkeypatch):
 
     scheduled = []
     monkeypatch.setattr(webview, "_is_webview_available", lambda: False)
-    monkeypatch.setattr(
-        wx, "CallLater", lambda delay, callback: scheduled.append((delay, callback))
-    )
     app = wx.App.Get() or wx.App(False)
+    ssh = _fake_ssh()
+    activated = []
+    ssh.activate_shell_output = lambda: activated.append(True)
     frame, _, session = create_shell_frame(
         app,
         tray_factory=lambda _parent: None,
-        session_state={"session": {"ssh": _fake_ssh()}, "generation": 0},
+        session_state={"session": {"ssh": ssh}, "generation": 0},
         defer_terminal_webview=True,
     )
     try:
         controls = frame._wx_shell_controls["pages"]["NAV-TERMINAL"]
         page = controls["page"]
+        notebook = frame._wx_shell_controls["notebook"]
         assert session["_embedded_terminal_panel"] is None
         assert "output" not in controls
-        assert len(scheduled) == 1 and scheduled[0][0] == 1000
-
-        scheduled[0][1]()
+        monkeypatch.setattr(
+            wx, "CallAfter", lambda callback, *args: scheduled.append((callback, args))
+        )
+        frame.Show()
+        notebook.SetSelection(notebook.FindPage(page))
+        wx.Yield()
+        mount_callbacks = [
+            (callback, args)
+            for callback, args in scheduled
+            if getattr(callback, "__name__", "") == "mount_terminal"
+        ]
+        assert len(mount_callbacks) == 1
+        for callback, args in scheduled:
+            callback(*args)
 
         panel = session["_embedded_terminal_panel"]
         assert panel.GetParent() is page
         assert controls["panel"] is panel
         assert {"input", "output", "clear"} <= set(controls)
+        assert activated == [True]
     finally:
         frame.Destroy()
         wx.Yield()

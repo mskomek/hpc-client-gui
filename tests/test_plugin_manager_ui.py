@@ -23,6 +23,8 @@ from support.test_plugin_manager_ui_shared import (
     t,
 )
 
+pytestmark = pytest.mark.usefixtures("qapp")
+
 @pytest.mark.gui
 def test_first_show_starts_exactly_one_automatic_refresh(qapp, frozen_thread_pool):
     calls = []

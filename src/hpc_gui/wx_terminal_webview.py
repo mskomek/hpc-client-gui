@@ -12,6 +12,8 @@ navigation guard, no credential/log leakage.
 from __future__ import annotations
 
 import pathlib
+import hashlib
+import sys
 from typing import Any, Callable, Optional
 
 # Keep PySide6 out of wx terminal path — wave 73 forbids Qt channel / qrc in wx page
@@ -30,6 +32,7 @@ from hpc_gui.core.i18n import subscribe_language_change, t
 from hpc_gui.wx_terminal_webview_io import TerminalIOMixin as _TerminalIOMixin
 from hpc_gui.wx_terminal_webview_lifecycle import TerminalLifecycleMixin as _TerminalLifecycleMixin
 from hpc_gui.wx_terminal_webview_bridge import TerminalBridgeMixin as _TerminalBridgeMixin
+from hpc_gui.wx_terminal_webview_labels import TerminalLabelsMixin as _TerminalLabelsMixin
 from hpc_gui.wx_terminal_webview_support import (
     DEFAULT_FONT_SIZE,
     MAX_PENDING_PASTE_BYTES as MAX_PENDING_PASTE_BYTES,
@@ -40,35 +43,20 @@ from hpc_gui.wx_terminal_webview_support import (
     _safe_json_dumps as _safe_json_dumps,
     _safe_truncate_index as _safe_truncate_index,
 )
+from hpc_gui.wx_terminal_webview_environment import terminal_index_path, webview_backend_available
 from hpc_gui.wx_terminal_fragment_transport import TerminalFragmentTransportMixin
 from hpc_gui.wx_terminal_webview_factory import new_terminal_webview
-
-def _assets_dir() -> pathlib.Path:
-    return pathlib.Path(__file__).resolve().parent / "assets" / "terminal"
-
+from hpc_gui.wx_terminal_diagnostics import record_terminal_event
 
 def _wx_index_path() -> pathlib.Path:
-    return _assets_dir() / "wx_index.html"
+    return terminal_index_path(__file__)
 
 
 def _is_webview_available() -> bool:
-    if not _WX_AVAILABLE:
-        return False
-    try:
-        # wx.html2.WebView.IsBackendAvailable exists on some builds; fallback to import check
-        if hasattr(wx.html2.WebView, "IsBackendAvailable"):
-            try:
-                if not wx.html2.WebView.IsBackendAvailable(wx.html2.WebViewBackendDefault):  # type: ignore
-                    return False
-            except Exception:
-                pass
-        # Also check that WebView can be instantiated (some platforms lack WebKit2)
-        return True
-    except Exception:
-        return False
+    return webview_backend_available(wx, _WX_AVAILABLE)
 
 
-class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, TerminalFragmentTransportMixin, _TerminalIOMixin, wx.Panel if _WX_AVAILABLE else object):  # type: ignore
+class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, _TerminalLabelsMixin, TerminalFragmentTransportMixin, _TerminalIOMixin, wx.Panel if _WX_AVAILABLE else object):  # type: ignore
     """Real xterm.js terminal hosted in wx.html2.WebView.
 
     Single structured JSON bridge:
@@ -119,6 +107,9 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         self._resize_timer = None
         self._readiness_timer = None
         self._webview = None
+        # The WebView controller may be mounted on the next wx turn. Keep
+        # paste input queueable during that deferred creation window.
+        self._webview_mount_pending = True
         self._init_fragment_transport(_wx_index_path().as_uri())
         self._is_parity = False
         self._diagnostic_text = ""
@@ -161,6 +152,24 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
 
         # Apply initial font
         self._apply_font_size(self._font_size, notify=False)
+        try:
+            wx_version = wx.version()
+        except Exception:
+            wx_version = "unknown"
+        try:
+            webview_version = str(wx.html2.WebView.GetBackendVersionInfo())
+        except Exception:
+            webview_version = "unknown"
+        record_terminal_event(
+            "terminal-panel-created",
+            backend=wx.Platform,
+            frozen=bool(getattr(sys, "frozen", False)),
+            executable=pathlib.Path(sys.executable).name,
+            meipass=bool(getattr(sys, "_MEIPASS", None)),
+            python_version=sys.version.split()[0],
+            wx_version=wx_version,
+            webview_version=webview_version,
+        )
 
     # ---------- UI building ----------
 
@@ -210,6 +219,7 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         # WebView or fallback error panel
         if not _is_webview_available():
             self._is_parity = False
+            self._webview_mount_pending = False
             self._diagnostic_text = self._build_diagnostic_text("WebView backend unavailable")
             err_panel = wx.Panel(self)
             err_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -273,6 +283,10 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
         """Create the native WebView controller, bind the bridge, load the
         local terminal page and arm the readiness timer. One attempt."""
         self._webview_create_attempts += 1
+        record_terminal_event(
+            "webview-controller-create-start",
+            attempt=self._webview_create_attempts,
+        )
         self._is_parity = True
         self._native_created = False
         self._webview_failure_stage = "creating"
@@ -285,9 +299,21 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
             )
             if self._webview is None:
                 raise RuntimeError("WebView backend returned no controller")
+            self._webview_mount_pending = False
+            record_terminal_event(
+                "webview-controller-create-returned",
+                attempt=self._webview_create_attempts,
+                pending_native=self._webview_pending_native,
+            )
             if self._webview_pending_native and self._webview.Create(self) is False:
                 raise RuntimeError("WebView2 controller Create() failed")
         except Exception as exc:
+            record_terminal_event(
+                "webview-controller-create-failed",
+                attempt=self._webview_create_attempts,
+                exception_type=type(exc).__name__,
+            )
+            self._webview_mount_pending = False
             # Fallback if creation fails despite availability check
             self._webview_failure_stage = "creation"
             self._webview_failure_detail = str(exc)
@@ -395,60 +421,26 @@ class WxTerminalWebViewPanel(_TerminalBridgeMixin, _TerminalLifecycleMixin, Term
             return
         self._webview_failure_stage = "navigation"
         try:
-            self._webview.LoadURL(_wx_index_path().as_uri())
+            index = _wx_index_path()
+            record_terminal_event(
+                "terminal-navigation-start",
+                asset_exists=index.is_file(),
+                asset_hash=(hashlib.sha256(index.read_bytes()).hexdigest() if index.is_file() else None),
+                url_scheme="file",
+            )
+            self._webview.LoadURL(index.as_uri())
         except Exception as exc:
+            record_terminal_event(
+                "terminal-navigation-call-failed",
+                exception_type=type(exc).__name__,
+            )
             self._webview_failure_stage = "navigation-call"
             self._webview_failure_detail = type(exc).__name__
 
     def _build_diagnostic_text(self, reason: str) -> str:
         return build_terminal_diagnostic_text(reason, wx)
 
-    # ---------- Language ----------
-
-    def _refresh_labels(self, _lang=None):
-        self._update_accessibility_label()
-        try:
-            self._find_ctrl.SetHint(t("login.terminal_find"))
-            self._find_btn.SetLabel(t("login.terminal_find"))
-            self._clear_btn.SetLabel(t("login.terminal_clear"))
-            self._clear_btn.SetToolTip(t("login.terminal_clear"))
-            self._font_down_btn.SetLabel(t("login.terminal_font_decrease_short"))
-            self._font_down_btn.SetToolTip(t("login.terminal_font_decrease"))
-            self._font_up_btn.SetLabel(t("login.terminal_font_increase_short"))
-            self._font_up_btn.SetToolTip(t("login.terminal_font_increase"))
-            self._find_btn.SetToolTip(t("login.terminal_find"))
-            # Status/identity/dimensions labels keep their values but tooltips refresh
-        except Exception:
-            pass
-
     # ---------- WebView events ----------
-
-    def _write_failure_text(self) -> str:
-        msg = t("login.terminal_write_failed")
-        return msg
-
-    def _show_write_failure(self):
-        """Surface a failed input write truthfully (W20 TERM-007).
-
-        A write that the transport rejects (False) or that raises must not
-        look like success while the header still claims "Connected".
-        The connection truth in _status_text is preserved; the diagnostic
-        is transient and restored on the next successful write.
-        """
-        self._write_failure_shown = True
-        try:
-            self._status_label.SetLabel(self._write_failure_text())
-        except Exception:
-            pass
-
-    def _clear_write_failure(self):
-        if not self._write_failure_shown:
-            return
-        self._write_failure_shown = False
-        try:
-            self._status_label.SetLabel(self._status_text)
-        except Exception:
-            pass
 
 
 

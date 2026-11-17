@@ -122,6 +122,8 @@ def test_bounded_command_terminates_and_preserves_normal_behaviour(tmp_path):
             shell,
             "-NoProfile",
             "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
             "-File",
             str(script),
         ],

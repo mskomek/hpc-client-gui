@@ -16,6 +16,8 @@ import time
 from collections import deque
 from typing import Callable, Optional, Tuple
 
+from hpc_gui.ssh.x11_shell import X11Unavailable
+
 _MAX_PENDING_OUTPUT_BYTES = 2 * 1024 * 1024
 _MAX_PENDING_OUTPUT_CHUNKS = 5000
 
@@ -143,6 +145,8 @@ class InteractiveShellSession:
             cols, rows = self.geometry
             try:
                 channel = self._invoke_shell(term="xterm-256color", width=cols, height=rows)
+            except X11Unavailable:
+                raise
             except Exception as preferred_exc:
                 self._log(
                     f"SSH: xterm-256color unavailable; falling back to xterm ({preferred_exc.__class__.__name__})"

@@ -4,6 +4,7 @@ import json
 import sys
 
 from hpc_gui.wx_terminal_url_bridge import parse_terminal_call
+from hpc_gui.wx_terminal_diagnostics import record_terminal_event
 
 from hpc_gui.wx_terminal_webview_support import (
     MAX_PENDING_BYTES,
@@ -14,6 +15,18 @@ from hpc_gui.wx_terminal_webview_support import (
     _safe_json_dumps,
     _safe_truncate_index,
 )
+
+
+def _shell_state(ssh) -> dict[str, object]:
+    session = getattr(ssh, "_shell_session", None) if ssh is not None else None
+    channel = getattr(session, "channel", None)
+    thread = getattr(session, "_thread", None)
+    return {
+        "ssh_id": id(ssh) if ssh is not None else None,
+        "shell_active": session is not None,
+        "channel_active": bool(channel is not None and not getattr(channel, "closed", False)),
+        "reader_alive": bool(thread is not None and thread.is_alive()),
+    }
 
 
 class TerminalIOMixin:
@@ -31,18 +44,44 @@ class TerminalIOMixin:
         if cb is None and self._ssh is not None:
             cb = getattr(self._ssh, "send_shell_input", None)
         if cb is None:
+            record_terminal_event(
+                "terminal-input-rejected",
+                callback=False,
+                **_shell_state(self._ssh),
+            )
             self._show_write_failure()
             return False
         try:
             accepted = cb(data)
-        except Exception:
+        except Exception as exc:
+            record_terminal_event(
+                "terminal-input-error",
+                callback=True,
+                callback_id=id(cb),
+                exception_type=type(exc).__name__,
+                **_shell_state(self._ssh),
+            )
             self._show_write_failure()
             return False
         # The SSH contract returns False when the shell is unavailable;
         # None (plain callbacks) and True mean accepted.
         if accepted is False:
+            record_terminal_event(
+                "terminal-input-rejected",
+                callback=True,
+                callback_id=id(cb),
+                accepted=False,
+                **_shell_state(self._ssh),
+            )
             self._show_write_failure()
             return False
+        record_terminal_event(
+            "terminal-input-accepted",
+            callback=True,
+            callback_id=id(cb),
+            accepted=True,
+            **_shell_state(self._ssh),
+        )
         self._clear_write_failure()
         return True
 
@@ -123,6 +162,17 @@ class TerminalIOMixin:
 
     def hpc_write(self, data: str):
         """Write raw terminal bytes/text to xterm without transformation."""
+        record_terminal_event(
+            "terminal-output-write",
+            ready=self._ready,
+            closed=self._closed,
+            is_parity=self._is_parity,
+            webview_present=self._webview is not None,
+            script_async=bool(
+                self._webview is not None
+                and hasattr(self._webview, "RunScriptAsync")
+            ),
+        )
         if self._closed:
             return
         if not isinstance(data, str):
@@ -255,8 +305,9 @@ class TerminalIOMixin:
         """
         if self._closed or not text:
             return False
-        if not self._ready or not self._is_parity or self._webview is None:
-            if not self._is_parity or self._webview is None:
+        if not self._ready:
+            if (not self._webview_mount_pending
+                    and (not self._is_parity or self._webview is None)):
                 return False
             nb = len(text.encode("utf-8", errors="replace"))
             if self._pending_paste_bytes + nb > MAX_PENDING_PASTE_BYTES:
@@ -264,6 +315,8 @@ class TerminalIOMixin:
             self._pending_paste.append(text)
             self._pending_paste_bytes += nb
             return True
+        if not self._is_parity or self._webview is None:
+            return False
         try:
             self._run_js(f"window.hpcPaste && window.hpcPaste({_safe_json_dumps(text)});")
             return True

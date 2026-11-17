@@ -183,7 +183,10 @@ def _collect_about_labels():
         # assert; returning ID_OK models the Close-button dismissal.
         return wx.ID_OK
 
-    original = wx.Dialog.ShowModal
+    # Access the raw SIP descriptor. Reading wx.Dialog.ShowModal through the
+    # class returns a callable already bound to the class; assigning that
+    # value back after interception corrupts later native dialog instances.
+    original = vars(wx.Dialog)["ShowModal"]
     wx.Dialog.ShowModal = _fake_show_modal
     try:
         assert about_view.show_about(None) == wx.ID_OK
@@ -200,7 +203,8 @@ def _collect_about_labels_with(show_fn):
         self.EndModal(wx.ID_OK)
         return wx.ID_OK
 
-    original = wx.Dialog.ShowModal
+    # Preserve the descriptor itself so restoration remains unbound.
+    original = vars(wx.Dialog)["ShowModal"]
     wx.Dialog.ShowModal = _fake_show_modal
     try:
         show_fn(None)

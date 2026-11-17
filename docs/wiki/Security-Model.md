@@ -70,10 +70,11 @@ refuses and exits `2`. The graphical interface asks in a dialog.
 
 ## Optional helpers
 
-The Windows X11 path uses `plink.exe` and VcXsrv, neither of which is bundled.
-They are downloaded only after you approve the download, or you can install
-them yourself. X11 helper processes are cleaned up when the application exits,
-and orphaned processes are handled defensively rather than left running. See
+The Windows X11 path uses the existing Paramiko SSH session and an optional
+user-installed VcXsrv. The app starts VcXsrv with a private MIT cookie and
+loopback-only access. The cookie authenticates the forwarding channel but does
+not isolate remote X11 applications from the local display; enable it only for
+trusted servers. See
 [[X11 Forwarding|X11-Forwarding]].
 
 ## Reporting a vulnerability

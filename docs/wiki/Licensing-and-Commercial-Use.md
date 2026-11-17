@@ -51,9 +51,9 @@ pull request. See [[Contributing|Contributing]].
 ## Third-party components
 
 Bundled third-party components carry their own licenses, recorded in
-`THIRD_PARTY_NOTICES.md`. The optional X11 helpers — PuTTY's `plink.exe` and
-VcXsrv — are not bundled; they are downloaded with your approval or installed
-by you, under their own licenses.
+`THIRD_PARTY_NOTICES.md`. VcXsrv, used as an optional local Windows X server,
+is not bundled; install it from its official source. It remains under its own
+license. The integrated X11 path does not require PuTTY's `plink.exe`.
 
 ## Independence
 

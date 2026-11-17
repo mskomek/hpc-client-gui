@@ -132,6 +132,8 @@ class ConnectionDialogProfileMixin:
         self.sp_transfer_parallelism.SetValue(coerce_profile_transfer_parallelism(profile.get("transfer_parallelism", 1)))
         self.sp_ssh_timeout.SetValue(coerce_profile_ssh_timeout(profile.get("ssh_timeout")) or 0)
         self.cb_x11.SetValue(bool(profile.get("x11_forwarding", False)))
+        self.cb_x11_trusted.SetValue(bool(profile.get("x11_trusted", False)))
+        self.cb_x11_trusted.Enable(self.cb_x11.GetValue())
         self.cb_cli_allowed.SetValue(bool(profile.get("cli_allowed", False)))
         # File manager
         fm = normalize_file_manager_settings(profile.get("file_manager"))
@@ -197,6 +199,7 @@ class ConnectionDialogProfileMixin:
             "key_path": self.key_path_ctrl.GetValue().strip(),
             "host_key_policy": "strict" if self.cb_host_key_policy.GetSelection() == 1 else "accept-new",
             "x11_forwarding": self.cb_x11.GetValue(),
+            "x11_trusted": self.cb_x11.GetValue() and self.cb_x11_trusted.GetValue(),
             "cli_allowed": self.cb_cli_allowed.GetValue(),
             "keepalive_interval_seconds": int(self.sp_keepalive.GetValue()),
             "transfer_parallelism": int(self.sp_transfer_parallelism.GetValue()),

@@ -14,6 +14,7 @@ class SSHConfig:
     key_path: str = ""
     host_key_policy: str = "accept-new"  # accept-new | strict
     x11_forwarding: bool = False
+    x11_trusted: bool = False
     dry_run: bool = False  # mock backend
     keepalive_interval_seconds: int = 30  # 0 disables; clamped to 0..3600
     transfer_parallelism: int = 1  # profile override; backend cap still applies

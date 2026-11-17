@@ -223,7 +223,8 @@ def test_wx_remote_ctrl_a_selects_all_rows(wx_app):
     event.SetKeyCode(ord("A"))
     event.SetControlDown(True)
     listing.ProcessEvent(event)
-    assert all(listing.IsSelected(index) for index in range(listing.GetItemCount()))
+    indices = [index for index in range(listing.GetItemCount()) if listing.GetItemText(index) != ".."]
+    assert indices and all(listing.IsSelected(index) for index in indices)
 
 
 def test_wx_remote_backspace_navigates_parent_and_f5_refreshes(wx_app):

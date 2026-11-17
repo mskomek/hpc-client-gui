@@ -13,9 +13,9 @@ bölümlere göre. Aşağıdaki etiketler arayüzün İngilizce metinleridir.
 
 | Ayar | Ne yapar |
 |---|---|
-| **When X11 is enabled, check/download/start required tools** | Bağlanırken `plink.exe` ve VcXsrv denetlenir. Eksikse onayınızla indirilip başlatılır. |
+| **When X11 is enabled, check/download/start required tools** | Bağlanırken yerel X sunucusu denetlenir. VcXsrv yalnızca kuruluysa ve güvenli dinleyici yoksa başlatılır. |
 | **Close VcXsrv when the app exits** | VcXsrv'i uygulama başlattıysa çıkışta PID ile kapatılır. |
-| **Close X11/SSH processes on exit** | Uygulamanın başlattığı plink/ssh süreçlerini sonlandırır. |
+| **Close X11/SSH processes on exit** | Uygulamanın başlattığı X11 yardımcıları kapanır; SSH aktarma kanalları terminalle kapanır. |
 
 X11'in kendisi bağlantı başına etkinleştirilir — bağlantı formundaki **Enable
 X11 forwarding (for GUI apps)** seçeneği. Bkz.

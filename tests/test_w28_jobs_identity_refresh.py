@@ -429,9 +429,11 @@ def test_finished_job_moves_below_active_and_selection_survives_transition(wx_ap
 @pytest.mark.wx
 @pytest.mark.semantic
 def test_hide_finished_toggle_hides_rows_without_clearing_selection(wx_app, monkeypatch, tmp_path):
-    from hpc_gui.config import storage
+    from hpc_gui.config import _storage_core, storage
 
-    monkeypatch.setattr(storage, "_config_path", lambda: tmp_path / "config.json")
+    # load_config/save_config resolve _config_path in _storage_core's globals;
+    # patching the compatibility facade's re-export leaves user config exposed.
+    monkeypatch.setattr(_storage_core, "_config_path", lambda: tmp_path / "config.json")
     backend = {"rows": [
         {"id": "31", "name": "active", "state": "RUNNING"},
         {"id": "30", "name": "done", "state": "COMPLETED", "end_time": "2026-10-18T10:00:00"},

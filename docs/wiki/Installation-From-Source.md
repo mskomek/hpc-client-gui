@@ -10,8 +10,8 @@ application and the same command-line interface as the packaged builds.
 - Python 3.14.x (`requires-python = "==3.14.*"`).
 - On Linux, the Qt platform libraries PySide6 needs (`libegl1` on
   Ubuntu/Debian, the distribution equivalent on Fedora and openSUSE).
-- Optional, X11 only: `plink.exe` and VcXsrv on Windows; the system OpenSSH
-  client on Linux.
+- Optional, X11 only: a local X server such as VcXsrv on Windows; Linux and
+  macOS use their desktop X server and MIT cookie.
 
 ## Windows
 

@@ -71,11 +71,11 @@ Komut satırında bu, `files rm`, `jobs submit`, `jobs cancel` ve
 
 ## İsteğe bağlı yardımcılar
 
-Windows X11 yolu `plink.exe` ve VcXsrv kullanır; ikisi de uygulamayla birlikte
-gelmez. Yalnızca indirmeyi onayladıktan sonra indirilirler ya da kendiniz
-kurabilirsiniz. X11 yardımcı süreçleri uygulama kapanırken temizlenir ve
-sahipsiz kalan süreçler çalışır durumda bırakılmak yerine savunmacı biçimde
-ele alınır. Bkz. [[X11 Yönlendirme|X11-Forwarding-TR]].
+Windows X11 yolu mevcut Paramiko SSH oturumunu ve isteğe bağlı, kullanıcı
+tarafından kurulmuş VcXsrv'i kullanır. Uygulama VcXsrv'i özel MIT çerezi ve
+yalnızca loopback erişimiyle başlatır. Çerez aktarma kanalını doğrular ancak
+uzak X11 uygulamalarını yerel ekrandan yalıtmaz; yalnızca güvendiğiniz
+sunucularda etkinleştirin. Bkz. [[X11 Yönlendirme|X11-Forwarding-TR]].
 
 ## Güvenlik açığı bildirimi
 

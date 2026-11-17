@@ -80,7 +80,7 @@ def test_request_registers_handler_and_never_starts_processes():
         def request_x11(self, **kwargs):
             requested.append(kwargs)
 
-    relay = X11Forwarder(cookie_reader=lambda _display: b"B" * 16)
+    relay = X11Forwarder(cookie_reader=lambda _display: b"B" * 16, trusted=True)
     try:
         relay.request(Channel())
         assert len(requested) == 1
@@ -114,7 +114,7 @@ def test_forwarder_refuses_unsecured_x11_request_without_local_cookie():
         def request_x11(self, **kwargs):
             requested.append(kwargs)
 
-    relay = X11Forwarder(cookie_reader=lambda _: None)
+    relay = X11Forwarder(cookie_reader=lambda _: None, trusted=True)
     with pytest.raises(RuntimeError, match="cookie unavailable"):
         relay.request(Channel())
     assert requested == []
@@ -128,6 +128,7 @@ def test_explicit_unauthenticated_mode_still_rejects_nonloopback_display():
         LocalDisplay(host="evil.example"),
         cookie_reader=lambda _: None,
         allow_unauthenticated_loopback=True,
+        trusted=True,
     )
     class Channel:
         def request_x11(self, **kwargs):
@@ -155,7 +156,7 @@ def test_relay_channel_count_is_bounded_and_closed_requests_rejected(monkeypatch
         def close(self):
             self.closed = True
 
-    relay = X11Forwarder(cookie_reader=lambda _: b"B" * 16)
+    relay = X11Forwarder(cookie_reader=lambda _: b"B" * 16, trusted=True)
     monkeypatch.setattr(forwarder_module.threading, "Thread", FakeThread)
     channels = [Channel() for _ in range(9)]
     for channel in channels:
@@ -217,7 +218,7 @@ class _FakeChannel:
 def test_relay_rewrites_fragmented_x11_setup_before_forwarding():
     display = _FakeLocalDisplay()
     real = b"R" * 16
-    relay = X11Forwarder(display, cookie_reader=lambda _: real)
+    relay = X11Forwarder(display, cookie_reader=lambda _: real, trusted=True)
     packet = _setup_packet(relay._fake_cookie)
     channel = _FakeChannel([packet[:11], packet[11:]])
     pumped = []
@@ -234,7 +235,7 @@ def test_relay_rewrites_fragmented_x11_setup_before_forwarding():
 
 def test_relay_rejects_invalid_x11_cookie_without_pumping():
     display = _FakeLocalDisplay()
-    relay = X11Forwarder(display, cookie_reader=lambda _: b"R" * 16)
+    relay = X11Forwarder(display, cookie_reader=lambda _: b"R" * 16, trusted=True)
     channel = _FakeChannel([_setup_packet(b"X" * 16)])
     pumped = []
     relay._pump = lambda *_: pumped.append(True)
@@ -248,7 +249,7 @@ def test_relay_rejects_invalid_x11_cookie_without_pumping():
 
 def test_closed_forwarder_refuses_new_channel_without_local_connection():
     display = _FakeLocalDisplay()
-    relay = X11Forwarder(display, cookie_reader=lambda _: b"R" * 16)
+    relay = X11Forwarder(display, cookie_reader=lambda _: b"R" * 16, trusted=True)
     relay.close()
     channel = _FakeChannel([_setup_packet(relay._fake_cookie)])
     relay._relay(channel)

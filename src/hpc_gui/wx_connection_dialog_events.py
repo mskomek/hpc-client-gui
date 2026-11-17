@@ -22,6 +22,7 @@ class ConnectionDialogEventsMixin:
         self.btn_save.Bind(wx.EVT_BUTTON, lambda e: self._save_clicked())
         self.btn_save_connect.Bind(wx.EVT_BUTTON, lambda e: self._save_and_connect_clicked())
         self.cb_jump_enabled.Bind(wx.EVT_CHECKBOX, lambda e: self._set_jump_children_enabled(e.IsChecked()))
+        self.cb_x11.Bind(wx.EVT_CHECKBOX, lambda e: self.cb_x11_trusted.Enable(e.IsChecked()))
         self.quota_enabled_cb.Bind(wx.EVT_CHECKBOX, lambda e: self._update_quota_status())
         self.quota_consent_cb.Bind(wx.EVT_CHECKBOX, lambda e: self._update_quota_status())
         self.quota_backend_choice.Bind(wx.EVT_CHOICE, lambda e: self._update_quota_status())

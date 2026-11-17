@@ -84,8 +84,10 @@ def test_unknown_declarative_engine_id_fails_closed():
 @pytest.mark.unit
 @pytest.mark.semantic
 @pytest.mark.regression
-def test_vcxsrv_does_not_disable_access_control():
-    assert "-ac" not in _vcxsrv_args(Path("vcxsrv.exe"), 0)
+def test_vcxsrv_does_not_disable_access_control(tmp_path: Path):
+    args = _vcxsrv_args(Path("vcxsrv.exe"), 0, tmp_path / "xauthority")
+    assert "-ac" not in args
+    assert args[args.index("-auth") + 1] == str(tmp_path / "xauthority")
 
 
 @pytest.mark.unit

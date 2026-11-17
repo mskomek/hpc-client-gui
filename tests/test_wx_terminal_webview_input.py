@@ -86,6 +86,7 @@ ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
 panel._ready = True
 panel._is_parity = True
+panel._webview = object()
 # Simulate resize from xterm
 panel._handle_resize(120, 40, 960, 600)
 assert ssh.resizes == [(120, 40)], f"expected [(120,40)], got {ssh.resizes}"
@@ -130,6 +131,7 @@ ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
 panel._ready = True
 panel._is_parity = True
+panel._webview = object()
 # Capture JS calls to verify hpcSetFontSize is called
 calls = []
 orig = panel._run_js
@@ -187,6 +189,7 @@ ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
 panel._ready = True
 panel._is_parity = True
+panel._webview = object()
 calls = []
 orig = panel._run_js
 def capture(code):
@@ -239,6 +242,7 @@ ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
 panel._ready = True
 panel._is_parity = True
+panel._webview = object()
 # Verify _handle_input does not log
 panel._handle_input("sensitive_data\\x03")
 assert ssh.sent == ["sensitive_data\\x03"]

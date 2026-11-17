@@ -37,9 +37,9 @@ dependencies documented in `docs/v2/WX_DEPENDENCY_CLOSURE.md`.
 | Python 3.14.x | Not required | Required |
 | wxWidgets runtime (wxPython 4.3.1) | Bundled | `wxPython>=4.3.1` required |
 | Qt/PySide6 | Not shipped (legacy-only `legacy-qt` extra) | Optional, legacy-only, not required |
-| `plink.exe` (PuTTY) | Optional, X11 only, Windows | Optional, X11 only |
+| `plink.exe` (PuTTY) | Not required | Not required |
 | VcXsrv | Optional, X11 only, Windows | Optional, X11 only |
-| System OpenSSH client | Not used for X11 on Windows | Required for X11 on Linux |
+| System OpenSSH client | Not required for integrated X11 | Not required for integrated X11 |
 | XQuartz | Not required | Required only for macOS X11 |
 
 ## Cluster-side requirements
@@ -58,10 +58,8 @@ the details rather than to guess.
 |---|---|---|
 | Key-based authentication | Supported | Main session path |
 | Password authentication | Supported | Can be stored protected in a profile |
-| X11 via plink + VcXsrv (Windows) | Recommended | Most reliable on Windows |
-| X11 via OpenSSH with a key | Supported | Uses `ssh -X/-Y` |
-| X11 via OpenSSH with a password | Limited | Hidden TTY prompts can block; plink preferred |
-| macOS X11 with a password | Limited | SSH key or agent required; password-only X11 is not started |
+| X11 via Paramiko + VcXsrv (Windows) | Supported | Requires loopback listener and MIT cookie |
+| X11 via Paramiko + desktop X server (Linux/macOS) | Supported | Requires `DISPLAY` and a local MIT cookie |
 | Host key policy `accept-new` | Supported | Unknown keys prompt to trust-and-save, trust once, or cancel |
 | Host key policy `strict` | Supported | Unknown keys rejected; changed keys always rejected |
 

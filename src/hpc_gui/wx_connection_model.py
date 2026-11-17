@@ -214,6 +214,7 @@ def ssh_info_from_profile(profile: dict[str, Any], model: "WxConnectionModel") -
         key_path=str(profile.get("key_path", "") or profile.get("ssh_key", "")),
         host_key_policy=str(profile.get("host_key_policy", "accept-new") or "accept-new"),
         x11_forwarding=bool(profile.get("x11_forwarding", False)),
+        x11_trusted=bool(profile.get("x11_trusted", False)),
         timeout=coerce_profile_ssh_timeout(profile.get("ssh_timeout")),
         keepalive_interval_seconds=coerce_keepalive_interval(profile.get("keepalive_interval_seconds", 30)),
         host_key_decision=host_key,

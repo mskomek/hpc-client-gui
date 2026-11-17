@@ -57,7 +57,8 @@ def test_wx_shell_dispatches_core_views():
 @pytest.mark.wx
 @pytest.mark.semantic
 def test_directories_default_download_uses_transfer_queue(monkeypatch, tmp_path):
-    from hpc_gui import wx_directories_view, wx_remote_files_view, wx_shell
+    from hpc_gui import wx_directories_view, wx_remote_files_view
+    import hpc_gui.wx_shell_file_transfer as file_transfer
 
     app = wx.GetApp() or wx.App(False)
     frame = wx.Frame(None)
@@ -75,7 +76,13 @@ def test_directories_default_download_uses_transfer_queue(monkeypatch, tmp_path)
 
     started = []
     monkeypatch.setattr(wx_remote_files_view, "build_remote_files_panel", fake_remote_panel)
-    monkeypatch.setattr(wx_shell, "_start_file_transfers", lambda *args, **kwargs: started.append((args, kwargs)))
+    # The directories callback imports the transfer starter from this module
+    # when the operation runs; wx_shell's facade alias is not that call site.
+    monkeypatch.setattr(
+        file_transfer,
+        "_start_file_transfers",
+        lambda *args, **kwargs: started.append((args, kwargs)),
+    )
 
     try:
         wx_directories_view.build_directories_panel(frame, session_state=state)

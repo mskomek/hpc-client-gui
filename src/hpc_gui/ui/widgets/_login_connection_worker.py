@@ -80,6 +80,7 @@ class ConnectionWorker(QObject):
                 key_path=self._cfg.key_path,
                 host_key_policy=self._cfg.host_key_policy,
                 x11_forwarding=self._cfg.x11_forwarding,
+                x11_trusted=bool(getattr(self._cfg, "x11_trusted", False)),
                 timeout=self._cfg.ssh_timeout,
                 keepalive_interval_seconds=self._cfg.keepalive_interval_seconds,
                 host_key_decision=self._decide_host_key,

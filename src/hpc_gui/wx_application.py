@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import os
+import sys
 
 from hpc_gui.core.i18n import load_saved_language, system_default_language
 from hpc_gui.wx_runtime import environment_without_qt_graphics
+from hpc_gui.wx_terminal_diagnostics import record_terminal_event
 
 
 def activate_terminal_for_packaged_smoke(frame) -> bool:
@@ -30,6 +32,13 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
     import wx
 
     app = wx.App(False)
+    record_terminal_event(
+        "wx-application-started",
+        frozen=bool(getattr(sys, "frozen", False)),
+        executable=os.path.basename(sys.executable),
+        python_version=sys.version.split()[0],
+        wx_version=wx.version(),
+    )
     if os.environ.get("HPC_GUI_PACKAGED_SMOKE_OUTPUT"):
         app.SetAppName(
             os.environ.get("HPC_GUI_PACKAGED_SMOKE_APP_NAME")
@@ -38,6 +47,7 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
         frame, _lifecycle, session_state = create_shell_frame(
             app, defer_terminal_webview=True
         )
+        record_terminal_event("wx-shell-frame-created", frozen=bool(getattr(sys, "frozen", False)))
         frame.Show()
         activate_terminal_for_packaged_smoke(frame)
         smoke_state = run_packaged_smoke(
@@ -72,6 +82,7 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
         frame, _lifecycle, _session_state = create_shell_frame(
             app, defer_terminal_webview=True
         )
+        record_terminal_event("wx-shell-frame-created", frozen=bool(getattr(sys, "frozen", False)))
         if splash is not None:
             try:
                 splash.Destroy()

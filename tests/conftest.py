@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+from functools import lru_cache
 from pathlib import Path
 from unittest.mock import patch
 
@@ -24,6 +25,39 @@ for _temp_var in ("TMP", "TEMP", "TMPDIR"):
 tempfile.tempdir = str(TEMP_ROOT)
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
+
+
+def pytest_collection_modifyitems(items):
+    """Run legacy Qt tests before wx tests in the shared Windows process.
+
+    PySide6 and wxPython each install a process-wide native event dispatcher.
+    On Windows, pumping QApplication after a wx.App has been initialized can
+    raise a native access violation even when each test passes by itself.
+    Keep all explicitly marked Qt tests ahead of the remaining suite; this
+    preserves and runs the tests while avoiding cross-framework teardown.
+    """
+    @lru_cache(maxsize=None)
+    def imports_qt(module_path: str) -> bool:
+        try:
+            source = Path(module_path).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return False
+        return "from PySide6" in source or "import PySide6" in source
+
+    qt_items = [
+        item for item in items
+        if item.get_closest_marker("qt")
+        # Plugin Manager tests get QApplication through a pytest plugin in
+        # tests/support, so their own module source does not mention Qt and
+        # they carry only a usefixtures marker. Include the resolved fixture
+        # dependency: otherwise pytest's module ordering can run wx first and
+        # then pump QApplication after wx.App has installed its dispatcher.
+        or "qapp" in getattr(item, "fixturenames", ())
+        or imports_qt(str(getattr(item.module, "__file__", "")))
+    ]
+    if qt_items:
+        qt_ids = {id(item) for item in qt_items}
+        items[:] = qt_items + [item for item in items if id(item) not in qt_ids]
 
 # QtWebEngine's Chromium profile teardown segfaults at interpreter exit in
 # offscreen test runs, so tests use the plain console fallback instead.

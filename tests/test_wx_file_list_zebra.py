@@ -21,9 +21,10 @@ def wx_app():
     load_language("en")
     created_app = wx.App.Get() is None
     app = wx.App.Get() or wx.App(False)
+    existing_windows = {id(window) for window in wx.GetTopLevelWindows()}
     yield app
     for window in wx.GetTopLevelWindows():
-        if window:
+        if window and id(window) not in existing_windows:
             window.Destroy()
     app.ProcessPendingEvents()
     wx.YieldIfNeeded()
@@ -54,10 +55,14 @@ def test_local_file_list_uses_alternating_row_colors(wx_app, tmp_path):
         (tmp_path / name).write_text(name, encoding="utf-8")
     (tmp_path / "d-folder").mkdir()
 
+    existing_windows = {id(window) for window in wx.GetTopLevelWindows()}
     show_local_files(path=tmp_path)
-    frame = next(window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_local_controls"))
+    frame = next(
+        window for window in wx.GetTopLevelWindows()
+        if id(window) not in existing_windows and hasattr(window, "_wx_local_controls")
+    )
     listing = frame._wx_local_controls["listing"]
-    _wait_for_rows(wx_app, listing, 3)
+    _wait_for_rows(wx_app, listing, 4)
 
     _assert_zebra_rows(listing)
     # Native list sorting can put directories first; assert each row by its

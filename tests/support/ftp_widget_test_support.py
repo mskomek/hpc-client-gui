@@ -195,6 +195,10 @@ class _FakeDropEvent:
 
 
 class FtpWidgetTestCase(unittest.TestCase):
+    # Every subclass constructs and tears down a native Qt FtpWidget, even
+    # when an individual test focuses on a nonvisual contract.
+    pytestmark = pytest.mark.qt
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.app = QApplication.instance() or QApplication([])

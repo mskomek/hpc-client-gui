@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import shutil
 from typing import Callable
 
 from PySide6.QtCore import QProcess
 
 from hpc_gui.core.i18n import t
-from hpc_gui.services.putty_manager import ensure_plink_available
 from hpc_gui.services.x11_system_ssh import (
     build_x11_launch,
     is_likely_x11_gui_command,
@@ -35,8 +33,8 @@ class X11Runner:
     """Single-responsibility X11 execution manager.
 
     Handles:
-    - dependency preflight (plink + local X server on Windows; system OpenSSH
-      + DISPLAY on Linux)
+    - local X server preflight; SSH forwarding itself stays on the Paramiko
+      interactive shell
     - command routing for likely X11 commands
     - QProcess lifecycle + cleanup
     """
@@ -46,31 +44,15 @@ class X11Runner:
         self._parent = parent
         self._bg_procs: list[QProcess] = []
 
-    def _system_ssh_available(self) -> bool:
-        return shutil.which("ssh") is not None
-
     def preflight(self, *, enabled: bool, parent=None, allow_download: bool = True) -> bool:
         if not enabled:
             return True
         p = parent or self._parent
-        if _is_windows():
-            if not ensure_plink_available(log=self._log, parent=p):
-                return False
-            if not ensure_x_server_running(self._log, parent=p, allow_download=allow_download):
-                return False
-            return True
-        if _is_macos():
-            if not self._system_ssh_available():
-                self._log("X11: macOS sistem OpenSSH istemcisi bulunamadı.")
-                return False
-            return ensure_x_server_running(self._log, parent=p)
-        # Linux: system OpenSSH is required; the local X server is the DISPLAY env.
-        if not self._system_ssh_available():
-            self._log("X11: sistem OpenSSH istemcisi (ssh) bulunamadi. X11 iletimi icin ssh kurun.")
-            return False
-        if not ensure_x_server_running(self._log, parent=p):
-            return False
-        return True
+        return ensure_x_server_running(
+            self._log,
+            parent=p,
+            allow_download=allow_download if _is_windows() else False,
+        )
 
     def should_handle(self, info, cmd: str) -> bool:
         if not info:

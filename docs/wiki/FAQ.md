@@ -45,9 +45,9 @@ workloads — Python scripts, batch solvers, training jobs — do not need it.
 
 ## Why does X11 work differently on Windows and Linux?
 
-They use genuinely different mechanisms. Windows runs `plink.exe -X` with
-VcXsrv as the X server; Linux uses the system OpenSSH client (`ssh -X/-Y`).
-Neither Windows helper is used on Linux. See
+The active Paramiko SSH terminal uses the same X11 channel protocol on both
+platforms. Windows displays windows with VcXsrv; Linux uses its desktop X
+server. See
 [[X11 Forwarding|X11-Forwarding]].
 
 ## Are my passwords safe?

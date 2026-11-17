@@ -64,6 +64,7 @@ class _ConnectionDialogActionsMixin:
                 "key_path": self.key_path.text().strip(),
                 "host_key_policy": str(self.cb_host_key_policy.currentData() or "accept-new"),
                 "x11_forwarding": self.cb_x11.isChecked(),
+                "x11_trusted": self.cb_x11.isChecked() and self.cb_x11_trusted.isChecked(),
                 "cli_allowed": self.cb_cli_allowed.isChecked(),
                 "keepalive_interval_seconds": int(self.sp_keepalive.value()),
                 "transfer_parallelism": int(self.sp_transfer_parallelism.value()),

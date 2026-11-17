@@ -117,6 +117,7 @@ def test_w40_gui_window_geometry_roundtrip_opens_connection_page(isolated_config
     """UISTATE-009..014 FULL: geometry restores; each launch opens Connection."""
     wx = pytest.importorskip("wx")
     from hpc_gui.wx_shell import create_shell_frame
+    from hpc_gui.services.geometry_policy import Rect, resolve_main_window_state
 
     i18n.load_language("en")
     app = wx.App.Get() or wx.App(False)
@@ -126,6 +127,10 @@ def test_w40_gui_window_geometry_roundtrip_opens_connection_page(isolated_config
         _pump(wx, app)
         notebook = frame._wx_shell_controls["notebook"]
         frame.SetSize(150, 120, 1280, 760)
+        _pump(wx, app)
+        # Keep the assertion portable to smaller active desktop areas where
+        # the window manager clamps the requested dimensions.
+        realized_size = frame.GetSize()
         notebook.SetSelection(4)
         _pump(wx, app)
         frame.Close()  # real close path persists state
@@ -134,14 +139,32 @@ def test_w40_gui_window_geometry_roundtrip_opens_connection_page(isolated_config
         _pump(wx, app)
     raw = storage.get_main_window_state()
     assert raw is not None
-    assert raw["width"] == 1280 and raw["height"] == 760
+    assert raw["width"] == realized_size.width
+    assert raw["height"] == realized_size.height
     assert raw["selected_tab"] == 4
     frame2, _l2, _s2 = create_shell_frame(app, tray_factory=lambda _p: None)
     try:
         frame2.Show()
         _pump(wx, app)
         size = frame2.GetSize()
-        assert (size.width, size.height) == (1280, 760)
+        work_areas = tuple(
+            Rect(
+                area.x,
+                area.y,
+                area.width,
+                area.height,
+            )
+            for area in (
+                wx.Display(index).GetClientArea()
+                for index in range(wx.Display.GetCount())
+            )
+        )
+        expected = resolve_main_window_state(
+            raw,
+            work_areas,
+            tab_count=frame2._wx_shell_controls["notebook"].GetPageCount(),
+        )["rect"]
+        assert (size.width, size.height) == (expected.width, expected.height)
         assert frame2._wx_shell_controls["notebook"].GetSelection() == 0
     finally:
         try:

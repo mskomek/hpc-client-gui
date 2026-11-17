@@ -34,6 +34,7 @@ ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
 panel._ready = True
 panel._is_parity = True
+panel._webview = object()
 calls = []
 orig = panel._run_js
 def capture(code):

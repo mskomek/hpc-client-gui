@@ -4,6 +4,7 @@ import json
 
 from hpc_gui.core.i18n import t
 from hpc_gui.wx_terminal_webview_support import _is_local_file_url
+from hpc_gui.wx_terminal_diagnostics import record_terminal_event
 
 
 class TerminalBridgeMixin:
@@ -17,6 +18,10 @@ class TerminalBridgeMixin:
             controller = event.GetEventObject()
         except Exception:
             controller = None
+        record_terminal_event(
+            "webview-native-created",
+            created=controller is getattr(self, "_webview", None),
+        )
         try:
             if not self._closed:
                 import wx
@@ -64,13 +69,30 @@ class TerminalBridgeMixin:
         self._native_created = True
         self._page_loaded = True
         self._webview_failure_stage = "page-loaded"
-        self._update_accessibility_label()
+        try:
+            rect = self._webview.GetClientSize()
+            width, height = int(rect.width), int(rect.height)
+        except Exception:
+            width = height = 0
+        try:
+            shown = bool(self._webview and self._webview.IsShownOnScreen())
+        except Exception:
+            shown = False
+        record_terminal_event(
+            "terminal-page-loaded",
+            page_loaded=True,
+            ready=self._ready,
+            width=width,
+            height=height,
+            shown=shown,
+        )
+        self._update_accessibility_label(defer_sync=True)
         try:
             event.Skip()
         except Exception:
             pass
 
-    def _update_accessibility_label(self) -> None:
+    def _update_accessibility_label(self, *, defer_sync: bool = False) -> None:
         webview = getattr(self, "_webview", None)
         if webview is None:
             return
@@ -82,23 +104,75 @@ class TerminalBridgeMixin:
             pass
         if not getattr(self, "_page_loaded", True):
             return
+        run_script_async = getattr(webview, "RunScriptAsync", None)
         script = (
             "const terminal = document.getElementById('terminal');"
             f"if (terminal) terminal.setAttribute('aria-label', {json.dumps(label, ensure_ascii=False)});"
         )
 
+        def run_sync() -> None:
+            if getattr(self, "_closed", False) or getattr(self, "_webview", webview) is not webview:
+                return
+            try:
+                if webview.IsBeingDeleted():
+                    return
+            except (AttributeError, RuntimeError):
+                pass
+            run_script = getattr(webview, "RunScript", None)
+            if callable(run_script):
+                try:
+                    run_script(script)
+                except Exception:
+                    pass
+
+        if not callable(run_script_async):
+            # Some wx backends expose only synchronous RunScript. It is safe
+            # for later language changes, but must leave EVT_WEBVIEW_LOADED
+            # before entering the native renderer event pump.
+            if defer_sync:
+                try:
+                    import wx
+
+                    wx.CallAfter(run_sync)
+                except Exception:
+                    pass
+                return
+            run_sync()
+            return
+
         def update_dom_label() -> None:
             if getattr(self, "_closed", False) or getattr(self, "_webview", webview) is not webview:
                 return
             try:
-                webview.RunScript(script)
-            except Exception:
+                if webview.IsBeingDeleted():
+                    return
+            except (AttributeError, RuntimeError):
                 pass
+            try:
+                # The async API queues work without re-entering the native
+                # renderer event pump used by EVT_WEBVIEW_LOADED.
+                run_script_async(script)
+            except Exception:
+                # If an async method exists but is unavailable at runtime,
+                # use the synchronous API only after the loaded event ends.
+                try:
+                    import wx
+
+                    wx.CallAfter(run_sync)
+                except Exception:
+                    pass
 
         try:
             import wx
 
             if wx.GetApp() is not None and isinstance(webview, wx.Window):
+                # Loaded/language events normally arrive on wx's UI thread.
+                # Calling CallAfter here creates a stale native callback if a
+                # parent is destroyed before the queued script runs.
+                is_main_thread = getattr(wx, "IsMainThread", None)
+                if callable(is_main_thread) and is_main_thread():
+                    update_dom_label()
+                    return
                 wx.CallAfter(update_dom_label)
                 return
         except Exception:
@@ -123,6 +197,20 @@ class TerminalBridgeMixin:
             detail = event.GetString() if hasattr(event, "GetString") else ""
         except Exception:
             detail = ""
+        import re
+        code = re.search(r"0x[0-9a-fA-F]{8}", detail)
+        record_terminal_event(
+            "webview-error",
+            stage=getattr(self, "_webview_failure_stage", "unknown"),
+            native_code=code.group(0) if code else None,
+            exception_type="native-event",
+        )
+        if self._is_ready_fragment_navigation_interrupt(event, detail):
+            try:
+                event.Skip()
+            except Exception:
+                pass
+            return
         aborted = "operation aborted" in detail.casefold() or "0x80004004" in detail.lower()
         native_failed = (
             not getattr(self, "_native_created", False)
@@ -160,6 +248,25 @@ class TerminalBridgeMixin:
         except Exception:
             pass
 
+    def _is_ready_fragment_navigation_interrupt(self, event, detail: str) -> bool:
+        """Ignore WebKit's benign interruption while loading an IPC fragment.
+
+        WebKitGTK can emit ERROR(code 7, "Frame load interrupted") while a
+        same-document file URL fragment is being delivered. Once the bridge is
+        ready, that event does not mean the terminal page or controller failed.
+        """
+        if (
+            not getattr(self, "_gtk_fragment_transport", False)
+            or not getattr(self, "_ready", False)
+            or detail.strip().casefold() != "frame load interrupted"
+        ):
+            return False
+        try:
+            url = event.GetURL() or ""
+        except Exception:
+            return False
+        return "#" in url and _is_local_file_url(url)
+
     def _on_script_message(self, event):
         if self._closed:
             return
@@ -195,6 +302,7 @@ class TerminalBridgeMixin:
             if not isinstance(msg, dict):
                 return
             mtype = msg.get("type")
+            record_terminal_event("terminal-bridge-message", message_type=mtype)
             if mtype == "bridge-ack":
                 self._fragment_acknowledged(msg.get("seq"))
                 return
@@ -226,6 +334,7 @@ class TerminalBridgeMixin:
             return
         self._webview_failure_stage = "ready"
         self._ready = True
+        record_terminal_event("terminal-bridge-ready", ready=True, page_loaded=self._page_loaded)
         # A replacement made it: retired controllers have been silent since
         # their own readiness timeout, so they are quiescent and safe to
         # destroy now (never destroy a possibly in-flight controller).

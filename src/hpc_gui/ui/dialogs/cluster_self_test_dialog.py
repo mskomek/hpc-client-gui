@@ -78,6 +78,7 @@ class ClusterSelfTestDialog(QDialog):
             key_path=str(self._profile.get("key_path") or "").strip(),
             host_key_policy=str(self._profile.get("host_key_policy") or "accept-new"),
             x11_forwarding=bool(self._profile.get("x11_forwarding", False)),
+            x11_trusted=bool(self._profile.get("x11_trusted", False)),
             timeout=self._profile.get("ssh_timeout"),
             jump=jump_info_from_settings(self._profile.get("jump_host")),
         )

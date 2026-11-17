@@ -172,6 +172,9 @@ assert panel.hpc_paste("second") is True
 assert calls == [], f"pre-ready paste must not call JS yet: {calls}"
 assert "".join(panel._pending_paste) == "first-second"
 # Ready delivers the queued paste in original order
+panel._webview = object()
+panel._is_parity = True
+panel._webview_mount_pending = False
 panel._on_bridge_ready()
 pastes = [c for c in calls if "hpcPaste" in c]
 assert len(pastes) == 1, f"expected one combined paste delivery: {calls}"

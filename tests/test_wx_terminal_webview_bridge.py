@@ -8,6 +8,7 @@ pytestmark = pytest.mark.wx
 import pathlib
 
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel, _is_webview_available
+from hpc_gui.wx_terminal_webview_bridge import TerminalBridgeMixin
 from support.subprocess_environment import project_python_environment
 from wx_terminal_webview_support import ASSETS, _fake_ssh, _show_frame_with_panel, _wait_for_ready
 
@@ -137,6 +138,82 @@ def test_wx_terminal_external_navigation_blocked():
     wx.Yield()
 
 
+@pytest.mark.gui
+@pytest.mark.regression
+def test_accessibility_dom_update_runs_inline_on_wx_ui_thread(monkeypatch):
+    _app = wx.GetApp() or wx.App(False)
+    frame = wx.Frame(None)
+
+    class FakeWebView(wx.Panel):
+        def __init__(self, parent):
+            super().__init__(parent)
+            self.script = ""
+
+        def SetAccessibleName(self, value):
+            self.label = value
+
+        def RunScript(self, script):
+            self.script = script
+
+        def RunScriptAsync(self, script):
+            self.script = script
+            self.async_called = True
+
+    class Harness(TerminalBridgeMixin):
+        def __init__(self, webview):
+            self._webview = webview
+            self._page_loaded = True
+            self._closed = False
+
+    webview = FakeWebView(frame)
+    harness = Harness(webview)
+    monkeypatch.setattr(
+        wx,
+        "CallAfter",
+        lambda *_args, **_kwargs: pytest.fail("UI thread must not queue a stale callback"),
+    )
+    try:
+        harness._update_accessibility_label()
+        assert webview.script
+        assert webview.async_called is True
+        assert webview.label
+    finally:
+        frame.Destroy()
+        wx.Yield()
+
+
+@pytest.mark.unit
+def test_accessibility_label_uses_sync_script_on_legacy_webview():
+    _app = wx.GetApp() or wx.App(False)
+    frame = wx.Frame(None)
+
+    class LegacyWebView(wx.Panel):
+        def __init__(self, parent):
+            super().__init__(parent)
+            self.sync_script_called = False
+
+        def SetAccessibleName(self, value):
+            self.accessible_name = value
+
+        def RunScript(self, _script):
+            self.sync_script_called = True
+
+    class Harness(TerminalBridgeMixin):
+        def __init__(self, webview):
+            self._webview = webview
+            self._page_loaded = True
+            self._closed = False
+
+    webview = LegacyWebView(frame)
+    try:
+        Harness(webview)._update_accessibility_label()
+        assert webview.accessible_name
+        assert webview.sync_script_called is True
+    finally:
+        frame.Destroy()
+        wx.Yield()
+
+
 @pytest.mark.audit
 def test_wx_terminal_single_bridge_and_no_splitlines():
     src = pathlib.Path("src/hpc_gui/wx_terminal_webview.py").read_text(encoding="utf-8")
@@ -161,7 +238,8 @@ def test_wx_terminal_single_bridge_and_no_splitlines():
 
 @pytest.mark.unit
 @pytest.mark.resource
-def test_wx_terminal_close_releases_native_webview():
+@pytest.mark.parametrize("being_deleted, expected_destroyed", [(False, 1), (True, 0)])
+def test_wx_terminal_close_releases_native_webview(being_deleted, expected_destroyed):
     from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
     class FakeWebView:
@@ -177,6 +255,11 @@ def test_wx_terminal_close_releases_native_webview():
 
     class PanelHarness:
         close = WxTerminalWebViewPanel.close
+        _ready = False
+        _page_loaded = False
+
+        def IsBeingDeleted(self):
+            return being_deleted
 
     webview = FakeWebView()
     panel = PanelHarness()
@@ -205,9 +288,8 @@ def test_wx_terminal_close_releases_native_webview():
     panel.close()
 
     assert webview.stopped == 1
-    # close() stops the native controller but leaves destruction to its wx
-    # parent. Explicitly destroying WebView2 here can race queued callbacks.
-    assert webview.destroyed == 0
+    # Manual close releases the child; parent teardown leaves it to wx.
+    assert webview.destroyed == expected_destroyed
     assert panel._webview is None
     assert panel._is_parity is False
 

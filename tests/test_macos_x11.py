@@ -23,17 +23,18 @@ def test_macos_xquartz_preflight_requires_xquartz_and_display(monkeypatch):
 
 @pytest.mark.unit
 @pytest.mark.semantic
-def test_macos_x11_preflight_uses_system_ssh_and_never_plink():
+def test_macos_x11_preflight_uses_desktop_x_server_without_system_ssh():
     runner = x11_runner.X11Runner(log_cb=lambda _msg: None)
     with (
-        mock.patch.object(x11_runner, "_is_macos", return_value=True),
         mock.patch.object(x11_runner, "_is_windows", return_value=False),
-        mock.patch.object(runner, "_system_ssh_available", return_value=True),
-        mock.patch.object(x11_runner, "ensure_x_server_running", return_value=True),
-        mock.patch.object(x11_runner, "ensure_plink_available") as plink,
+        mock.patch.object(
+            x11_runner, "ensure_x_server_running", return_value=True
+        ) as ensure_x_server,
     ):
         assert runner.preflight(enabled=True)
-    plink.assert_not_called()
+    ensure_x_server.assert_called_once_with(
+        runner._log, parent=None, allow_download=False
+    )
 
 
 @pytest.mark.unit

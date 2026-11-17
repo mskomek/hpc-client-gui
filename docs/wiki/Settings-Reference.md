@@ -13,9 +13,9 @@ Labels below are the English interface strings.
 
 | Setting | What it does |
 |---|---|
-| **When X11 is enabled, check/download/start required tools** | On Connect, `plink.exe` and VcXsrv are checked. If missing, they are downloaded with your consent and started. |
+| **When X11 is enabled, check/download/start required tools** | On Connect, the local X server is checked. The app starts VcXsrv only when it is installed and no safe listener is already running. |
 | **Close VcXsrv when the app exits** | If VcXsrv was started by the application, it is closed by PID on exit. |
-| **Close X11/SSH processes on exit** | Terminates the plink/ssh processes the application started. |
+| **Close X11/SSH processes on exit** | Closes application-started X11 helpers; interactive SSH relay channels close with the terminal. |
 
 X11 itself is enabled per connection — **Enable X11 forwarding (for GUI apps)**
 on the connection form. See [[X11 Forwarding|X11-Forwarding]].

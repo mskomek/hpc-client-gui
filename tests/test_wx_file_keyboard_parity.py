@@ -24,14 +24,20 @@ def _pump(app, pred, timeout=2):
 @pytest.fixture
 def wx_app():
     load_language("en")
+    created_app = wx.App.Get() is None
     app = wx.App.Get()
     if app is None:
         app = wx.App(False)
+    existing_windows = {id(window) for window in wx.GetTopLevelWindows()}
     yield app
     for w in wx.GetTopLevelWindows():
-        if w: w.Destroy()
+        if w and id(w) not in existing_windows:
+            w.Destroy()
     app.ProcessPendingEvents()
-    app.Destroy()
+    wx.YieldIfNeeded()
+    app.ProcessPendingEvents()
+    if created_app and wx.App.Get() is app:
+        app.Destroy()
 
 def _local(app, path):
     show_local_files(path=path)
@@ -56,7 +62,8 @@ def test_wx_local_ctrl_a_selects_all_active_tab_rows(wx_app, tmp_path: Path):
     event.SetKeyCode(ord("A"))
     event.SetControlDown(True)
     listing.ProcessEvent(event)
-    assert all(listing.IsSelected(i) for i in range(listing.GetItemCount()))
+    indices = [index for index, _name in content_rows(listing)]
+    assert indices and all(listing.IsSelected(index) for index in indices)
 
 def test_wx_local_ctrl_c_copies_selected_paths(wx_app, tmp_path: Path):
     src=tmp_path / "src.txt"
@@ -241,7 +248,8 @@ def test_wx_remote_ctrl_a_selects_all_rows(wx_app):
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(ord("A")); event.SetControlDown(True)
     listing.ProcessEvent(event)
-    assert all(listing.IsSelected(i) for i in range(listing.GetItemCount()))
+    indices = [index for index in range(listing.GetItemCount()) if listing.GetItemText(index) != ".."]
+    assert indices and all(listing.IsSelected(index) for index in indices)
 
 def test_wx_remote_ctrl_v_pastes_into_active_tab(wx_app):
     backend=MockRemoteFilesBackend()

@@ -35,8 +35,9 @@ Tam olarak üç şey, hepsi sizin başlattığınız:
 2. Günlük gönderme iletişim kutusundan **dışa aktardığınız tanılama paketi**.
 3. O iletişim kutusundan **panoya kopyaladığınız günlük metni**.
 
-İsteğe bağlı X11 yardımcıları (plink, VcXsrv) yalnızca indirmeyi
-onayladıktan sonra indirilir.
+Uygulama VcXsrv veya başka X11 ikililerini indirmez. Uygulamanın başlattığı MIT
+çerezi kullanıcıya özel uygulama verisi dizininde kalır; günlük veya tanılama
+paketlerine yazılmaz.
 
 ## Tanılama paketi ne içerir
 

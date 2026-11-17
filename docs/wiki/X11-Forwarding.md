@@ -20,59 +20,58 @@ options live in Settings, under Connection and X11:
   page; executables are not downloaded or run automatically.
 - **Close VcXsrv when the app exits** — if the application started VcXsrv, it
   is closed by PID.
-- **Close X11/SSH processes on exit** — the plink/ssh processes the application
-  started are terminated.
+- **Close X11/SSH processes on exit** — application-started X11 helpers are
+  closed; the interactive SSH relay channels close with the terminal.
 
-## Windows: plink + VcXsrv
+## Windows: Paramiko + VcXsrv
 
-On Windows the path is `plink.exe -X` together with **VcXsrv** as the X server
-listening on `127.0.0.1:6000`.
+The active Paramiko SSH terminal requests X11 forwarding before it opens the
+remote PTY and shell. **VcXsrv** is the local X server that renders remote
+windows. Plink and a second SSH process are not used.
 
-**Neither is bundled in the executable.** Install both from their official
-download pages. VcXsrv is started without `-ac`, so X access control is not
-disabled.
+VcXsrv is not bundled; install it from its official source. When the app starts
+VcXsrv, it supplies a private MIT-MAGIC-COOKIE authority file and never uses
+`-ac`. If VcXsrv binds to all interfaces, the app accepts it only when its own
+process, authority file, exact executable firewall rules, active firewall
+profiles, and inbound-block defaults are verified. Otherwise it refuses that
+server. An unrelated wildcard listener is never accepted.
 
-Password authentication requires Plink's `-pw` argument. The application
-redacts it from logs, previews, process metadata, and diagnostics, but Windows
-may still expose the live process command line to other processes owned by the
-same user. SSH keys or an agent are preferred for X11 authentication.
+The profile's existing SSH key, agent, password, and host-key policy remain in
+effect. No password or cookie is written to the application log. If a local
+server or MIT cookie is unavailable, the app refuses the X11 request and keeps
+the selected X11 shell is refused; the app does not silently open an unforwarded
+shell. With X11 disabled, normal SSH remains available. The remote server must permit X11 forwarding and have
+`xauth` installed; its `sshd` assigns `DISPLAY` (usually `localhost:10.0`) after
+the request succeeds.
 
-Common failures are reported specifically: `plink.exe` could not be prepared,
-VcXsrv could not be started (a firewall or permissions issue), VcXsrv started
-but exited immediately, or VcXsrv appears to be running but port 6000 never
-opened.
+Only commands typed into the interactive SSH terminal are forwarded. Remote
+`exec_command` calls and batch jobs do not inherit this display.
 
-Start VcXsrv before launching a remote graphical application. When a session
-starts, the launched command is echoed and the window opens separately.
+## Linux and macOS: local desktop X server
 
-## Linux: system OpenSSH
+The active Paramiko terminal uses the local desktop X server. Linux desktops
+may provide Xorg or Xwayland; macOS requires XQuartz. The process must inherit a
+valid `DISPLAY` and access to its MIT cookie through `XAUTHORITY` or `xauth`.
+System OpenSSH is not required for this integrated forwarding path.
 
-On Linux, X11 forwarding uses the **system OpenSSH client** with `-X` or `-Y`.
-It does **not** use the Windows plink/VcXsrv path, and nothing is downloaded.
+## Authentication and trust
 
-Requirements: the OpenSSH client installed, an X server already running (your
-desktop session), and `DISPLAY` set in the environment.
-
-The launch is deliberately non-interactive: forwarding failures are made
-explicit rather than silently continuing without X11, and host-key checking
-follows the profile's policy — `strict` maps to strict checking, otherwise
-`accept-new`. Password authentication is not attempted on this path, because
-the prompt would appear on a hidden console and hang; **use a key on Linux**.
-
-## Which flag: `-X` or `-Y`
-
-`-Y` is trusted forwarding and `-X` is untrusted. Untrusted forwarding is more
-restrictive and some applications will not run under it; trusted forwarding
-gives the remote application more access to your local X server. The connection
-carries this choice.
+By default the app asks the local X server for an **untrusted** cookie through
+the X11 SECURITY extension. If the extension is unavailable, forwarding fails
+closed. The profile has a separate **Use trusted X11** option for servers that
+need trusted forwarding; it warns that the remote program can control the local
+display. The SSH channel's random cookie is replaced only after the setup packet
+matches. MIT cookie authentication proves identity; it does not provide the
+isolation that an untrusted SECURITY cookie provides. Do not use `xhost +` or
+unauthenticated X server modes.
 
 ## Support summary
 
 | Scenario | Status | Notes |
 |---|---|---|
-| Windows, plink + VcXsrv | Recommended | Most reliable on Windows |
-| Any platform, OpenSSH with a key | Supported | `ssh -X/-Y` |
-| OpenSSH with a password | Limited | Hidden prompts can block; plink preferred on Windows, a key preferred on Linux |
+| Windows, Paramiko + VcXsrv | Supported | Authenticated server; wildcard bind requires verified firewall isolation |
+| Linux/macOS desktop X server | Supported | Requires `DISPLAY`, `xauth`, and SECURITY support unless trusted mode is chosen |
+| SSH server without X11 forwarding | Unsupported | Selected X11 shell fails closed; X11-off SSH is unaffected |
 
 ## Performance
 
@@ -83,9 +82,9 @@ offers a remote-desktop or web-based alternative.
 
 ## Cleanup
 
-Helper processes are cleaned up when the application exits, and orphaned
-processes are handled defensively. The two Settings options above control
-whether VcXsrv and the X11/SSH processes are closed with the application.
+X11 relay channels close with the interactive SSH session. If the application
+started VcXsrv, the existing Settings option controls whether that process is
+closed when the app exits.
 
 ## See also
 

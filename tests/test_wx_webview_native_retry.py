@@ -71,6 +71,50 @@ def test_native_error_schedules_retry_after_completed_callback(monkeypatch):
     assert panel.retries == [True]
 
 
+def test_ready_webkit_fragment_interrupt_does_not_report_page_failure():
+    class Panel(TerminalBridgeMixin):
+        _gtk_fragment_transport = True
+        _ready = True
+        _closed = False
+        _native_created = True
+        _webview_pending_native = False
+        _webview_legacy_edge = False
+        _webview_create_attempts = 1
+        _webview_max_attempts = 3
+        _webview_failure_stage = "page-loaded"
+
+        def __init__(self):
+            self._webview = object()
+            self._status_label = SimpleNamespace(SetLabel=self._set_status)
+            self.status = "connected"
+            self._diagnostic_text = ""
+
+        def _set_status(self, value):
+            self.status = value
+
+        def _build_diagnostic_text(self, reason):
+            return reason
+
+    class FragmentError(_Event):
+        def GetString(self):
+            return "Frame load interrupted"
+
+        def GetURL(self):
+            return "file:///tmp/wx_index.html#__hpc=7"
+
+        def GetInt(self):
+            return 7
+
+    panel = Panel()
+    event = FragmentError(panel)
+    panel._on_error(event)
+
+    assert event.skipped
+    assert panel.status == "connected"
+    assert panel._webview_failure_stage == "page-loaded"
+    assert panel._diagnostic_text == ""
+
+
 def test_no_overlapping_create_when_native_pending_times_out():
     class Panel(TerminalBridgeMixin):
         _closed = False
@@ -259,13 +303,15 @@ def test_legacy_loaded_event_proves_native_controller_created():
     class Panel(TerminalBridgeMixin):
         _native_created = False
         _page_loaded = False
+        _ready = False
 
-        def _update_accessibility_label(self):
-            pass
+        def _update_accessibility_label(self, *, defer_sync=False):
+            self.defer_sync = defer_sync
 
     panel = Panel()
     event = _Event(object())
     panel._on_loaded(event)
     assert panel._native_created
     assert panel._page_loaded
+    assert panel.defer_sync is True
     assert event.skipped

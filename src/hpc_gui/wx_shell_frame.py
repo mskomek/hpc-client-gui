@@ -5,7 +5,7 @@ from hpc_gui.wx_lifecycle import WxLifecycleController
 from hpc_gui import __version__
 from hpc_gui.wx_shell_connections import _connection_callbacks
 from hpc_gui.wx_shell_connection_switch import install_connection_switch_guard
-from hpc_gui.wx_shell_events import _directories_callbacks
+from hpc_gui.wx_shell_events import _directories_callbacks, bind_notebook_native_repaint
 from hpc_gui.wx_shell_dispatch import _dispatch
 from hpc_gui.wx_shell_files import _editor_action_factory
 from hpc_gui.wx_shell_jobs import _jobs_callbacks
@@ -183,6 +183,18 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
             real_panel = _build_terminal_panel(
                 terminal_page, ssh=live_ssh or _term_ssh, lifecycle=lifecycle
             )
+            from hpc_gui.wx_terminal_diagnostics import record_terminal_event
+            record_terminal_event(
+                "terminal-deferred-mount-complete",
+                ssh_id=id(live_ssh or _term_ssh) if (live_ssh or _term_ssh) is not None else None,
+                same_ssh=live_ssh is not None and (live_ssh or _term_ssh) is live_ssh,
+                visible=terminal_page.IsShownOnScreen(),
+            )
+            # A lazy terminal can mount after on_connected already ran. Attach
+            # the output subscriber first, then release shell startup output.
+            activate_output = getattr(live_ssh, "activate_shell_output", None)
+            if callable(activate_output):
+                activate_output()
             terminal_mounted = True
             terminal_sizer.Add(real_panel, 1, wx.EXPAND)
             terminal_page.Layout()
@@ -364,6 +376,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     # Backward compat aliases for old control dict
     menu = menu_menu
     command_items = []
+    bind_notebook_native_repaint(wx, notebook)
     frame._wx_shell_controls = {"menu": menu, "language_menu": language_menu, "language_items": language_items, "version_menu": version_menu, "notebook": notebook, "pages": page_controls}
     frame._wx_shell_chrome_windows = chrome_windows
     frame._wx_shell_shell_ref = shell_ref
@@ -381,10 +394,12 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     # is the keyboard-only traversal contract for the main shell.
     _wx_shell_accel_ids: dict = {}
     _wx_shell_accel_spec: list = []
+    _wx_shell_accel_id_refs: list = []
     try:
         _accel_entries = []
         for _tab_index in range(min(7, int(notebook.GetPageCount()))):
             _tab_cmd = wx.NewIdRef()
+            _wx_shell_accel_id_refs.append(_tab_cmd)
             _wx_shell_accel_ids[int(_tab_cmd)] = _tab_index
 
             def _make_tab_handler(_idx=_tab_index):
@@ -437,6 +452,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                 continue
             _used_accels.add(_shortcut)
             _accel_cmd = wx.NewIdRef()
+            _wx_shell_accel_id_refs.append(_accel_cmd)
             _wx_shell_accel_ids[int(_accel_cmd)] = {
                 "APP-HELP": "help", "APP-SETTINGS": "settings",
             }.get(_cmd_id, _cmd_id)
@@ -448,6 +464,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         pass
     frame._wx_shell_accel_ids = _wx_shell_accel_ids
     frame._wx_shell_accel_spec = _wx_shell_accel_spec
+    frame._wx_shell_accel_id_refs = tuple(_wx_shell_accel_id_refs)
 
     frame.Bind(wx.EVT_CLOSE, close)
     frame._wx_shell_close = close

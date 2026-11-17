@@ -49,8 +49,8 @@ commented out.
 **Partition** — a Slurm queue. Names are site-specific; the bundled templates'
 partition names are examples.
 
-**plink** — PuTTY's command-line client. Used on Windows for X11
-(`plink.exe -X`). Not bundled. See [[X11 Forwarding|X11-Forwarding]].
+**plink** — PuTTY's command-line SSH client. It is not used by the integrated
+X11 terminal. See [[X11 Forwarding|X11-Forwarding]].
 
 **Profile** — a saved connection: host, port, username, key path, and host-key
 policy. See [[Connecting and Profiles|Connecting-and-Profiles]].

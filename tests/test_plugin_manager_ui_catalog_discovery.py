@@ -23,6 +23,8 @@ from support.test_plugin_manager_ui_shared import (
     t,
 )
 
+pytestmark = pytest.mark.usefixtures("qapp")
+
 @pytest.mark.gui
 def test_mocked_registry_populates_discover(qapp, monkeypatch):
     monkeypatch.setattr(

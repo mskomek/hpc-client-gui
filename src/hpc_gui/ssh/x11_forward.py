@@ -18,14 +18,20 @@ import os
 import re
 import secrets
 import select
-import shutil
 import socket
 import struct
 import subprocess
 import sys
 import threading
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable, Optional
+
+from hpc_gui.core.xauthority import (
+    create_untrusted_cookie,
+    find_xauth_executable,
+    read_mit_cookie,
+)
 
 _X11_BASE_PORT = 6000
 _MAX_X11_DISPLAY = 65535 - _X11_BASE_PORT
@@ -99,20 +105,25 @@ def local_display_from_env(*, platform: Optional[str] = None) -> LocalDisplay:
 def read_local_cookie(display: LocalDisplay, *, runner=subprocess.run) -> Optional[bytes]:
     """Return the local MIT-MAGIC-COOKIE-1 for ``display`` (None if absent)."""
 
-    xauth = shutil.which("xauth") or ("/opt/X11/bin/xauth" if os.path.exists("/opt/X11/bin/xauth") else None)
-    if not xauth or not display.name:
-        return None
-    try:
-        proc = runner([xauth, "list", display.name], capture_output=True, text=True, timeout=3)
-    except Exception:
-        return None
-    for line in (getattr(proc, "stdout", "") or "").splitlines():
-        parts = line.split()
-        if len(parts) >= 3 and parts[1] == _MIT_COOKIE.decode():
-            try:
-                return bytes.fromhex(parts[2])
-            except ValueError:
-                continue
+    xauth = find_xauth_executable()
+    if xauth and display.name:
+        try:
+            proc = runner([xauth, "list", display.name], capture_output=True, text=True, timeout=3)
+        except Exception:
+            proc = None
+        for line in (getattr(proc, "stdout", "") or "").splitlines():
+            parts = line.split()
+            if len(parts) >= 3 and parts[1] == _MIT_COOKIE.decode():
+                try:
+                    cookie = bytes.fromhex(parts[2])
+                except ValueError:
+                    continue
+                if len(cookie) == 16:
+                    return cookie
+    authority = os.environ.get("XAUTHORITY") or str(os.path.expanduser("~/.Xauthority"))
+    cookie = read_mit_cookie(authority, display.display)
+    if cookie:
+        return cookie
     return None
 
 
@@ -173,11 +184,26 @@ class X11Forwarder:
         log: Optional[Callable[[str], None]] = None,
         cookie_reader: Callable[[LocalDisplay], Optional[bytes]] = read_local_cookie,
         allow_unauthenticated_loopback: bool = False,
+        trusted: bool = False,
+        untrusted_cookie_factory=create_untrusted_cookie,
     ) -> None:
         self.display = display or local_display_from_env()
         self._log = log or (lambda _msg: None)
         self._fake_cookie = secrets.token_bytes(16)
-        self._real_cookie = cookie_reader(self.display)
+        self._authority_copy = None
+        if trusted:
+            self._real_cookie = cookie_reader(self.display)
+        else:
+            authority = os.environ.get("XAUTHORITY") or str(Path.home() / ".Xauthority")
+            try:
+                self._authority_copy, self._real_cookie = untrusted_cookie_factory(
+                    authority, self.display.name
+                )
+            except Exception as exc:
+                raise RuntimeError(
+                    "Untrusted X11 cookie unavailable; explicitly enable trusted X11 "
+                    "only if the remote application may control your display"
+                ) from exc
         self._allow_empty_auth = bool(allow_unauthenticated_loopback)
         self._closed = threading.Event()
         self._relay_lock = threading.Lock()
@@ -196,16 +222,24 @@ class X11Forwarder:
         if not self.display.unix_path and self.display.host not in _LOOPBACK_HOSTS:
             raise ValueError("Remote X11 DISPLAY hosts are not permitted")
 
-        channel.request_x11(
+        accepted = channel.request_x11(
             screen_number=self.display.screen,
             auth_protocol=_MIT_COOKIE.decode(),
             auth_cookie=self.fake_cookie_hex,
             single_connection=False,
             handler=self._on_x11_channel,
         )
+        if accepted is False:
+            raise RuntimeError("SSH server rejected X11 forwarding")
 
     def close(self) -> None:
         self._closed.set()
+        if self._authority_copy is not None:
+            try:
+                self._authority_copy.unlink(missing_ok=True)
+            except OSError:
+                pass
+            self._authority_copy = None
 
     # Called on the Paramiko transport thread: bound concurrency and return.
     def _on_x11_channel(self, channel, origin) -> None:

@@ -49,9 +49,8 @@ siteye göre değişir; şablonlarda yorum içinde bırakılmasının nedeni bud
 **Bölüm (partition)** — bir Slurm kuyruğu. Adlar siteye özgüdür; şablonlardaki
 bölüm adları örnektir.
 
-**plink** — PuTTY'nin komut satırı istemcisi. Windows'ta X11 için kullanılır
-(`plink.exe -X`). Birlikte gelmez. Bkz.
-[[X11 Yönlendirme|X11-Forwarding-TR]].
+**plink** — PuTTY'nin komut satırı SSH istemcisi. Entegre X11 terminali bunu
+kullanmaz. Bkz. [[X11 Yönlendirme|X11-Forwarding-TR]].
 
 **Profil** — kaydedilmiş bir bağlantı: ana bilgisayar, port, kullanıcı adı,
 anahtar yolu ve ana bilgisayar anahtarı ilkesi. Bkz.

@@ -35,8 +35,9 @@ Exactly three things, all initiated by you:
 2. **A diagnostic bundle** you export from the send-logs dialog.
 3. **Log text you copy** to the clipboard from that dialog.
 
-Optional X11 helpers (plink, VcXsrv) are downloaded only after you approve the
-download.
+The application does not download VcXsrv or other X11 binaries. An app-started
+MIT cookie stays in the per-user application data directory and is not written
+to logs or diagnostic bundles.
 
 ## What a diagnostic bundle contains
 

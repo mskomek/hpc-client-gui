@@ -18,35 +18,23 @@ def _runner() -> X11Runner:
 class LinuxX11PreflightTest(unittest.TestCase):
     @pytest.mark.unit
     @pytest.mark.semantic
-    def test_linux_preflight_requires_ssh(self) -> None:
+    def test_linux_preflight_uses_paramiko_without_system_ssh(self) -> None:
         with mock.patch.object(x11_runner, "_is_windows", return_value=False):
-            with mock.patch.object(x11_runner.shutil, "which", return_value=None):
-                with mock.patch.object(x11_runner, "ensure_x_server_running", return_value=True):
-                    self.assertFalse(_runner().preflight(enabled=True))
+            with mock.patch.object(x11_runner, "ensure_x_server_running", return_value=True):
+                self.assertTrue(_runner().preflight(enabled=True))
 
     @pytest.mark.unit
     @pytest.mark.semantic
-    def test_linux_preflight_requires_display(self) -> None:
-        with mock.patch.object(x11_runner, "_is_windows", return_value=False):
-            with mock.patch.object(x11_runner.shutil, "which", return_value="/usr/bin/ssh"):
-                with mock.patch.object(x11_runner, "ensure_x_server_running", return_value=False):
-                    self.assertFalse(_runner().preflight(enabled=True))
-
-    @pytest.mark.unit
-    @pytest.mark.semantic
-    def test_linux_preflight_passes_with_ssh_and_display(self) -> None:
-        with mock.patch.object(x11_runner, "_is_windows", return_value=False):
-            with mock.patch.object(x11_runner.shutil, "which", return_value="/usr/bin/ssh"):
-                with mock.patch.object(x11_runner, "ensure_x_server_running", return_value=True):
-                    self.assertTrue(_runner().preflight(enabled=True))
-
     @pytest.mark.unit
     @pytest.mark.semantic
     def test_disabled_preflight_passes_anyway(self) -> None:
         with mock.patch.object(x11_runner, "_is_windows", return_value=False):
-            with mock.patch.object(x11_runner.shutil, "which", return_value=None):
-                with mock.patch.object(x11_runner, "ensure_x_server_running", return_value=False):
-                    self.assertTrue(_runner().preflight(enabled=False))
+            with mock.patch.object(
+                x11_runner,
+                "ensure_x_server_running",
+                side_effect=AssertionError("disabled X11 must not inspect the display"),
+            ):
+                self.assertTrue(_runner().preflight(enabled=False))
 
 
 class LinuxXServerTest(unittest.TestCase):

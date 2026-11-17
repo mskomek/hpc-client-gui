@@ -286,6 +286,10 @@ class FtpWidgetTests(FtpWidgetTestCase):
                 self.started.set()
                 time.sleep(0.05)
 
+            def listdir_entries(self, _path: str):
+                # Delete completion refreshes the affected folder.
+                return []
+
             def is_dir(self, _path: str) -> bool:
                 raise AssertionError("directory metadata should avoid GUI type probes")
 
@@ -359,3 +363,5 @@ class FtpWidgetTests(FtpWidgetTestCase):
                     "download",
                 ],
             )
+
+

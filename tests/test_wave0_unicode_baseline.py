@@ -302,11 +302,15 @@ class TestEncodingBoundaryInventory:
 
     @pytest.mark.audit
     def test_files_ssh_uses_utf8(self):
-        """services/files_ssh.py should use UTF-8 for SFTP text operations."""
-        ssh_files = ROOT / "src" / "hpc_gui" / "services" / "files_ssh.py"
-        if ssh_files.is_file():
-            content = ssh_files.read_text(encoding="utf-8")
-            assert "utf-8" in content.lower(), "SFTP backend should use UTF-8"
+        """The SFTP facade composes the UTF-8 text implementation mixin."""
+        facade = ROOT / "src" / "hpc_gui" / "services" / "files_ssh.py"
+        implementation = ROOT / "src" / "hpc_gui" / "services" / "files_ssh_text.py"
+        facade_text = facade.read_text(encoding="utf-8")
+        implementation_text = implementation.read_text(encoding="utf-8").lower()
+        assert "from hpc_gui.services.files_ssh_text import sshtextmixin" in facade_text.lower()
+        assert "class sshfilesbackend(sshtextmixin, filesbackend)" in facade_text.lower()
+        assert 'decode("utf-8", errors=errors)' in implementation_text
+        assert 'text.encode("utf-8")' in implementation_text
 
     @pytest.mark.audit
     def test_shell_session_uses_utf8_decoder(self):
