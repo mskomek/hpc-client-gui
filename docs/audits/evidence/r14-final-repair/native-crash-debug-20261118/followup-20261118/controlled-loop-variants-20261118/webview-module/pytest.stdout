@@ -1,0 +1,18 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- %USERPROFILE%\AppData\Local\Programs\Python\Python314\python.exe
+rootdir: %USERPROFILE%\AppData\Local\Temp\hpc-client-gui-r14-debug-20261118\repo
+configfile: pyproject.toml
+collecting ... collected 9 items
+
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_assets_are_local_and_vendored PASSED [ 11%]
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready PASSED [ 22%]
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_external_navigation_blocked PASSED [ 33%]
+tests/test_wx_terminal_webview_bridge.py::test_accessibility_dom_update_runs_inline_on_wx_ui_thread PASSED [ 44%]
+tests/test_wx_terminal_webview_bridge.py::test_accessibility_label_uses_sync_script_on_legacy_webview PASSED [ 55%]
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_single_bridge_and_no_splitlines PASSED [ 66%]
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_close_releases_native_webview[False-1] PASSED [ 77%]
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_close_releases_native_webview[True-0] PASSED [ 88%]
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_composition_keeps_qt_out PASSED [100%]
+
+- generated xml file: %USERPROFILE%\AppData\Local\Temp\hpc-client-gui-r14-webview-module-20261118\junit.xml -
+============================== 9 passed in 2.26s ==============================

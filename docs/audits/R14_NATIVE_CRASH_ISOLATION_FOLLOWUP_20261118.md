@@ -52,6 +52,8 @@ This is a test-harness isolation repair for the observed same-process order fail
 
 Evidence is in [repaired-subprocess-test](evidence/r14-final-repair/native-crash-debug-20261118/followup-20261118/controlled-loop-variants-20261118/repaired-subprocess-test/). The summary binds the five Session 1 results to the modified test SHA, and the folder's `SHA256SUMS.txt` covers all retained files.
 
+The full changed WebView bridge test module then passed in the same Kole Session 1 environment: **9 collected, 9 passed, 0 failed, 0 skipped, exit code 0** in 2.26 seconds. Its JUnit XML and complete output are in [webview-module](evidence/r14-final-repair/native-crash-debug-20261118/followup-20261118/controlled-loop-variants-20261118/webview-module/). The test source SHA matches the repeated order-regression run above. Ruff passed for that exact file on the worktree.
+
 ## Current status
 
 - Source change: external-navigation GUI test now isolates its native WebView in a child process.
@@ -59,5 +61,6 @@ Evidence is in [repaired-subprocess-test](evidence/r14-final-repair/native-crash
 - WebView2 profile collision with the expected default path: not observed among 12 pre-existing processes.
 - Native crash: still reproducible, root cause open.
 - Focused order regression: 5/5 pass with the modified test.
+- WebView bridge module: 9/9 pass in Kole Session 1.
 - Full pytest: not run.
 - GitHub writes: none.

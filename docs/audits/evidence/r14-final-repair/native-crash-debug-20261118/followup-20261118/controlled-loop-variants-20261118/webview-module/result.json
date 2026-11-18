@@ -1,0 +1,10 @@
+{
+    "pid":  2352,
+    "session":  1,
+    "exit":  0,
+    "startUtc":  "2026-11-18T15:17:29.4535737Z",
+    "endUtc":  "2026-11-18T15:17:33.4972878Z",
+    "stdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-webview-module-20261118\\pytest.stdout",
+    "stderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-webview-module-20261118\\pytest.stderr",
+    "junit":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-webview-module-20261118\\junit.xml"
+}

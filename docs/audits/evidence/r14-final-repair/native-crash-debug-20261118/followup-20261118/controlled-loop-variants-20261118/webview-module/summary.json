@@ -1,0 +1,14 @@
+{
+  "modified_test_sha256": "f57d51d7e5540fe981e4c288541175ea6ee031a9ea8a7c07ada88362865f5155",
+  "host": "Kole Windows11-New",
+  "session_id": 1,
+  "python": "3.14.7",
+  "pytest": "9.1.1",
+  "collected": 9,
+  "passed": 9,
+  "failed": 0,
+  "skipped": 0,
+  "exit_code": 0,
+  "duration_seconds": 2.26,
+  "wer_dumps_enabled": false
+}
