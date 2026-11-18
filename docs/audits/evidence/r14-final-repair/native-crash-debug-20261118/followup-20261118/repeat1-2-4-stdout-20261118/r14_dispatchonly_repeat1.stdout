@@ -1,0 +1,27 @@
+================================================= test session starts =================================================
+platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\home\AppData\Local\Programs\Python\Python314\python.exe
+cachedir: .tmp\debug-r14\cache-r14_dispatchonly_repeat1
+rootdir: C:\Users\home\AppData\Local\Temp\hpc-client-gui-r14-debug-20261118\repo
+configfile: pyproject.toml
+collecting ... collected 4 items
+
+tests/test_wave80_files_outputs.py::TestWave80Audit::test_files_follow_menu_has_following_check PASSED           [ 25%]
+tests/test_wave80_files_outputs.py::TestRegression::test_wave78_tabs_still_work PASSED                           [ 50%]
+tests/test_wave80_files_outputs_audit_behavior.py::TestWave80Audit::test_files_follow_menu_has_following_check PASSED [ 75%]
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_external_navigation_blocked PASSED                    [100%]
+
+- generated xml file: C:\Users\home\AppData\Local\Temp\hpc-client-gui-r14-debug-20261118\repo\.tmp\debug-r14\r14_dispatchonly_repeat1.xml -
+================================================ slowest 20 durations =================================================
+0.63s call     tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_external_navigation_blocked
+0.25s call     tests/test_wave80_files_outputs.py::TestWave80Audit::test_files_follow_menu_has_following_check
+0.20s call     tests/test_wave80_files_outputs_audit_behavior.py::TestWave80Audit::test_files_follow_menu_has_following_check
+0.14s call     tests/test_wave80_files_outputs.py::TestRegression::test_wave78_tabs_still_work
+0.01s setup    tests/test_wave80_files_outputs.py::TestWave80Audit::test_files_follow_menu_has_following_check
+0.00s setup    tests/test_wave80_files_outputs_audit_behavior.py::TestWave80Audit::test_files_follow_menu_has_following_check
+0.00s setup    tests/test_wave80_files_outputs.py::TestRegression::test_wave78_tabs_still_work
+0.00s setup    tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_external_navigation_blocked
+0.00s teardown tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_external_navigation_blocked
+0.00s teardown tests/test_wave80_files_outputs.py::TestWave80Audit::test_files_follow_menu_has_following_check
+0.00s teardown tests/test_wave80_files_outputs.py::TestRegression::test_wave78_tabs_still_work
+0.00s teardown tests/test_wave80_files_outputs_audit_behavior.py::TestWave80Audit::test_files_follow_menu_has_following_check
+================================================== 4 passed in 1.50s ==================================================

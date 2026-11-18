@@ -1,0 +1,7 @@
+{"phase": "setup", "node": "tests/test_wave80_files_outputs.py::TestWave80Audit::test_files_follow_menu_has_following_check", "app": "None", "loop": "None", "windows": [], "threads": []}
+{"phase": "teardown", "node": "tests/test_wave80_files_outputs.py::TestWave80Audit::test_files_follow_menu_has_following_check", "app": "<wx.core.App object at 0x000002AA2B84E330>", "loop": "None", "windows": [], "threads": []}
+{"phase": "setup", "node": "tests/test_wave80_files_outputs.py::TestRegression::test_wave78_tabs_still_work", "app": "<wx.core.App object at 0x000002AA2B84E330>", "loop": "None", "windows": [], "threads": []}
+{"phase": "teardown", "node": "tests/test_wave80_files_outputs.py::TestRegression::test_wave78_tabs_still_work", "app": "<wx.core.App object at 0x000002AA2B84E330>", "loop": "None", "windows": [], "threads": []}
+{"phase": "setup", "node": "tests/test_wave80_files_outputs_audit_behavior.py::TestWave80Audit::test_files_follow_menu_has_following_check", "app": "<wx.core.App object at 0x000002AA2B84E330>", "loop": "None", "windows": [], "threads": []}
+{"phase": "teardown", "node": "tests/test_wave80_files_outputs_audit_behavior.py::TestWave80Audit::test_files_follow_menu_has_following_check", "app": "<wx.core.App object at 0x000002AA2B84E330>", "loop": "None", "windows": [], "threads": []}
+{"phase": "setup", "node": "tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_external_navigation_blocked", "app": "<wx.core.App object at 0x000002AA2B84E330>", "loop": "None", "windows": [], "threads": []}

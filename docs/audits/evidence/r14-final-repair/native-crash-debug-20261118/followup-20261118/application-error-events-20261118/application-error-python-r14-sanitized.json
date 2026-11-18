@@ -1,0 +1,105 @@
+{
+  "schema": "r14-sanitized-windows-crash-events/1",
+  "capturedUtc": "2026-11-18T12:58:53.7971419Z",
+  "source": "Kole Windows Application event log, IDs 1000 and 1001, Python fault records near selected R14 runs",
+  "sanitization": "Process IDs, report identifiers, full messages, and local file paths omitted. Unknown-module fault addresses omitted.",
+  "runs": [
+    {
+      "run": "last1000e",
+      "events": [
+        {
+          "timeUtc": "2026-11-18T07:48:52.117745Z",
+          "eventId": 1001,
+          "provider": "Windows Error Reporting",
+          "exceptionCode": null,
+          "module": "StackHash_53c9"
+        },
+        {
+          "timeUtc": "2026-11-18T07:48:47.631672Z",
+          "eventId": 1000,
+          "provider": "Application Error",
+          "exceptionCode": "c0000005",
+          "module": "unknown"
+        }
+      ]
+    },
+    {
+      "run": "first250",
+      "events": [
+        {
+          "timeUtc": "2026-11-18T08:06:35.100455Z",
+          "eventId": 1001,
+          "provider": "Windows Error Reporting",
+          "exceptionCode": null,
+          "module": "StackHash_53c9"
+        },
+        {
+          "timeUtc": "2026-11-18T08:06:30.655450Z",
+          "eventId": 1000,
+          "provider": "Application Error",
+          "exceptionCode": "c0000005",
+          "module": "unknown"
+        }
+      ]
+    },
+    {
+      "run": "state_observer",
+      "events": [
+        {
+          "timeUtc": "2026-11-18T11:43:14.321770Z",
+          "eventId": 1001,
+          "provider": "Windows Error Reporting",
+          "exceptionCode": "0xc0000005",
+          "module": "wxbase333u_vc140_x64.dll"
+        },
+        {
+          "timeUtc": "2026-11-18T11:43:10.506155Z",
+          "eventId": 1000,
+          "provider": "Application Error",
+          "exceptionCode": "c0000005",
+          "module": "wxbase333u_vc140_x64.dll",
+          "faultOffset": "00000000001623ef"
+        }
+      ]
+    },
+    {
+      "run": "dispatchonly_repeat3",
+      "events": [
+        {
+          "timeUtc": "2026-11-18T11:54:38.186538Z",
+          "eventId": 1001,
+          "provider": "Windows Error Reporting",
+          "exceptionCode": null,
+          "module": "StackHash_53c9"
+        },
+        {
+          "timeUtc": "2026-11-18T11:54:34.208686Z",
+          "eventId": 1000,
+          "provider": "Application Error",
+          "exceptionCode": "c0000005",
+          "module": "unknown"
+        }
+      ]
+    },
+    {
+      "run": "dispatchonly_repeat5",
+      "events": [
+        {
+          "timeUtc": "2026-11-18T11:54:47.930688Z",
+          "eventId": 1001,
+          "provider": "Windows Error Reporting",
+          "exceptionCode": "0xc0000374",
+          "module": "StackHash_91bf"
+        },
+        {
+          "timeUtc": "2026-11-18T11:54:44.340176Z",
+          "eventId": 1000,
+          "provider": "Application Error",
+          "exceptionCode": "c0000374",
+          "module": "ntdll.dll",
+          "faultOffset": "0000000000112fc5"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+    "capturedUtc":  "2026-11-18T12:59:58.0989806Z",
+    "registeredR14TaskCount":  54,
+    "registeredStateCounts":  {
+                                  "Ready":  54
+                              },
+    "operationalLogEnabled":  false,
+    "operationalLogRecordCount":  null,
+    "selectedTasks":  [
+                          {
+                              "task":  "HPC_GUI_R14_DEBUG_FIRST250_20261118",
+                              "state":  "Ready",
+                              "lastRunUtc":  "2026-11-18T08:05:11.0000000Z",
+                              "lastTaskResult":  3221225477,
+                              "action":  "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-debug-20261118\\run-first250-session1.ps1"
+                          },
+                          {
+                              "task":  "HPC_GUI_R14_DEBUG_LAST1000E_20261118",
+                              "state":  "Ready",
+                              "lastRunUtc":  "2026-11-18T07:35:41.0000000Z",
+                              "lastTaskResult":  3221225477,
+                              "action":  "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-debug-20261118\\run-last1000e-session1.ps1"
+                          },
+                          {
+                              "task":  "HPC_GUI_R14_DEBUG_LAST750_20261118",
+                              "state":  "Ready",
+                              "lastRunUtc":  "2026-11-18T07:51:22.0000000Z",
+                              "lastTaskResult":  0,
+                              "action":  "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-debug-20261118\\run-last750-session1.ps1"
+                          },
+                          {
+                              "task":  "HPC_GUI_R14_MACHINE_WER_20261118",
+                              "state":  "Ready",
+                              "lastRunUtc":  "2026-11-18T11:53:36.0000000Z",
+                              "lastTaskResult":  0,
+                              "action":  "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-debug-20261118\\run-r14-threeprior-diag-session1.ps1"
+                          },
+                          {
+                              "task":  "HPC_GUI_R14_WERREPEATS_20261118",
+                              "state":  "Ready",
+                              "lastRunUtc":  "2026-11-18T11:54:25.0000000Z",
+                              "lastTaskResult":  0,
+                              "action":  "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-debug-20261118\\run-r14-dispatchonly-repeats-session1.ps1"
+                          }
+                      ]
+}

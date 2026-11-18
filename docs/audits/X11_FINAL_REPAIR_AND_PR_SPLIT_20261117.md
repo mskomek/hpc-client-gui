@@ -8,7 +8,7 @@ Base: `339b86bada84504d2d02af002fad6b6af13777a5`
 
 ## Decision
 
-**Delivery remains BLOCKED.** The shutdown failure reported by the earlier harness was not reproduced when `WM_CLOSE` was sent to the confirmed main window: three idle runs and one connected/reconnected GUI run exited naturally with native exit code 0. I made no production shutdown changes. The integrated full pytest run collected 3,983 tests but ended with two test failures and a Windows native access violation at 96%, without a final summary or JUnit file. PR #67 also has an unresolved relay-shutdown review concern. No commit, push, PR update, or merge was performed.
+**Delivery remains BLOCKED.** This report text was first written before the later audit-only commit `b336316028495c5ecc8be90948fa1760472a61d0` was created and pushed; at that earlier checkpoint no commit/push/PR update/merge had occurred. The shutdown failure reported by the earlier harness was not reproduced when `WM_CLOSE` was sent to the confirmed main window: three idle runs and one connected/reconnected GUI run exited naturally with native exit code 0. I made no production shutdown changes. The integrated full pytest run collected 3,983 tests but ended with two test failures and a Windows native access violation at 96%, without a final summary or JUnit file. PR #67 also has an unresolved relay-shutdown review concern. This sentence records the state before audit-only commit `b336316...`; that later commit/push is described in the chronology section below.
 
 ## 1. Packaged Windows shutdown
 
@@ -100,7 +100,7 @@ Test-owned credentials were cleaned up:
 
 W61.1 provenance receipt hash reconciliation and NVDA/Orca accessibility evaluation remain separate follow-ups. They are not treated as X11 protocol defects or new release gates here.
 
-No commit, push, PR modification, or merge occurred. This task did not grant that authority; repository instructions require approval before commit and prohibit push without approval. Before delivery can proceed:
+At the original report checkpoint, no commit, push, PR modification, or merge had yet occurred. Subsequently, the user-authorized delivery created and pushed audit-only commit `b336316028495c5ecc8be90948fa1760472a61d0` (parent `c26fcac1cea56e37bd2683c73b11a5a5240be984`), containing this audit report and R14 evidence only. It excluded experimental test changes. PR #67 was not changed. The current evidence-repair task authorizes no GitHub writes. Before implementation delivery can proceed:
 
 1. Diagnose or repair the repeatable full-suite native crash and resolve the two observed failed tests without skips or relaxed assertions.
 2. Run an integrated full pytest to exit 0 with JUnit and final counts on the exact final source.
@@ -157,3 +157,21 @@ An additional five-run Session 1 repetition used the same activated dispatch-onl
 ### GitHub delivery scope
 
 The 2026-11-18 report push includes this audit report and `evidence/r14-final-repair/native-crash-debug-20261118/` only. Experimental working-tree changes in `tests/conftest.py` and `tests/wx_terminal_webview_support.py` are excluded from that delivery; their hashes describe the local diagnostic source used for the reported test runs. No X11 source change, PR edit, merge, or full-suite PASS is included in this report push.
+
+## R14 evidence repair addendum (2026-11-18)
+
+The initial audit-only push above is historical. The local evidence-repair pass restored the previously missing `followup-20261118/r14_state_observer.wxstate.log` from Kole Windows11-New; its SHA-256 is `3400c0469e9021ad15ed499393340494b97d0e23f66bb019a5267c802994a9c0`, matching the committed manifest. It contains only test node names and wx app/event-loop/window/thread state.
+
+F-03 remains inconsistent for the originally bundled `r14_threeprior_diag` artifact set: its JSON declares a 2,631-byte stdout hash, but the bundled stdout is 903 bytes and ends during test four. A later independent run is preserved separately under `followup-20261118/recovered-threeprior-diag-run-20261118/`; result JSON, stdout, JUnit, wrapper exit and Session 1 metadata match, and the registered `HPC_GUI_R14_MACHINE_WER_20261118` task has `LastTaskResult=0` with an action matching the runner. Do not replace the original record with this later PASS.
+
+For `last750`, the recovered runner expression and node list show 751 requested entries: the external-navigation target was already in the selected 750, then appended a second time. The request has 750 unique IDs; pytest collected, executed and passed all 750. The last750 task's `LastTaskResult=0`. Supporting scripts, list and scheduler snapshot are in `followup-20261118/last750-selection-source-20261118/`.
+
+A live Kole inventory found 54 `HPC_GUI_R14*` scheduled tasks, all Ready; this contradicts the earlier cleanup receipt's “none remain” statement. The Task Scheduler Operational channel is disabled, but per-task `LastTaskResult` values were available for the first250, last1000e, last750, recovered threeprior and repeat wrapper. The first250 and last1000e tasks both record `0xC0000005`; run JSON confirms the process exit. The repeat wrapper task itself returns 0 while its child records show repeat3 `0xC0000005` and repeat5 `0xC0000374`. No scheduled task was modified in this evidence-only pass. The full pytest status remains NOT PASS; no full suite was run for this evidence-repair task. See `R14_EVIDENCE_REPAIR_VERIFICATION_20261118.md` for the run matrix, hash checks, classifications and limitations.
+
+
+### Follow-up verification — live Task Scheduler and last750 selection
+
+The initial cleanup receipt is superseded for current-state reporting: a new read-only enumeration found 54 registered R14 tasks, all Ready. The disabled Operational event log prevented historical event export; current `LastTaskResult` metadata and task actions were captured instead. R14 evidence was preserved in additional checksummed subfolders. Full pytest remains NOT PASS historically and was NOT RUN during evidence repair.
+
+
+The crash-event follow-up captured sanitized Application Error 1000/WER 1001 metadata for the five individually represented native-crash runs. The state-observer AV names `wxbase333u_vc140_x64.dll`; repeat5 heap corruption names `ntdll.dll`; other AVs report `unknown` module. Metadata-only checks found 93 archived Python crash reports, zero archived dumps and zero WER Temp dumps. Native root cause remains open. Raw WER messages, report GUIDs, process IDs and file paths were not added to the evidence bundle.

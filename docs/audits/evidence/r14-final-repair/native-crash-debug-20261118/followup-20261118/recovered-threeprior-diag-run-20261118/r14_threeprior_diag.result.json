@@ -1,0 +1,11 @@
+{
+  "group": "r14_threeprior_diag",
+  "exit_code": 0,
+  "duration_seconds": 2.36,
+  "selected_tests": 4,
+  "junit_sha256": "bf8cc91f39078b2e6d0b940b0c1d59b9ec6667e2a6ded844f53f91fb3b4cebc3",
+  "stdout_sha256": "067c60b924488f805690480acee559dc5b174804f820c0983e24d798d05c9dd2",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 2631,
+  "stderr_bytes": 0
+}
