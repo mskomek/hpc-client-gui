@@ -1,0 +1,15 @@
+{
+  "diagnostic_source_snapshot_sha256": "0b45fac5182937d28024ae203a9ffff205c4ae6e73fc1f16fd95a689accf2e87",
+  "host": "Kole Windows11-New",
+  "session_id": 1,
+  "python": "3.14.7",
+  "prefix_tests": 3,
+  "webview_navigation_test": "run unchanged in a separate child pytest process",
+  "runs": 5,
+  "exit_codes": [0, 0, 0, 0, 0],
+  "each_run_summary": "4 passed",
+  "interpretation": "The order-sensitive crash did not reproduce when the original WebView navigation test ran in a child Python process after the same wx Jobs prefix. This motivated, but is distinct from, the later repository test change documented in repaired-subprocess-test.",
+  "test_source_hash": null,
+  "production_source_changed": false,
+  "WER_dumps_enabled": false
+}

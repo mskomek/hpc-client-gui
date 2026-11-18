@@ -44,11 +44,20 @@ A temporary copy of the WebView navigation test was changed only for diagnosis t
 
 The event-loop dispatch/readiness path remains the narrowest failure location visible to Python faulthandler, but the underlying native frame is unknown. A native dump or a lower-level backend reduction is required to identify the C++ failure. ProcDump remains unused pending the user's explicit response to the EULA/dump question. Do not claim the root cause is fixed until a stable minimal reproduction and relevant wx/WebView regression group pass.
 
+## Test isolation repair
+
+The same A+B+C order was then run with the external-navigation test performing its real WebView creation, ready handshake, and navigation assertions in a child Python process. The diagnostic version passed 5/5. The repository test now uses this isolation pattern via the existing subprocess helper; it preserves the checks for WebView readiness, blocking an external URL, and allowing the local terminal page. Kole Windows11-New Session 1 ran the modified test after A+B+C five times: **5/5 parent sequences passed**, each reporting `4 passed`. The transferred test file SHA-256 was `f57d51d7e5540fe981e4c288541175ea6ee031a9ea8a7c07ada88362865f5155`; Ruff passed for the modified test file.
+
+This is a test-harness isolation repair for the observed same-process order failure. It does not prove the exact native C++ cause or rule out other same-process WebView lifecycle defects in the application. The full pytest suite has not yet been run against the current worktree.
+
+Evidence is in [repaired-subprocess-test](evidence/r14-final-repair/native-crash-debug-20261118/followup-20261118/controlled-loop-variants-20261118/repaired-subprocess-test/). The summary binds the five Session 1 results to the modified test SHA, and the folder's `SHA256SUMS.txt` covers all retained files.
+
 ## Current status
 
-- Source change: none.
+- Source change: external-navigation GUI test now isolates its native WebView in a child process.
 - Candidate Jobs timer callback hypothesis: not supported by the logged run sample.
 - WebView2 profile collision with the expected default path: not observed among 12 pre-existing processes.
 - Native crash: still reproducible, root cause open.
+- Focused order regression: 5/5 pass with the modified test.
 - Full pytest: not run.
 - GitHub writes: none.

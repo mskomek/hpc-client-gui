@@ -1,0 +1,21 @@
+{
+  "diagnostic_source_snapshot_sha256": "0b45fac5182937d28024ae203a9ffff205c4ae6e73fc1f16fd95a689accf2e87",
+  "modified_test_sha256": "f57d51d7e5540fe981e4c288541175ea6ee031a9ea8a7c07ada88362865f5155",
+  "host": "Kole Windows11-New",
+  "session_id": 1,
+  "python": "3.14.7",
+  "prefix_tests": 3,
+  "webview_navigation_test": "same source test, native WebView operations execute in an isolated child process",
+  "runs": 5,
+  "exit_codes": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "each_parent_summary": "4 passed",
+  "interpretation": "The source test modification passed in all five same-order runs. The original navigation assertions and ready handshake execute in an isolated child process. This contains the observed test-order crash, but does not identify a native C++ frame or establish the absence of an application lifecycle defect.",
+  "production_source_changed": false,
+  "wer_dumps_enabled": false
+}
