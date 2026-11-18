@@ -1,0 +1,47 @@
+================================================= test session starts =================================================
+platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\home\AppData\Local\Programs\Python\Python314\python.exe
+cachedir: .tmp\debug-r14\cache-r14_bridge_module_dispatchonly
+rootdir: C:\Users\home\AppData\Local\Temp\hpc-client-gui-r14-debug-20261118\repo
+configfile: pyproject.toml
+collecting ... collected 9 items
+
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_assets_are_local_and_vendored PASSED          [ 11%]
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready PASSED             [ 22%]
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_external_navigation_blocked PASSED                    [ 33%]
+tests/test_wx_terminal_webview_bridge.py::test_accessibility_dom_update_runs_inline_on_wx_ui_thread PASSED       [ 44%]
+tests/test_wx_terminal_webview_bridge.py::test_accessibility_label_uses_sync_script_on_legacy_webview PASSED     [ 55%]
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_single_bridge_and_no_splitlines PASSED                [ 66%]
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_close_releases_native_webview[False-1] PASSED         [ 77%]
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_close_releases_native_webview[True-0] PASSED          [ 88%]
+tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_composition_keeps_qt_out PASSED               [100%]
+
+- generated xml file: C:\Users\home\AppData\Local\Temp\hpc-client-gui-r14-debug-20261118\repo\.tmp\debug-r14\r14_bridge_module_dispatchonly.xml -
+================================================ slowest 30 durations =================================================
+0.92s call     tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
+0.86s call     tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_external_navigation_blocked
+0.05s setup    tests/test_wx_terminal_webview_bridge.py::test_accessibility_label_uses_sync_script_on_legacy_webview
+0.03s setup    tests/test_wx_terminal_webview_bridge.py::test_accessibility_dom_update_runs_inline_on_wx_ui_thread
+0.01s setup    tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_assets_are_local_and_vendored
+0.00s call     tests/test_wx_terminal_webview_bridge.py::test_accessibility_label_uses_sync_script_on_legacy_webview
+0.00s setup    tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_external_navigation_blocked
+0.00s call     tests/test_wx_terminal_webview_bridge.py::test_accessibility_dom_update_runs_inline_on_wx_ui_thread
+0.00s setup    tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_single_bridge_and_no_splitlines
+0.00s setup    tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
+0.00s setup    tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_close_releases_native_webview[True-0]
+0.00s setup    tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_close_releases_native_webview[False-1]
+0.00s setup    tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_composition_keeps_qt_out
+0.00s teardown tests/test_wx_terminal_webview_bridge.py::test_accessibility_label_uses_sync_script_on_legacy_webview
+0.00s call     tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_single_bridge_and_no_splitlines
+0.00s call     tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_assets_are_local_and_vendored
+0.00s call     tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_composition_keeps_qt_out
+0.00s teardown tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
+0.00s teardown tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_composition_keeps_qt_out
+0.00s teardown tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_external_navigation_blocked
+0.00s teardown tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_assets_are_local_and_vendored
+0.00s teardown tests/test_wx_terminal_webview_bridge.py::test_accessibility_dom_update_runs_inline_on_wx_ui_thread
+0.00s call     tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_close_releases_native_webview[True-0]
+0.00s call     tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_close_releases_native_webview[False-1]
+0.00s teardown tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_close_releases_native_webview[False-1]
+0.00s teardown tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_single_bridge_and_no_splitlines
+0.00s teardown tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_close_releases_native_webview[True-0]
+================================================== 9 passed in 2.16s ==================================================

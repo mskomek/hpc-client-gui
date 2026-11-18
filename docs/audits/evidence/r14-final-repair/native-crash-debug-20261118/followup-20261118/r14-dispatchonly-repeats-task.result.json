@@ -1,0 +1,27 @@
+﻿{
+    "wrapper_session_id":  1,
+    "started_utc":  "2026-11-18T11:54:25.5167048Z",
+    "ended_utc":  "2026-11-18T11:54:48.8894297Z",
+    "runs":  [
+                 {
+                     "exit":  0,
+                     "group":  "r14_dispatchonly_repeat1"
+                 },
+                 {
+                     "exit":  0,
+                     "group":  "r14_dispatchonly_repeat2"
+                 },
+                 {
+                     "exit":  -1073741819,
+                     "group":  "r14_dispatchonly_repeat3"
+                 },
+                 {
+                     "exit":  0,
+                     "group":  "r14_dispatchonly_repeat4"
+                 },
+                 {
+                     "exit":  -1073740940,
+                     "group":  "r14_dispatchonly_repeat5"
+                 }
+             ]
+}

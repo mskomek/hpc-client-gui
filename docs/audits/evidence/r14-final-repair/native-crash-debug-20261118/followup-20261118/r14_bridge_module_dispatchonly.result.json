@@ -1,0 +1,10 @@
+{
+  "group": "r14_bridge_module_dispatchonly",
+  "exit_code": 0,
+  "duration_seconds": 3.0,
+  "junit_sha256": "b367dad40893551e7225f2350bd26db61cf0f56b523fefd23e7ffb130cf58bcf",
+  "stdout_sha256": "ada0ea7a59c7d526924324bebc886c026492afa104d109c85856d6c97fdc7b84",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 4945,
+  "stderr_bytes": 0
+}

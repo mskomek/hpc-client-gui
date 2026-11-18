@@ -1,0 +1,11 @@
+{
+  "group": "last750",
+  "exit_code": 0,
+  "duration_seconds": 713.45,
+  "selected_tests": 751,
+  "junit_sha256": "8f29b9ae33b3daea0c195b8b878d5f39e5b3d0f567cc4dd4930beba13c9b20e1",
+  "stdout_sha256": "7c7f16f93302c4c7bb4bb0495832e96f80b40a392d3a03c8a097a4a30b907a3d",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 95096,
+  "stderr_bytes": 0
+}

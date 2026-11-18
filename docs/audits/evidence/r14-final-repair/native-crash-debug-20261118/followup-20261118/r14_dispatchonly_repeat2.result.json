@@ -1,0 +1,11 @@
+{
+  "group": "r14_dispatchonly_repeat2",
+  "exit_code": 0,
+  "duration_seconds": 2.32,
+  "selected_tests": 4,
+  "junit_sha256": "71c5555aecaee92e360872cbbc78515efc7b91e63ecd09712eb621d65c5e509d",
+  "stdout_sha256": "e855c7f51a906ba08c6f59e8418fd1459594574a9beb94338623ac7ccf2f5b9f",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 2641,
+  "stderr_bytes": 0
+}

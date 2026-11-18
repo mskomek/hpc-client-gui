@@ -1,0 +1,1 @@
+WER LocalDumps evidence: HKCU per-user key temporarily created, produced no dump, removed. HKLM python.exe key confirmed absent, temporarily created with DumpType=1 and DumpCount=5, then removed; no dump file appeared. Post-check confirmed neither HKLM nor HKCU test key remains. ProcDump was not run; no EULA accepted.
