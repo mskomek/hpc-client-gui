@@ -1,0 +1,69 @@
+{
+  "source_commit": "48d5f54fb555907b2804b146d854c303874a96ab",
+  "source_tree_sha1": "bafcf64065b8b86ec75d8ec95ee2c260a24b6988",
+  "branch": "codex/x11-active-terminal-kole-20261114",
+  "execution_host": "Kole Windows11-New",
+  "windows_session_id": 1,
+  "python": "3.14.7",
+  "pytest": "9.1.1",
+  "full_suite": {
+    "collected": 4012,
+    "passed": 3931,
+    "failed": 5,
+    "errors": 0,
+    "skipped": 47,
+    "subtests_passed": 29,
+    "duration_seconds": 1076.567,
+    "exit_code": 1,
+    "pytest_pid": 10424,
+    "started_local": "2026-11-18 21:33:00",
+    "finished_local": "2026-11-18 21:51:00",
+    "junit_testsuite_test_count": 4012,
+    "junit_testcase_records": 3983
+  },
+  "full_suite_wheel": {
+    "sha256": "8c4b202a21228a84bfdbb1fad02bd3a8a051cb2b7bed6c3fa770a34c22d730d4",
+    "built_from_commit": "2c7bdc0393d29afc05858486410f70381990cbe0",
+    "stored_outside_project_temp": true
+  },
+  "final_commit_wheel": {
+    "sha256": "6294946ca07fc2e54c6f82d79d104472c46246abcfa7ef46e996238fe052fd96",
+    "built_from_commit": "48d5f54fb555907b2804b146d854c303874a96ab",
+    "build_exit_code": 0,
+    "focused_tests_passed": 3,
+    "focused_tests_failed": 0
+  },
+  "w11_module_regression": {
+    "isolated_module_runs": 5,
+    "tests_per_run": 14,
+    "failures_per_run": 0,
+    "errors_per_run": 0,
+    "exit_code_per_run": 0,
+    "test_source_sha256": "7e63896f5fd69a66491abe63f4043874ced3c1d5b97309bc7a0060dfac8c5f78"
+  },
+  "focused_artifact_regressions": {
+    "w31_package_resource": "PASS",
+    "w61_historical_cli_repair_receipt": "PASS",
+    "wx_a11y_audit_document": "PASS",
+    "tests_passed": 3,
+    "exit_code": 0
+  },
+  "overlay_sha256": {
+    "tests/conftest.py": "9822feaa5c7bf66903d86f3da29041df14af33e97d7a63d27ca4a104aaae5a687",
+    "tests/wx_terminal_webview_support.py": "972c9f3d0c313a473fab4e2421f0c39c725c37bd1b51ee9a8e0bd49ab99d59ad",
+    "docs/v2/V2_MAIN_TO_DEVELOP_CHANGE_LEDGER.md": "4172f928d0d0c8cdb2f7689cb3c51d786cea082509ee7e5f1922327ba9f4d525",
+    "tests/support/qt_wx_ordering.py": "7d6246b25023d405a752011a01367a81702afcd7e8972fbd8134eacddfdcc5c5",
+    "tests/test_qt_wx_collection_order.py": "63bedb59280ea941fc0815e93e50e979a6dd44db339eeaf02574f5165717ad0b",
+    "audit/A11Y_AUDIT.md": "3e390c181205b2bf1f028c4795da65912e0a6cc0125cf4c25d35212ff83a4f89",
+    "W61.1_U02.1_CLI_GUI_REPAIR_20261006.json": "5f8935c23b26b3b337026182d6477205960761fc6f1365fe228b59232385ac85",
+    "W61.1_U02.1_GUEST_LAUNCH_20261006.json": "2e35510ad0254b8a87a30532e460eb3447d67fb450fd6fd1ebf7855719858dd6"
+  },
+  "failure_classification": [
+    "Five tests failed only because audit/current-gui/MANIFEST.json and referenced screenshots are absent from the test worktree.",
+    "Historical manifest commit 3a7294079b992d3ddcabc349bbeadf6988312b64 is not present in this branch repository; no external screenshot fixture was injected."
+  ],
+  "native_crash_during_final_suite": false,
+  "native_cpp_root_cause": "OPEN; no dump or native stack captured",
+  "full_suite_verdict": "FAIL",
+  "skips_reclassified": false
+}

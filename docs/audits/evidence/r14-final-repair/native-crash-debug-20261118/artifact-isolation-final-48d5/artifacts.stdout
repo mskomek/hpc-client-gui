@@ -1,0 +1,13 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- %USERPROFILE%\AppData\Local\Programs\Python\Python314\python.exe
+cachedir: .pytest_cache
+rootdir: %USERPROFILE%\AppData\Local\Temp\hpc-client-gui-r14-current-fullsuite\repo
+configfile: pyproject.toml
+collecting ... collected 3 items
+
+tests/test_w31_race_lifecycle.py::test_w31_package_artifact_contains_provider_parser_resources PASSED [ 33%]
+tests/test_w61_1_release_handoff.py::test_w611_rel025_records_the_repaired_documented_cli_entrypoint PASSED [ 66%]
+tests/test_wx_a11y.py::test_wx_a11y_terminal_limits_documented PASSED    [100%]
+
+- generated xml file: %USERPROFILE%\AppData\Local\Temp\hpc-client-gui-r14-current-fullsuite\repo\.tmp\r14-final-artifact-isolation-logged\artifacts.xml -
+============================== 3 passed in 0.46s ==============================

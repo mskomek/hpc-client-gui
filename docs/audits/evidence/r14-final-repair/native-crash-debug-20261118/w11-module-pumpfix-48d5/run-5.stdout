@@ -1,0 +1,24 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- %USERPROFILE%\AppData\Local\Programs\Python\Python314\python.exe
+cachedir: .pytest_cache
+rootdir: %USERPROFILE%\AppData\Local\Temp\hpc-client-gui-r14-current-fullsuite\repo
+configfile: pyproject.toml
+collecting ... collected 14 items
+
+tests/test_w11_ssh_lifecycle.py::test_valid_connection_runs_remote_command PASSED [  7%]
+tests/test_w11_ssh_lifecycle.py::test_unreachable_host_fails_without_session PASSED [ 14%]
+tests/test_w11_ssh_lifecycle.py::test_invalid_credentials_are_rejected PASSED [ 21%]
+tests/test_w11_ssh_lifecycle.py::test_host_key_first_contact_save_and_reject PASSED [ 28%]
+tests/test_w11_ssh_lifecycle.py::test_host_key_mismatch_is_refused PASSED [ 35%]
+tests/test_w11_ssh_lifecycle.py::test_disconnect_while_idle_releases_transport PASSED [ 42%]
+tests/test_w11_ssh_lifecycle.py::test_command_against_dead_transport_raises PASSED [ 50%]
+tests/test_w11_ssh_lifecycle.py::test_reconnect_after_close_succeeds PASSED [ 57%]
+tests/test_w11_ssh_lifecycle.py::test_repeated_connect_disconnect_leaks_no_session_state PASSED [ 64%]
+tests/test_w11_ssh_lifecycle.py::test_unicode_command_output_roundtrip PASSED [ 71%]
+tests/test_w11_ssh_lifecycle.py::test_wx_panel_reports_failed_connect_as_failed PASSED [ 78%]
+tests/test_w11_ssh_lifecycle.py::test_wx_panel_transport_failure_repaints_status PASSED [ 85%]
+tests/test_w11_ssh_lifecycle.py::test_transport_failure_drives_controller_out_of_connected PASSED [ 92%]
+tests/test_w11_ssh_lifecycle.py::test_reconnect_closes_superseded_model_session PASSED [100%]
+
+- generated xml file: %USERPROFILE%\AppData\Local\Temp\hpc-client-gui-r14-current-fullsuite\repo\.tmp\r14-w11-pumpfix\run-5.xml -
+============================= 14 passed in 26.77s =============================

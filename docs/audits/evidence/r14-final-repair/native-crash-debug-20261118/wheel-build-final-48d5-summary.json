@@ -1,0 +1,11 @@
+{
+  "source_commit": "48d5f54fb555907b2804b146d854c303874a96ab",
+  "wheel": "hpc_client_gui-1.5.9-py3-none-any.whl",
+  "sha256": "6294946ca07fc2e54c6f82d79d104472c46246abcfa7ef46e996238fe052fd96",
+  "bytes": 1268467,
+  "python": "3.14.7",
+  "build_exit_code": 0,
+  "build_command": "python -m build --wheel",
+  "W31_resource_test": "PASS",
+  "focused_exit_code": 0
+}

@@ -107,3 +107,28 @@ No native dump or C++ stack was captured. Root cause remains OPEN: older control
 Full pytest outputs, JUnit, sanitized failure index, and result summary are in `evidence/r14-final-repair/native-crash-debug-20261118/full-pytest-20261118/`. User-specific paths have been replaced. No raw dump is retained. SHA-256 manifests are regenerated after sanitation.
 
 Verdict: focused WebView workaround is green; full pytest is FAIL/INVALID-AS-ACCEPTANCE due 15 failures and source/runner limitations; native root cause OPEN; X11 acceptance unchanged and not rerun. Remote logs were retrieved over the existing Tailscale-backed Kole SSH/SCP route. No GitHub writes or pushes occurred.
+
+## 2026-11-18 final-source full-suite and W11 follow-up
+
+The earlier 4,012-test diagnostic run (3,921 passed / 15 failed) was superseded by a complete run using the exact committed source plus the recorded worktree overlays and required historical receipts. The final run completed on Kole Windows11-New, interactive Session 1, Python 3.14.7 / pytest 9.1.1. Source commit: `48d5f54fb555907b2804b146d854c303874a96ab`; source tree: `bafcf64065b8b86ec75d8ec95ee2c260a24b6988`.
+
+- Collected 4,012; passed 3,931; failed 5; errors 0; skipped 47; 29 passing subtests; duration 1,076.567 seconds; pytest exit code **1**.
+- All five failures are `tests.test_gui_audit_screenshots`: the test snapshot lacks `audit/current-gui/MANIFEST.json` and its registered screenshot files. The expected historical manifest commit `3a7294079b992d3ddcabc349bbeadf6988312b64` is not available in this branch repository. No substitute manifest or screenshots were fabricated or imported. This remains a full-suite **FAIL**, not PASS.
+- The 47 skips were preserved as reported by pytest and were not individually reclassified.
+- The final suite did not reproduce a native crash. The native C++ root cause remains **OPEN** because no dump or native stack was captured.
+
+JUnit, complete stdout/stderr, process result, timestamps, and source identity are retained in [full-pytest-final-48d5](evidence/r14-final-repair/native-crash-debug-20261118/full-pytest-final-48d5/). The JUnit records the five screenshot audit failures; `exit_code.txt` records `1`.
+
+### W11 transport lifecycle regression
+
+The integrated W11 failure was caused by the test helper waiting with `sleep` while a live `wx.App` had deferred `wx.CallAfter(controller.fail)` onto the event queue. In isolation, with no live wx app, the callback ran synchronously, which is why the previous isolated test passed. The regression test now optionally pumps wx events while waiting; the production controller behavior was not changed. This repair is committed as `48d5f54fb555907b2804b146d854c303874a96ab`.
+
+The complete W11 lifecycle module then passed in five fresh Kole Session 1 processes: 14/14 each, zero failures/errors, exit code 0 each. The tested test-source SHA-256 is recorded in `source-identity.json`. Per-run JUnit and console results are in [w11-module-pumpfix-48d5](evidence/r14-final-repair/native-crash-debug-20261118/w11-module-pumpfix-48d5/).
+
+### Final-source artifact-focused checks
+
+A wheel built from commit `48d5f54` completed successfully (SHA-256 `6294946ca07fc2e54c6f82d79d104472c46246abcfa7ef46e996238fe052fd96`). Three focused checks passed against it: W31 package resource, W61.1 historical CLI repair receipt, and the wx A11Y audit document (3 passed, exit 0). Build and test outputs are retained under [wheel-build-final-48d5](evidence/r14-final-repair/native-crash-debug-20261118/wheel-build-final-48d5/) and [artifact-isolation-final-48d5](evidence/r14-final-repair/native-crash-debug-20261118/artifact-isolation-final-48d5/). These focused passes do not alter the full-suite FAIL above.
+
+The R14 diagnosis used Tailscale-backed SSH/SCP to retrieve Kole's logs. No push or merge was performed. The earlier ProcDump approval was used only for the previously documented owned-process attempts; those attempts produced no dump. No unrelated process was terminated.
+
+**Current verdict:** W11 lifecycle regression repaired and repeatedly verified; artifact-focused checks PASS; full pytest FAIL due five absent historical GUI audit fixtures; native C++ crash root cause OPEN; GitHub delivery remains blocked on the required full-suite acceptance and remaining native diagnosis.
