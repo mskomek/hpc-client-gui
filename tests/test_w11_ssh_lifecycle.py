@@ -116,9 +116,20 @@ def _profile(server, **overrides):
     return profile
 
 
-def _wait_for(predicate, timeout_s=10.0, poll_s=0.05):
+def _wait_for(predicate, timeout_s=10.0, poll_s=0.05, *, pump_wx=False):
+    """Wait for a condition, optionally dispatching queued wx callbacks."""
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
+        if pump_wx:
+            try:
+                import wx
+
+                app = wx.App.Get()
+                if app is not None and wx.IsMainThread():
+                    app.ProcessPendingEvents()
+                    wx.Yield()
+            except Exception:
+                pass
         if predicate():
             return True
         time.sleep(poll_s)
@@ -446,7 +457,12 @@ def test_transport_failure_drives_controller_out_of_connected(lab_server, lab_en
     assert model.controller.state.value == "connected"
     try:
         ssh.client.get_transport().close()
-        failed = _wait_for(lambda: model.controller.state.value == "failed", timeout_s=10.0)
+        # Earlier GUI cases may leave wx.App alive; drain its CallAfter queue.
+        failed = _wait_for(
+            lambda: model.controller.state.value == "failed",
+            timeout_s=10.0,
+            pump_wx=True,
+        )
     finally:
         ssh.close()
     assert failed, "controller never left 'connected' after transport death"
