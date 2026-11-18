@@ -1,0 +1,15 @@
+{
+    "attempt":  1,
+    "pid":  8444,
+    "session":  1,
+    "completed":  true,
+    "exit":  null,
+    "procdumpExit":  null,
+    "startUtc":  "2026-11-18T16:15:31.8509261Z",
+    "endUtc":  "2026-11-18T16:15:46.6289173Z",
+    "dump":  null,
+    "stdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-1.stdout",
+    "stderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-1.stderr",
+    "procdumpStdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-1-procdump.stdout",
+    "procdumpStderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-1-procdump.stderr"
+}

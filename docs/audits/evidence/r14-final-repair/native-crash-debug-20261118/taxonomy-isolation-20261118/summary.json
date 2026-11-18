@@ -1,0 +1,29 @@
+[
+    {
+        "run":  1,
+        "session":  1,
+        "exit":  1,
+        "stdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-taxonomy-20261118\\run-1.stdout",
+        "stderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-taxonomy-20261118\\run-1.stderr",
+        "junit":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-taxonomy-20261118\\run-1.xml",
+        "elapsed":  4.0235227
+    },
+    {
+        "run":  2,
+        "session":  1,
+        "exit":  1,
+        "stdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-taxonomy-20261118\\run-2.stdout",
+        "stderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-taxonomy-20261118\\run-2.stderr",
+        "junit":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-taxonomy-20261118\\run-2.xml",
+        "elapsed":  4.0377784
+    },
+    {
+        "run":  3,
+        "session":  1,
+        "exit":  1,
+        "stdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-taxonomy-20261118\\run-3.stdout",
+        "stderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-taxonomy-20261118\\run-3.stderr",
+        "junit":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-taxonomy-20261118\\run-3.xml",
+        "elapsed":  4.0559009
+    }
+]

@@ -1,0 +1,15 @@
+{
+    "run":  2,
+    "pid":  10784,
+    "session":  1,
+    "completed":  true,
+    "exit":  null,
+    "procdumpExit":  null,
+    "dump":  null,
+    "stdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-ac-20261118\\run-2.stdout",
+    "stderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-ac-20261118\\run-2.stderr",
+    "procdumpStdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-ac-20261118\\run-2-procdump.stdout",
+    "procdumpStderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-ac-20261118\\run-2-procdump.stderr",
+    "startUtc":  "2026-11-18T16:33:59.3754694Z",
+    "endUtc":  "2026-11-18T16:34:12.3938499Z"
+}

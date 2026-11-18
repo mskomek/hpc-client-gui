@@ -1,0 +1,12 @@
+{
+  "diagnostic_source_snapshot_sha256": "0b45fac5182937d28024ae203a9ffff205c4ae6e73fc1f16fd95a689accf2e87",
+  "host": "Kole Windows11-New",
+  "session_id": 1,
+  "test": "tests/test_test_taxonomy_checker.py::test_report_mode_succeeds_with_taxonomy_debt",
+  "runs": 3,
+  "exit_codes": [1, 1, 1],
+  "failure": "checker.repository_sha() invokes git rev-parse HEAD, but the diagnostic source archive contains no .git metadata; checker.main therefore returns 2.",
+  "classification": "environment/snapshot defect, not a taxonomy marker result",
+  "production_source_changed": false,
+  "test_source_changed": false
+}

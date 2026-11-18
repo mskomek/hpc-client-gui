@@ -1,0 +1,11 @@
+{
+    "run":  2,
+    "pid":  6268,
+    "session":  1,
+    "exit":  0,
+    "startUtc":  "2026-11-18T16:26:02.8695070Z",
+    "endUtc":  "2026-11-18T16:26:04.8953403Z",
+    "stdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-w11-isolation-20261118\\run-2.stdout",
+    "stderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-w11-isolation-20261118\\run-2.stderr",
+    "junit":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-w11-isolation-20261118\\run-2.xml"
+}

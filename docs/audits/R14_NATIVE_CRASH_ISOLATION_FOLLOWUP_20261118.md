@@ -64,3 +64,46 @@ The full changed WebView bridge test module then passed in the same Kole Session
 - WebView bridge module: 9/9 pass in Kole Session 1.
 - Full pytest: not run.
 - GitHub writes: none.
+## 2026-11-18 Tailscale follow-up addendum
+
+This addendum supersedes the earlier “Full pytest: NOT RUN” and “ProcDump was not run / EULA pending” statements above. Those statements were accurate when written but became stale after the additional Kole Session 1 runs below. Earlier diagnostic observations remain historical evidence.
+
+### Full pytest result received from Kole over Tailscale
+
+The suite completed on Kole Windows11-New, interactive Session 1, Python 3.14.7 / pytest 9.1.1, using the diagnostic source archive SHA-256 `0b45fac5182937d28024ae203a9ffff205c4ae6e73fc1f16fd95a689accf2e87` with overlay hashes in `evidence/r14-final-repair/native-crash-debug-20261118/full-pytest-20261118/diagnostic-summary.json`.
+
+- Collected 4,012; passed 3,921; failed 15; errors 0; skipped 47; passing subtests 29.
+- Duration 1,037.33 seconds (17:17). JUnit confirms 15 failures and 0 errors.
+- The wrapper did not persist the process exit code (`null`). Evidence proves failure but not the native pytest exit code. This is not a PASS.
+- No native process crash occurred during this suite run.
+
+Failure classification from `failure-index.md`:
+
+1. One docs-reference test: current source tree lacks `TODO_V2_REMAINING.md`, referenced by the change ledger.
+2. Five GUI audit screenshot tests: `audit/current-gui/MANIFEST.json` is absent locally and from the diagnostic snapshot.
+3. One temp-root policy failure: basetemp was outside the repository `.tmp` policy.
+4. One taxonomy report test and three W14 provenance tests: the diagnostic source archive had no `.git` metadata; the taxonomy test also failed 3/3 in isolation for that reason.
+5. One W31 package artifact test: runner omitted `HPC_GUI_W31_PACKAGE_WHEEL`.
+6. One W61.1 handoff test and one wx A11Y test: the archive omitted the historical receipt and `audit/A11Y_AUDIT.md`; both exist in the local worktree.
+7. One W11 transport lifecycle test: integrated failure, but five isolated Session 1 runs passed; test-order/global-state interaction remains unresolved.
+
+This is diagnostic evidence, not a valid whole-worktree acceptance run: the snapshot omitted Git metadata and required files and used a noncompliant basetemp. Failures include runner/source packaging issues and one unresolved integrated-order failure. The 47 skips were not individually reclassified.
+
+### ProcDump and native crash update
+
+After the user's explicit EULA authorization, ProcDump 12.02 (Microsoft Authenticode verified) was run only against the test-owned Python process in Session 1. Five A+B+C+target attempts and three A+C+target attempts were monitored (eight total). All completed without a dump; the corresponding test runs passed and no exception-triggered dump was produced. The crash did not reproduce in these eight ProcDump-monitored attempts. Evidence is in `procdump-attempt-20261118/` and `procdump-ac-attempt-20261118/`.
+
+No native dump or C++ stack was captured. Root cause remains OPEN: older controlled runs reproduced crashes, newest monitored attempts did not. The accepted per-user EULA value remains as authorized. The downloaded tool, owned tasks, diagnostic processes, and transient directories were cleaned. Unrelated SearchHost/W65 processes were untouched.
+
+### Focused isolation results
+
+- Modified WebView bridge module: 9 passed, 0 failed, exit 0, 2.26 seconds; source SHA `f57d51d7e5540fe981e4c288541175ea6ee031a9ea8a7c07ada88362865f5155`.
+- A+B+C plus modified WebView navigation: five repeated Session 1 sequences passed, each four tests.
+- W11 transport lifecycle: five isolated Session 1 runs passed (exit 0); integrated-order failure unresolved.
+- Taxonomy report: three isolated attempts failed due absent Git metadata; not a valid product-level verdict.
+
+### Evidence integrity and status
+
+Full pytest outputs, JUnit, sanitized failure index, and result summary are in `evidence/r14-final-repair/native-crash-debug-20261118/full-pytest-20261118/`. User-specific paths have been replaced. No raw dump is retained. SHA-256 manifests are regenerated after sanitation.
+
+Verdict: focused WebView workaround is green; full pytest is FAIL/INVALID-AS-ACCEPTANCE due 15 failures and source/runner limitations; native root cause OPEN; X11 acceptance unchanged and not rerun. Remote logs were retrieved over the existing Tailscale-backed Kole SSH/SCP route. No GitHub writes or pushes occurred.

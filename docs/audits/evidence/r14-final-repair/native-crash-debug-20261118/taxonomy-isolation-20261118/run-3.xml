@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="2.062" timestamp="2026-11-18T19:30:00.782017+03:00" hostname="Windows11-New"><testcase classname="tests.test_test_taxonomy_checker" name="test_report_mode_succeeds_with_taxonomy_debt" time="1.852"><failure message="AssertionError: assert 2 == 0&#10; +  where 2 = &lt;function main at 0x000002320BCE9C70&gt;(['--mode', 'report'])&#10; +    where &lt;function main at 0x000002320BCE9C70&gt; = checker.main">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000002320BD90050&gt;
+capsys = &lt;_pytest.capture.CaptureFixture object at 0x000002320BA39BE0&gt;
+
+    @pytest.mark.audit
+    def test_report_mode_succeeds_with_taxonomy_debt(monkeypatch, capsys):
+        monkeypatch.setattr(
+            checker,
+            "collect_records",
+            lambda: [{"nodeid": "tests/legacy.py::test_unmarked", "markers": []}],
+        )
+&gt;       assert checker.main(["--mode", "report"]) == 0
+E       AssertionError: assert 2 == 0
+E        +  where 2 = &lt;function main at 0x000002320BCE9C70&gt;(['--mode', 'report'])
+E        +    where &lt;function main at 0x000002320BCE9C70&gt; = checker.main
+
+tests\test_test_taxonomy_checker.py:82: AssertionError</failure></testcase></testsuite></testsuites>

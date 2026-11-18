@@ -1,0 +1,18 @@
+{
+    "pid":  5140,
+    "session":  1,
+    "timeout_seconds":  2700,
+    "completed":  true,
+    "exit":  null,
+    "startUtc":  "2026-11-18T15:23:43.7790069Z",
+    "endUtc":  "2026-11-18T15:41:03.6547556Z",
+    "stdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-fullpytest-20261118\\pytest.stdout",
+    "stderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-fullpytest-20261118\\pytest.stderr",
+    "junit":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-fullpytest-20261118\\junit.xml",
+    "basetemp":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-fullpytest-20261118\\pytest-base",
+    "collected":  4012,
+    "failures":  15,
+    "errors":  0,
+    "skipped":  47,
+    "time":  1037.259
+}

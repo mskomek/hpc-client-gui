@@ -1,0 +1,81 @@
+{
+    "attempts":  [
+                     {
+                         "attempt":  1,
+                         "pid":  8444,
+                         "session":  1,
+                         "completed":  true,
+                         "exit":  null,
+                         "procdumpExit":  null,
+                         "startUtc":  "2026-11-18T16:15:31.8509261Z",
+                         "endUtc":  "2026-11-18T16:15:46.6289173Z",
+                         "dump":  null,
+                         "stdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-1.stdout",
+                         "stderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-1.stderr",
+                         "procdumpStdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-1-procdump.stdout",
+                         "procdumpStderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-1-procdump.stderr"
+                     },
+                     {
+                         "attempt":  2,
+                         "pid":  8520,
+                         "session":  1,
+                         "completed":  true,
+                         "exit":  null,
+                         "procdumpExit":  null,
+                         "startUtc":  "2026-11-18T16:15:46.6925335Z",
+                         "endUtc":  "2026-11-18T16:16:01.1731245Z",
+                         "dump":  null,
+                         "stdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-2.stdout",
+                         "stderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-2.stderr",
+                         "procdumpStdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-2-procdump.stdout",
+                         "procdumpStderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-2-procdump.stderr"
+                     },
+                     {
+                         "attempt":  3,
+                         "pid":  1200,
+                         "session":  1,
+                         "completed":  true,
+                         "exit":  null,
+                         "procdumpExit":  null,
+                         "startUtc":  "2026-11-18T16:16:01.1829592Z",
+                         "endUtc":  "2026-11-18T16:16:16.0321602Z",
+                         "dump":  null,
+                         "stdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-3.stdout",
+                         "stderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-3.stderr",
+                         "procdumpStdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-3-procdump.stdout",
+                         "procdumpStderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-3-procdump.stderr"
+                     },
+                     {
+                         "attempt":  4,
+                         "pid":  1448,
+                         "session":  1,
+                         "completed":  true,
+                         "exit":  null,
+                         "procdumpExit":  null,
+                         "startUtc":  "2026-11-18T16:16:16.0361700Z",
+                         "endUtc":  "2026-11-18T16:16:29.5070977Z",
+                         "dump":  null,
+                         "stdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-4.stdout",
+                         "stderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-4.stderr",
+                         "procdumpStdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-4-procdump.stdout",
+                         "procdumpStderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-4-procdump.stderr"
+                     },
+                     {
+                         "attempt":  5,
+                         "pid":  9032,
+                         "session":  1,
+                         "completed":  true,
+                         "exit":  null,
+                         "procdumpExit":  null,
+                         "startUtc":  "2026-11-18T16:16:29.5070977Z",
+                         "endUtc":  "2026-11-18T16:16:42.9172777Z",
+                         "dump":  null,
+                         "stdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-5.stdout",
+                         "stderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-5.stderr",
+                         "procdumpStdout":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-5-procdump.stdout",
+                         "procdumpStderr":  "C:\\Users\\home\\AppData\\Local\\Temp\\hpc-client-gui-r14-procdump-20261118\\attempt-5-procdump.stderr"
+                     }
+                 ],
+    "eulaAccepted":  1,
+    "dumpCaptured":  false
+}

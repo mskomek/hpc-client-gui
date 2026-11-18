@@ -1,0 +1,31 @@
+{
+  "diagnostic_snapshot_sha256": "0b45fac5182937d28024ae203a9ffff205c4ae6e73fc1f16fd95a689accf2e87",
+  "overlays": {
+    "wx_webview_support_py": "972c9f3d0c313a473fab4e2421f0c39c725c37bd1b51ee9a8e0bd49ab99d59ad",
+    "webview_bridge_test_py": "f57d51d7e5540fe981e4c288541175ea6ee031a9ea8a7c07ada88362865f5155",
+    "conftest_py": "9822feaa5c7bf66903d86f3da29041df14af33e97d7a63d27ca4a104aaae5a687"
+  },
+  "host": "Kole Windows11-New",
+  "session_id": 1,
+  "python": "3.14.7",
+  "pytest": "9.1.1",
+  "collected": 4012,
+  "passed": 3921,
+  "failed": 15,
+  "errors": 0,
+  "skipped": 47,
+  "subtests_passed": 29,
+  "duration_seconds": 1037.33,
+  "wrapper_exit_code": null,
+  "pytest_exit": "not persisted; final pytest/JUnit indicates failure, conventional pytest code would be 1",
+  "native_crash_during_full_run": false,
+  "classification": [
+    "diagnostic archive lacked .git metadata: 3 W14 provenance tests plus taxonomy test (verified separately);",
+    "runner passed --basetemp outside project .tmp: temp-root policy test;",
+    "runner did not set HPC_GUI_W31_PACKAGE_WHEEL: W31 package resource test;",
+    "diagnostic archive omitted W61 historical receipt and A11Y audit file even though both exist in the local worktree;",
+    "local worktree is missing TODO_V2_REMAINING.md referenced by the change ledger;",
+    "local worktree lacks audit/current-gui/MANIFEST.json: five GUI audit screenshot tests;",
+    "W11 transport lifecycle test failed in the integrated order but passed in 5/5 isolated Session 1 runs; order interaction unresolved."
+  ]
+}

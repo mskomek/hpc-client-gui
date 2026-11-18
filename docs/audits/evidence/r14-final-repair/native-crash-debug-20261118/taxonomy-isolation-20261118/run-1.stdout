@@ -1,0 +1,25 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+________________ test_report_mode_succeeds_with_taxonomy_debt _________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000022BED500050>
+capsys = <_pytest.capture.CaptureFixture object at 0x0000022BED1A9BE0>
+
+    @pytest.mark.audit
+    def test_report_mode_succeeds_with_taxonomy_debt(monkeypatch, capsys):
+        monkeypatch.setattr(
+            checker,
+            "collect_records",
+            lambda: [{"nodeid": "tests/legacy.py::test_unmarked", "markers": []}],
+        )
+>       assert checker.main(["--mode", "report"]) == 0
+E       AssertionError: assert 2 == 0
+E        +  where 2 = <function main at 0x0000022BED459C70>(['--mode', 'report'])
+E        +    where <function main at 0x0000022BED459C70> = checker.main
+
+tests\test_test_taxonomy_checker.py:82: AssertionError
+---------------------------- Captured stderr call -----------------------------
+taxonomy report failed: Command '['git', 'rev-parse', 'HEAD']' returned non-zero exit status 128.
+=========================== short test summary info ===========================
+FAILED tests/test_test_taxonomy_checker.py::test_report_mode_succeeds_with_taxonomy_debt
+1 failed in 2.22s

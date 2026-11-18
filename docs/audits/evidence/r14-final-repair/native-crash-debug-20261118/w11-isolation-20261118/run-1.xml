@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="0.667" timestamp="2026-11-18T19:26:00.905859+03:00" hostname="Windows11-New"><testcase classname="tests.test_w11_ssh_lifecycle" name="test_transport_failure_drives_controller_out_of_connected" time="0.527" /></testsuite></testsuites>
