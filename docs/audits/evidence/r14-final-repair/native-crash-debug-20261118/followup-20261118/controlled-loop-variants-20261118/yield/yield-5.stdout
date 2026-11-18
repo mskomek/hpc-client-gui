@@ -1,0 +1,21 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+________________ test_wx_terminal_external_navigation_blocked _________________
+
+    @pytest.mark.gui
+    def test_wx_terminal_external_navigation_blocked():
+        if not _is_webview_available():
+            pytest.skip("WebView backend unavailable")
+        _app = wx.App.Get() or wx.App(False)
+        frame = wx.Frame(None, size=(900, 600))
+        ssh = _fake_ssh()
+        panel = WxTerminalWebViewPanel(frame, ssh=ssh)
+        _show_frame_with_panel(frame, panel)
+>       assert _wait_for_ready(panel, timeout=6) is True
+E       assert False is True
+E        +  where False = _wait_for_ready(<hpc_gui.wx_terminal_webview.WxTerminalWebViewPanel object at 0x00000269D47CB140>, timeout=6)
+
+tests\test_wx_terminal_webview_bridge.py:112: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_external_navigation_blocked
+1 failed in 6.37s

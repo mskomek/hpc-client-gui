@@ -1,0 +1,574 @@
+{
+  "environment": {
+    "wx_module": "wxbase333u_vc140_x64.dll",
+    "webdriver": "Microsoft Edge WebView2",
+    "interactive_session": 1,
+    "python": "3.14.7",
+    "machine": "Windows11-New"
+  },
+  "audit_commit": "669b00be0ab6577fb1684354b7d5de2ee5534fbd",
+  "wer": {
+    "temporary_local_dumps_setting_enabled": true,
+    "owned_processes_remaining": 0,
+    "owned_scheduled_tasks_remaining": 0,
+    "owned_remote_temp_folder_removed": true,
+    "setting_removed": true,
+    "files_created": 0
+  },
+  "test_run_count": 38,
+  "archive_sha256": [
+    {
+      "file": "nested-loop-results.zip",
+      "sha256": "19984fba9ca13a511cfc22a9ee5b190396d7339209611f01c32f28dd97e6c240"
+    },
+    {
+      "file": "yield-results.zip",
+      "sha256": "c9cb0388772323e3d8a0e225aca716054d7657fc6e10dccaea64ad4dcc63f40c"
+    },
+    {
+      "file": "sequence-results.zip",
+      "sha256": "89ccf1874cab85ac4bd069121bfafc420fa2b33bbd0063a1b39b77d1bd503e8e"
+    },
+    {
+      "file": "matrix-results.zip",
+      "sha256": "77ae7c353e14377cd445d2bd3c137c88d9395b8ad6bc5771b0cb2a9d0d3bf429"
+    },
+    {
+      "file": "pair-results.zip",
+      "sha256": "5ac71ead83a6bc2fcbd38c4d44595b7679e9860d08f692007880c5fd262dc50b"
+    }
+  ],
+  "schema": "r14-native-crash-isolation/1",
+  "diagnostic_source": {
+    "conftest_sha256": "9822feaa5c7bf66903d86f3da29041df14af33e97d7a63d27ca4a104aaae5a687",
+    "archive_sha256": "0b45fac5182937d28024ae203a9ffff205c4ae6e73fc1f16fd95a689accf2e87",
+    "composite_id": "1a6b6e1f447d5daab8673fa7027067b988b34f562529c97cccf9e563a94b09ba",
+    "wx_helper_sha256": "972c9f3d0c313a473fab4e2421f0c39c725c37bd1b51ee9a8e0bd49ab99d59ad"
+  },
+  "source_code_changed": false,
+  "pytest_full_suite": "NOT RUN",
+  "captured_utc": "2026-11-18T14:29:54.0769523Z",
+  "runs": [
+    {
+      "run": 1,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-loop",
+      "status": "PASS",
+      "pytest_summary": "1 passed in 1.62s",
+      "exception": null
+    },
+    {
+      "run": 2,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-loop",
+      "status": "PASS",
+      "pytest_summary": "1 passed in 0.89s",
+      "exception": null
+    },
+    {
+      "run": 3,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-loop",
+      "status": "PASS",
+      "pytest_summary": "1 passed in 1.00s",
+      "exception": null
+    },
+    {
+      "run": 4,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-loop",
+      "status": "PASS",
+      "pytest_summary": "1 passed in 0.93s",
+      "exception": null
+    },
+    {
+      "run": 5,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-loop",
+      "status": "PASS",
+      "pytest_summary": "1 passed in 1.01s",
+      "exception": null
+    },
+    {
+      "run": 1,
+      "session": 1,
+      "exit": 1,
+      "stderr_sha256": "6db9b02010a5dd8390f572c359b2f0fa08e72e8cbc4592ee3bfafb9014df38eb",
+      "variant": "yield",
+      "status": "FAIL_ASSERTION",
+      "pytest_summary": "1 failed in 6.37s",
+      "exception": null
+    },
+    {
+      "run": 2,
+      "session": 1,
+      "exit": 1,
+      "stderr_sha256": "6db9b02010a5dd8390f572c359b2f0fa08e72e8cbc4592ee3bfafb9014df38eb",
+      "variant": "yield",
+      "status": "FAIL_ASSERTION",
+      "pytest_summary": "1 failed in 6.36s",
+      "exception": null
+    },
+    {
+      "run": 3,
+      "session": 1,
+      "exit": 1,
+      "stderr_sha256": "6db9b02010a5dd8390f572c359b2f0fa08e72e8cbc4592ee3bfafb9014df38eb",
+      "variant": "yield",
+      "status": "FAIL_ASSERTION",
+      "pytest_summary": "1 failed in 6.38s",
+      "exception": null
+    },
+    {
+      "run": 4,
+      "session": 1,
+      "exit": 1,
+      "stderr_sha256": "6db9b02010a5dd8390f572c359b2f0fa08e72e8cbc4592ee3bfafb9014df38eb",
+      "variant": "yield",
+      "status": "FAIL_ASSERTION",
+      "pytest_summary": "1 failed in 6.39s",
+      "exception": null
+    },
+    {
+      "run": 5,
+      "session": 1,
+      "exit": 1,
+      "stderr_sha256": "6db9b02010a5dd8390f572c359b2f0fa08e72e8cbc4592ee3bfafb9014df38eb",
+      "variant": "yield",
+      "status": "FAIL_ASSERTION",
+      "pytest_summary": "1 failed in 6.37s",
+      "exception": null
+    },
+    {
+      "run": 1,
+      "session": 1,
+      "exit": -1073741819,
+      "stderr_sha256": "4a68bb41c297c098b6d39c4ae3f3bf8d6baebf035768aebf28ddf9622c89848c",
+      "variant": "nested-seq",
+      "status": "FAIL_NATIVE_CRASH",
+      "pytest_summary": "",
+      "exception": "0xC0000005"
+    },
+    {
+      "run": 2,
+      "session": 1,
+      "exit": -1073741819,
+      "stderr_sha256": "53067739e8684a5305d8b07e1bcb1789e84efd797c39e8d0e5c0c563d7813ba6",
+      "variant": "nested-seq",
+      "status": "FAIL_NATIVE_CRASH",
+      "pytest_summary": "",
+      "exception": "0xC0000005"
+    },
+    {
+      "run": 3,
+      "session": 1,
+      "exit": -1073740940,
+      "stderr_sha256": "d6a65dcd91cd11020a5930d2b041d21e88db16c8877904f172d25b4fc7a0b196",
+      "variant": "nested-seq",
+      "status": "FAIL_NATIVE_CRASH",
+      "pytest_summary": "",
+      "exception": "0xC0000374"
+    },
+    {
+      "run": 4,
+      "session": 1,
+      "exit": -1073741819,
+      "stderr_sha256": "8535b90e074281eabed50dd8b0e077c97a0f6214e9f081f2ac8a0c1286d34186",
+      "variant": "nested-seq",
+      "status": "FAIL_NATIVE_CRASH",
+      "pytest_summary": "",
+      "exception": "0xC0000005"
+    },
+    {
+      "run": 5,
+      "session": 1,
+      "exit": -1073741819,
+      "stderr_sha256": "5e669a5b5a4be8b006c24366a05bd6005b8b50f6cba9c2d10dfa7b28f514629d",
+      "variant": "nested-seq",
+      "status": "FAIL_NATIVE_CRASH",
+      "pytest_summary": "",
+      "exception": "0xC0000005"
+    },
+    {
+      "run": 1,
+      "session": 1,
+      "exit": 1,
+      "stderr_sha256": "6db9b02010a5dd8390f572c359b2f0fa08e72e8cbc4592ee3bfafb9014df38eb",
+      "variant": "yield-seq",
+      "status": "FAIL_ASSERTION",
+      "pytest_summary": "1 failed, 3 passed in 7.11s",
+      "exception": null
+    },
+    {
+      "run": 2,
+      "session": 1,
+      "exit": 1,
+      "stderr_sha256": "6db9b02010a5dd8390f572c359b2f0fa08e72e8cbc4592ee3bfafb9014df38eb",
+      "variant": "yield-seq",
+      "status": "FAIL_ASSERTION",
+      "pytest_summary": "1 failed, 3 passed in 7.12s",
+      "exception": null
+    },
+    {
+      "run": 3,
+      "session": 1,
+      "exit": 1,
+      "stderr_sha256": "6db9b02010a5dd8390f572c359b2f0fa08e72e8cbc4592ee3bfafb9014df38eb",
+      "variant": "yield-seq",
+      "status": "FAIL_ASSERTION",
+      "pytest_summary": "1 failed, 3 passed in 7.15s",
+      "exception": null
+    },
+    {
+      "run": 4,
+      "session": 1,
+      "exit": 1,
+      "stderr_sha256": "6db9b02010a5dd8390f572c359b2f0fa08e72e8cbc4592ee3bfafb9014df38eb",
+      "variant": "yield-seq",
+      "status": "FAIL_ASSERTION",
+      "pytest_summary": "1 failed, 3 passed in 7.08s",
+      "exception": null
+    },
+    {
+      "run": 5,
+      "session": 1,
+      "exit": 1,
+      "stderr_sha256": "6db9b02010a5dd8390f572c359b2f0fa08e72e8cbc4592ee3bfafb9014df38eb",
+      "variant": "yield-seq",
+      "status": "FAIL_ASSERTION",
+      "pytest_summary": "1 failed, 3 passed in 7.09s",
+      "exception": null
+    },
+    {
+      "run": 1,
+      "session": 1,
+      "exit": -1073741819,
+      "stderr_sha256": "dff7c34e3d49ee61beac4d31909f5b4d801205c66d96dcb4288f8aca9a16354f",
+      "variant": "nested-a",
+      "status": "FAIL_NATIVE_CRASH",
+      "pytest_summary": "",
+      "exception": "0xC0000005"
+    },
+    {
+      "run": 2,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-a",
+      "status": "PASS",
+      "pytest_summary": "2 passed in 1.35s",
+      "exception": null
+    },
+    {
+      "run": 3,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-a",
+      "status": "PASS",
+      "pytest_summary": "2 passed in 1.26s",
+      "exception": null
+    },
+    {
+      "run": 1,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-ab",
+      "status": "PASS",
+      "pytest_summary": "3 passed in 1.30s",
+      "exception": null
+    },
+    {
+      "run": 2,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-ab",
+      "status": "PASS",
+      "pytest_summary": "3 passed in 1.45s",
+      "exception": null
+    },
+    {
+      "run": 3,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-ab",
+      "status": "PASS",
+      "pytest_summary": "3 passed in 1.46s",
+      "exception": null
+    },
+    {
+      "run": 1,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-b",
+      "status": "PASS",
+      "pytest_summary": "2 passed in 1.14s",
+      "exception": null
+    },
+    {
+      "run": 2,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-b",
+      "status": "PASS",
+      "pytest_summary": "2 passed in 1.13s",
+      "exception": null
+    },
+    {
+      "run": 3,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-b",
+      "status": "PASS",
+      "pytest_summary": "2 passed in 1.11s",
+      "exception": null
+    },
+    {
+      "run": 1,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-c",
+      "status": "PASS",
+      "pytest_summary": "2 passed in 1.56s",
+      "exception": null
+    },
+    {
+      "run": 2,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-c",
+      "status": "PASS",
+      "pytest_summary": "2 passed in 1.18s",
+      "exception": null
+    },
+    {
+      "run": 3,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-c",
+      "status": "PASS",
+      "pytest_summary": "2 passed in 1.21s",
+      "exception": null
+    },
+    {
+      "run": 1,
+      "session": 1,
+      "exit": -1073740940,
+      "stderr_sha256": "840686a0ca21ded650951b5238fa3092eb9396d1d061faf3beaa1cadd657b1d2",
+      "variant": "nested-ac",
+      "status": "FAIL_NATIVE_CRASH",
+      "pytest_summary": "",
+      "exception": "0xC0000374"
+    },
+    {
+      "run": 2,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-ac",
+      "status": "PASS",
+      "pytest_summary": "3 passed in 1.39s",
+      "exception": null
+    },
+    {
+      "run": 3,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-ac",
+      "status": "PASS",
+      "pytest_summary": "3 passed in 1.39s",
+      "exception": null
+    },
+    {
+      "run": 1,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-bc",
+      "status": "PASS",
+      "pytest_summary": "3 passed in 1.31s",
+      "exception": null
+    },
+    {
+      "run": 2,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-bc",
+      "status": "PASS",
+      "pytest_summary": "3 passed in 1.29s",
+      "exception": null
+    },
+    {
+      "run": 3,
+      "session": 1,
+      "exit": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "nested-bc",
+      "status": "PASS",
+      "pytest_summary": "3 passed in 1.28s",
+      "exception": null
+    }
+  ],
+  "harness_sha256": [
+    {
+      "file": "variant_runner.py",
+      "sha256": "927cc74adf20fc48eabee61038c7fede736e751292c23f6e095907ea166931f5"
+    },
+    {
+      "file": "variant_sequence_runner.py",
+      "sha256": "ae3b44590d7b1c47eb33bc40886ca8957cc9aefba45dd67d39cefa47e90cdf3d"
+    },
+    {
+      "file": "variant_matrix_runner.py",
+      "sha256": "5194222a544714579ca52f5931d752cf8f24ffdac508bfc1558bd35915065ecf"
+    },
+    {
+      "file": "variant_pair_runner.py",
+      "sha256": "9115a3f5dd369b2811dce68e19ac002ecf4368275fbeff4fd794ebe90aa8c553"
+    },
+    {
+      "file": "run-variant.ps1",
+      "sha256": "340666c69b3216c14a037a2226e601f95eddc1aefbc6f27f229a34abd4c146ee"
+    },
+    {
+      "file": "start-variant-task.ps1",
+      "sha256": "c3fa3d0effbe7cce4597159478ade0c7ce012cf1ec36b36d70609daa4f870cb4"
+    },
+    {
+      "file": "run-sequence.ps1",
+      "sha256": "0fa1b190e0ec9b5d8b4cc56e7dfa25ca9053fef0339c91157e899b7bded8f4b1"
+    },
+    {
+      "file": "start-sequence-task.ps1",
+      "sha256": "6e285d033049ccba124d679c4883db2c8c4d2db18ebd1205c29abc774666774a"
+    },
+    {
+      "file": "run-matrix.ps1",
+      "sha256": "4710ac70c1d81f060e0dcb59d14f8cce393c1e66cf53c46f335d0767481a73f9"
+    },
+    {
+      "file": "start-matrix-task.ps1",
+      "sha256": "600a210d9dc8774d322faeb481d6e58106426e6f9e7c75ca402254d8d4be417d"
+    },
+    {
+      "file": "run-pairs.ps1",
+      "sha256": "b3f50f6627f055f2a340c1aaad83d4439af4ec408b56a59f51d267fe7c1c91cd"
+    },
+    {
+      "file": "start-pairs-task.ps1",
+      "sha256": "652d0bb661936930c60d05d14f5b52978979fd66869cb6959c9acb0c6d647aa9"
+    }
+  ],
+  "branch": "codex/x11-active-terminal-kole-20261114",
+  "worktree": "D:\\Projeler\\.tmp\\hpc-client-gui\\x11-kole-acceptance",
+  "groups": [
+    {
+      "exception_codes": [
+        "0xC0000005"
+      ],
+      "runs": 3,
+      "variant": "nested-a",
+      "assertion_fail": 0,
+      "pass": 2,
+      "native_crash": 1
+    },
+    {
+      "exception_codes": [],
+      "runs": 3,
+      "variant": "nested-ab",
+      "assertion_fail": 0,
+      "pass": 3,
+      "native_crash": 0
+    },
+    {
+      "exception_codes": [
+        "0xC0000374"
+      ],
+      "runs": 3,
+      "variant": "nested-ac",
+      "assertion_fail": 0,
+      "pass": 2,
+      "native_crash": 1
+    },
+    {
+      "exception_codes": [],
+      "runs": 3,
+      "variant": "nested-b",
+      "assertion_fail": 0,
+      "pass": 3,
+      "native_crash": 0
+    },
+    {
+      "exception_codes": [],
+      "runs": 3,
+      "variant": "nested-bc",
+      "assertion_fail": 0,
+      "pass": 3,
+      "native_crash": 0
+    },
+    {
+      "exception_codes": [],
+      "runs": 3,
+      "variant": "nested-c",
+      "assertion_fail": 0,
+      "pass": 3,
+      "native_crash": 0
+    },
+    {
+      "exception_codes": [],
+      "runs": 5,
+      "variant": "nested-loop",
+      "assertion_fail": 0,
+      "pass": 5,
+      "native_crash": 0
+    },
+    {
+      "exception_codes": [
+        "0xC0000005",
+        "0xC0000374"
+      ],
+      "runs": 5,
+      "variant": "nested-seq",
+      "assertion_fail": 0,
+      "pass": 0,
+      "native_crash": 5
+    },
+    {
+      "exception_codes": [],
+      "runs": 5,
+      "variant": "yield",
+      "assertion_fail": 5,
+      "pass": 0,
+      "native_crash": 0
+    },
+    {
+      "exception_codes": [],
+      "runs": 5,
+      "variant": "yield-seq",
+      "assertion_fail": 5,
+      "pass": 0,
+      "native_crash": 0
+    }
+  ]
+}
