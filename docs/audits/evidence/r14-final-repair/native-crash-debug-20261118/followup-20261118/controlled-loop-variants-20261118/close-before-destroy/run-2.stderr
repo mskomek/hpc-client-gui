@@ -1,0 +1,38 @@
+Windows fatal exception: code 0xc0000374
+
+Current thread 0x000004b0 (most recent call first):
+  File "%USERPROFILE%\AppData\Local\Temp\hpc-client-gui-r14-debug-20261118\repo\tests\wx_terminal_webview_support.py", line 46 in _wait_for_ready
+  File "%USERPROFILE%\AppData\Local\Temp\hpc-client-gui-r14-debug-20261118\repo\tests\test_wx_terminal_webview_bridge_closeprobe.py", line 112 in test_wx_terminal_external_navigation_blocked_closeprobe
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\python.py", line 167 in pytest_pyfunc_call
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_callers.py", line 121 in _multicall
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_manager.py", line 120 in _hookexec
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_hooks.py", line 512 in __call__
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\python.py", line 1707 in runtest
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\runner.py", line 184 in pytest_runtest_call
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_callers.py", line 121 in _multicall
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_manager.py", line 120 in _hookexec
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_hooks.py", line 512 in __call__
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\runner.py", line 250 in <lambda>
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\runner.py", line 361 in from_call
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\runner.py", line 249 in call_and_report
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\runner.py", line 139 in runtestprotocol
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\runner.py", line 118 in pytest_runtest_protocol
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_callers.py", line 121 in _multicall
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_manager.py", line 120 in _hookexec
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_hooks.py", line 512 in __call__
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\main.py", line 408 in pytest_runtestloop
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_callers.py", line 121 in _multicall
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_manager.py", line 120 in _hookexec
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_hooks.py", line 512 in __call__
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\main.py", line 384 in _main
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\main.py", line 330 in wrap_session
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\main.py", line 377 in pytest_cmdline_main
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_callers.py", line 121 in _multicall
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_manager.py", line 120 in _hookexec
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\pluggy\_hooks.py", line 512 in __call__
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\config\__init__.py", line 229 in _main
+  File "%USERPROFILE%\AppData\Roaming\Python\Python314\site-packages\_pytest\config\__init__.py", line 201 in main
+  File "%USERPROFILE%\AppData\Local\Temp\hpc-client-gui-r14-closeprobe-20261118\closeprobe_runner.py", line 16 in <module>
+
+Current thread's C stack trace (most recent call first):
+  <cannot get C stack on this system>

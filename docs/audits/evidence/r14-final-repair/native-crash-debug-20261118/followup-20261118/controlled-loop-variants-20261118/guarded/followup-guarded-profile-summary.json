@@ -1,0 +1,8 @@
+{
+  "source_snapshot_sha256": "0b45fac5182937d28024ae203a9ffff205c4ae6e73fc1f16fd95a689accf2e87",
+  "environment": {"host": "Kole Windows11-New", "session_id": 1, "python": "3.14.7", "backend": "wx WebView2"},
+  "guarded_tick_sequence": {"runs": 5, "exit_codes": [-1073740940, -1073740940, -1073740940, -1073740940, -1073741819], "interpretation": {"0xC0000374": 4, "0xC0000005": 1}, "summary": "5/5 native crashes; state.closed guard did not remove failure"},
+  "guarded_tick_logging_sequence": {"runs": 3, "exit_codes": [-1073741819, 0, 0], "summary": "1 access violation, 2 passes; both passing runs recorded open=0 and closed=0 tick callbacks; callback/timer hypothesis unsupported by this sample"},
+  "webview2_process_inventory": {"observed_count": 12, "session_id": 1, "parent_groups": [{"parent": "SearchHost.exe", "count": 6, "observed_start": "2026-11-11", "profile_hash": "ce90809ac06dc263fabe947f111cc68ef52474510712cc50d0cdf0b1d140f0fa"}, {"parent": "pre-existing W65 Python process", "count": 6, "observed_start": "2026-11-12", "profile_hash": "62006f4dcc59b689e5daf6858a4b00334362898b4130863f0dd199e3b73cf7b7"}], "expected_default_profile_hash": "fd56665f75dd1762ea5fe158046280d8290874211127961fe504aaa11e80d021", "matches_expected_default_profile": false, "caveat": "Paths were hashed in memory and not recorded. No conclusion about profile collision beyond non-match to the expected default path."},
+  "cleanup": {"owned_scheduled_tasks_remaining": 0, "owned_processes_remaining": 0, "wer_local_dumps_setting_present": false, "owned_temp_directory_present": false, "owned_probe_scripts_remaining": 0, "unrelated_webview_processes_terminated": false}
+}

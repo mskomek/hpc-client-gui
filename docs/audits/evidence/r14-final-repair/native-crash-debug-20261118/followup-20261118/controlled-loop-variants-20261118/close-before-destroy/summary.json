@@ -1,0 +1,18 @@
+{
+  "source_snapshot_sha256": "0b45fac5182937d28024ae203a9ffff205c4ae6e73fc1f16fd95a689accf2e87",
+  "runs": 5,
+  "exit_codes": [
+    -1073741819,
+    -1073740940,
+    -1073740940,
+    -1073740940,
+    -1073740940
+  ],
+  "exception_counts": {
+    "0xC0000005": 1,
+    "0xC0000374": 4
+  },
+  "outcome": "All five runs crashed while _wait_for_ready dispatched the WebView event loop; explicit panel.close() occurs after successful readiness and was not reached, so this probe cannot assess teardown behavior.",
+  "cleanup_lines_changed_in_temporary_copy": true,
+  "production_source_changed": false
+}
