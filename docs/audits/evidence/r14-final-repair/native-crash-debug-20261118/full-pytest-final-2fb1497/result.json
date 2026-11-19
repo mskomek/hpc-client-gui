@@ -1,0 +1,17 @@
+{
+    "source_commit":  "2fb1497527ed05dd2dd66e3d31c43d4743afb6d1",
+    "source_tree":  "36b64c56e6ee865857a99a5294f0759654ea049c",
+    "launcher_pid":  9956,
+    "launcher_session":  1,
+    "pytest_pid":  2364,
+    "pytest_session":  1,
+    "exit_code":  0,
+    "wheel_sha256":  "c9c4b7a533c8ffe4551bd2c665420bc1e4c7cccf3cccbcb9d802ea3665c8df1f",
+    "status":  "COMPLETED",
+    "runner_pid":  1832,
+    "runner_session":  1,
+    "started_local":  "2026-11-19T10:41:13.7210494+03:00",
+    "wrapper_exit_code":  0,
+    "duration_seconds":  1120.837,
+    "finished_local":  "2026-11-19T10:59:54.5773690+03:00"
+}

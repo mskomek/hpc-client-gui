@@ -1,0 +1,28 @@
+{
+  "collected": 4012,
+  "overlays": {
+    "tests/test_qt_wx_collection_order.py": "63bedb59280ea941fc0815e93e50e979a6dd44db339eeaf02574f5165717ad0b",
+    "tests/support/qt_wx_ordering.py": "7d6246b25023d405a752011a01367a81702afcd7e8972fbd8134eacddfdcc5c5",
+    "tests/wx_terminal_webview_support.py": "972c9f3d0c313a473fab4e2421f0c39c725c37bd1b51ee9a8e0bd49ab99d59ad",
+    "tests/test_w11_ssh_lifecycle.py": "7e63896f5fd69a66491abe63f4043874ced3c1d5b97309bc7a0060dfac8c5f78",
+    "tests/conftest.py": "9822feaa5c7bf66903d86f3da29041df14af33e97d7a63d27ca4a104aaae5a687",
+    "docs/v2/V2_MAIN_TO_DEVELOP_CHANGE_LEDGER.md": "4172f928d0d0c8cdb2f7689cb3c51d786cea082509ee7e5f1922327ba9f4d525"
+  },
+  "failed": 0,
+  "source_commit": "2fb1497527ed05dd2dd66e3d31c43d4743afb6d1",
+  "python": "3.14.7",
+  "test_environment": "Kole Windows11-New, interactive Session 1",
+  "passed": 3936,
+  "pytest": "9.1.1",
+  "subtests_passed": 29,
+  "source_tree": "36b64c56e6ee865857a99a5294f0759654ea049c",
+  "historical_gui_source_commit": "3a7294079b992d3ddcabc349bbeadf6988312b64",
+  "exit_code": 0,
+  "skipped": 47,
+  "junit_duration_seconds": 1117.863,
+  "historical_gui_zip_sha256": "59A1B3CA5A3A8B4013260D90B5501E0399B3816319521591A02E50C984352771",
+  "errors": 0,
+  "wheel_sha256": "c9c4b7a533c8ffe4551bd2c665420bc1e4c7cccf3cccbcb9d802ea3665c8df1f",
+  "pytest_duration_seconds": 1117.92,
+  "historical_gui_fixture_commit": "c59e536e14ac09a0432bb8421a717ad518a684e9"
+}

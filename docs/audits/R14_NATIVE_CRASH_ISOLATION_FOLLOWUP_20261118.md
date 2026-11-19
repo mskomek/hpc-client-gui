@@ -133,3 +133,32 @@ The R14 diagnosis used Tailscale-backed SSH/SCP to retrieve Kole's logs. No push
 
 **Current verdict:** W11 lifecycle regression repaired and repeatedly verified; artifact-focused checks PASS; full pytest FAIL due five absent historical GUI audit fixtures; native C++ crash root cause OPEN; GitHub delivery remains blocked on the required full-suite acceptance and remaining native diagnosis.
 
+## 2026-11-19 final regression closeout
+
+This section supersedes the preceding full-suite FAIL statements. It records the final run on the corrected historical fixture and the exact committed source identified below. Earlier outcomes remain in this report as historical diagnostics.
+
+### Historical GUI audit fixture and focused failures
+
+The five screenshot-audit failures were caused by the test snapshot missing the authentic historical fixture. The recovered archive is from GUI audit follow-up commit `c59e536e14ac09a0432bb8421a717ad518a684e9`; its manifest records product source commit `3a7294079b992d3ddcabc349bbeadf6988312b64`, marks the evidence `historical`, and its screenshots match the recorded hashes. The archive SHA-256 is `59A1B3CA5A3A8B4013260D90B5501E0399B3816319521591A02E50C984352771`. The earlier capture commit `598352492a329dcf0379fceffd402117f2af4fb0` predates the manifest's historical-status amendment and was not used as the final fixture. No screenshot or manifest was fabricated.
+
+With the corrected fixture, the GUI audit module passed **5/5** in Kole Session 1. The report-reference issue was corrected in commit `2fb1497527ed05dd2dd66e3d31c43d4743afb6d1` by linking the tracked wheel summary JSON rather than an ignored build directory. The W31 wheel test's earlier `PermissionError` was an artifact ACL issue: the wheel was rebuilt from the same source commit in the task-owned temp area and read access was granted only to the test account for that temporary file. Focused docs-reference and W31 checks then passed **2/2**. Wheel SHA-256: `c9c4b7a533c8ffe4551bd2c665420bc1e4c7cccf3cccbcb9d802ea3665c8df1f`.
+
+### Integrated full pytest
+
+The final run used Kole Windows11-New's interactive Session 1, Python 3.14.7 and pytest 9.1.1. The test source was commit `2fb1497527ed05dd2dd66e3d31c43d4743afb6d1` (Git tree `36b64c56e6ee865857a99a5294f0759654ea049c`) plus the exact worktree overlays listed in `source-identity.json`.
+
+- Collected: **4,012**; passed: **3,936**; failed: **0**; errors: **0**; skipped: **47**; passing subtests: **29**.
+- Pytest summary duration: **1,117.92 s** (18:37); JUnit duration: **1,117.863 s**.
+- Persisted pytest exit code: **0**; wrapper exit code: **0**.
+- The run's launcher, runner and pytest process were all recorded in Windows Session 1. JUnit hostname is `Windows11-New` and records zero failures/errors.
+
+Complete sanitized stdout/stderr, JUnit XML, process result, timestamps, source identity, focused GUI/W31 results, wheel build log, and `SHA256SUMS.txt` are retained in [full-pytest-final-2fb1497](evidence/r14-final-repair/native-crash-debug-20261118/full-pytest-final-2fb1497/). The 47 skips are pytest-reported skips; this run did not add skips or alter assertions. This is an integrated full-suite **PASS** for the recorded source plus overlays, rather than a sum of partitioned results.
+
+### Remaining status
+
+- The full suite did not reproduce a native crash. The previously observed wx/WebView native access violations still have no captured dump or native C++ stack, so their root cause remains **OPEN**; the full-suite pass does not prove that the intermittent native defect is fixed.
+- The actual X11 acceptance remains the historical R13/R10 evidence and was not rerun in this regression closeout.
+- GitHub was not updated: no push, PR edit, or merge occurred. No product runtime change was made in this closeout; commit `2fb1497` is the report-link correction.
+
+**Updated verdict:** final integrated pytest **PASS** on the source/overlay identity above; historical GUI audit and W31 focused checks **PASS**; native C++ crash root cause **OPEN**; X11 evidence unchanged; GitHub delivery remains pending the separately required native diagnosis and repository delivery steps.
+
