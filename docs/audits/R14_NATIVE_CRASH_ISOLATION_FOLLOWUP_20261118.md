@@ -127,8 +127,9 @@ The complete W11 lifecycle module then passed in five fresh Kole Session 1 proce
 
 ### Final-source artifact-focused checks
 
-A wheel built from commit `48d5f54` completed successfully (SHA-256 `6294946ca07fc2e54c6f82d79d104472c46246abcfa7ef46e996238fe052fd96`). Three focused checks passed against it: W31 package resource, W61.1 historical CLI repair receipt, and the wx A11Y audit document (3 passed, exit 0). Build and test outputs are retained under [wheel-build-final-48d5](evidence/r14-final-repair/native-crash-debug-20261118/wheel-build-final-48d5/) and [artifact-isolation-final-48d5](evidence/r14-final-repair/native-crash-debug-20261118/artifact-isolation-final-48d5/). These focused passes do not alter the full-suite FAIL above.
+A wheel built from commit `48d5f54` completed successfully (SHA-256 `6294946ca07fc2e54c6f82d79d104472c46246abcfa7ef46e996238fe052fd96`). Three focused checks passed against it: W31 package resource, W61.1 historical CLI repair receipt, and the wx A11Y audit document (3 passed, exit 0). Build and test outputs are retained under [wheel-build-final-48d5-summary.json](evidence/r14-final-repair/native-crash-debug-20261118/wheel-build-final-48d5-summary.json) and [artifact-isolation-final-48d5](evidence/r14-final-repair/native-crash-debug-20261118/artifact-isolation-final-48d5/). These focused passes do not alter the full-suite FAIL above.
 
 The R14 diagnosis used Tailscale-backed SSH/SCP to retrieve Kole's logs. No push or merge was performed. The earlier ProcDump approval was used only for the previously documented owned-process attempts; those attempts produced no dump. No unrelated process was terminated.
 
 **Current verdict:** W11 lifecycle regression repaired and repeatedly verified; artifact-focused checks PASS; full pytest FAIL due five absent historical GUI audit fixtures; native C++ crash root cause OPEN; GitHub delivery remains blocked on the required full-suite acceptance and remaining native diagnosis.
+
