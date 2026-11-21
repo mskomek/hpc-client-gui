@@ -19,15 +19,45 @@ def install_main_frame_exit_policy(wx, app, frame) -> None:
     """
     app.SetExitOnFrameDelete(True)
     exit_queued = False
+    try:
+        main_frame_id = frame.GetId()
+    except Exception:
+        main_frame_id = None
+
+    def destroyed_main_frame(event) -> bool:
+        # wxGTK can emit the same native frame as a fresh wx.TopLevelWindow
+        # Python wrapper. Identity alone fails (observed in native W19); do
+        # NOT use C++ wrapper equality during destruction.
+        try:
+            destroyed = event.GetWindow()
+        except (AttributeError, RuntimeError):
+            destroyed = None
+        if destroyed is frame:
+            return True
+        if destroyed is None:
+            try:
+                destroyed = event.GetEventObject()
+            except (AttributeError, RuntimeError):
+                destroyed = None
+        if destroyed is None or main_frame_id is None:
+            return False
+        top_level = getattr(wx, "TopLevelWindow", None)
+        if top_level is None or not isinstance(destroyed, top_level):
+            return False
+        try:
+            # Match only an unparented top-level frame with the cached native
+            # ID. A child WebView destroy event must never end the wx loop.
+            return (
+                destroyed.GetId() == main_frame_id
+                and destroyed.GetParent() is None
+            )
+        except (AttributeError, RuntimeError):
+            return False
 
     def on_destroyed(event):
         nonlocal exit_queued
         try:
-            try:
-                destroyed = event.GetWindow()
-            except (AttributeError, RuntimeError):
-                destroyed = None
-            if destroyed is frame and not exit_queued:
+            if destroyed_main_frame(event) and not exit_queued:
                 try:
                     wx.CallAfter(app.ExitMainLoop)
                 except Exception as exc:
