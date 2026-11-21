@@ -21,7 +21,7 @@ import time
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-_LAST_TEST = re.compile(r"^tests[/\\].+::test_[^\\r\\n]*", re.MULTILINE)
+_LAST_TEST = re.compile(r"^tests[/\\].+::test_[^\r\n]*", re.MULTILINE)
 
 
 def _git_sha() -> str:
@@ -117,7 +117,7 @@ def run(label: str, output: Path, seconds: int, selections: list[str]) -> int:
                 _stop_owned_tree(proc)
                 rc = proc.poll()
         except OSError as exc:
-            stdout.write(f"LAUNCH_FAILED:{type(exc).__name__}\\n".encode("utf-8"))
+            stdout.write(f"LAUNCH_FAILED:{type(exc).__name__}\n".encode("utf-8"))
     duration = round(time.monotonic() - started, 2)
     raw = log.read_bytes()
     contents = raw.decode("utf-8", errors="replace")
@@ -128,8 +128,19 @@ def run(label: str, output: Path, seconds: int, selections: list[str]) -> int:
         status = "NATIVE_SIGNAL"
     elif rc in (133, 3221225477, 3221226505, 3221225725):
         status = "ABNORMAL_EXIT"
+    elif "--collect-only" in selections and rc == 0:
+        collected_match = re.search(
+            r"(\\d+) (?:test(?:s)?|item(?:s)?) collected", contents
+        )
+        status = "COLLECTED" if collected_match else "COLLECTION_INCOMPLETE"
     elif rc == 0 and junit_receipt["complete"]:
-        status = "PASS" if junit_receipt["counts"]["skipped"] == 0 else "PASS_WITH_SKIPS"
+        counts = junit_receipt["counts"]
+        if counts["tests"] == counts["skipped"]:
+            status = "SKIPPED_ONLY"
+        elif counts["skipped"] > 0:
+            status = "PASS_WITH_SKIPS"
+        else:
+            status = "PASS"
     else:
         status = "FAIL_OR_INCOMPLETE"
     receipt = {
@@ -147,14 +158,15 @@ def run(label: str, output: Path, seconds: int, selections: list[str]) -> int:
         "returncode_unsigned_32": None if rc is None else rc & 0xFFFFFFFF,
         "log_sha256": hashlib.sha256(raw).hexdigest(),
         "junit": junit_receipt,
+        "collected_count": int(collected_match.group(1)) if status == "COLLECTED" else None,
         "last_started_tests": _LAST_TEST.findall(contents)[-8:],
     }
     path = output / f"{label}.receipt.json"
-    path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
+    path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(receipt, indent=2, sort_keys=True), flush=True)
     # Skips must not be misreported as native acceptance, but they are
     # legitimate for collection-only and platform-guarded tests.
-    return 0 if status in {"PASS", "PASS_WITH_SKIPS"} else 1
+    return 0 if status in {"PASS", "PASS_WITH_SKIPS", "COLLECTED"} else 1
 
 
 def main() -> int:
