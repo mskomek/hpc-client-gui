@@ -162,6 +162,16 @@ jobs:
           python scripts/v2_native_suite_runner.py --label windows-fresh-profile --output $env:V2_EVIDENCE --timeout-seconds 180 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
           $fresh = $LASTEXITCODE
           $env:WEBVIEW2_USER_DATA_FOLDER = $originalProfile
+          # Exact first ten tests: lifecycle, static bridge assets, then ready.
+          # The shorter lifecycle+ready prefix previously passed.
+          python scripts/v2_native_suite_runner.py --label windows-assets-prefix --output $env:V2_EVIDENCE --timeout-seconds 180 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_assets_are_local_and_vendored tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
+          $assetsPrefix = $LASTEXITCODE
+          # Only the profile changes; retain the entire original three-module
+          # order and a distinct data directory for each experiment.
+          $env:WEBVIEW2_USER_DATA_FOLDER = Join-Path $env:V2_EVIDENCE "trio-fresh-edge-profile"
+          python scripts/v2_native_suite_runner.py --label windows-full-trio-fresh --output $env:V2_EVIDENCE --timeout-seconds 240 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py tests/test_wx_terminal_native_teardown_contracts.py
+          $freshTrio = $LASTEXITCODE
+          $env:WEBVIEW2_USER_DATA_FOLDER = $originalProfile
           "source_sha=$(git rev-parse HEAD)" | Out-File -Encoding utf8 (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
           "webview_exit=$result" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
           "isolated_exit=$isolated" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
@@ -169,7 +179,9 @@ jobs:
           "lifecycle_prefix_exit=$prefix" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
           "last_lifecycle_pair_exit=$pair" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
           "fresh_profile_exit=$fresh" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
-          foreach ($name in @("windows-webview-source","windows-webview-isolated","windows-webview-remainder","windows-lifecycle-prefix","windows-last-lifecycle-pair","windows-fresh-profile")) {
+          "assets_prefix_exit=$assetsPrefix" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          "full_trio_fresh_exit=$freshTrio" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          foreach ($name in @("windows-webview-source","windows-webview-isolated","windows-webview-remainder","windows-lifecycle-prefix","windows-last-lifecycle-pair","windows-fresh-profile","windows-assets-prefix","windows-full-trio-fresh")) {
             $log = Join-Path $env:V2_EVIDENCE "$name.stdout.log"
             if (Test-Path $log) { Get-Content $log -Tail 25 }
           }
