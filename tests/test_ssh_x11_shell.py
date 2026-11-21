@@ -255,3 +255,17 @@ def test_x11_transport_inspection_failure_closes_forwarder(monkeypatch):
         )
     assert ("forwarder-close",) in events
 
+def test_x11_unavailable_is_non_retryable_at_connection_boundary(monkeypatch):
+    info = SSHConnInfo("host", 22, x11_forwarding=True)
+    wrapper = ssh_client.SSHClientWrapper(info)
+    captured = []
+
+    def fake_retry(_connect, *, attempts, on_retry, non_retryable):
+        captured.append(non_retryable)
+        raise X11Unavailable("local SECURITY extension missing")
+
+    monkeypatch.setattr(ssh_client, "retry_connection", fake_retry)
+    with pytest.raises(X11Unavailable, match="SECURITY"):
+        wrapper.connect(info)
+    assert captured and X11Unavailable in captured[0]
+
