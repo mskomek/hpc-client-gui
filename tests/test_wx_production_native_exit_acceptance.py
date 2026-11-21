@@ -34,7 +34,12 @@ def test_production_native_destroy_event_exits_real_webview_mainloop():
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
         from hpc_gui.wx_shell_smoke_finalize import _frame_destroyed
 
-        app = wx.App(False)
+        class AppWithExitEvidence(wx.App):
+            def ExitMainLoop(self):
+                print("POLICY: ExitMainLoop_called", flush=True)
+                return super().ExitMainLoop()
+
+        app = AppWithExitEvidence(False)
         frame = wx.Frame(None, title="production-exit-policy-webview", size=(840, 540))
         panel = WxTerminalWebViewPanel(frame)
         assert panel._webview is not None, "WebView backend unavailable"
@@ -93,7 +98,11 @@ def test_production_native_destroy_event_exits_real_webview_mainloop():
             )
             event.Skip()
 
-        frame.Bind(wx.EVT_WINDOW_DESTROY, trace_destroy)
+        # The application policy owns the sole native destroy-event handler.
+        # A second Bind here can change wxGTK dispatch order and mask the
+        # callback being diagnosed; trace_destroy remains documented above.
+        # The previous diagnostic run proved its source is a TopLevelWindow
+        # alias with the cached main-frame ID and no parent.
 
         def close(event):
             if event.GetVeto():
