@@ -45,13 +45,23 @@ def install_main_frame_exit_policy(wx, app, frame) -> None:
         if top_level is None or not isinstance(destroyed, top_level):
             return False
         try:
-            # Match only an unparented top-level frame with the cached native
-            # ID. A child WebView destroy event must never end the wx loop.
-            return (
-                destroyed.GetId() == main_frame_id
-                and destroyed.GetParent() is None
-            )
+            # wx assigns a unique native window ID at creation. Cache the
+            # frame's ID while it is still valid: frame.GetId() itself can
+            # fail after native wxGTK teardown.
+            if destroyed.GetId() != main_frame_id:
+                return False
         except (AttributeError, RuntimeError):
+            return False
+        try:
+            # Reject owned top-level windows while their wrapper is live.
+            # On wxGTK the destroy-event wrapper may already have a deleted
+            # C++ parent; GetParent() then raises RuntimeError, even though
+            # its native ID remains readable. Do not reject the main frame
+            # solely because parent lookup is no longer possible.
+            return destroyed.GetParent() is None
+        except RuntimeError:
+            return True
+        except AttributeError:
             return False
 
     def on_destroyed(event):
