@@ -116,7 +116,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path $env:V2_EVIDENCE | Out-Null
-          python scripts/v2_native_suite_runner.py --label windows-webview-source --output $env:V2_EVIDENCE --timeout-seconds 300 -- tests/test_wx_terminal_webview_bridge.py tests/test_wx_webview_native_retry.py
+          python scripts/v2_native_suite_runner.py --label windows-webview-source --output $env:V2_EVIDENCE --timeout-seconds 300 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py tests/test_wx_terminal_native_teardown_contracts.py
           $result = $LASTEXITCODE
           "source_sha=$(git rev-parse HEAD)" | Out-File -Encoding utf8 (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
           "webview_exit=$result" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
