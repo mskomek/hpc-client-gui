@@ -117,12 +117,24 @@ jobs:
             > .tmp/w19-native/production-hang-gdb.log 2>&1
           hang_gdb_rc=$?
           echo "production_hang_gdb_exit=$hang_gdb_rc" >> .tmp/w19-native/identity.txt
-          if grep -q 'Program received signal SIGALRM' .tmp/w19-native/production-hang-gdb.log \
-            && grep -q 'Thread ' .tmp/w19-native/production-hang-gdb.log; then
+          if grep -qE 'received signal SIGALRM' .tmp/w19-native/production-hang-gdb.log \
+            && grep -q 'Thread 1 (' .tmp/w19-native/production-hang-gdb.log; then
             echo "production_hang_backtrace=CAPTURED" >> .tmp/w19-native/identity.txt
           else
             echo "production_hang_backtrace=NOT_CAPTURED" >> .tmp/w19-native/identity.txt
           fi
+          # A/B probe: preserve the wx error text via stderr instead of
+          # wxLogGui's invisible modal wxMessageDialog. It is diagnostic only;
+          # a successful probe does not override the existing red native tests.
+          timeout --signal=TERM --kill-after=5s 30s \
+            dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            env HPC_GUI_DIAG_WX_LOG_STDERR=1 \
+            python scripts/diagnose_wx_native_close_gdb.py \
+            > .tmp/w19-native/stderr-log-ab.log 2>&1
+          stderr_log_ab_rc=$?
+          echo "stderr_log_ab_exit=$stderr_log_ab_rc" >> .tmp/w19-native/identity.txt
+          echo '=== redirected wx log A/B probe ==='
+          tail -n 70 .tmp/w19-native/stderr-log-ab.log
           echo '=== production-native hung-stack summary ==='
           grep -E 'GDB_PROBE:|Program received signal|wxEventLoop|gtk_main|g_main|webkit|WebKit|Thread ' \
             .tmp/w19-native/production-hang-gdb.log | head -n 100 || true
