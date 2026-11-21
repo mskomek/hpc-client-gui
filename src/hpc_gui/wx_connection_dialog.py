@@ -106,6 +106,13 @@ class WxConnectionDialog(
         self.rb_prompt_edit_only.SetLabel(t("connection.password_no_prompt"))
         self.rb_prompt_edit_only.SetToolTip(t("connection.password_no_prompt_tip"))
         self.cb_save_password.SetLabel(t("login.save_password"))
+        x11_option = getattr(self, "cb_x11", None)
+        if x11_option is not None:
+            x11_option.SetLabel(t("login.x11_enable"))
+        trusted_option = getattr(self, "cb_x11_trusted", None)
+        if trusted_option is not None:
+            trusted_option.SetLabel(t("login.x11_trusted"))
+            trusted_option.SetToolTip(t("login.x11_trusted_tip"))
         self.cluster_toggle.SetLabel(
             f"{t('connection.system_settings')}  {'▼' if self.cluster_toggle.GetValue() else '▶'}"
         )
