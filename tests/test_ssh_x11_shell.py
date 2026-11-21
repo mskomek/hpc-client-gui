@@ -9,8 +9,13 @@ import pytest
 from hpc_gui.ssh import client as ssh_client
 from hpc_gui.ssh import x11_shell
 from hpc_gui.ssh.contracts import SSHConnInfo
+from hpc_gui.ssh.errors import X11Unavailable
 
 pytestmark = pytest.mark.unit
+
+
+def test_x11_unavailable_contract_is_public_from_composition():
+    assert x11_shell.X11Unavailable is X11Unavailable
 
 
 class _Channel:

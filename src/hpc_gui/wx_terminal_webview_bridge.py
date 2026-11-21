@@ -86,98 +86,27 @@ class TerminalBridgeMixin:
             height=height,
             shown=shown,
         )
-        self._update_accessibility_label(defer_sync=True)
+        self._update_accessibility_label()
         try:
             event.Skip()
         except Exception:
             pass
 
-    def _update_accessibility_label(self, *, defer_sync: bool = False) -> None:
+    def _update_accessibility_label(self) -> None:
         webview = getattr(self, "_webview", None)
         if webview is None:
             return
         label = t("login.terminal_accessible_name")
         try:
             webview.SetName(label)
-            webview.SetAccessibleName(label)
         except Exception:
             pass
-        if not getattr(self, "_page_loaded", True):
-            return
-        run_script_async = getattr(webview, "RunScriptAsync", None)
-        script = (
-            "const terminal = document.getElementById('terminal');"
-            f"if (terminal) terminal.setAttribute('aria-label', {json.dumps(label, ensure_ascii=False)});"
-        )
-
-        def run_sync() -> None:
-            if getattr(self, "_closed", False) or getattr(self, "_webview", webview) is not webview:
-                return
-            try:
-                if webview.IsBeingDeleted():
-                    return
-            except (AttributeError, RuntimeError):
-                pass
-            run_script = getattr(webview, "RunScript", None)
-            if callable(run_script):
-                try:
-                    run_script(script)
-                except Exception:
-                    pass
-
-        if not callable(run_script_async):
-            # Some wx backends expose only synchronous RunScript. It is safe
-            # for later language changes, but must leave EVT_WEBVIEW_LOADED
-            # before entering the native renderer event pump.
-            if defer_sync:
-                try:
-                    import wx
-
-                    wx.CallAfter(run_sync)
-                except Exception:
-                    pass
-                return
-            run_sync()
-            return
-
-        def update_dom_label() -> None:
-            if getattr(self, "_closed", False) or getattr(self, "_webview", webview) is not webview:
-                return
-            try:
-                if webview.IsBeingDeleted():
-                    return
-            except (AttributeError, RuntimeError):
-                pass
-            try:
-                # The async API queues work without re-entering the native
-                # renderer event pump used by EVT_WEBVIEW_LOADED.
-                run_script_async(script)
-            except Exception:
-                # If an async method exists but is unavailable at runtime,
-                # use the synchronous API only after the loaded event ends.
-                try:
-                    import wx
-
-                    wx.CallAfter(run_sync)
-                except Exception:
-                    pass
-
         try:
-            import wx
-
-            if wx.GetApp() is not None and isinstance(webview, wx.Window):
-                # Loaded/language events normally arrive on wx's UI thread.
-                # Calling CallAfter here creates a stale native callback if a
-                # parent is destroyed before the queued script runs.
-                is_main_thread = getattr(wx, "IsMainThread", None)
-                if callable(is_main_thread) and is_main_thread():
-                    update_dom_label()
-                    return
-                wx.CallAfter(update_dom_label)
-                return
+            set_accessible_name = getattr(webview, "SetAccessibleName", None)
+            if callable(set_accessible_name):
+                set_accessible_name(label)
         except Exception:
             pass
-        update_dom_label()
 
     def _on_error(self, event):
         # wxWidgets emits ERROR after its native WebView2 create callback
@@ -242,7 +171,9 @@ class TerminalBridgeMixin:
             except Exception:
                 pass
             import wx
-            wx.CallLater(300, self._retry_webview_creation, True)
+            self._native_retry_timer = wx.CallLater(
+                300, self._retry_webview_creation, True
+            )
         try:
             event.Skip()
         except Exception:
@@ -400,6 +331,7 @@ class TerminalBridgeMixin:
         the old control leaves the layout before the new one exists and the
         generation is bumped.
         """
+        self._native_retry_timer = None
         self._native_retry_scheduled = False
         try:
             if self._closed or self._ready:

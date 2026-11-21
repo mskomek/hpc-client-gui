@@ -422,6 +422,7 @@
   },
   "dirs": {
     "refresh": "Yenile",
+    "more_actions": "Diğer işlemler",
     "back": "Geri",
     "forward": "İleri",
     "up": "Üst Dizin",

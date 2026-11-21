@@ -1,0 +1,11 @@
+predecessor_1=0
+predecessor_2=0
+predecessor_3=0
+predecessor_4=0
+predecessor_5=0
+predecessor_6=0
+predecessor_7=0
+predecessor_8=0
+predecessor_9=0
+predecessor_10=0
+webview_bridge=0

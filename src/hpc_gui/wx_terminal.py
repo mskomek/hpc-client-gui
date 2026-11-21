@@ -53,15 +53,57 @@ def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None, li
         frame.SetTitle(t("help.section_terminal"))
     subscribe_language_change(refresh_labels)
     def close(_event=None):
+        if getattr(frame, "_wx_terminal_close_completed", False):
+            if _event is not None:
+                try:
+                    _event.Veto()
+                except Exception:
+                    pass
+            return
+        pending_native = False
         try:
-            panel._wx_terminal_close()
+            callback = (getattr(panel, "_wx_terminal_parent_close", None)
+                        or getattr(panel, "_wx_terminal_close", None))
+            pending_native = bool(callback()) if callable(callback) else False
         except Exception:
             pass
+        frame._wx_terminal_close_pending = pending_native
         try:
             unsubscribe_language_change(refresh_labels)
         except Exception:
             pass
-        frame.Destroy()
+        if pending_native:
+            frame._wx_terminal_close_scheduled = True
+            frame._wx_terminal_close_completed = True
+            if _event is not None:
+                try:
+                    _event.Veto()
+                except Exception:
+                    pass
+
+            def destroy_after_native_callback_window():
+                frame._wx_terminal_destroy_timer = None
+                if getattr(frame, "_wx_terminal_frame_destroy_started", False):
+                    return
+                try:
+                    if frame.IsBeingDeleted():
+                        return
+                except AttributeError:
+                    pass
+                except RuntimeError:
+                    return
+                frame._wx_terminal_frame_destroy_started = True
+                try:
+                    frame.Destroy()
+                except RuntimeError:
+                    pass
+
+            frame._wx_terminal_destroy_timer = wx.CallLater(
+                350, destroy_after_native_callback_window
+            )
+        else:
+            frame._wx_terminal_close_completed = True
+            frame.Destroy()
     frame.Bind(wx.EVT_CLOSE, close)
     frame._wx_terminal_panel = panel
     frame._wx_terminal_controls = panel._wx_terminal_controls

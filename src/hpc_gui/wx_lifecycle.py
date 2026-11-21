@@ -93,7 +93,16 @@ class WxLifecycleController:
                 continue
             outcome = {}
             worker = threading.Thread(target=self._run_cleanup, args=(cleanup, outcome), daemon=True)
-            worker.start()
+            try:
+                worker.start()
+            except Exception as exc:
+                complete = False
+                self.cleanup_failures.append({"callback": label, "error_type": type(exc).__name__})
+                continue
+            if worker.ident is None:
+                complete = False
+                self.cleanup_failures.append({"callback": label, "error_type": "ThreadNotStarted"})
+                continue
             worker.join(timeout=self.CLEANUP_TIMEOUT_S)
             if worker.is_alive():
                 complete = False

@@ -1,0 +1,10 @@
+exit_1=0
+exit_2=0
+exit_3=0
+exit_4=0
+exit_5=0
+exit_6=0
+exit_7=0
+exit_8=0
+exit_9=0
+exit_10=0

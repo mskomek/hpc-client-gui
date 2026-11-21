@@ -331,3 +331,59 @@ def test_shell_can_defer_terminal_panel_mount(monkeypatch):
     finally:
         frame.Destroy()
         wx.Yield()
+
+
+@pytest.mark.gui
+@pytest.mark.wx
+def test_queued_deferred_terminal_mount_is_ignored_after_shell_close(monkeypatch):
+    import hpc_gui.wx_terminal as terminal
+    from hpc_gui.wx_shell import create_shell_frame
+
+    scheduled = []
+    builds = []
+    activated = []
+
+    def build_panel(parent, *, ssh=None, lifecycle=None):
+        builds.append((parent, ssh, lifecycle))
+        return wx.Panel(parent)
+
+    monkeypatch.setattr(terminal, "build_terminal_panel", build_panel)
+    app = wx.App.Get() or wx.App(False)
+    ssh = _fake_ssh()
+    ssh.activate_shell_output = lambda: activated.append(True)
+    frame, lifecycle, session = create_shell_frame(
+        app,
+        tray_factory=lambda _parent: None,
+        session_state={"session": {"ssh": ssh}, "generation": 0},
+        defer_terminal_webview=True,
+    )
+    try:
+        page = frame._wx_shell_controls["pages"]["NAV-TERMINAL"]["page"]
+        notebook = frame._wx_shell_controls["notebook"]
+        monkeypatch.setattr(
+            wx, "CallAfter", lambda callback, *args: scheduled.append((callback, args))
+        )
+        frame.Show()
+        notebook.SetSelection(notebook.FindPage(page))
+        wx.Yield()
+        mount = next(
+            (callback, args)
+            for callback, args in scheduled
+            if getattr(callback, "__name__", "") == "mount_terminal"
+        )
+
+        frame.Close()
+        wx.Yield()
+        assert frame._wx_shell_close_started
+        assert lifecycle.shutdown_started
+        mount[0](*mount[1])
+
+        assert builds == []
+        assert activated == []
+        assert session["_embedded_terminal_panel"] is None
+    finally:
+        try:
+            frame.Destroy()
+        except RuntimeError:
+            pass
+        wx.Yield()

@@ -308,7 +308,9 @@ def test_25_second_gate_timeout_retains_evidence_and_fails(tmp_path, monkeypatch
         observed_timeout.append(timeout)
         # Preserve actual kill/reap and evidence production while keeping this
         # regression fast; the packaged-gate's requested deadline stays 25s.
-        return run_child(cmd, cwd=cwd, env=env, timeout=1)
+        # Allow a cold Python startup and the stub's evidence write to finish
+        # on slower Windows runners before exercising the timeout branch.
+        return run_child(cmd, cwd=cwd, env=env, timeout=5)
 
     monkeypatch.setattr(runner, "_run_child", accelerated_child)
     evidence = runner.run_packaged_smoke(artifact, "windows", output, timeout=25)

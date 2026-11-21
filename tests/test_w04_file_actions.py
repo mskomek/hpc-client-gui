@@ -7,7 +7,7 @@ import time
 import hpc_gui.wx_shell as wx_shell
 from hpc_gui.core.i18n import t
 from hpc_gui.core.i18n import load_language
-from w04_support_freeze_support import _MessageBoxCapture, _auto_cancel_native_selectors, _close_shell, wx
+from w04_support_freeze_support import _MessageBoxCapture, _auto_cancel_native_selectors, _close_shell, close_wx_app, wx
 
 
 @pytest.fixture(autouse=True)
@@ -23,15 +23,7 @@ def wx_app():
     if app is None:
         app = wx.App(False)
     yield app
-    for window in wx.GetTopLevelWindows():
-        try:
-            if window:
-                window.Destroy()
-        except Exception:
-            pass
-    app.ProcessPendingEvents()
-    wx.SafeYield()
-    app.Destroy()
+    close_wx_app(app)
 
 
 def test_local_delete__requires_explicit_destructive_confirm(wx_app, tmp_path, monkeypatch):

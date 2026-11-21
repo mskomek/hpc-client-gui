@@ -55,6 +55,7 @@ def test_wx_separator_lifecycle_offscreen():
     # Run real wx lifecycle in isolated subprocess to avoid Qt/wx App conflicts
     script = textwrap.dedent("""
         import sys
+        import time
         sys.path.insert(0, "src")
         try:
             import wx
@@ -211,9 +212,11 @@ def test_wx_separator_lifecycle_offscreen():
             import wx
             app = wx.GetApp()
             frame.Close()
-            app.ProcessPendingEvents()
-            wx.Yield()
-            app.ProcessPendingEvents()
+            deadline = time.monotonic() + 3
+            while time.monotonic() < deadline and wx.GetTopLevelWindows():
+                app.ProcessPendingEvents()
+                wx.SafeYield()
+                wx.MilliSleep(5)
             assert not wx.GetTopLevelWindows(), "wx top-level windows remain after frame teardown"
             app.Destroy()
             print("TEARDOWN_OK", flush=True)

@@ -1,0 +1,41 @@
+﻿task_name=CodexX11V45Win11NewGUIAcceptance
+started_local=2026-11-21T09:53:11.2648502+03:00
+completed_local=2026-11-21T09:55:23.9073927+03:00
+task_state=Ready
+last_task_result=0
+run_as=home
+interactive_session=1
+quser_at_start= USERNAME              SESSIONNAME        ID  STATE   IDLE TIME  LOGON TIME
+ home                  console             1  Active      none   11/20/2026 5:29 PM
+
+
+Folder: \
+HostName:                             WINDOWS11-NEW
+TaskName:                             \CodexX11V45Win11NewGUIAcceptance
+Next Run Time:                        N/A
+Status:                               Ready
+Logon Mode:                           Interactive only
+Last Run Time:                        11/21/2026 9:54:00 AM
+Last Result:                          0
+Author:                               WINDOWS11-NEW\home
+Task To Run:                          cmd.exe /d /c C:\Users\home\.tmp\hpc-client-gui\x11-final-develop-20261121\run_win11new_v45_acceptance.cmd
+Start In:                             N/A
+Comment:                              N/A
+Scheduled Task State:                 Enabled
+Idle Time:                            Disabled
+Power Management:                     Stop On Battery Mode, No Start On Batteries
+Run As User:                          home
+Delete Task If Not Rescheduled:       Disabled
+Stop Task If Runs X Hours and X Mins: 72:00:00
+Schedule:                             Scheduling data is not available in this format.
+Schedule Type:                        One Time Only
+Start Time:                           9:54:00 AM
+Start Date:                           11/21/2026
+End Date:                             N/A
+Days:                                 N/A
+Months:                               N/A
+Repeat: Every:                        Disabled
+Repeat: Until: Time:                  Disabled
+Repeat: Until: Duration:              Disabled
+Repeat: Stop If Still Running:        Disabled
+

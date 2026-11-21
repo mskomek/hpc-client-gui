@@ -6,6 +6,11 @@ controls accessible names and places focus in the search field when opened.
 macOS settings use the native Command bindings; terminal interrupt semantics
 remain distinct from file-copy shortcuts.
 
+The terminal is rendered by `wx.html2.WebView` with `xterm.js`; the older
+`wx.TextCtrl` and `EVT_CHAR` description does not describe the current V2
+terminal. Keyboard and screen-reader behavior inside the WebView still needs
+manual validation on each supported desktop.
+
 Keyboard smoke checklist:
 
 - Open Help and Settings from the menu/shortcut, confirm initial focus, then

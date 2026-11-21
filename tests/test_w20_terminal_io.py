@@ -19,6 +19,7 @@ wx = pytest.importorskip("wx")
 pytestmark = pytest.mark.wx
 
 from hpc_gui.wx_terminal_webview import _is_webview_available
+from support.wx_gui import wx_gui_subprocess_timeout
 
 
 def _run_subprocess_test(code_str, timeout=20):
@@ -30,7 +31,10 @@ def _run_subprocess_test(code_str, timeout=20):
     env["PYTHONPATH"] = "src"
     return subprocess.run(
         [sys.executable, "-c", code_str],
-        capture_output=True, text=True, timeout=timeout, env=env,
+        capture_output=True,
+        text=True,
+        timeout=wx_gui_subprocess_timeout(timeout),
+        env=env,
     )
 
 

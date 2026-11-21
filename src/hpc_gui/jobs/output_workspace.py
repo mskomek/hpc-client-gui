@@ -8,6 +8,7 @@ from threading import Lock, Thread
 from typing import Any, Callable
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
+from hpc_gui.jobs.native_window_identity import matches_wx_destroy_event
 from hpc_gui.services.job_failure_classifier import explain_job_failure
 from hpc_gui.services.job_provenance import JobProvenanceCapture
 from hpc_gui.services.job_tracking_controller import JobTrackingController
@@ -54,6 +55,47 @@ def _output_at_bottom(ctrl) -> bool:
         return maximum <= 0 or ctrl.GetScrollPos(wx.VERTICAL) >= maximum - 1
     except (AttributeError, RuntimeError, ImportError):
         return True
+
+
+def _stop_window_timer(wx, frame, timer, handler) -> None:
+    """Stop a detached output timer and remove its event binding."""
+    try:
+        timer.Stop()
+    except RuntimeError:
+        pass
+    try:
+        frame.Unbind(wx.EVT_TIMER, handler=handler, source=timer)
+    except (RuntimeError, TypeError):
+        pass
+    try:
+        timer.SetOwner(None)
+    except (AttributeError, RuntimeError, TypeError):
+        pass
+
+
+def _finalize_output_window(
+    *, wx, frame, timer, handler, state, state_lock, follower,
+    refresh_labels, on_closed,
+) -> bool:
+    """Release output-window resources once, for close or native destroy."""
+    with state_lock:
+        if state["closed"]:
+            return False
+        state["closed"] = True
+    if follower is not None:
+        follower.close()
+    _stop_window_timer(wx, frame, timer, handler)
+    unsubscribe_language_change(refresh_labels)
+    if callable(on_closed):
+        on_closed()
+    return True
+
+
+def _handle_output_window_destroy(event, frame, window_id, finalize) -> None:
+    """Apply direct-destroy cleanup for the matching native frame wrapper."""
+    if matches_wx_destroy_event(event, frame, window_id):
+        finalize()
+    event.Skip()
 
 
 class WxJobsModel:
@@ -194,6 +236,7 @@ def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=Non
     controls.Add(auto_scroll, 0, wx.ALIGN_CENTER_VERTICAL)
     root.Add(controls, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
     frame.SetSizer(root)
+    frame_id = frame.GetId()
     frame._wx_output_controls = {"output": output, "pause": pause, "auto_scroll": auto_scroll, "follower": follower}
     timer = wx.Timer(frame)
     state = {"closed": False, "in_flight": False, "at_bottom": True}
@@ -254,25 +297,30 @@ def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=Non
         _event.Skip()
 
     def closed(_event=None):
-        with state_lock:
-            if state["closed"]:
-                return
-            state["closed"] = True
-        if follower is not None:
-            follower.close()
-        timer.Stop()
-        unsubscribe_language_change(refresh_labels)
-        if callable(on_closed):
-            on_closed()
-        frame.Destroy()
+        if _finalize_output_window(
+            wx=wx, frame=frame, timer=timer, handler=refresh, state=state,
+            state_lock=state_lock, follower=follower,
+            refresh_labels=refresh_labels, on_closed=on_closed,
+        ):
+            frame.Destroy()
 
     def refresh_labels(_language=None):
         frame.SetTitle(f"{t('jobs.open_output')} {view.id if view else view_id}")
 
     frame._wx_output_refresh = refresh
     frame.Bind(wx.EVT_TIMER, refresh, timer)
+    def on_destroy(event):
+        _handle_output_window_destroy(
+            event, frame, frame_id, lambda: _finalize_output_window(
+                wx=wx, frame=frame, timer=timer, handler=refresh, state=state,
+                state_lock=state_lock, follower=follower,
+                refresh_labels=refresh_labels, on_closed=on_closed,
+            ),
+        )
+
     frame.Bind(wx.EVT_SIZE, resized)
     frame.Bind(wx.EVT_CLOSE, closed)
+    frame.Bind(wx.EVT_WINDOW_DESTROY, on_destroy)
     subscribe_language_change(refresh_labels)
     if lifecycle is not None:
         lifecycle.register_cleanup(closed)

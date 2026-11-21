@@ -15,6 +15,7 @@ from hpc_gui.wx_shell_teardown import build_shell_close_handler
 from hpc_gui.core.i18n import current_language, set_language, t
 from hpc_gui.wx_shell_window_support import (
     _make_tray, _restore_main_window_state, _save_main_window_state,
+    bind_display_bounds_on_show,
     _update_shell_status_text,
 )
 
@@ -35,8 +36,6 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     default_size, min_size = shell_sizes(wx)
     frame = wx.Frame(None, title=f"{t('app.title')} {__version__}", size=default_size)
     frame._wx_app = app
-    # Spec §3: recommended 1440×900 default, 1280×760 minimum; usable at ~1100×700 without clipping
-    frame.SetMinSize(wx.Size(*min_size))
     panel = wx.Panel(frame)
     root = wx.BoxSizer(wx.VERTICAL)
     menubar = wx.MenuBar()
@@ -175,7 +174,8 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
 
         def mount_terminal():
             nonlocal terminal_mounted
-            if (terminal_mounted or terminal_page.IsBeingDeleted()
+            if (terminal_mounted or getattr(frame, "_wx_shell_close_started", False)
+                    or lifecycle.shutdown_started or terminal_page.IsBeingDeleted()
                     or not terminal_page.IsShownOnScreen()):
                 return
             live_session = session_state.get("session") or {}
@@ -205,9 +205,12 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
             controls.update({"output": term_controls.get("output"), "panel": real_panel})
 
             def close_terminal():
-                callback = getattr(real_panel, "_wx_terminal_close", None) or getattr(real_panel, "close", None)
+                callback = (getattr(real_panel, "_wx_terminal_parent_close", None)
+                            or getattr(real_panel, "_wx_terminal_close", None)
+                            or getattr(real_panel, "close", None))
                 if callable(callback):
-                    callback()
+                    return callback()
+                return False
 
             terminal_page._wx_host_close = close_terminal
 
@@ -264,6 +267,11 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     root.Add(notebook, 1, wx.EXPAND | wx.ALL, 12)
     panel.SetSizer(root)
     frame.CreateStatusBar()
+    # Set the initial display-bounded minimum after adding native chrome. GTK
+    # recalculates its content minimum on first show, so a one-shot show hook
+    # reapplies the bound after native sizing completes.
+    frame.SetMinSize(wx.Size(*min_size))
+    frame.SetSize(wx.Size(*default_size))
     frame.SetStatusText(t("common.ready"))
 
     def refresh_labels(_language=None):
@@ -377,6 +385,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     menu = menu_menu
     command_items = []
     bind_notebook_native_repaint(wx, notebook)
+    from hpc_gui.wx_shell_notebook import bind_notebook_page_resize
+
+    bind_notebook_page_resize(wx, frame, notebook)
     frame._wx_shell_controls = {"menu": menu, "language_menu": language_menu, "language_items": language_items, "version_menu": version_menu, "notebook": notebook, "pages": page_controls}
     frame._wx_shell_chrome_windows = chrome_windows
     frame._wx_shell_shell_ref = shell_ref
@@ -468,6 +479,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
 
     frame.Bind(wx.EVT_CLOSE, close)
     frame._wx_shell_close = close
+    bind_display_bounds_on_show(wx, frame)
     _restore_main_window_state(wx, frame, notebook)
     refresh_labels()
     return frame, lifecycle, session_state

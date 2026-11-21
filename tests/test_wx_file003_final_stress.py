@@ -46,6 +46,7 @@ def test_stress_a_right_click_retarget(wx_app, monkeypatch):
 
     entries_of = lambda: [entry.path for entry in frame._wx_remote_tabs[0]["entries"]]  # noqa: E731
     executed = 0
+    failure_details = []
     for index in range(200):
         paths = entries_of()
         content_rows = [row for row, path in enumerate(paths) if path != "/"]
@@ -81,23 +82,28 @@ def test_stress_a_right_click_retarget(wx_app, monkeypatch):
         executed += 1
         if len(observed) != before + 1:
             METRICS["wrong_targets"] += 1
+            failure_details.append((index, mode, "callback-count", len(observed) - before))
             continue
         selection = observed[-1]
         actual = tuple(sorted(selection.effective_paths))
         if mode == 3:
             if actual or not selection.background:
                 METRICS["wrong_targets"] += 1
+                failure_details.append((index, mode, "background", actual, selection.background))
             continue
         if actual != tuple(sorted(expected)):
             METRICS["wrong_targets"] += 1
+            failure_details.append((index, mode, "paths", expected, actual))
             continue
         if mode == 2 and sum(listing.IsSelected(i) for i in range(listing.GetItemCount())) != 2:
             METRICS["wrong_targets"] += 1
+            failure_details.append((index, mode, "multiselection"))
         if mode == 0 and not listing.IsSelected(paths.index(expected[0])):
             METRICS["wrong_targets"] += 1
+            failure_details.append((index, mode, "right-click-row-selection", expected))
 
     _record("right-click retarget", executed, 200)
-    assert METRICS["wrong_targets"] == 0
+    assert METRICS["wrong_targets"] == 0, failure_details[:5]
 
 @pytest.mark.gui
 @pytest.mark.semantic

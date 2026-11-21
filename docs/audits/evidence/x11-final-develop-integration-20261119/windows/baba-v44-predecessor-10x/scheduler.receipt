@@ -1,0 +1,38 @@
+﻿task_name=CodexX11V44Predecessor10x
+started_local=2026-11-21T09:16:12.5754240+03:00
+completed_local=2026-11-21T09:22:34.9910641+03:00
+task_state=Ready
+last_task_result=0
+run_as=msi
+interactive_session=2
+
+Folder: \
+HostName:                             DESKTOP-CVSJ8U2
+TaskName:                             \CodexX11V44Predecessor10x
+Next Run Time:                        N/A
+Status:                               Ready
+Logon Mode:                           Interactive only
+Last Run Time:                        21.11.2026 09:17:00
+Last Result:                          0
+Author:                               DESKTOP-CVSJ8U2\msi
+Task To Run:                          cmd.exe /d /c C:\Users\msi\.tmp\hpc-client-gui\x11-final-develop-20261121\run_predecessor_v44_x10.cmd
+Start In:                             N/A
+Comment:                              N/A
+Scheduled Task State:                 Enabled
+Idle Time:                            Disabled
+Power Management:                     Stop On Battery Mode, No Start On Batteries
+Run As User:                          msi
+Delete Task If Not Rescheduled:       Disabled
+Stop Task If Runs X Hours and X Mins: 72:00:00
+Schedule:                             Scheduling data is not available in this format.
+Schedule Type:                        One Time Only
+Start Time:                           09:17:00
+Start Date:                           21.11.2026
+End Date:                             N/A
+Days:                                 N/A
+Months:                               N/A
+Repeat: Every:                        Disabled
+Repeat: Until: Time:                  Disabled
+Repeat: Until: Duration:              Disabled
+Repeat: Stop If Still Running:        Disabled
+

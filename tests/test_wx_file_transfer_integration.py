@@ -248,7 +248,10 @@ def test_wx_file_transfer_cancel_button_cancels_controller():
     cancel.ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, cancel.GetId()))
     files.release.set()
     assert controller.engine.wait(2)
-    app.ProcessPendingEvents()
+    deadline = time.monotonic() + 2
+    while controller in state["transfer_sessions"] and time.monotonic() < deadline:
+        app.ProcessPendingEvents()
+        wx.MilliSleep(5)
     assert controller.engine.failed[0][1] == "cancelled"
     assert not cancel.IsEnabled()
     assert state["transfer_sessions"] == set()

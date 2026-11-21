@@ -1,0 +1,30 @@
+===== ITERATION 1 =====
+.                                                                        [100%]
+1 passed in 35.39s
+===== ITERATION 2 =====
+.                                                                        [100%]
+1 passed in 32.80s
+===== ITERATION 3 =====
+.                                                                        [100%]
+1 passed in 34.10s
+===== ITERATION 4 =====
+.                                                                        [100%]
+1 passed in 34.93s
+===== ITERATION 5 =====
+.                                                                        [100%]
+1 passed in 33.54s
+===== ITERATION 6 =====
+.                                                                        [100%]
+1 passed in 34.31s
+===== ITERATION 7 =====
+.                                                                        [100%]
+1 passed in 34.19s
+===== ITERATION 8 =====
+.                                                                        [100%]
+1 passed in 34.44s
+===== ITERATION 9 =====
+.                                                                        [100%]
+1 passed in 35.87s
+===== ITERATION 10 =====
+.                                                                        [100%]
+1 passed in 33.60s

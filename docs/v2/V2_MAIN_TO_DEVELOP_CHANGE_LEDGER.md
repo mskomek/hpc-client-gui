@@ -35,7 +35,7 @@ The following is a responsibility-level index of the changed tree, based on the 
 | Packaging and update/release | `build/`, release workflow, package specs, updater code/docs, `docs/VERIFYING_RELEASES.md` | platform-specific package contents, runtime closure, update handoff/rollback, immutable candidate identity, provenance and release gates. |
 | CI, architecture and test harness | `.github/workflows/`, `scripts/`, `tests/`, `build/audit/` | source CI coverage by OS, test validity, skip/de-select semantics, architecture gate, lint, packaged smoke, candidate identity and repeatability. |
 | Security, licensing and operations | `SECURITY.md`, `THIRD_PARTY_NOTICES.md`, trusted-tool and lab docs | trust boundaries, dependency/license disclosures, credential handling, host-key behavior, safe lab provisioning and non-leakage of terminal/session content. |
-| Waves, evidence and documentation | `docs/wave-reports/`, `build/audit/`, `artifacts/`, `TODO_V2_REMAINING.md` | treat these as traceability/evidence inputs, not as proof by filename. Bind every claim to the referenced source SHA, command, exit code and artifact hash. |
+| Waves, evidence and documentation | `docs/wave-reports/`, `build/audit/`, `artifacts/`, [`V2_FINAL_ACCEPTANCE_REPORT_2026-10-17.md`](V2_FINAL_ACCEPTANCE_REPORT_2026-10-17.md) | treat these as traceability/evidence inputs, not as proof by filename. Bind every claim to the referenced source SHA, command, exit code and artifact hash. |
 
 ### History note
 
@@ -57,7 +57,7 @@ The branch used for the acceptance execution also contains local commits recorde
 
 ## 4. Final noninteractive acceptance record
 
-The canonical detailed record is [`V2_FINAL_ACCEPTANCE_REPORT_2026-10-17.md`](V2_FINAL_ACCEPTANCE_REPORT_2026-10-17.md); current open-work ledger is [`TODO_V2_REMAINING.md`](../../TODO_V2_REMAINING.md). The report's claim is **`V2_ACCEPTED` for the noninteractive scope only**, not manual user acceptance or authenticated real-HPC endpoint acceptance.
+The canonical detailed record is [`V2_FINAL_ACCEPTANCE_REPORT_2026-10-17.md`](V2_FINAL_ACCEPTANCE_REPORT_2026-10-17.md). The earlier `TODO_V2_REMAINING.md` link is absent from this source tree; this retained acceptance report is the available V2 status record. Its claim is **`V2_ACCEPTED` for the noninteractive scope only**, not manual user acceptance or authenticated real-HPC endpoint acceptance.
 
 Recorded final source and artifact identities:
 

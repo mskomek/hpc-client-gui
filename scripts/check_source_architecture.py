@@ -40,7 +40,11 @@ PUBLIC_FACADES = (
 def _source_paths(root: Path) -> list[Path]:
     commands = (
         ["git", "ls-files", "-z", "--cached", "--", "*.py"],
-        ["git", "ls-files", "-z", "--others", "--exclude-standard", "--", "*.py"],
+        [
+            "git", "ls-files", "-z", "--others", "--exclude-standard", "--",
+            ":(glob)src/**/*.py", ":(glob)tests/**/*.py",
+            ":(glob)scripts/**/*.py", ":(glob)*.py",
+        ],
     )
     paths: set[Path] = set()
     for command in commands:
@@ -49,6 +53,13 @@ def _source_paths(root: Path) -> list[Path]:
             if not item:
                 continue
             path = Path(item.decode("utf-8"))
+            # LOC and dependency gates cover executable project roots. Python
+            # receipts under docs and task scratch overlays are evidence, not
+            # modules shipped or imported by the project.
+            if len(path.parts) > 1 and path.parts[0] not in {"src", "tests", "scripts"}:
+                continue
+            if path.suffix != ".py":
+                continue
             if not EXCLUDED_PARTS.intersection(path.parts):
                 paths.add(path)
     return sorted(paths, key=lambda path: path.as_posix())
@@ -181,6 +192,11 @@ def _scan_project(root: Path) -> dict[str, Any]:
                                 graph[current].add(module)
                 continue
             if not isinstance(node, ast.ImportFrom):
+                continue
+            # Documentation evidence may retain executable snippets and test
+            # receipts, but those files are not importable project modules.
+            # Relative imports have no package context there.
+            if node.level and current is None:
                 continue
             resolved = _resolve_from_module(current, node, Path(relative).name == "__init__.py")
             if not resolved or not resolved.startswith("hpc_gui"):

@@ -84,7 +84,9 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
         lambda _event: remote_panel._wx_remote_run_action("download"),
     )
     top_splitter.SplitVertically(local_workspace, remote_panel, 340)
-    top_splitter.SetMinimumPaneSize(300)
+    # The local pane contains its own navigation sidebar and file browser.
+    # Keep enough width for both when restoring a narrow saved splitter ratio.
+    top_splitter.SetMinimumPaneSize(450)
     session_state["_embedded_files_panes_splitter"] = top_splitter
     transfers_panel = build_transfers_panel(transfer_splitter)
     # store for routing in _start_file_transfers

@@ -1,0 +1,7 @@
+run_id=pr67-x11-forwarder-focused-final-20261120
+base_head=339b86bada84504d2d02af002fad6b6af13777a5
+working_tree_diff_sha256=466aaf78043eee8fd02e7bb571c656fd5373e5a270598e88258669b4f0423927
+environment=Windows host, Python 3.12.4, pytest
+command=python -m pytest -q tests/test_x11_forwarder_contracts.py tests/test_x11_forwarder_shutdown.py --junitxml=docs/audits/evidence/pr67-lifecycle-focused-final-20261120/junit.xml
+exit=0
+summary=29 passed, 0 failed, 0 errors, 0 skipped

@@ -92,3 +92,43 @@ def test_missing_display_falls_back_to_the_preferred_size():
     default, minimum = shell_sizes(Broken())
     assert default == PREFERRED_SIZE
     assert minimum == MINIMUM_SIZE
+
+
+@pytest.mark.gui
+@pytest.mark.wx
+def test_created_shell_minimum_and_start_size_fit_display_work_area():
+    import wx
+
+    from hpc_gui.wx_shell_frame import create_shell_frame
+
+    app = wx.App.Get()
+    owns_app = app is None
+    if owns_app:
+        app = wx.App(False)
+    frame, _lifecycle, _session = create_shell_frame(
+        app, tray_factory=lambda _parent: None
+    )
+    try:
+        frame.Show()
+        for _ in range(8):
+            wx.SafeYield()
+            wx.MilliSleep(10)
+        area = wx.Display(frame).GetClientArea()
+        minimum = frame.GetMinSize()
+        actual = frame.GetSize()
+        assert minimum.width <= area.width
+        assert minimum.height <= area.height
+        assert actual.width <= area.width
+        assert actual.height <= area.height
+    finally:
+        try:
+            frame.Close()
+            for _ in range(3):
+                app.ProcessPendingEvents()
+                wx.SafeYield()
+            if not frame.IsBeingDeleted():
+                frame.Destroy()
+        except Exception:
+            pass
+        if owns_app:
+            app.Destroy()

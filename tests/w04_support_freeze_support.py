@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pathlib
+import time
 
 
 
@@ -52,12 +53,32 @@ REQUIRED_COLUMNS = [
 ]
 
 def _close_shell(frame):
-    """Controlled teardown: Close + yields + conditional Destroy (W02 pattern:
-    an abrupt Destroy() of the full shell frame corrupts the heap)."""
+    """Close the shell and honor its deferred native teardown window."""
     try:
         frame.Close()
     except Exception:
         pass
+    production_teardown = bool(
+        getattr(frame, "_wx_shell_destroy_scheduled", False)
+        or getattr(frame, "_wx_shell_native_teardown_pending", False)
+        or getattr(frame, "_wx_shell_destroy_invoked", False)
+    )
+    if production_teardown:
+        deadline = time.monotonic() + 3.0
+        while time.monotonic() < deadline:
+            try:
+                if (getattr(frame, "_wx_shell_destroy_completed", False)
+                        or frame.IsBeingDeleted()):
+                    break
+            except (AttributeError, RuntimeError):
+                break
+            wx.Yield()
+            wx.MilliSleep(10)
+        else:
+            raise AssertionError("deferred wx shell destruction did not complete")
+        for _ in range(3):
+            wx.Yield()
+        return
     for _ in range(3):
         wx.Yield()
     try:
@@ -67,6 +88,16 @@ def _close_shell(frame):
         pass
     for _ in range(3):
         wx.Yield()
+
+
+def close_wx_app(app):
+    """Close every top-level window before destroying the wx application."""
+    for window in list(wx.GetTopLevelWindows()):
+        if window:
+            _close_shell(window)
+    app.ProcessPendingEvents()
+    wx.SafeYield()
+    app.Destroy()
 
 class _MessageBoxCapture:
     """Stand-in for ``wx.MessageBox`` that records instead of blocking."""

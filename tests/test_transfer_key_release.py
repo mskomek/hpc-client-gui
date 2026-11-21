@@ -104,7 +104,12 @@ class TransferKeyReleaseTests(unittest.TestCase):
         dialog = self.panel._transfer_dialogs[-1]
         stop.set()
         dialog.cancel_all()
-        self._pump(lambda: not dialog._running)
+        # A cancelled item can mark the dialog stopped before the worker has
+        # emitted all_done and queueFinished. Wait for the reservation release
+        # too, otherwise this assertion races the final queued Qt callback.
+        self._pump(
+            lambda: not dialog._running and not self.panel._active_transfer_keys
+        )
 
         # The dialog is still open and never emitted `finished` - this is
         # exactly when the keys used to stay reserved for good.

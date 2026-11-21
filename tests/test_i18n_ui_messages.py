@@ -35,7 +35,7 @@ def test_wx_terminal_accessible_label_tracks_live_language_changes():
     class FakeWebView:
         def __init__(self):
             self.name = ""
-            self.script = ""
+            self.script_calls = 0
 
         def SetName(self, value):
             self.name = value
@@ -44,7 +44,7 @@ def test_wx_terminal_accessible_label_tracks_live_language_changes():
             self.name = value
 
         def RunScript(self, value):
-            self.script = value
+            self.script_calls += 1
 
     class Harness(TerminalBridgeMixin):
         def __init__(self):
@@ -57,32 +57,25 @@ def test_wx_terminal_accessible_label_tracks_live_language_changes():
         load_language("en")
         harness._update_accessibility_label()
         assert harness._webview.name == "Remote terminal"
-        assert harness._webview.script == ""
+        assert harness._webview.script_calls == 0
 
         harness._page_loaded = True
         harness._update_accessibility_label()
-        assert "Remote terminal" in harness._webview.script
+        assert harness._webview.script_calls == 0
 
         load_language("tr")
         harness._update_accessibility_label()
         assert harness._webview.name == "Uzak terminal"
-        assert "Uzak terminal" in harness._webview.script
+        assert harness._webview.script_calls == 0
     finally:
         load_language(previous)
 
 
-def test_loaded_event_defers_sync_accessible_label_script(monkeypatch):
-    scheduled = []
-
-    class FakeWx:
-        @staticmethod
-        def CallAfter(callback):
-            scheduled.append(callback)
-
+def test_loaded_event_sets_accessible_name_without_script():
     class FakeWebView:
         def __init__(self):
             self.name = ""
-            self.script = ""
+            self.script_calls = 0
 
         def SetName(self, value):
             self.name = value
@@ -91,7 +84,7 @@ def test_loaded_event_defers_sync_accessible_label_script(monkeypatch):
             self.name = value
 
         def RunScript(self, value):
-            self.script = value
+            self.script_calls += 1
 
     class Harness(TerminalBridgeMixin):
         def __init__(self):
@@ -106,7 +99,6 @@ def test_loaded_event_defers_sync_accessible_label_script(monkeypatch):
             self.skipped = True
 
     previous = current_language()
-    monkeypatch.setitem(sys.modules, "wx", FakeWx)
     harness = Harness()
     event = Event()
 
@@ -116,10 +108,7 @@ def test_loaded_event_defers_sync_accessible_label_script(monkeypatch):
 
         assert event.skipped
         assert harness._webview.name == "Remote terminal"
-        assert harness._webview.script == ""
-        assert len(scheduled) == 1
-        scheduled.pop()()
-        assert "Remote terminal" in harness._webview.script
+        assert harness._webview.script_calls == 0
     finally:
         load_language(previous)
 

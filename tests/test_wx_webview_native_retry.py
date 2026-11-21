@@ -305,13 +305,13 @@ def test_legacy_loaded_event_proves_native_controller_created():
         _page_loaded = False
         _ready = False
 
-        def _update_accessibility_label(self, *, defer_sync=False):
-            self.defer_sync = defer_sync
+        def _update_accessibility_label(self):
+            self.updated_accessible_name = True
 
     panel = Panel()
     event = _Event(object())
     panel._on_loaded(event)
     assert panel._native_created
     assert panel._page_loaded
-    assert panel.defer_sync is True
+    assert panel.updated_accessible_name is True
     assert event.skipped

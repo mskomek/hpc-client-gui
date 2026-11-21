@@ -20,6 +20,7 @@ def install_listing(view):
     btn_favorites = view.btn_favorites
     btn_forward = view.btn_forward
     btn_history = view.btn_history
+    btn_more = view.btn_more
     btn_new_file = view.btn_new_file
     btn_new_folder = view.btn_new_folder
     btn_refresh = view.btn_refresh
@@ -142,12 +143,15 @@ def install_listing(view):
             btn_new_folder.SetLabel(t("dirs.new_folder"))
             btn_new_file.SetLabel(t("dirs.new_file"))
             btn_upload.SetLabel(t("dirs.upload"))
-            btn_download.SetLabel(t("dirs.download_selected"))
+            btn_download.SetLabel(t("dirs.download"))
+            btn_download.SetToolTip(t("dirs.download_selected"))
             btn_delete.SetLabel(t("dirs.delete"))
             btn_undo.SetLabel(t("dirs.undo"))
             btn_favorites.SetLabel(t("dirs.favorites"))
             btn_history.SetLabel(t("dirs.history"))
             btn_refresh.SetLabel(t("dirs.refresh"))
+            btn_refresh.SetMaxSize(wx.Size(120, -1))
+            btn_more.SetLabel(t("dirs.more_actions"))
             path_label.SetLabel(t("dirs.path"))
         except Exception:
             pass

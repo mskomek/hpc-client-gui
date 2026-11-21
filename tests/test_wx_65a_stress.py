@@ -17,6 +17,7 @@ wx = pytest.importorskip("wx")
 
 from hpc_gui.core.i18n import current_language, set_language, t
 from hpc_gui.wx_shell import create_shell_frame
+from hpc_gui.wx_shell_sizing import display_available
 from tests.support.wx65_stress import Probe, _cleanup_wx_test, _click, _menu, _toggle, _yield
 
 
@@ -188,15 +189,21 @@ def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch, request) -> None:
     print(f"en/tr {executed['en_tr_switches']}")
 
     # 200 resizes
+    available_w, available_h = display_available(wx)
+    minimum = frame.GetMinSize()
+    minimum_w = min(max(960, minimum.width), available_w)
+    minimum_h = min(max(640, minimum.height), available_h)
+    width_span = max(1, min(120, available_w - minimum_w + 1))
+    height_span = max(1, min(90, available_h - minimum_h + 1))
     for i in range(200):
-        w = 960 + (i % 120)
-        h = 640 + (i % 90)
+        w = minimum_w + (i % width_span)
+        h = minimum_h + (i % height_span)
         frame.SetSize((w, h))
         executed["resizes"] += 1
         if i % 50 == 0:
             _yield(1)
             sz = frame.GetSize()
-            if sz.GetWidth() < 960 or sz.GetHeight() < 640:
+            if sz.GetWidth() < minimum_w or sz.GetHeight() < minimum_h:
                 invariants["clipped_required_controls"] += 1
     print(f"resizes {executed['resizes']}")
 

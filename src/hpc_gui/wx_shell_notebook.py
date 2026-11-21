@@ -6,6 +6,41 @@ from __future__ import annotations
 _GTK_PAGE_INSET_FALLBACK = (2, 39)
 
 
+def resize_selected_notebook_page(wx, notebook) -> None:
+    """Fit one visible GTK notebook page inside the tab and border insets."""
+    if getattr(wx, "Platform", None) != "__WXGTK__":
+        return
+    try:
+        if notebook.IsBeingDeleted():
+            return
+        selection = notebook.GetSelection()
+        if selection < 0:
+            return
+        page = notebook.GetPage(selection)
+        if page is None:
+            return
+        window_size = notebook.GetSize()
+        client_size = notebook.GetClientSize()
+        if min(window_size.width, window_size.height) <= 0:
+            return
+        inset_width = window_size.width - client_size.width
+        inset_height = window_size.height - client_size.height
+        if not 0 <= inset_width <= 16:
+            inset_width = _GTK_PAGE_INSET_FALLBACK[0]
+        if not 0 <= inset_height <= 64:
+            inset_height = _GTK_PAGE_INSET_FALLBACK[1]
+        page_size = wx.Size(
+            max(1, window_size.width - inset_width),
+            max(1, window_size.height - inset_height),
+        )
+        if page.GetSize() != page_size:
+            page.SetSize(page_size)
+        page.Layout()
+    except Exception:
+        # GTK may be completing teardown while a queued page resize runs.
+        return
+
+
 def bind_notebook_page_resize(wx, frame, notebook) -> None:
     """Keep GTK notebook pages sized when native resize events miss them.
 

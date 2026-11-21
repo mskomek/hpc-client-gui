@@ -66,6 +66,31 @@ def test_namespace_package_imports_from_tests_and_scripts_resolve(tmp_path: Path
     assert scan["dependency_errors"] == []
 
 
+def test_python_evidence_is_excluded_from_importable_source_scan(
+    tmp_path: Path,
+) -> None:
+    _git_repo(tmp_path)
+    _write(tmp_path / "docs/audits/evidence/receipt.py", "from .support import probe\n")
+
+    scan = architecture._scan_project(tmp_path)
+
+    assert scan["dependency_errors"] == []
+    assert "docs/audits/evidence/receipt.py" not in scan["files"]
+
+
+def test_source_paths_exclude_documentation_and_task_scratch(tmp_path: Path) -> None:
+    _git_repo(tmp_path)
+    _write(tmp_path / "docs/audits/evidence/receipt.py", "value = 1\n")
+    _write(tmp_path / "scratch/overlay.py", "value = 2\n")
+    _write(tmp_path / "tests/test_project.py", "value = 3\n")
+
+    paths = {path.as_posix() for path in architecture._source_paths(tmp_path)}
+
+    assert "tests/test_project.py" in paths
+    assert "docs/audits/evidence/receipt.py" not in paths
+    assert "scratch/overlay.py" not in paths
+
+
 def test_public_facade_contract_detects_removed_exports() -> None:
     tree = ast.parse("def retained(): pass\nclass Kept: pass\n")
     errors = architecture._api_errors(

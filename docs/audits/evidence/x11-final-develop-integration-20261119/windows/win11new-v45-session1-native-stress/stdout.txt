@@ -1,0 +1,33 @@
+===== PREDECESSOR ITERATION 1 =====
+.                                                                        [100%]
+1 passed in 10.33s
+===== PREDECESSOR ITERATION 2 =====
+.                                                                        [100%]
+1 passed in 11.08s
+===== PREDECESSOR ITERATION 3 =====
+.                                                                        [100%]
+1 passed in 11.35s
+===== PREDECESSOR ITERATION 4 =====
+.                                                                        [100%]
+1 passed in 11.16s
+===== PREDECESSOR ITERATION 5 =====
+.                                                                        [100%]
+1 passed in 10.84s
+===== PREDECESSOR ITERATION 6 =====
+.                                                                        [100%]
+1 passed in 10.22s
+===== PREDECESSOR ITERATION 7 =====
+.                                                                        [100%]
+1 passed in 9.85s
+===== PREDECESSOR ITERATION 8 =====
+.                                                                        [100%]
+1 passed in 11.89s
+===== PREDECESSOR ITERATION 9 =====
+.                                                                        [100%]
+1 passed in 11.46s
+===== PREDECESSOR ITERATION 10 =====
+.                                                                        [100%]
+1 passed in 10.54s
+===== WEBVIEW BRIDGE =====
+............                                                             [100%]
+12 passed in 2.65s

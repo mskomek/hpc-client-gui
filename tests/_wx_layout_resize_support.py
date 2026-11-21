@@ -12,12 +12,22 @@ from hpc_gui.core.i18n import t
 def _is_visible_on_screen(window) -> bool:
     """Ignore controls on hidden notebook pages during geometry checks."""
     try:
+        current = window
+        while current is not None:
+            parent = current.GetParent()
+            if isinstance(parent, wx.Notebook):
+                selection = parent.GetSelection()
+                if selection < 0 or not _is_same_window(
+                    parent.GetPage(selection), current
+                ):
+                    return False
+            current = parent
         is_visible = getattr(window, "IsShownOnScreen", None)
         if callable(is_visible):
             return bool(is_visible())
         return bool(window.IsShown())
-    except Exception:
-        return False
+    except Exception as exc:
+        raise RuntimeError("could not determine wx control visibility") from exc
 
 
 def _is_same_window(first, second) -> bool:
@@ -243,7 +253,7 @@ def _collect_required_controls(frame):
     return required
 
 
-def _measure_invariants(frame, required_controls, invariants: Counter) -> None:
+def _measure_invariants(frame, required_controls, invariants: Counter, details=None) -> None:
     # zero sized primary workspace and horizontal overflow
     try:
         notebook = frame._wx_shell_controls["notebook"]
@@ -313,6 +323,16 @@ def _measure_invariants(frame, required_controls, invariants: Counter) -> None:
                             # Avoid counting notebooks themselves which correctly fill parent
                             # But for required controls, any extending past parent is clipping
                             invariants["clipped_required_controls"] += 1
+                            if details is not None and len(details) < 10:
+                                details.append(
+                                    (
+                                        name,
+                                        tuple(sz),
+                                        tuple(pos),
+                                        tuple(pclient),
+                                        type(parent).__name__,
+                                    )
+                                )
                 except Exception:
                     invariants["layout_exceptions"] += 1
         except Exception:

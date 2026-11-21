@@ -5,7 +5,7 @@ import re
 import types
 import hpc_gui.wx_shell as wx_shell
 from hpc_gui.core.i18n import load_language
-from w04_support_freeze_support import _MessageBoxCapture, _close_shell, _fake_plugin, _fire_menu, _parse_freeze_matrix, wx
+from w04_support_freeze_support import _MessageBoxCapture, _close_shell, _fake_plugin, _fire_menu, _parse_freeze_matrix, close_wx_app, wx
 
 
 @pytest.fixture(autouse=True)
@@ -21,15 +21,7 @@ def wx_app():
     if app is None:
         app = wx.App(False)
     yield app
-    for window in wx.GetTopLevelWindows():
-        try:
-            if window:
-                window.Destroy()
-        except Exception:
-            pass
-    app.ProcessPendingEvents()
-    wx.SafeYield()
-    app.Destroy()
+    close_wx_app(app)
 
 
 def test_menu_events__route_to_canonical_owners(wx_app, monkeypatch):

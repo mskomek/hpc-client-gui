@@ -93,7 +93,7 @@ class TerminalLifecycleMixin:
             except Exception:
                 pass
 
-    def close(self):
+    def close(self, *, parent_teardown=False):
         if self._closed:
             return
         webview = self._webview
@@ -124,6 +124,13 @@ class TerminalLifecycleMixin:
         try:
             if self._resize_timer and self._resize_timer.IsRunning():
                 self._resize_timer.Stop()
+        except Exception:
+            pass
+        try:
+            retry_timer = getattr(self, "_native_retry_timer", None)
+            if retry_timer is not None and retry_timer.IsRunning():
+                retry_timer.Stop()
+            self._native_retry_timer = None
         except Exception:
             pass
         self._stop_fragment_ack_timer()
@@ -163,15 +170,45 @@ class TerminalLifecycleMixin:
         except Exception:
             being_deleted = False
         if webview is not None:
-            try:
-                webview.Stop()
-            except Exception:
-                pass
-            if not being_deleted:
+            native_create_pending = bool(
+                parent_teardown
+                and not getattr(self, "_native_created", False)
+                and (
+                    getattr(self, "_webview_pending_native", False)
+                    or getattr(self, "_webview_legacy_edge", False)
+                )
+            )
+            if not native_create_pending:
+                try:
+                    webview.Stop()
+                except Exception:
+                    pass
+            if not being_deleted and not parent_teardown:
                 try:
                     webview.Destroy()
                 except Exception:
                     pass
+
+    def close_for_parent_teardown(self):
+        """Stop terminal work and leave native child destruction to its owner.
+
+        WebView2 can still deliver asynchronous controller callbacks while a
+        parent is closing. The owner uses the return value to defer its own
+        destruction briefly when native creation has not settled.
+        """
+        if self._closed:
+            return bool(getattr(self, "_parent_teardown_pending", False))
+        pending_native = bool(
+            self._webview is not None
+            and not getattr(self, "_native_created", False)
+            and (
+                getattr(self, "_webview_pending_native", False)
+                or getattr(self, "_webview_legacy_edge", False)
+            )
+        )
+        self._parent_teardown_pending = pending_native
+        self.close(parent_teardown=True)
+        return pending_native
 
     def _update_status(self, state: str):
         """Update the connection status label. States: disconnected, connecting, connected, reconnecting."""
@@ -234,7 +271,33 @@ class TerminalLifecycleMixin:
 
     # For lifecycle
     def Destroy(self):  # type: ignore[override]
-        self.close()
+        pending_native = self.close_for_parent_teardown()
+        if pending_native:
+            if getattr(self, "_wx_terminal_destroy_deferred", False):
+                return True
+            self._wx_terminal_destroy_deferred = True
+            import wx
+
+            def destroy_after_native_callback_window():
+                self._wx_terminal_destroy_timer = None
+                try:
+                    if self.IsBeingDeleted():
+                        return
+                except (AttributeError, RuntimeError):
+                    return
+                self._wx_terminal_destroy_deferred = False
+                try:
+                    super(TerminalLifecycleMixin, self).Destroy()
+                except Exception:
+                    pass
+
+            try:
+                self._wx_terminal_destroy_timer = wx.CallLater(
+                    350, destroy_after_native_callback_window
+                )
+                return True
+            except Exception:
+                self._wx_terminal_destroy_deferred = False
         try:
             return super().Destroy()  # type: ignore
         except Exception:

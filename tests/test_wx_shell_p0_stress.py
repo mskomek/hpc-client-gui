@@ -88,13 +88,16 @@ def _shell_menu_labels(frame):
 def _close(app, frame, lifecycle):
     frame.Close()
     _pump(app, lambda: lifecycle.shutdown_started)
-    for _ in range(10):
+    deadline = time.monotonic() + 3
+    while time.monotonic() < deadline and any(
+        window is frame for window in wx.GetTopLevelWindows()
+    ):
         app.ProcessPendingEvents()
-        wx.MilliSleep(2)
-    # Destroy() is deferred, and ProcessPendingEvents() alone does not reclaim
-    # the pending deletes. Without this yield they pile up across the run and the
-    # process exhausts its 10,000 USER object allowance part-way through.
-    wx.SafeYield()
+        wx.SafeYield()
+        wx.MilliSleep(5)
+    assert not any(
+        window is frame for window in wx.GetTopLevelWindows()
+    ), "shell frame teardown did not complete"
 
 
 @pytest.mark.gui

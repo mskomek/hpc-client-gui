@@ -5,11 +5,8 @@ from __future__ import annotations
 from typing import Callable
 
 from hpc_gui.ssh.contracts import _SSH_CHANNEL_TIMEOUT_SECONDS
+from hpc_gui.ssh.errors import X11Unavailable
 from hpc_gui.ssh.x11_forward import X11Forwarder
-
-
-class X11Unavailable(RuntimeError):
-    """A local display or authenticated SSH X11 request is unavailable."""
 
 
 def open_x11_shell(

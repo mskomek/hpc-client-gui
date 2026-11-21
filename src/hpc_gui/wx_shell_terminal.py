@@ -49,10 +49,12 @@ def _schedule_terminal_mount(
         )
 
         def close_terminal():
-            callback = getattr(real_panel, "_wx_terminal_close", None)
-            callback = callback or getattr(real_panel, "close", None)
+            callback = (getattr(real_panel, "_wx_terminal_parent_close", None)
+                        or getattr(real_panel, "_wx_terminal_close", None)
+                        or getattr(real_panel, "close", None))
             if callable(callback):
-                callback()
+                return callback()
+            return False
 
         terminal_page._wx_host_close = close_terminal
 

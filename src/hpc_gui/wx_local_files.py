@@ -190,6 +190,9 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
     # initial tab
     initial = create_tab(model.current_path)
     notebook.AddPage(initial["panel"], tab_label(model.current_path), True)
+    from hpc_gui.wx_shell_notebook import bind_notebook_page_resize
+
+    bind_notebook_page_resize(wx, host, notebook)
     model.active_tab = 0
 
 

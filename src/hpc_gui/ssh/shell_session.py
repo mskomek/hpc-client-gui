@@ -16,7 +16,7 @@ import time
 from collections import deque
 from typing import Callable, Optional, Tuple
 
-from hpc_gui.ssh.x11_shell import X11Unavailable
+from hpc_gui.ssh.errors import X11Unavailable
 
 _MAX_PENDING_OUTPUT_BYTES = 2 * 1024 * 1024
 _MAX_PENDING_OUTPUT_CHUNKS = 5000

@@ -200,6 +200,14 @@ def qapp():
 
     app = QApplication.instance() or QApplication([])
     yield app
+    from PySide6.QtCore import QCoreApplication, QEvent
+
+    # Tests below use deleteLater() on transfer dialogs. Drain those QObject
+    # deletions before the next (non-Qt) test reaches a Python pending-call
+    # checkpoint, where Shiboken may otherwise process stale cleanup work.
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    app.processEvents()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
 class _FakeBackend:

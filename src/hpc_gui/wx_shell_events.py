@@ -1,6 +1,23 @@
 """wx shell events workflows."""
 from __future__ import annotations
 
+from hpc_gui.wx_shell_notebook import resize_selected_notebook_page
+
+
+
+def _layout_selected_notebook_pages(wx, root) -> None:
+    """Repair deferred GTK sizing for active nested notebook pages."""
+    pending = [root] if root is not None else []
+    while pending:
+        window = pending.pop()
+        try:
+            if window.IsBeingDeleted():
+                continue
+            if isinstance(window, wx.Notebook) and window.IsShownOnScreen():
+                resize_selected_notebook_page(wx, window)
+            pending.extend(window.GetChildren())
+        except Exception:
+            continue
 
 
 def _logs_callbacks(session_state, parent, lifecycle):
@@ -41,6 +58,7 @@ def bind_notebook_native_repaint(wx, notebook) -> None:
                     return
                 page = notebook.GetCurrentPage()
                 frame = notebook.GetTopLevelParent()
+                _layout_selected_notebook_pages(wx, page)
                 windows = (notebook, page, frame)
                 for window in windows:
                     if window and not window.IsBeingDeleted():
@@ -48,6 +66,10 @@ def bind_notebook_native_repaint(wx, notebook) -> None:
                 for window in windows:
                     if window and not window.IsBeingDeleted():
                         window.Update()
+                # GTK can complete the outer page switch after the first
+                # deferred paint callback. A second queue turn lets nested
+                # native notebooks publish their final client allocation.
+                wx.CallAfter(_layout_selected_notebook_pages, wx, page)
             except Exception:
                 # Page transitions can race with shell teardown.
                 return

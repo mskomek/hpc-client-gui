@@ -7,6 +7,7 @@ CI runs it explicitly via ``pytest -m packaging``.
 from __future__ import annotations
 
 import re
+import shutil
 import sys
 import zipfile
 from pathlib import Path
@@ -85,8 +86,10 @@ def test_built_wheel_contains_required_assets(tmp_path: Path) -> None:
     import subprocess
 
     dist_dir = tmp_path / "dist"
+    build_command = shutil.which("pyproject-build")
+    assert build_command, "the pyproject-build console script is required for packaging tests"
     result = subprocess.run(
-        [sys.executable, "-m", "build", "--wheel", "--outdir", str(dist_dir)],
+        [build_command, "--wheel", "--outdir", str(dist_dir)],
         capture_output=True,
         text=True,
         cwd=ROOT,

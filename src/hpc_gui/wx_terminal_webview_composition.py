@@ -28,6 +28,9 @@ def build_terminal_panel(
             panel._terminal_model = model  # for compat
             panel._terminal_ssh = ssh
             panel._wx_terminal_close = panel.close
+            parent_close = getattr(panel, "close_for_parent_teardown", None)
+            if callable(parent_close):
+                panel._wx_terminal_parent_close = parent_close
             panel._wx_terminal_set_ssh = panel.set_ssh
             # For tests that call _wx_terminal_render, provide a wrapper that writes to xterm
             def _render_wrap(data):
@@ -132,21 +135,64 @@ def show_terminal(
     subscribe_language_change(refresh_labels)
 
     def close(_event=None):
+        if getattr(frame, "_wx_terminal_close_completed", False):
+            if _event is not None:
+                try:
+                    _event.Veto()
+                except Exception:
+                    pass
+            return
+        pending_native = False
         try:
-            # Panel close handles unsubscribe and timers
-            c = getattr(panel, "_wx_terminal_close", None) or getattr(panel, "close", None)
+            # Parent teardown must not destroy a WebView child while its
+            # asynchronous native controller creation is still completing.
+            c = (getattr(panel, "_wx_terminal_parent_close", None)
+                 or getattr(panel, "_wx_terminal_close", None)
+                 or getattr(panel, "close", None))
             if callable(c):
-                c()
+                pending_native = bool(c())
         except Exception:
             pass
+        frame._wx_terminal_close_pending = pending_native
         try:
             unsubscribe_language_change(refresh_labels)
         except Exception:
             pass
-        try:
-            frame.Destroy()
-        except Exception:
-            pass
+        if pending_native:
+            frame._wx_terminal_close_scheduled = True
+            frame._wx_terminal_close_completed = True
+            if _event is not None:
+                try:
+                    _event.Veto()
+                except Exception:
+                    pass
+
+            def destroy_after_native_callback_window():
+                frame._wx_terminal_destroy_timer = None
+                if getattr(frame, "_wx_terminal_frame_destroy_started", False):
+                    return
+                try:
+                    if frame.IsBeingDeleted():
+                        return
+                except AttributeError:
+                    pass
+                except RuntimeError:
+                    return
+                frame._wx_terminal_frame_destroy_started = True
+                try:
+                    frame.Destroy()
+                except RuntimeError:
+                    pass
+
+            frame._wx_terminal_destroy_timer = wx.CallLater(
+                350, destroy_after_native_callback_window
+            )
+        else:
+            frame._wx_terminal_close_completed = True
+            try:
+                frame.Destroy()
+            except Exception:
+                pass
 
     frame.Bind(wx.EVT_CLOSE, close)
     frame._wx_terminal_panel = panel

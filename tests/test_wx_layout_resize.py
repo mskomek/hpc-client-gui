@@ -17,6 +17,7 @@ from _wx_layout_resize_support import (
 )
 from hpc_gui.core.i18n import load_language, set_language
 from hpc_gui.wx_shell import create_shell_frame
+from hpc_gui.wx_shell_sizing import display_available
 
 METRICS = Counter()
 EXECUTED: dict[str, tuple[int, int]] = {}
@@ -72,13 +73,39 @@ def _close(app, frame, lifecycle):
 @pytest.mark.wx
 @pytest.mark.semantic
 @pytest.mark.slow
-def test_wx_layout_resize():
+def test_wx_layout_resize(request):
     load_language("en")
     app = wx.App.Get()
     owns_app = app is None
     if owns_app:
         app = wx.App(False)
     frame, lifecycle, session = create_shell_frame(app, tray_factory=lambda _parent: None)
+
+    cleanup_state = {"done": False}
+
+    def cleanup():
+        if cleanup_state["done"]:
+            return
+        cleanup_state["done"] = True
+        _close(app, frame, lifecycle)
+        for window in list(wx.GetTopLevelWindows()):
+            if window:
+                try:
+                    window.Destroy()
+                except Exception:
+                    pass
+        try:
+            app.ProcessPendingEvents()
+            wx.SafeYield()
+        except Exception:
+            pass
+        if owns_app:
+            try:
+                app.Destroy()
+            except Exception:
+                pass
+
+    request.addfinalizer(cleanup)
     frame.Show()
     _pump(app, rounds=6)
 
@@ -91,6 +118,7 @@ def test_wx_layout_resize():
         "detached_frames_during_resize": 0,
     })
     executed = {"english": 0, "turkish": 0, "total_resize": 0, "tab_selections": 0}
+    clipped_details = []
 
     # Verify minimum size is set
     min_size = frame.GetMinSize()
@@ -107,12 +135,22 @@ def test_wx_layout_resize():
     # Ensure at least 960x640
     min_w = max(min_w, 960)
     min_h = max(min_h, 640)
+    # Keep native resizes inside the active display's usable area. On GTK,
+    # SetSize() requests larger than the X11 screen can create zero-sized
+    # notebook/splitter allocations instead of exercising a real window size.
+    available_w, available_h = display_available(wx)
+    max_w = max(min_w, available_w)
+    max_h = max(min_h, available_h)
     random_sizes = []
     for _ in range(195):
-        w = rng.randint(min_w, 1920)
-        h = rng.randint(min_h, 1080)
+        w = rng.randint(min_w, max_w)
+        h = rng.randint(min_h, max_h)
         random_sizes.append((w, h))
-    all_sizes = ACCEPTANCE_SIZES + random_sizes
+    supported_sizes = [
+        (min(max(w, min_w), max_w), min(max(h, min_h), max_h))
+        for w, h in ACCEPTANCE_SIZES
+    ]
+    all_sizes = supported_sizes + random_sizes
     rng.shuffle(all_sizes)
     all_sizes = all_sizes[:200]
     assert len(all_sizes) >= 200
@@ -147,8 +185,11 @@ def test_wx_layout_resize():
                 notebook.SetSelection(tab_idx)
                 frame.Layout()
                 _pump(app, rounds=2)
+                assert notebook.GetSelection() == tab_idx, (
+                    f"English tab selection {tab_idx} did not become active"
+                )
                 executed["tab_selections"] += 1
-                _measure_invariants(frame, required, invariants)
+                _measure_invariants(frame, required, invariants, clipped_details)
             except Exception:
                 invariants["layout_exceptions"] += 1
         executed["total_resize"] += 1
@@ -185,10 +226,10 @@ def test_wx_layout_resize():
         rng2 = random.Random(1)
         random_sizes_tr = []
         for _ in range(195):
-            w = rng2.randint(min_w, 1920)
-            h = rng2.randint(min_h, 1080)
+            w = rng2.randint(min_w, max_w)
+            h = rng2.randint(min_h, max_h)
             random_sizes_tr.append((w, h))
-        all_sizes_tr = ACCEPTANCE_SIZES + random_sizes_tr
+        all_sizes_tr = supported_sizes + random_sizes_tr
         rng2.shuffle(all_sizes_tr)
         all_sizes_tr = all_sizes_tr[:200]
         for size in all_sizes_tr:
@@ -203,8 +244,11 @@ def test_wx_layout_resize():
                     notebook.SetSelection(tab_idx)
                     frame.Layout()
                     _pump(app, rounds=2)
+                    assert notebook.GetSelection() == tab_idx, (
+                        f"Turkish tab selection {tab_idx} did not become active"
+                    )
                     executed["tab_selections"] += 1
-                    _measure_invariants(frame, required, invariants)
+                    _measure_invariants(frame, required, invariants, clipped_details)
                 except Exception:
                     invariants["layout_exceptions"] += 1
             executed["total_resize"] += 1
@@ -259,7 +303,10 @@ def test_wx_layout_resize():
 
     assert invariants["negative_or_zero_control_geometry"] == 0, f"negative_or_zero {invariants['negative_or_zero_control_geometry']}"
     assert invariants["zero_sized_primary_workspace"] == 0
-    assert invariants["clipped_required_controls"] == 0, f"clipped {invariants['clipped_required_controls']}"
+    assert invariants["clipped_required_controls"] == 0, (
+        f"clipped {invariants['clipped_required_controls']}; "
+        f"samples={clipped_details}"
+    )
     assert invariants["horizontal_overflow"] == 0
     assert invariants["layout_exceptions"] == 0, f"layout_exceptions {invariants['layout_exceptions']}"
     assert invariants["detached_frames_during_resize"] == 0
@@ -268,20 +315,7 @@ def test_wx_layout_resize():
     assert frame.GetMinSize().width > 0 and frame.GetMinSize().height > 0
 
     # Cleanup: Destroy shell and SafeYield to reclaim USER objects
-    _close(app, frame, lifecycle)
-    try:
-        for w in list(wx.GetTopLevelWindows()):
-            if w:
-                try:
-                    w.Destroy()
-                except Exception:
-                    pass
-        app.ProcessPendingEvents()
-        wx.SafeYield()
-        if owns_app:
-            app.Destroy()
-    except Exception:
-        pass
+    cleanup()
 
 
 @pytest.mark.gui

@@ -89,6 +89,10 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
             except Exception:
                 pass
         app.SetTopWindow(frame)
+        # Establish the production shell as the exit-owning top-level window
+        # only after the splash is gone; closing it must end the main loop.
+        app.SetExitOnFrameDelete(True)
+        frame._wx_shell_exit_main_loop_on_close = True
         frame.Show()
         try:
             frame.Raise()

@@ -70,6 +70,39 @@ def _window_work_areas(wx):
         return ()
 
 
+def bind_display_bounds_on_show(wx, frame) -> None:
+    """Reapply fitted shell bounds after GTK calculates native chrome sizes."""
+    state = {"scheduled": False, "applied": False}
+
+    def on_show(event):
+        event.Skip()
+        if not event.IsShown() or state["scheduled"] or state["applied"]:
+            return
+        state["scheduled"] = True
+
+        def apply_bounds():
+            state["scheduled"] = False
+            try:
+                if frame.IsBeingDeleted():
+                    return
+                from hpc_gui.wx_shell_sizing import display_available, shell_sizes
+
+                available_w, available_h = display_available(wx)
+                _default_size, minimum_size = shell_sizes(wx)
+                current = frame.GetSize()
+                width = min(max(current.width, minimum_size[0]), available_w)
+                height = min(max(current.height, minimum_size[1]), available_h)
+                frame.SetMinSize(wx.Size(*minimum_size))
+                frame.SetSize(wx.Size(width, height))
+                state["applied"] = True
+            except Exception:
+                return
+
+        wx.CallAfter(apply_bounds)
+
+    frame.Bind(wx.EVT_SHOW, on_show)
+
+
 def _restore_main_window_state(wx, frame, notebook):
     """Restore window geometry while opening the Connection page each time.
 

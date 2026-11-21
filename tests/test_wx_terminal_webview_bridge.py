@@ -8,12 +8,13 @@ pytestmark = pytest.mark.wx
 import pathlib
 
 from hpc_gui.wx_terminal_webview import _is_webview_available
-from hpc_gui.wx_terminal_webview_bridge import TerminalBridgeMixin
 from support.subprocess_environment import project_python_environment
+from support.wx_gui import wx_gui_subprocess_timeout
 from wx_terminal_webview_support import (
     ASSETS,
     _run_subprocess_test,
 )
+
 
 @pytest.mark.contract
 def test_wx_terminal_webview_assets_are_local_and_vendored():
@@ -99,7 +100,13 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
         os._exit(0)
     """)
     env = project_python_environment(pathlib.Path(__file__).parents[1])
-    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=15, env=env)
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        timeout=wx_gui_subprocess_timeout(15),
+        env=env,
+    )
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
@@ -154,7 +161,7 @@ def test_wx_terminal_external_navigation_blocked():
         assert local.vetoed is False
         assert local.skipped is True
 
-        panel.close()
+        panel.close_for_parent_teardown()
         wx.Yield()
         frame.Destroy()
         wx.Yield()
@@ -162,84 +169,8 @@ def test_wx_terminal_external_navigation_blocked():
         os._exit(0)
         """
     )
-    result = _run_subprocess_test(code, timeout=20)
+    result = _run_subprocess_test(code, timeout=wx_gui_subprocess_timeout(20))
     assert result.returncode == 0, f"WebView navigation subprocess failed: {result.stdout}\n{result.stderr}"
-
-
-@pytest.mark.gui
-@pytest.mark.regression
-def test_accessibility_dom_update_runs_inline_on_wx_ui_thread(monkeypatch):
-    _app = wx.GetApp() or wx.App(False)
-    frame = wx.Frame(None)
-
-    class FakeWebView(wx.Panel):
-        def __init__(self, parent):
-            super().__init__(parent)
-            self.script = ""
-
-        def SetAccessibleName(self, value):
-            self.label = value
-
-        def RunScript(self, script):
-            self.script = script
-
-        def RunScriptAsync(self, script):
-            self.script = script
-            self.async_called = True
-
-    class Harness(TerminalBridgeMixin):
-        def __init__(self, webview):
-            self._webview = webview
-            self._page_loaded = True
-            self._closed = False
-
-    webview = FakeWebView(frame)
-    harness = Harness(webview)
-    monkeypatch.setattr(
-        wx,
-        "CallAfter",
-        lambda *_args, **_kwargs: pytest.fail("UI thread must not queue a stale callback"),
-    )
-    try:
-        harness._update_accessibility_label()
-        assert webview.script
-        assert webview.async_called is True
-        assert webview.label
-    finally:
-        frame.Destroy()
-        wx.Yield()
-
-
-@pytest.mark.unit
-def test_accessibility_label_uses_sync_script_on_legacy_webview():
-    _app = wx.GetApp() or wx.App(False)
-    frame = wx.Frame(None)
-
-    class LegacyWebView(wx.Panel):
-        def __init__(self, parent):
-            super().__init__(parent)
-            self.sync_script_called = False
-
-        def SetAccessibleName(self, value):
-            self.accessible_name = value
-
-        def RunScript(self, _script):
-            self.sync_script_called = True
-
-    class Harness(TerminalBridgeMixin):
-        def __init__(self, webview):
-            self._webview = webview
-            self._page_loaded = True
-            self._closed = False
-
-    webview = LegacyWebView(frame)
-    try:
-        Harness(webview)._update_accessibility_label()
-        assert webview.accessible_name
-        assert webview.sync_script_called is True
-    finally:
-        frame.Destroy()
-        wx.Yield()
 
 
 @pytest.mark.audit
@@ -320,6 +251,141 @@ def test_wx_terminal_close_releases_native_webview(being_deleted, expected_destr
     assert webview.destroyed == expected_destroyed
     assert panel._webview is None
     assert panel._is_parity is False
+
+
+@pytest.mark.unit
+@pytest.mark.resource
+@pytest.mark.parametrize("retry_timer_running", [True, False])
+@pytest.mark.parametrize(
+    "pending_native, expected_deferred",
+    [(True, True), (False, False)],
+)
+def test_parent_teardown_leaves_webview_destroy_to_parent(
+    pending_native, expected_deferred, retry_timer_running
+):
+    from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
+
+    class FakeWebView:
+        def __init__(self):
+            self.stopped = 0
+            self.destroyed = 0
+
+        def Stop(self):
+            self.stopped += 1
+
+        def Destroy(self):
+            self.destroyed += 1
+
+    class PanelHarness:
+        close = WxTerminalWebViewPanel.close
+        close_for_parent_teardown = WxTerminalWebViewPanel.close_for_parent_teardown
+
+        def IsBeingDeleted(self):
+            return False
+
+    class FakeRetryTimer:
+        def __init__(self, running):
+            self.running = running
+            self.stop_calls = 0
+
+        def IsRunning(self):
+            return self.running
+
+        def Stop(self):
+            self.stop_calls += 1
+            self.running = False
+
+    panel = PanelHarness()
+    panel._closed = False
+    panel._webview = FakeWebView()
+    panel._webview_pending_native = pending_native
+    panel._webview_legacy_edge = False
+    panel._native_created = not pending_native
+    panel._ready = False
+    panel._page_loaded = False
+    panel._is_parity = True
+    panel._generation = 0
+    panel._readiness_timer = None
+    panel._resize_timer = None
+    retry_timer = FakeRetryTimer(retry_timer_running)
+    panel._native_retry_timer = retry_timer
+    panel._gtk_ack_timer = None
+    panel._stop_fragment_ack_timer = lambda: None
+    panel._gtk_queue = type("Queue", (), {"reset": lambda self: None})()
+    panel._gtk_screen_snapshot = None
+    panel._gtk_query_pending = False
+    panel._gtk_send_scheduled = False
+    panel._subscriber = None
+    panel._subscribers_list = None
+    panel._pending = []
+    panel._pending_bytes = 0
+    panel._pending_paste = []
+    panel._pending_paste_bytes = 0
+    panel._write_failure_shown = False
+    panel._lang_cb = lambda _language=None: None
+    webview = panel._webview
+
+    deferred = panel.close_for_parent_teardown()
+    deferred_again = panel.close_for_parent_teardown()
+
+    assert deferred is expected_deferred
+    assert deferred_again is expected_deferred
+    assert webview.stopped == (0 if pending_native else 1)
+    assert webview.destroyed == 0
+    assert panel._webview is None
+    assert retry_timer.stop_calls == int(retry_timer_running)
+    assert panel._native_retry_timer is None
+
+
+@pytest.mark.unit
+def test_direct_panel_destroy_defers_pending_native_teardown(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    from hpc_gui.wx_terminal_webview_lifecycle import TerminalLifecycleMixin
+
+    timers = []
+    timer_handle = object()
+    monkeypatch.setitem(
+        sys.modules,
+        "wx",
+        SimpleNamespace(
+            CallLater=lambda delay, callback: timers.append((delay, callback)) or timer_handle
+        ),
+    )
+
+    class BaseWindow:
+        def __init__(self):
+            self.destroyed = 0
+
+        def Destroy(self):
+            self.destroyed += 1
+            return True
+
+        def IsBeingDeleted(self):
+            return False
+
+    class PanelHarness(TerminalLifecycleMixin, BaseWindow):
+        def __init__(self):
+            BaseWindow.__init__(self)
+            self.parent_close_calls = 0
+
+        def close_for_parent_teardown(self):
+            self.parent_close_calls += 1
+            return True
+
+    panel = PanelHarness()
+
+    assert panel.Destroy() is True
+    assert panel.Destroy() is True
+    assert panel.parent_close_calls == 2
+    assert panel.destroyed == 0
+    assert len(timers) == 1
+    assert timers[0][0] == 350
+    assert panel._wx_terminal_destroy_timer is timer_handle
+
+    timers[0][1]()
+    assert panel.destroyed == 1
 
 
 @pytest.mark.audit

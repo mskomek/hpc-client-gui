@@ -8,6 +8,7 @@ from typing import Any, Callable
 
 from hpc_gui.core.i18n import t, unsubscribe_language_change
 from hpc_gui.jobs.job_rows import parse_job_row
+from hpc_gui.jobs.native_window_identity import matches_wx_destroy_event
 
 
 @dataclass
@@ -64,6 +65,10 @@ class JobsWorkspaceLifecycle:
 
     def __init__(self, bindings: WorkspaceLifecycleBindings) -> None:
         self.bindings = bindings
+        try:
+            self._host_id = bindings.host.GetId()
+        except (AttributeError, RuntimeError):
+            self._host_id = None
 
     def _close_files_browser(self) -> None:
         bindings = self.bindings
@@ -81,7 +86,7 @@ class JobsWorkspaceLifecycle:
                 return
             bindings.state["closed"] = True
             bindings.state["outputs_pending_generations"].clear()
-        bindings.timer.Stop()
+        self._stop_timer()
         self._close_files_browser()
         unsubscribe_language_change(bindings.refresh_labels)
         # Embedded pages belong to the parent notebook. Standalone windows own
@@ -92,19 +97,51 @@ class JobsWorkspaceLifecycle:
 
     def on_destroy(self, event) -> None:
         bindings = self.bindings
-        event_window = event.GetEventObject()
-        if not _is_same_window(event_window, bindings.host):
+        if not matches_wx_destroy_event(event, bindings.host, self._host_id):
             event.Skip()
             return
         with bindings.state_lock:
             bindings.state["closed"] = True
             bindings.state["outputs_pending_generations"].clear()
-        bindings.timer.Stop()
+        self._stop_timer()
         self._close_files_browser()
         for follower in bindings.state.get("followers", {}).values():
             follower.close()
         unsubscribe_language_change(bindings.refresh_labels)
         event.Skip()
+
+    def _stop_timer(self) -> None:
+        """Stop and detach the host timer before its native owner is destroyed.
+
+        Stop() prevents future ticks, while Unbind() also removes an already
+        queued EVT_TIMER from reaching this controller during teardown.
+        """
+        bindings = self.bindings
+        try:
+            bindings.timer.Stop()
+        except RuntimeError:
+            # Native owner teardown can invalidate the wrapper before cleanup.
+            pass
+        unbind = getattr(bindings.host, "Unbind", None)
+        wx = getattr(bindings, "wx", None)
+        timer_event = getattr(wx, "EVT_TIMER", None)
+        if callable(unbind) and timer_event is not None:
+            try:
+                unbind(
+                    timer_event,
+                    handler=self.tick,
+                    source=bindings.timer,
+                )
+            except (RuntimeError, TypeError):
+                # A partially destroyed host has already removed bindings.
+                pass
+        set_owner = getattr(bindings.timer, "SetOwner", None)
+        if callable(set_owner):
+            try:
+                # A queued native timer notification must not retain the HWND.
+                set_owner(None)
+            except (RuntimeError, TypeError):
+                pass
 
     def set_session(self, session) -> None:
         bindings = self.bindings
@@ -253,7 +290,10 @@ class JobsWorkspaceLifecycle:
 
     def tick(self, event) -> None:
         bindings = self.bindings
-        actions, state = bindings.actions, bindings.state
+        state = bindings.state
+        if state.get("closed"):
+            return
+        actions = bindings.actions
         if bindings.auto_refresh.GetValue():
             actions.refresh_jobs(event)
         try:
@@ -276,20 +316,3 @@ class JobsWorkspaceLifecycle:
                     actions.refresh_outputs_tab(event)
         except Exception:
             pass
-
-
-def _is_same_window(left: Any, right: Any) -> bool:
-    """Compare wx window wrappers by their native handle when available."""
-    if left is right:
-        return True
-    try:
-        left_handle = left.GetHandle()
-        right_handle = right.GetHandle()
-        if left_handle is not None and right_handle is not None:
-            return left_handle == right_handle
-    except Exception:
-        pass
-    try:
-        return bool(left == right)
-    except Exception:
-        return False

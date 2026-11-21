@@ -37,6 +37,27 @@ def test_shutdown_reports_cleanup_timeout_without_blocking():
 
 
 @pytest.mark.unit
+def test_shutdown_does_not_join_unstarted_cleanup_worker(monkeypatch):
+    monkeypatch.setattr("threading.Thread.start", lambda _thread: None)
+    cleaned = []
+    controller = WxLifecycleController()
+    controller.register_cleanup(lambda: cleaned.append("worker"), worker_safe=True)
+    controller.register_cleanup(lambda: cleaned.append("ui"))
+
+    controller.shutdown()
+
+    assert cleaned == ["ui"]
+    assert controller.cleanup_complete is False
+    assert controller.cleanup_timed_out is False
+    assert controller.cleanup_failures == [
+        {
+            "callback": "test_shutdown_does_not_join_unstarted_cleanup_worker.<locals>.<lambda>",
+            "error_type": "ThreadNotStarted",
+        }
+    ]
+
+
+@pytest.mark.unit
 def test_tray_unavailable_is_fail_soft():
     controller = WxLifecycleController()
     assert not controller.notify_job("done")

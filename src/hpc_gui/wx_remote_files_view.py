@@ -22,6 +22,7 @@ from hpc_gui.wx_remote_files_support import (
     _type_label as _type_label,
 )
 from hpc_gui.wx_remote_files_listing import install_listing
+from hpc_gui.wx_remote_files_more_menu import build_more_actions_menu
 from hpc_gui.wx_remote_files_navigation import install_navigation
 from hpc_gui.wx_remote_files_interactions import install_interactions
 from hpc_gui.wx_remote_files_actions import install_actions
@@ -50,18 +51,22 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     btn_new_folder = wx.Button(panel, label=t("dirs.new_folder"))
     btn_new_file = wx.Button(panel, label=t("dirs.new_file"))
     btn_upload = wx.Button(panel, label=t("dirs.upload"))
-    btn_download = wx.Button(panel, label=t("dirs.download_selected"))
+    btn_download = wx.Button(panel, label=t("dirs.download"))
     btn_delete = wx.Button(panel, label=t("dirs.delete"))
     btn_undo = wx.Button(panel, label=t("dirs.undo"))
     btn_favorites = wx.Button(panel, label=t("dirs.favorites"))
     btn_history = wx.Button(panel, label=t("dirs.history"))
     btn_refresh = wx.Button(panel, label=t("dirs.refresh"))
+    btn_more = wx.Button(panel, label=t("dirs.more_actions"))
+    btn_download.SetToolTip(t("dirs.download_selected"))
+    for button in (btn_new_file, btn_delete, btn_undo, btn_favorites, btn_history, btn_refresh):
+        button.Hide()
     btn_back = wx.Button(panel, label=t("dirs.back"))
     btn_forward = wx.Button(panel, label=t("dirs.forward"))
     btn_up = wx.Button(panel, label=t("dirs.up"))
     for button, key in ((btn_back, "dirs.back"), (btn_forward, "dirs.forward"), (btn_up, "dirs.up")):
         button.SetToolTip(t(key))
-    for b in (btn_back, btn_forward, btn_up, btn_new_folder, btn_new_file, btn_upload, btn_download, btn_delete, btn_undo, btn_favorites, btn_history, btn_refresh):
+    for b in (btn_back, btn_forward, btn_up, btn_new_folder, btn_upload, btn_download, btn_more):
         toolbar.Add(b, 0, wx.ALL, 3)
     def _available(callback, supported=None):
         if not callable(callback):
@@ -399,6 +404,19 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         sel, tstate = _selected_paths_for_toolbar()
         run_action("undo", sel, tstate["path"] if tstate else "/")
 
+    def _on_more_actions(_evt):
+        actions = (
+            ("dirs.new_file", _on_toolbar_new_file),
+            ("dirs.delete", _on_toolbar_delete),
+            ("dirs.undo", _on_toolbar_undo),
+            ("dirs.refresh", load),
+            ("dirs.favorites", _on_favorites),
+            ("dirs.history", _on_history),
+        )
+        menu = build_more_actions_menu(wx, t, actions)
+        panel.PopupMenu(menu)
+        menu.Destroy()
+
     btn_new_folder.Bind(wx.EVT_BUTTON, _on_toolbar_new_folder)
     btn_new_file.Bind(wx.EVT_BUTTON, _on_toolbar_new_file)
     btn_back.Bind(wx.EVT_BUTTON, _go_back)
@@ -408,6 +426,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     btn_download.Bind(wx.EVT_BUTTON, _on_toolbar_download)
     btn_delete.Bind(wx.EVT_BUTTON, _on_toolbar_delete)
     btn_undo.Bind(wx.EVT_BUTTON, _on_toolbar_undo)
+    btn_more.Bind(wx.EVT_BUTTON, _on_more_actions)
     # Context actions are enabled/disabled at invocation time because the
     # active session and navigation store can change after construction.
 
@@ -427,7 +446,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
                 pass
     subscribe_language_change(refresh_labels)
     host.bind_host_close(lambda event: (unsubscribe_language_change(refresh_labels), close(event)))
-    host._wx_remote_controls = {"listing": initial["listing"], "path": path, "notebook": notebook, "toolbar": toolbar, "btn_back": btn_back, "btn_forward": btn_forward, "btn_up": btn_up, "btn_new_folder": btn_new_folder, "btn_new_file": btn_new_file, "btn_upload": btn_upload, "btn_download": btn_download, "btn_delete": btn_delete, "btn_undo": btn_undo, "btn_favorites": btn_favorites, "btn_history": btn_history, "btn_refresh": btn_refresh, "path_label": path_label, "load": load, "refresh_provider_filters": refresh_provider_filters, "navigate": navigate}
+    host._wx_remote_controls = {"listing": initial["listing"], "path": path, "notebook": notebook, "toolbar": toolbar, "btn_back": btn_back, "btn_forward": btn_forward, "btn_up": btn_up, "btn_new_folder": btn_new_folder, "btn_new_file": btn_new_file, "btn_upload": btn_upload, "btn_download": btn_download, "btn_delete": btn_delete, "btn_undo": btn_undo, "btn_favorites": btn_favorites, "btn_history": btn_history, "btn_refresh": btn_refresh, "btn_more": btn_more, "path_label": path_label, "load": load, "refresh_provider_filters": refresh_provider_filters, "navigate": navigate}
     host._wx_remote_model = model
     host._wx_remote_state = state
     host._wx_remote_run_action = run_action

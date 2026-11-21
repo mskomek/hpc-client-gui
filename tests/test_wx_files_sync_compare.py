@@ -452,7 +452,13 @@ def test_wx_compare_close_in_flight_is_safe(monkeypatch, tmp_path: Path):
         compare_btn.GetEventHandler().ProcessEvent(evt)
         assert started.wait(5), "comparison worker did not reach the barrier"
         frame.Close()
-        wx.Yield()
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline and any(
+            window is frame for window in wx.GetTopLevelWindows()
+        ):
+            app.ProcessPendingEvents()
+            wx.SafeYield()
+            wx.MilliSleep(5)
         assert files_page._compare_state["closed"] is True
         assert all(window is not frame for window in wx.GetTopLevelWindows())
 

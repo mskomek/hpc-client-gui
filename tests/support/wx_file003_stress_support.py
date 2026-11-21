@@ -83,6 +83,8 @@ def _browser_windows():
 def _local_frame(app, path):
     show_local_files(path=path)
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_local_controls")][-1]
+    _settle(app, rounds=4)
+    _pump(app, lambda: frame.IsShownOnScreen())
     _pump(app, lambda: frame._wx_local_controls["listing"].GetItemCount() >= 0)
     return frame
 
@@ -93,6 +95,8 @@ def _remote_frame(app, backend, path="/work", loader=None):
         operation=backend.operation,
     )
     frame = [w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_remote_controls")][-1]
+    _settle(app, rounds=4)
+    _pump(app, lambda: frame.IsShownOnScreen())
     _pump(app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
     return frame
 
@@ -182,8 +186,23 @@ def _context_event(listing, position):
     return event
 
 def _row_position(listing, row):
-    rect = listing.GetItemRect(row)
-    return listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
+    assert listing.IsShownOnScreen(), "screen-coordinate context event needs a mapped wx control"
+    # wxGTK's GetItemRect includes the report header's vertical offset while
+    # HitTest uses control client coordinates. Find a point through HitTest so
+    # synthetic screen-coordinate events target the same row as a real click.
+    width, height = listing.GetClientSize()
+    assert width > 5 and height > 0, "mapped list control has no clickable client area"
+    hit_rows = [
+        y for y in range(height)
+        if listing.HitTest(wx.Point(5, y))[0] == row
+    ]
+    assert hit_rows, f"wx list row {row} has no hittable client coordinates"
+    client_position = wx.Point(5, hit_rows[len(hit_rows) // 2])
+    screen_position = listing.ClientToScreen(client_position)
+    round_trip_position = listing.ScreenToClient(screen_position)
+    hit_index, _flags = listing.HitTest(round_trip_position)
+    assert hit_index == row, f"screen point round trip hit row {hit_index}, expected {row}"
+    return screen_position
 
 def _key(listing, code, *, ctrl=False, shift=False):
     event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)

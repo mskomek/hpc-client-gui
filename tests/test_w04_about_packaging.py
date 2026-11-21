@@ -3,7 +3,7 @@
 import pytest
 import pathlib
 from hpc_gui.core.i18n import load_language
-from w04_support_freeze_support import _MessageBoxCapture, _collect_about_labels, _collect_about_labels_with, _parse_freeze_matrix, wx
+from w04_support_freeze_support import _MessageBoxCapture, _collect_about_labels, _collect_about_labels_with, _parse_freeze_matrix, close_wx_app, wx
 
 
 @pytest.fixture(autouse=True)
@@ -19,15 +19,7 @@ def wx_app():
     if app is None:
         app = wx.App(False)
     yield app
-    for window in wx.GetTopLevelWindows():
-        try:
-            if window:
-                window.Destroy()
-        except Exception:
-            pass
-    app.ProcessPendingEvents()
-    wx.SafeYield()
-    app.Destroy()
+    close_wx_app(app)
 
 
 def test_about__visible_contract_fields(wx_app):

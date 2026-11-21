@@ -63,9 +63,9 @@ def _context_action(listing, label, index="selected"):
         if index is None:
             point = listing.ClientToScreen(wx.Point(5, max(5, listing.GetSize().height - 5)))
         else:
-            if index == "selected":
-                index = next((i for i in range(listing.GetItemCount()) if listing.IsSelected(i)), 0)
-            point = listing.ClientToScreen(wx.Point(5, listing.GetItemRect(index).y + 2))
+            # Selected-item actions use the keyboard context-menu position.
+            # Synthetic screen coordinates can map to an adjacent row in wxGTK.
+            point = wx.DefaultPosition
         event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
         event.SetPosition(point)
         listing.ProcessEvent(event)

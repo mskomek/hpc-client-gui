@@ -6,7 +6,7 @@ import re
 import hpc_gui.wx_shell as wx_shell
 from hpc_gui.core.i18n import t
 from hpc_gui.core.i18n import load_language
-from w04_support_freeze_support import CLOSED_VOCABULARY, FROZEN_COUNTS, REQUIRED_COLUMNS, _MessageBoxCapture, _close_shell, _menu_labels, _parse_freeze_matrix, _shell_menu_labels, wx
+from w04_support_freeze_support import CLOSED_VOCABULARY, FROZEN_COUNTS, REQUIRED_COLUMNS, _MessageBoxCapture, _close_shell, _menu_labels, _parse_freeze_matrix, _shell_menu_labels, close_wx_app, wx
 
 
 @pytest.fixture(autouse=True)
@@ -22,15 +22,7 @@ def wx_app():
     if app is None:
         app = wx.App(False)
     yield app
-    for window in wx.GetTopLevelWindows():
-        try:
-            if window:
-                window.Destroy()
-        except Exception:
-            pass
-    app.ProcessPendingEvents()
-    wx.SafeYield()
-    app.Destroy()
+    close_wx_app(app)
 
 
 def test_matrix__has_all_required_columns():
@@ -175,3 +167,71 @@ def test_baseline_removals__no_wx_surface_for_legacy_keys(wx_app):
         assert frame._wx_shell_help_items["tour"] is None
     finally:
         _close_shell(frame)
+
+
+def test_close_shell_waits_for_scheduled_native_destruction(monkeypatch):
+    class ScheduledFrame:
+        _wx_shell_destroy_scheduled = False
+        _wx_shell_destroy_completed = False
+        destroy_calls = 0
+
+        def Close(self):
+            self._wx_shell_destroy_scheduled = True
+
+        def IsBeingDeleted(self):
+            return self._wx_shell_destroy_completed
+
+        def Destroy(self):
+            self.destroy_calls += 1
+            return True
+
+    frame = ScheduledFrame()
+    yielded = 0
+
+    def yield_until_destroyed():
+        nonlocal yielded
+        yielded += 1
+        if yielded == 2:
+            frame._wx_shell_destroy_completed = True
+
+    monkeypatch.setattr(wx, "Yield", yield_until_destroyed)
+    monkeypatch.setattr(wx, "MilliSleep", lambda _milliseconds: None)
+    _close_shell(frame)
+
+    assert frame.destroy_calls == 0
+    assert yielded >= 2
+
+
+def test_close_shell_does_not_repeat_production_destroy(monkeypatch):
+    class DestroyedFrame:
+        _wx_shell_destroy_scheduled = False
+        _wx_shell_native_teardown_pending = False
+        _wx_shell_destroy_invoked = False
+        _wx_shell_destroy_completed = False
+        destroy_calls = 0
+
+        def Close(self):
+            self._wx_shell_destroy_invoked = True
+
+        def IsBeingDeleted(self):
+            return self._wx_shell_destroy_completed
+
+        def Destroy(self):
+            self.destroy_calls += 1
+            return True
+
+    frame = DestroyedFrame()
+    yielded = 0
+
+    def yield_until_destroyed():
+        nonlocal yielded
+        yielded += 1
+        if yielded == 2:
+            frame._wx_shell_destroy_completed = True
+
+    monkeypatch.setattr(wx, "Yield", yield_until_destroyed)
+    monkeypatch.setattr(wx, "MilliSleep", lambda _milliseconds: None)
+    _close_shell(frame)
+
+    assert frame.destroy_calls == 0
+    assert yielded >= 2
