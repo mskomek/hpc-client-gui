@@ -57,7 +57,7 @@ The branch used for the acceptance execution also contains local commits recorde
 
 ## 4. Final noninteractive acceptance record
 
-The canonical detailed record is [`V2_FINAL_ACCEPTANCE_REPORT_2026-10-17.md`](V2_FINAL_ACCEPTANCE_REPORT_2026-10-17.md); current open-work ledger is [`TODO_V2_REMAINING.md`](../../TODO_V2_REMAINING.md). The report's claim is **`V2_ACCEPTED` for the noninteractive scope only**, not manual user acceptance or authenticated real-HPC endpoint acceptance.
+The canonical detailed record is [`V2_FINAL_ACCEPTANCE_REPORT_2026-10-17.md`](V2_FINAL_ACCEPTANCE_REPORT_2026-10-17.md); the historical open-work ledger was `TODO_V2_REMAINING.md` (not present in the current tracked checkout). The report's claim is **`V2_ACCEPTED` for the noninteractive scope only**, not manual user acceptance or authenticated real-HPC endpoint acceptance.
 
 Recorded final source and artifact identities:
 
