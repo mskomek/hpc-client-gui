@@ -226,3 +226,32 @@ def test_disabled_x11_may_keep_previous_nonfatal_shell_fallback(monkeypatch):
     assert wrapper._start_shell_session() is None
     assert wrapper._shell_session is None
 
+@pytest.mark.parametrize("client_present", [False, True])
+def test_required_x11_does_not_succeed_without_active_ssh_transport(client_present):
+    wrapper = ssh_client.SSHClientWrapper(
+        SSHConnInfo("localhost", 22, x11_forwarding=True),
+        logger=lambda _message: None,
+    )
+    if client_present:
+        wrapper.client = SimpleNamespace(
+            get_transport=lambda: SimpleNamespace(is_active=lambda: False)
+        )
+    with pytest.raises(X11Unavailable, match="(client is unavailable|transport is inactive)"):
+        wrapper._start_shell_session()
+
+
+def test_x11_transport_inspection_failure_closes_forwarder(monkeypatch):
+    events = []
+    forwarder = _Forwarder(events)
+    monkeypatch.setattr(x11_shell, "X11Forwarder", lambda **_kwargs: forwarder)
+
+    class BadTransportClient:
+        def get_transport(self):
+            raise OSError("transport broken")
+
+    with pytest.raises(X11Unavailable, match="could not be inspected"):
+        x11_shell.open_x11_shell(
+            BadTransportClient(), log=lambda _msg: None, term="xterm"
+        )
+    assert ("forwarder-close",) in events
+
