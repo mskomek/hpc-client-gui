@@ -130,7 +130,7 @@ def run(label: str, output: Path, seconds: int, selections: list[str]) -> int:
         status = "ABNORMAL_EXIT"
     elif "--collect-only" in selections and rc == 0:
         collected_match = re.search(
-            r"(\\d+) (?:test(?:s)?|item(?:s)?) collected", contents
+            r"(\d+) (?:test(?:s)?|item(?:s)?) collected", contents
         )
         status = "COLLECTED" if collected_match else "COLLECTION_INCOMPLETE"
     elif rc == 0 and junit_receipt["complete"]:
