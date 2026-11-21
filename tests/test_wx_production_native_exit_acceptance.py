@@ -32,6 +32,7 @@ def test_production_native_destroy_event_exits_real_webview_mainloop():
         import wx
         from hpc_gui.wx_application import install_main_frame_exit_policy
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
+        from hpc_gui.wx_shell_smoke_finalize import _frame_destroyed
 
         app = wx.App(False)
         frame = wx.Frame(None, title="production-exit-policy-webview", size=(840, 540))
@@ -46,24 +47,30 @@ def test_production_native_destroy_event_exits_real_webview_mainloop():
         install_main_frame_exit_policy(wx, app, frame)
         print("POLICY: installed", flush=True)
 
+        def describe_window(w):
+            if w is None:
+                return "none"
+            try:
+                return (
+                    f"{type(w).__name__}(name={w.GetName()!r},"
+                    f"id={w.GetId()},frame={w is frame},panel={w is panel})"
+                )
+            except Exception as exc:
+                return f"{type(w).__name__}(unavailable={type(exc).__name__})"
+
         def trace_destroy(event):
             try:
                 native_target = event.GetWindow()
-                native_self = native_target is frame
-                native_panel = native_target is panel
             except Exception as exc:
-                native_self, native_panel = False, False
+                native_target = None
                 print(f"POLICY: GetWindow_error={type(exc).__name__}", flush=True)
             try:
                 event_object = event.GetEventObject()
-                object_self = event_object is frame
-                object_panel = event_object is panel
             except Exception:
-                object_self, object_panel = False, False
+                event_object = None
             print(
-                f"POLICY: destroy_event GetWindow_frame={native_self} "
-                f"GetWindow_panel={native_panel} EventObject_frame={object_self} "
-                f"EventObject_panel={object_panel}",
+                f"POLICY: destroy_event source={describe_window(native_target)} "
+                f"event_object={describe_window(event_object)}",
                 flush=True,
             )
             event.Skip()
@@ -75,6 +82,7 @@ def test_production_native_destroy_event_exits_real_webview_mainloop():
                 print("POLICY: explicit veto", flush=True)
                 return
             print("POLICY: destroying frame", flush=True)
+            frame._wx_shell_destroy_invoked = True
             print(f"POLICY: destroy_return={frame.Destroy()}", flush=True)
 
         frame.Bind(wx.EVT_CLOSE, close)
@@ -88,6 +96,7 @@ def test_production_native_destroy_event_exits_real_webview_mainloop():
             print(
                 f"POLICY: after_destroy panel_closed={panel._closed} "
                 f"top_windows={top_windows!r} "
+                f"frame_native_deleted={_frame_destroyed(wx, frame)} "
                 f"exit_policy_error={getattr(frame, '_wx_shell_exit_loop_error_type', '')}",
                 flush=True,
             )
