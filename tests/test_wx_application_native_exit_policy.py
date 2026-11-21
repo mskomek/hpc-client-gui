@@ -25,14 +25,17 @@ class _Frame:
 
 
 class _NativeTopLevelAlias:
-    def __init__(self, *, window_id=713, parent=None):
+    def __init__(self, *, window_id=713, parent=None, fail_parent=False):
         self.window_id = window_id
         self.parent = parent
+        self.fail_parent = fail_parent
 
     def GetId(self):
         return self.window_id
 
     def GetParent(self):
+        if self.fail_parent:
+            raise RuntimeError("wrapped C/C++ parent was deleted")
         return self.parent
 
 
@@ -162,3 +165,18 @@ def test_gtk_child_and_other_top_level_destroy_are_ignored():
     assert queued == []
     assert exited == []
     assert policies == [True]
+
+
+def test_gtk_alias_with_deleted_native_parent_lookup_still_exits():
+    frame, key, queued, policies, exited = _setup()
+    alias = _NativeTopLevelAlias(
+        window_id=frame.GetId(),
+        fail_parent=True,
+    )
+
+    frame.handlers[key](_Event(alias))
+
+    assert policies == [True]
+    assert len(queued) == 1
+    queued[0]()
+    assert exited == ["exit"]
