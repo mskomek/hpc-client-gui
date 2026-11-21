@@ -78,11 +78,27 @@ jobs:
             --timeout-seconds 600 -- tests \
             -k 'not test_referenced_local_files_exist' --maxfail=0
           continued_exit=$?
-          printf 'source_sha=%s\ncollection_exit=%s\nsuite_exit=%s\ncontinued_exit=%s\n' \
-            "$(git rev-parse HEAD)" "$collect_exit" "$suite_exit" "$continued_exit" \
+          # F-03 controlled A/B: the crash involved Qt's GLib dispatcher
+          # entering wxApp::DoIdle at an FTP widget concurrency test.
+          dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            python scripts/v2_native_suite_runner.py \
+            --label linux-ftp-isolated --output "$V2_EVIDENCE" \
+            --timeout-seconds 120 -- tests/test_ftp_widget_backend_concurrency.py
+          ftp_isolated_exit=$?
+          dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            python scripts/v2_native_suite_runner.py \
+            --label linux-ftp-prefix --output "$V2_EVIDENCE" \
+            --timeout-seconds 180 -- \
+            tests/test_ftp_widget_activity_rows_history.py \
+            tests/test_ftp_widget_backend_concurrency.py
+          ftp_prefix_exit=$?
+          printf 'source_sha=%s\ncollection_exit=%s\nsuite_exit=%s\ncontinued_exit=%s\nftp_isolated_exit=%s\nftp_prefix_exit=%s\n' \
+            "$(git rev-parse HEAD)" "$collect_exit" "$suite_exit" "$continued_exit" "$ftp_isolated_exit" "$ftp_prefix_exit" \
             > "$V2_EVIDENCE/runner-exits.txt"
           echo "Linux collection=$collect_exit, full=$suite_exit, investigation=$continued_exit"
           tail -n 35 "$V2_EVIDENCE/linux-after-docs-probe.stdout.log" || true
+          tail -n 35 "$V2_EVIDENCE/linux-ftp-isolated.stdout.log" || true
+          tail -n 35 "$V2_EVIDENCE/linux-ftp-prefix.stdout.log" || true
           tail -n 35 "$V2_EVIDENCE/linux-full-suite.stdout.log" || true
           tail -n 20 "$V2_EVIDENCE/linux-collection.stdout.log" || true
           if [ "$collect_exit" -ne 0 ] || [ "$suite_exit" -ne 0 ]; then
@@ -134,11 +150,26 @@ jobs:
           $isolated = $LASTEXITCODE
           python scripts/v2_native_suite_runner.py --label windows-webview-remainder --output $env:V2_EVIDENCE --timeout-seconds 300 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py tests/test_wx_terminal_native_teardown_contracts.py -k 'not test_wx_terminal_webview_page_loads_and_posts_ready' --maxfail=0
           $remainder = $LASTEXITCODE
+          # Order dependence: all lifecycle tests before the one WebView2
+          # ready test, versus just the last lifecycle test before it.
+          python scripts/v2_native_suite_runner.py --label windows-lifecycle-prefix --output $env:V2_EVIDENCE --timeout-seconds 180 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
+          $prefix = $LASTEXITCODE
+          python scripts/v2_native_suite_runner.py --label windows-last-lifecycle-pair --output $env:V2_EVIDENCE --timeout-seconds 150 -- tests/test_wx_terminal_webview_lifecycle.py::test_wx_terminal_embedded_connect_to_ssh tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
+          $pair = $LASTEXITCODE
+          # Fresh profile control; do not change application/profile defaults.
+          $originalProfile = $env:WEBVIEW2_USER_DATA_FOLDER
+          $env:WEBVIEW2_USER_DATA_FOLDER = Join-Path $env:V2_EVIDENCE "separate-edge-profile"
+          python scripts/v2_native_suite_runner.py --label windows-fresh-profile --output $env:V2_EVIDENCE --timeout-seconds 180 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
+          $fresh = $LASTEXITCODE
+          $env:WEBVIEW2_USER_DATA_FOLDER = $originalProfile
           "source_sha=$(git rev-parse HEAD)" | Out-File -Encoding utf8 (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
           "webview_exit=$result" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
           "isolated_exit=$isolated" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
           "remainder_exit=$remainder" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
-          foreach ($name in @("windows-webview-source","windows-webview-isolated","windows-webview-remainder")) {
+          "lifecycle_prefix_exit=$prefix" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          "last_lifecycle_pair_exit=$pair" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          "fresh_profile_exit=$fresh" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          foreach ($name in @("windows-webview-source","windows-webview-isolated","windows-webview-remainder","windows-lifecycle-prefix","windows-last-lifecycle-pair","windows-fresh-profile")) {
             $log = Join-Path $env:V2_EVIDENCE "$name.stdout.log"
             if (Test-Path $log) { Get-Content $log -Tail 25 }
           }
