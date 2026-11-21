@@ -103,8 +103,13 @@ def test_untrusted_cookie_failure_does_not_create_fallback(tmp_path, monkeypatch
     create_mit_cookie_file(source, 0)
     monkeypatch.setattr("hpc_gui.core.xauthority.find_xauth_executable", lambda: "xauth")
     failure = type("Result", (), {"returncode": 1, "stdout": "", "stderr": ""})()
+    baseline = type("Result", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+    def runner(command, **_kwargs):
+        return baseline if "list" in command else failure
+
     with pytest.raises(RuntimeError, match="does not support untrusted"):
-        create_untrusted_cookie(source, ":0", runner=lambda *_args, **_kwargs: failure)
+        create_untrusted_cookie(source, ":0", runner=runner)
     assert list(tmp_path.glob("hpc-x11-*.xauth")) == []
 
 def test_default_forwarder_uses_untrusted_cookie_and_deletes_private_copy(tmp_path):
