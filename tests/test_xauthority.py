@@ -74,23 +74,26 @@ def test_trusted_cookie_reader_uses_installed_vcxsrv_xauth(tmp_path, monkeypatch
 
 def test_untrusted_cookie_uses_private_authority_copy_and_cleans_it(tmp_path, monkeypatch):
     source = tmp_path / "source.xauth"
-    create_mit_cookie_file(source, 0)
+    trusted = create_mit_cookie_file(source, 0)
     monkeypatch.setattr("hpc_gui.core.xauthority.find_xauth_executable", lambda: "xauth")
     calls = []
+    generated_cookie = bytes.fromhex("1234567890abcdef1234567890abcdef")
 
     def runner(command, **_kwargs):
         calls.append(command)
         if "generate" in command:
             return type("Result", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+        cookie = trusted if len([item for item in calls if "list" in item]) == 1 else generated_cookie
         return type("Result", (), {
             "returncode": 0,
-            "stdout": "host/unix:0 MIT-MAGIC-COOKIE-1 1234567890abcdef1234567890abcdef\n",
+            "stdout": "host/unix:0 MIT-MAGIC-COOKIE-1 " + cookie.hex() + "\n",
             "stderr": "",
         })()
 
     private, cookie = create_untrusted_cookie(source, ":0", runner=runner)
     assert private != source and private.exists()
-    assert cookie == bytes.fromhex("1234567890abcdef1234567890abcdef")
+    assert cookie == generated_cookie and cookie != trusted
+    assert "list" in calls[0] and "generate" in calls[1]
     assert calls[0][0:2] == ["xauth", "-f"]
     private.unlink()
 
@@ -189,4 +192,25 @@ def test_explicit_server_rejection_is_not_silent():
             forwarder.request(RejectedChannel())
     finally:
         forwarder.close()
+
+def test_untrusted_generation_that_reuses_trusted_cookie_fails_closed(
+    tmp_path, monkeypatch
+):
+    source = tmp_path / "original.xauth"
+    trusted = create_mit_cookie_file(source, 0)
+    monkeypatch.setattr("hpc_gui.core.xauthority.find_xauth_executable", lambda: "xauth")
+
+    def runner(command, **_kwargs):
+        return type("Result", (), {
+            "returncode": 0,
+            "stdout": (
+                "host/unix:0 MIT-MAGIC-COOKIE-1 " + trusted.hex() + "\n"
+                if "list" in command else ""
+            ),
+            "stderr": "",
+        })()
+
+    with pytest.raises(RuntimeError, match="distinct untrusted"):
+        create_untrusted_cookie(source, ":0", runner=runner)
+    assert list(tmp_path.glob("hpc-x11-*.xauth")) == []
 
