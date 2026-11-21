@@ -230,6 +230,7 @@ def test_native_error_timer_can_be_cancelled_on_close(monkeypatch):
     class Panel(TerminalBridgeMixin, _Panel):
         def __init__(self):
             _Panel.__init__(self, pending=True)
+            self._native_retry_scheduled = False
             self._webview_create_attempts = 1
             self._webview_max_attempts = 3
             self._native_create_errors = 0
