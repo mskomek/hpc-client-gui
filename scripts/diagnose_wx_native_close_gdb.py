@@ -8,6 +8,7 @@ No credentials, network connections, SSH profiles, or persistent user data.
 
 from __future__ import annotations
 
+import os
 import signal
 import sys
 
@@ -20,6 +21,12 @@ from hpc_gui.wx_shell_smoke_finalize import _frame_destroyed
 
 def main() -> int:
     app = wx.App(False)
+    # Diagnostic A/B only: preserve the log text but prevent wxLogGui from
+    # launching an invisible modal dialog while the last frame is closing.
+    # The actual app policy is unchanged until this is proven by native CI.
+    if os.environ.get("HPC_GUI_DIAG_WX_LOG_STDERR") == "1":
+        wx.Log.SetActiveTarget(wx.LogStderr())
+        print("GDB_PROBE: wx_log_target=stderr", flush=True)
     frame = wx.Frame(None, title="gdb-webview-close-probe", size=(840, 540))
     panel = WxTerminalWebViewPanel(frame)
     if panel._webview is None:
