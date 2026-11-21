@@ -18,6 +18,7 @@ on:
       - "tests/test_wx_production_native_exit_acceptance.py"
       - "src/hpc_gui/wx_application.py"
       - "src/hpc_gui/wx_terminal_webview_lifecycle.py"
+      - "scripts/diagnose_wx_native_close_gdb.py"
   workflow_dispatch:
 
 permissions:
@@ -101,6 +102,30 @@ jobs:
             > .tmp/w19-native/production-close.log 2>&1
           production_close_rc=$?
           echo "production_close_exit=$production_close_rc" >> .tmp/w19-native/identity.txt
+          # Diagnose the actual hung native WebKitGTK close, not an unrelated
+          # connection-lifecycle test. SIGALRM is intentionally intercepted
+          # by gdb after 9s and is never counted as a successful app exit.
+          timeout --signal=TERM --kill-after=5s 45s \
+            dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            gdb -nx -q -batch \
+              -ex 'set pagination off' -ex 'set confirm off' \
+              -ex 'set print thread-events off' \
+              -ex 'handle SIGPIPE nostop noprint pass' \
+              -ex 'handle SIGALRM stop print nopass' \
+              -ex run -ex 'info threads' -ex 'thread apply all bt 24' \
+              --args python scripts/diagnose_wx_native_close_gdb.py \
+            > .tmp/w19-native/production-hang-gdb.log 2>&1
+          hang_gdb_rc=$?
+          echo "production_hang_gdb_exit=$hang_gdb_rc" >> .tmp/w19-native/identity.txt
+          if grep -q 'Program received signal SIGALRM' .tmp/w19-native/production-hang-gdb.log \
+            && grep -q 'Thread ' .tmp/w19-native/production-hang-gdb.log; then
+            echo "production_hang_backtrace=CAPTURED" >> .tmp/w19-native/identity.txt
+          else
+            echo "production_hang_backtrace=NOT_CAPTURED" >> .tmp/w19-native/identity.txt
+          fi
+          echo '=== production-native hung-stack summary ==='
+          grep -E 'GDB_PROBE:|Program received signal|wxEventLoop|gtk_main|g_main|webkit|WebKit|Thread ' \
+            .tmp/w19-native/production-hang-gdb.log | head -n 100 || true
           tail -n 35 .tmp/w19-native/production-close.log
           tail -n 35 .tmp/w19-native/natural-close.log
           tail -n 35 .tmp/w19-native/readback.log
