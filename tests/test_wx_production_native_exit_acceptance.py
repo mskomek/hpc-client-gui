@@ -36,8 +36,28 @@ def test_production_native_destroy_event_exits_real_webview_mainloop():
 
         class AppWithExitEvidence(wx.App):
             def ExitMainLoop(self):
-                print("POLICY: ExitMainLoop_called", flush=True)
-                return super().ExitMainLoop()
+                try:
+                    is_main_running = self.IsMainLoopRunning()
+                except Exception as exc:
+                    is_main_running = f"error:{type(exc).__name__}"
+                try:
+                    main = self.GetMainLoop()
+                    main_loop_running = main.IsRunning() if main else None
+                except Exception as exc:
+                    main_loop_running = f"error:{type(exc).__name__}"
+                try:
+                    active = wx.EventLoopBase.GetActive()
+                    active_running = active.IsRunning() if active else None
+                except Exception as exc:
+                    active_running = f"error:{type(exc).__name__}"
+                print(
+                    f"POLICY: ExitMainLoop_called main_running={is_main_running} "
+                    f"main_loop_running={main_loop_running} active_running={active_running}",
+                    flush=True,
+                )
+                outcome = super().ExitMainLoop()
+                print(f"POLICY: ExitMainLoop_return={outcome!r}", flush=True)
+                return outcome
 
         app = AppWithExitEvidence(False)
         frame = wx.Frame(None, title="production-exit-policy-webview", size=(840, 540))
