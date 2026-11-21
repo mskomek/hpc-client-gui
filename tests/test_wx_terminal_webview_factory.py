@@ -131,8 +131,8 @@ def test_native_created_navigates_current_not_retired_controller(monkeypatch):
     stale = Event(old)
     panel._on_native_created(stale)
     assert stale.skipped
-    cb, args = scheduled.pop()
-    cb(*args)
+    # Reject retired WebView controllers before enqueueing a wx callback.
+    assert scheduled == []
     assert panel.loaded == 0
 
     live = Event(current)

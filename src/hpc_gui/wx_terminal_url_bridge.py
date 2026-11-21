@@ -16,9 +16,22 @@ from urllib.parse import quote
 _ALLOWED = frozenset({
     "hpcWrite", "hpcClear", "hpcPaste", "hpcFocus", "hpcSetFontSize",
     "hpcFit", "hpcFind", "hpcFindNext", "hpcFindPrev",
-    "hpcGetScreenState",
+    "hpcGetScreenState", "hpcSetAccessibilityLabel",
 })
 _CALL = re.compile(r"^\s*window\.(hpc\w+)\s*&&\s*window\.\1\((.*)\)\s*;?\s*$", re.S)
+
+
+def _valid_accessibility_label(value: object) -> bool:
+    """Match JavaScript's UTF-16 string.length limit of 256 code units."""
+    if not isinstance(value, str):
+        return False
+    try:
+        # Python len() counts Unicode code points; JavaScript string.length
+        # counts UTF-16 units (emoji typically use two). Reject ill-formed
+        # surrogate text rather than forwarding an unrepresentable label.
+        return len(value.encode("utf-16-le")) <= 512
+    except UnicodeEncodeError:
+        return False
 
 
 def parse_terminal_call(code: str) -> tuple[str, object] | None:
@@ -32,6 +45,8 @@ def parse_terminal_call(code: str) -> tuple[str, object] | None:
     except (TypeError, ValueError):
         return None
     if method in {"hpcWrite", "hpcPaste", "hpcFind"} and not isinstance(arg, str):
+        return None
+    if method == "hpcSetAccessibilityLabel" and not _valid_accessibility_label(arg):
         return None
     if method == "hpcSetFontSize" and (type(arg) is not int or not 6 <= arg <= 32):
         return None
@@ -53,6 +68,8 @@ def encode_terminal_fragment(
     """Encode a whitelisted action in a fragment, never query/path/network."""
     if type(seq) is not int or seq < 1 or method not in _ALLOWED:
         raise ValueError("invalid terminal bridge command")
+    if method == "hpcSetAccessibilityLabel" and not _valid_accessibility_label(arg):
+        raise ValueError("invalid accessibility label")
     payload = {"seq": seq, "op": method, "arg": arg}
     if channel is not None:
         if not re.fullmatch(r"[0-9a-f]{32}", channel):
