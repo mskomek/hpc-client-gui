@@ -44,6 +44,16 @@ def test_native_webview_parent_close_returns_mainloop():
         frame.SetSizer(root)
         frame.Layout()
         app.SetTopWindow(frame)
+
+        def observe_destroy(event):
+            try:
+                own_window = event.GetWindow() is frame
+            except Exception:
+                own_window = False
+            print(f"NATIVE_STAGE: frame_destroy_event own={own_window}", flush=True)
+            event.Skip()
+
+        frame.Bind(wx.EVT_WINDOW_DESTROY, observe_destroy)
         frame.Show()
         print("NATIVE_STAGE: shown", flush=True)
 
@@ -52,7 +62,19 @@ def test_native_webview_parent_close_returns_mainloop():
             frame.Close()
             print("NATIVE_STAGE: close_returned", flush=True)
 
+        def inspect_after_close():
+            try:
+                top_count = len(wx.GetTopLevelWindows())
+            except Exception:
+                top_count = -1
+            print(
+                f"NATIVE_STAGE: after_close panel_closed={panel._closed} "
+                f"top_windows={top_count}",
+                flush=True,
+            )
+
         wx.CallLater(600, close_frame)
+        wx.CallLater(3000, inspect_after_close)
         app.MainLoop()
         assert panel._closed, "panel did not receive native destroy"
         print("NATIVE_WEBVIEW_MAINLOOP_EXITED", flush=True)
