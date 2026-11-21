@@ -26,13 +26,18 @@ def test_native_webview_parent_close_returns_mainloop():
 
     script = textwrap.dedent(
         """
+        import faulthandler
         import wx
         import wx.html2
+
+        faulthandler.enable()
+        faulthandler.dump_traceback_later(7, repeat=False)
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
         app = wx.App(False)
         frame = wx.Frame(None, title="native-close-probe", size=(840, 540))
         panel = WxTerminalWebViewPanel(frame)
+        print("NATIVE_STAGE: constructed", flush=True)
         assert panel._webview is not None, "native WebView unavailable"
         root = wx.BoxSizer(wx.VERTICAL)
         root.Add(panel, 1, wx.EXPAND)
@@ -40,8 +45,14 @@ def test_native_webview_parent_close_returns_mainloop():
         frame.Layout()
         app.SetTopWindow(frame)
         frame.Show()
+        print("NATIVE_STAGE: shown", flush=True)
 
-        wx.CallLater(600, frame.Close)
+        def close_frame():
+            print("NATIVE_STAGE: close_begin", flush=True)
+            frame.Close()
+            print("NATIVE_STAGE: close_returned", flush=True)
+
+        wx.CallLater(600, close_frame)
         app.MainLoop()
         assert panel._closed, "panel did not receive native destroy"
         print("NATIVE_WEBVIEW_MAINLOOP_EXITED", flush=True)
@@ -70,3 +81,34 @@ def test_native_webview_parent_close_returns_mainloop():
             f"stderr={result.stderr!r}"
         )
         assert "NATIVE_WEBVIEW_MAINLOOP_EXITED" in result.stdout
+
+def test_blank_native_wx_frame_exits_mainloop():
+    if sys.platform.startswith("linux") and not os.environ.get("DISPLAY"):
+        pytest.skip("real X display required; run under Xvfb or GNOME")
+
+    code = textwrap.dedent(
+        """
+        import wx
+        app = wx.App(False)
+        frame = wx.Frame(None, title="blank-close-control")
+        app.SetTopWindow(frame)
+        frame.Show()
+        wx.CallLater(600, frame.Close)
+        app.MainLoop()
+        print("BLANK_MAINLOOP_EXITED", flush=True)
+        """
+    )
+    env = project_python_environment(pathlib.Path(__file__).resolve().parents[1])
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=12,
+        check=False,
+    )
+    assert result.returncode == 0, (
+        f"blank wx control exit={result.returncode}; "
+        f"stdout={result.stdout!r}, stderr={result.stderr!r}"
+    )
+    assert "BLANK_MAINLOOP_EXITED" in result.stdout
