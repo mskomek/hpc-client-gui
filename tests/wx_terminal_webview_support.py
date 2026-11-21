@@ -4,6 +4,7 @@ from __future__ import annotations
 import pathlib
 import subprocess
 import sys
+import tempfile
 import time
 
 import wx
@@ -62,12 +63,21 @@ def _show_frame_with_panel(frame, panel):
 
 
 def _run_subprocess_test(code_str, timeout=15):
-    """Run an isolated wx test with the project source on PYTHONPATH."""
-    env = project_python_environment(pathlib.Path(__file__).parents[1])
-    return subprocess.run(
-        [sys.executable, "-c", code_str],
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        env=env,
-    )
+    """Run a native wx test in a subprocess with a disposable WebView2 profile.
+
+    Several legacy subprocess tests intentionally call os._exit(), so their
+    Edge browser children can briefly outlive the test Python interpreter.
+    Sharing the real app profile across tests can race native controller
+    creation. Never point tests at a user's persistent WebView2 state.
+    """
+    with tempfile.TemporaryDirectory(prefix="v2-wx-webview-", ignore_cleanup_errors=True) as temp:
+        env = project_python_environment(pathlib.Path(__file__).parents[1])
+        if sys.platform == "win32":
+            env["WEBVIEW2_USER_DATA_FOLDER"] = str(pathlib.Path(temp) / "webview2")
+        return subprocess.run(
+            [sys.executable, "-c", code_str],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=env,
+        )
