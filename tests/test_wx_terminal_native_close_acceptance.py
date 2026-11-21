@@ -35,6 +35,9 @@ def test_native_webview_parent_close_returns_mainloop():
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
         app = wx.App(False)
+        # Production PR #78 sets this explicitly; standalone probes must
+        # separate the raw wx default from the intended app exit policy.
+        app.SetExitOnFrameDelete(True)
         frame = wx.Frame(None, title="native-close-probe", size=(840, 540))
         def exit_policy():
             getter = getattr(app, "GetExitOnFrameDelete", None)
@@ -169,6 +172,7 @@ def test_native_webview_direct_destroy_exits_mainloop():
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
         app = wx.App(False)
+        app.SetExitOnFrameDelete(True)
         frame = wx.Frame(None, title="native-direct-destroy-control", size=(840, 540))
         panel = WxTerminalWebViewPanel(frame)
         getter = getattr(app, "GetExitOnFrameDelete", None)
@@ -326,5 +330,65 @@ def test_terminal_fallback_panel_exits_mainloop():
         )
     assert result.returncode == 0 and "FALLBACK_MAINLOOP_EXITED" in result.stdout, (
         f"fallback panel exit={result.returncode}, stdout={result.stdout!r}, "
+        f"stderr={result.stderr!r}"
+    )
+
+
+def test_native_webview_explicit_close_contract():
+    """Diagnostic candidate: approved Close event destroys frame exactly once."""
+    if sys.platform.startswith("linux") and not os.environ.get("DISPLAY"):
+        pytest.skip("real X display required; run under Xvfb or GNOME")
+    code = textwrap.dedent(
+        """
+        import wx
+        from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
+        app = wx.App(False)
+        app.SetExitOnFrameDelete(True)
+        frame = wx.Frame(None, title="terminal-explicit-close-control")
+        panel = WxTerminalWebViewPanel(frame)
+        assert panel._webview is not None
+        root = wx.BoxSizer(wx.VERTICAL)
+        root.Add(panel, 1, wx.EXPAND)
+        frame.SetSizer(root)
+        frame.Layout()
+        app.SetTopWindow(frame)
+
+        def on_close(event):
+            print(
+                f"EXPLICIT: close_event vetoed={event.GetVeto()}",
+                flush=True,
+            )
+            if event.GetVeto():
+                event.Skip()
+                return
+            print(f"EXPLICIT: destroy_return={frame.Destroy()}", flush=True)
+
+        frame.Bind(wx.EVT_CLOSE, on_close)
+        frame.Show()
+        def close_now():
+            print(f"EXPLICIT: Close returned {frame.Close()}", flush=True)
+        wx.CallLater(600, close_now)
+        app.MainLoop()
+        assert panel._closed
+        print("EXPLICIT_CLOSE_EXITED", flush=True)
+        """
+    )
+    env = project_python_environment(pathlib.Path(__file__).resolve().parents[1])
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=12,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        pytest.fail(
+            f"explicit-close diagnostic timed out: stdout={exc.stdout!r} "
+            f"stderr={exc.stderr!r}"
+        )
+    assert result.returncode == 0 and "EXPLICIT_CLOSE_EXITED" in result.stdout, (
+        f"explicit-close exit={result.returncode}, stdout={result.stdout!r}, "
         f"stderr={result.stderr!r}"
     )
