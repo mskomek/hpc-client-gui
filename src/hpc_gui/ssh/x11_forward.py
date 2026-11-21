@@ -201,9 +201,14 @@ class X11Forwarder:
             authority = os.environ.get("XAUTHORITY") or str(Path.home() / ".Xauthority")
             try:
                 authority_copy, cookie = untrusted_cookie_factory(authority, self.display.name)
-                if not isinstance(cookie, bytes) or len(cookie) != 16:
-                    raise ValueError("invalid untrusted X11 cookie")
                 self._authority_copy = Path(authority_copy)
+                if not isinstance(cookie, bytes) or len(cookie) != 16:
+                    try:
+                        self._authority_copy.unlink(missing_ok=True)
+                    except OSError:
+                        pass
+                    self._authority_copy = None
+                    raise ValueError("invalid untrusted X11 cookie")
                 self._real_cookie = cookie
             except Exception as exc:
                 raise RuntimeError(
