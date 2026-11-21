@@ -170,3 +170,59 @@ def test_x11_failure_does_not_retry_shell_with_another_terminal_type():
     session = InteractiveShellSession(invoke_shell=invoke, geometry=(80, 24))
     assert session.start() is False
     assert terms == ["xterm-256color"]
+
+def test_explicit_trusted_mode_reaches_forwarder_not_remote_pty(monkeypatch):
+    events = []
+    received = []
+    forwarder = _Forwarder(events)
+    channel = _Channel(events)
+
+    def factory(**options):
+        received.append(options)
+        return forwarder
+
+    monkeypatch.setattr(x11_shell, "X11Forwarder", factory)
+    x11_shell.open_x11_shell(
+        _SSH(_Transport(channel, events)),
+        log=lambda _message: None,
+        x11_trusted=True,
+        term="xterm",
+        width=120,
+        height=40,
+    )
+    assert received[0]["trusted"] is True
+    assert ("pty", {"term": "xterm", "width": 120, "height": 40}) in events
+
+
+def test_required_x11_shell_failure_aborts_ssh_setup(monkeypatch):
+    info = SSHConnInfo("localhost", 22, x11_forwarding=True)
+    wrapper = ssh_client.SSHClientWrapper(info, logger=lambda _message: None)
+    wrapper.client = SimpleNamespace(
+        get_transport=lambda: SimpleNamespace(is_active=lambda: True)
+    )
+    starts = []
+    monkeypatch.setattr(
+        ssh_client,
+        "InteractiveShellSession",
+        lambda **_kwargs: SimpleNamespace(start=lambda: starts.append(True) or False),
+    )
+
+    with pytest.raises(X11Unavailable, match="X11 shell could not start"):
+        wrapper._start_shell_session()
+    assert starts == [True]
+    assert wrapper._shell_session is None
+
+
+def test_disabled_x11_may_keep_previous_nonfatal_shell_fallback(monkeypatch):
+    wrapper = ssh_client.SSHClientWrapper(SSHConnInfo("localhost", 22))
+    wrapper.client = SimpleNamespace(
+        get_transport=lambda: SimpleNamespace(is_active=lambda: True)
+    )
+    monkeypatch.setattr(
+        ssh_client,
+        "InteractiveShellSession",
+        lambda **_kwargs: SimpleNamespace(start=lambda: False),
+    )
+    assert wrapper._start_shell_session() is None
+    assert wrapper._shell_session is None
+
