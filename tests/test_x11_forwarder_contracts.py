@@ -168,8 +168,12 @@ def test_relay_channel_count_is_bounded_and_closed_requests_rejected(monkeypatch
     after_close = Channel()
     relay._on_x11_channel(after_close, None)
     assert after_close.closed is True
-    # close() also schedules bounded cleanup workers for the eight relays.
+    # close() schedules at most one cleanup worker per active relay,
+    # even if the owner calls it repeatedly during a shutdown race.
     assert len([item for item in starts if item.name == "hpc_gui_x11_relay"]) == 8
+    assert len([item for item in starts if item.name == "hpc_gui_x11_close"]) == 8
+    relay.close()
+    assert len([item for item in starts if item.name == "hpc_gui_x11_close"]) == 8
 
 
 class _FakeLocalDisplay:
