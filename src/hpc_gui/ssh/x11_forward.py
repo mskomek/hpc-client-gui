@@ -185,6 +185,7 @@ class X11Forwarder:
         self._active_relays = 0
         self._relay_channels = set()
         self._relay_sockets = {}
+        self._closing_channels = set()
 
     @property
     def fake_cookie_hex(self) -> str:
@@ -232,7 +233,9 @@ class X11Forwarder:
             active = [
                 (channel, self._relay_sockets.get(channel))
                 for channel in self._relay_channels
+                if channel not in self._closing_channels
             ]
+            self._closing_channels.update(channel for channel, _ in active)
         for channel, local in active:
             try:
                 threading.Thread(
@@ -242,6 +245,8 @@ class X11Forwarder:
                     daemon=True,
                 ).start()
             except RuntimeError as exc:
+                with self._relay_lock:
+                    self._closing_channels.discard(channel)
                 self._log(f"X11: cannot start relay cleanup ({type(exc).__name__})")
 
     # Called on the Paramiko transport thread: bound concurrency and return.
@@ -323,6 +328,7 @@ class X11Forwarder:
             with self._relay_lock:
                 self._relay_sockets.pop(channel, None)
                 self._relay_channels.discard(channel)
+                self._closing_channels.discard(channel)
                 self._active_relays = max(0, self._active_relays - 1)
 
     def _pump(self, channel, local: socket.socket) -> None:
