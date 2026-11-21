@@ -10,9 +10,11 @@ are stubbed; every other QTimer.singleShot user keeps working.
 
 from __future__ import annotations
 
+import ast
 import os
 import sys
 import tempfile
+from functools import lru_cache
 from pathlib import Path
 from unittest.mock import patch
 
@@ -24,6 +26,45 @@ for _temp_var in ("TMP", "TEMP", "TMPDIR"):
 tempfile.tempdir = str(TEMP_ROOT)
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
+
+
+@lru_cache(maxsize=None)
+def _imports_qt(module_path: str) -> bool:
+    """Recognize actual PySide6 imports, not comments or string literals."""
+    try:
+        tree = ast.parse(Path(module_path).read_text(encoding="utf-8", errors="replace"))
+    except (OSError, SyntaxError, ValueError):
+        return False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            if any(
+                alias.name == "PySide6" or alias.name.startswith("PySide6.")
+                for alias in node.names
+            ):
+                return True
+        elif isinstance(node, ast.ImportFrom) and node.level == 0:
+            module = node.module or ""
+            if module == "PySide6" or module.startswith("PySide6."):
+                return True
+    return False
+
+
+def pytest_collection_modifyitems(items):
+    """Keep actual Qt consumers before wx in a shared native process.
+
+    qt and qapp markers cover tests that acquire Qt indirectly via fixtures;
+    AST import detection covers modules with direct PySide6 imports.
+    """
+    qt_items = [
+        item for item in items
+        if item.get_closest_marker("qt")
+        or "qapp" in getattr(item, "fixturenames", ())
+        or _imports_qt(str(getattr(item.module, "__file__", "")))
+    ]
+    if qt_items:
+        qt_ids = {id(item) for item in qt_items}
+        items[:] = qt_items + [item for item in items if id(item) not in qt_ids]
+
 
 # QtWebEngine's Chromium profile teardown segfaults at interpreter exit in
 # offscreen test runs, so tests use the plain console fallback instead.
