@@ -20,6 +20,21 @@ class _Frame:
     def Bind(self, event_type, callback):
         self.handlers[event_type] = callback
 
+    def GetId(self):
+        return 713
+
+
+class _NativeTopLevelAlias:
+    def __init__(self, *, window_id=713, parent=None):
+        self.window_id = window_id
+        self.parent = parent
+
+    def GetId(self):
+        return self.window_id
+
+    def GetParent(self):
+        return self.parent
+
 
 class _Event:
     def __init__(self, window, *, fail_window=False, fail_skip=False):
@@ -47,6 +62,7 @@ def _setup(call_after=None):
     wx = SimpleNamespace(
         EVT_WINDOW_DESTROY=event_key,
         CallAfter=call_after or (lambda callback: queued.append(callback)),
+        TopLevelWindow=_NativeTopLevelAlias,
     )
     app = SimpleNamespace(
         SetExitOnFrameDelete=lambda value: policies.append(value),
@@ -110,3 +126,39 @@ def test_failed_queue_is_recorded_and_a_second_event_can_retry():
     assert exited == []
     queued[0]()
     assert exited == ["exit"]
+
+
+def test_gtk_native_top_level_alias_is_accepted_without_cpp_equality():
+    frame, key, queued, policies, exited = _setup()
+    actual_alias = _NativeTopLevelAlias(window_id=frame.GetId(), parent=None)
+
+    frame.handlers[key](_Event(actual_alias))
+    frame.handlers[key](_Event(actual_alias))
+
+    assert policies == [True]
+    assert len(queued) == 1
+    queued[0]()
+    assert exited == ["exit"]
+
+
+def test_gtk_child_and_other_top_level_destroy_are_ignored():
+    frame, key, queued, policies, exited = _setup()
+    handler = frame.handlers[key]
+
+    class _ChildWithCollidingId:
+        def GetId(self):
+            return frame.GetId()
+
+        def GetParent(self):
+            return None
+
+    # Even an accidentally colliding child ID cannot match the main frame.
+    handler(_Event(_ChildWithCollidingId()))
+    # An owned top-level dialog is not the unparented application main frame.
+    handler(_Event(_NativeTopLevelAlias(window_id=frame.GetId(), parent=frame)))
+    # A different top-level frame with no parent must not end this app.
+    handler(_Event(_NativeTopLevelAlias(window_id=99, parent=None)))
+
+    assert queued == []
+    assert exited == []
+    assert policies == [True]
