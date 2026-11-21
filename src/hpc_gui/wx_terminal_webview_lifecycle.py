@@ -81,12 +81,20 @@ class TerminalLifecycleMixin:
                 pass
 
     def close(self):
+        """Release Python state without double-destroying parent-owned children.
+
+        Keep the zero-argument callback contract for cleanup registries and
+        compatibility subclasses. Destroy/EVT_WINDOW_DESTROY mark native
+        parent ownership before calling this hook.
+        """
         if self._closed:
             return
+        parent_teardown = bool(getattr(self, "_native_parent_teardown", False))
         webview = self._webview
         self._closed = True
         self._webview = None
         self._is_parity = False
+        self._native_retry_scheduled = False
         # Drop retired controllers without touching them: still-attached
         # children are destroyed natively at panel teardown, and an explicit
         # Destroy here would repeat the in-flight-teardown race.
@@ -106,6 +114,15 @@ class TerminalLifecycleMixin:
                 self._resize_timer.Stop()
         except Exception:
             pass
+        # Retain the CallLater handle so shutdown can cancel retries that
+        # would otherwise keep a destroyed native panel alive until firing.
+        retry = getattr(self, "_native_retry_timer", None)
+        self._native_retry_timer = None
+        if retry is not None:
+            try:
+                retry.Stop()
+            except Exception:
+                pass
         self._stop_fragment_ack_timer()
         self._gtk_queue.reset()
         self._gtk_screen_snapshot = None
@@ -143,11 +160,22 @@ class TerminalLifecycleMixin:
         except Exception:
             being_deleted = False
         if webview is not None:
-            try:
-                webview.Stop()
-            except Exception:
-                pass
-            if not being_deleted:
+            # Stop() can race an unfinished asynchronous WebView2 native
+            # create callback. The owning wx parent will release the child.
+            native_create_pending = (
+                parent_teardown
+                and not getattr(self, "_native_created", False)
+                and (
+                    getattr(self, "_webview_pending_native", False)
+                    or getattr(self, "_webview_legacy_edge", False)
+                )
+            )
+            if not native_create_pending:
+                try:
+                    webview.Stop()
+                except Exception:
+                    pass
+            if not being_deleted and not parent_teardown:
                 try:
                     webview.Destroy()
                 except Exception:
@@ -197,6 +225,7 @@ class TerminalLifecycleMixin:
                 destroyed = None
         try:
             if destroyed is self or (destroyed is not None and destroyed == self):
+                self._native_parent_teardown = True
                 self.close()
         except RuntimeError:
             pass
@@ -214,6 +243,7 @@ class TerminalLifecycleMixin:
 
     # For lifecycle
     def Destroy(self):  # type: ignore[override]
+        self._native_parent_teardown = True
         self.close()
         try:
             return super().Destroy()  # type: ignore

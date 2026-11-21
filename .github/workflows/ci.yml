@@ -125,4 +125,5 @@ jobs:
           tests/test_x11_server_discovery.py
           tests/test_x11_server_startup.py
           tests/test_wx_webview_native_retry.py
+          tests/test_wx_terminal_native_teardown_contracts.py
           -q --tb=short
