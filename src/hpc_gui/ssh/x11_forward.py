@@ -30,6 +30,7 @@ from typing import Callable, Optional
 _X11_BASE_PORT = 6000
 _MAX_X11_DISPLAY = 65535 - _X11_BASE_PORT
 _MAX_RELAY_CHANNELS = 8
+_RELAY_IO_TIMEOUT_SECONDS = 3.0
 _MIT_COOKIE = b"MIT-MAGIC-COOKIE-1"
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "[::1]"})
 
@@ -182,6 +183,8 @@ class X11Forwarder:
         self._closed = threading.Event()
         self._relay_lock = threading.Lock()
         self._active_relays = 0
+        self._relay_channels = set()
+        self._relay_sockets = {}
 
     @property
     def fake_cookie_hex(self) -> str:
@@ -204,19 +207,56 @@ class X11Forwarder:
             handler=self._on_x11_channel,
         )
 
+    @staticmethod
+    def _interrupt_relay(channel, local) -> None:
+        """Release blocked send/recv calls without using the wx UI thread."""
+        for endpoint in (local, channel):
+            if endpoint is None:
+                continue
+            shutdown = getattr(endpoint, "shutdown", None)
+            if callable(shutdown):
+                try:
+                    shutdown(socket.SHUT_RDWR)
+                except Exception:
+                    pass
+            try:
+                endpoint.close()
+            except Exception:
+                pass
+
     def close(self) -> None:
-        self._closed.set()
+        # Never run potentially blocking Paramiko channel.close() on the GUI
+        # thread. The relay count caps cleanup workers at eight per forwarder.
+        with self._relay_lock:
+            self._closed.set()
+            active = [
+                (channel, self._relay_sockets.get(channel))
+                for channel in self._relay_channels
+            ]
+        for channel, local in active:
+            try:
+                threading.Thread(
+                    target=self._interrupt_relay,
+                    args=(channel, local),
+                    name="hpc_gui_x11_close",
+                    daemon=True,
+                ).start()
+            except RuntimeError as exc:
+                self._log(f"X11: cannot start relay cleanup ({type(exc).__name__})")
 
     # Called on the Paramiko transport thread: bound concurrency and return.
     def _on_x11_channel(self, channel, origin) -> None:
         with self._relay_lock:
-            if self._closed.is_set() or self._active_relays >= _MAX_RELAY_CHANNELS:
-                try:
-                    channel.close()
-                except Exception:
-                    pass
-                return
-            self._active_relays += 1
+            rejected = self._closed.is_set() or self._active_relays >= _MAX_RELAY_CHANNELS
+            if not rejected:
+                self._active_relays += 1
+                self._relay_channels.add(channel)
+        if rejected:
+            try:
+                channel.close()
+            except Exception:
+                pass
+            return
         try:
             thread = threading.Thread(
                 target=self._relay, args=(channel,), name="hpc_gui_x11_relay", daemon=True
@@ -225,6 +265,7 @@ class X11Forwarder:
         except Exception:
             with self._relay_lock:
                 self._active_relays -= 1
+                self._relay_channels.discard(channel)
             channel.close()
             raise
 
@@ -238,6 +279,15 @@ class X11Forwarder:
             except OSError as exc:
                 self._log(f"X11: yerel X sunucusuna bağlanılamadı ({self.display.name}): {exc}")
                 return
+            # Register atomically with close() so a socket created during
+            # shutdown cannot escape teardown.
+            with self._relay_lock:
+                if self._closed.is_set():
+                    return
+                self._relay_sockets[channel] = local
+            local_timeout = getattr(local, "settimeout", None)
+            if callable(local_timeout):
+                local_timeout(_RELAY_IO_TIMEOUT_SECONDS)
             # Avoid keeping an untrusted X11 channel open indefinitely before
             # the setup packet arrives; the steady-state pump has its own poll.
             channel.settimeout(10.0)
@@ -271,9 +321,14 @@ class X11Forwarder:
                 except Exception:
                     pass
             with self._relay_lock:
+                self._relay_sockets.pop(channel, None)
+                self._relay_channels.discard(channel)
                 self._active_relays = max(0, self._active_relays - 1)
 
     def _pump(self, channel, local: socket.socket) -> None:
+        # Bound steady-state backpressure; neither Paramiko nor local socket
+        # writes may remain blocked indefinitely when the peer stops reading.
+        channel.settimeout(_RELAY_IO_TIMEOUT_SECONDS)
         while not self._closed.is_set():
             readable, _, _ = select.select([channel, local], [], [], 1.0)
             if channel in readable:
