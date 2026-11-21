@@ -169,6 +169,13 @@
     } catch (e) {}
   };
 
+  window.hpcSetAccessibilityLabel = (value) => {
+    // Avoid eval or HTML parsing: write a short, localized DOM attribute.
+    if (typeof value !== "string" || value.length > 256) return;
+    const target = document.getElementById("terminal");
+    if (target) target.setAttribute("aria-label", value);
+  };
+
   window.hpcSetFontSize = (size) => {
     try {
       terminal.options.fontSize = size;
@@ -345,6 +352,7 @@
   const nativeCommands = new Set([
     "hpcWrite", "hpcClear", "hpcPaste", "hpcFocus", "hpcSetFontSize",
     "hpcFit", "hpcFind", "hpcFindNext", "hpcFindPrev", "hpcGetScreenState",
+    "hpcSetAccessibilityLabel",
   ]);
 
   function handleNativeFragment() {
@@ -390,6 +398,10 @@
         case "hpcSetFontSize":
           if (!Number.isInteger(msg.arg) || msg.arg < 6 || msg.arg > 32) break;
           window.hpcSetFontSize(msg.arg);
+          break;
+        case "hpcSetAccessibilityLabel":
+          if (typeof msg.arg !== "string" || msg.arg.length > 256) break;
+          window.hpcSetAccessibilityLabel(msg.arg);
           break;
         case "hpcGetScreenState":
           postToPython({

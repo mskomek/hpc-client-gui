@@ -16,7 +16,7 @@ from urllib.parse import quote
 _ALLOWED = frozenset({
     "hpcWrite", "hpcClear", "hpcPaste", "hpcFocus", "hpcSetFontSize",
     "hpcFit", "hpcFind", "hpcFindNext", "hpcFindPrev",
-    "hpcGetScreenState",
+    "hpcGetScreenState", "hpcSetAccessibilityLabel",
 })
 _CALL = re.compile(r"^\s*window\.(hpc\w+)\s*&&\s*window\.\1\((.*)\)\s*;?\s*$", re.S)
 
@@ -31,7 +31,9 @@ def parse_terminal_call(code: str) -> tuple[str, object] | None:
         arg = json.loads(value) if value.strip() else None
     except (TypeError, ValueError):
         return None
-    if method in {"hpcWrite", "hpcPaste", "hpcFind"} and not isinstance(arg, str):
+    if method in {"hpcWrite", "hpcPaste", "hpcFind", "hpcSetAccessibilityLabel"} and not isinstance(arg, str):
+        return None
+    if method == "hpcSetAccessibilityLabel" and len(arg) > 256:
         return None
     if method == "hpcSetFontSize" and (type(arg) is not int or not 6 <= arg <= 32):
         return None
@@ -53,6 +55,10 @@ def encode_terminal_fragment(
     """Encode a whitelisted action in a fragment, never query/path/network."""
     if type(seq) is not int or seq < 1 or method not in _ALLOWED:
         raise ValueError("invalid terminal bridge command")
+    if method == "hpcSetAccessibilityLabel" and (
+        not isinstance(arg, str) or len(arg) > 256
+    ):
+        raise ValueError("invalid accessibility label")
     payload = {"seq": seq, "op": method, "arg": arg}
     if channel is not None:
         if not re.fullmatch(r"[0-9a-f]{32}", channel):

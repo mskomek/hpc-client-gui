@@ -1,0 +1,206 @@
+name: V2 F03-F04 native pytest source diagnosis
+
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - ".github/workflows/v2-f03-f04-native-suite.yml"
+      - "scripts/v2_native_suite_runner.py"
+      - "scripts/v2_native_prefix_bisect.py"
+      - "src/hpc_gui/wx_terminal_webview.py"
+      - "src/hpc_gui/wx_terminal_webview_bridge.py"
+      - "tests/conftest.py"
+      - "tests/test_wx_terminal_webview_bridge.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v2-f03-f04-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+# Diagnostic, not real Kole Session 1/Wayland acceptance or merge authorization.
+jobs:
+  linux-combined:
+    name: Ubuntu native full-suite exit and JUnit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 24
+    env:
+      PYTHONPATH: src
+      GDK_BACKEND: x11
+      QT_QPA_PLATFORM: offscreen
+      HPC_GUI_DISABLE_WEBENGINE: "1"
+      V2_EVIDENCE: .tmp/v2-f03-f04/linux
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Python 3.14
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.14"
+      - name: Install GTK and Qt source test environment
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            xvfb dbus-x11 libgtk-3-0 libwebkit2gtk-4.1-0 \
+            libnotify4 libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 \
+            libsm6 libxtst6 libsdl2-2.0-0 libjpeg-turbo8 libtiff6 libpng16-16t64
+          python -m pip install --upgrade pip
+          python -m pip install --no-deps \
+            'https://github.com/wxWidgets/Phoenix/releases/download/wxPython-4.3.1/wxpython-4.3.1+ubuntu2404-cp314-cp314-linux_x86_64.whl#sha256=03c95c048a7c1ea5ff4cbcb05bf7a1788c9791739d0649b88b57dd461ea5b343'
+          python -m pip install -r requirements-release.lock --no-deps
+          python -m pip install "PySide6==6.11.2" "pyftpdlib>=1.5.9" "six" "numpy" "pillow"
+          python -m pip install --no-deps -e .
+          python -c "import wx, PySide6; print('WX', wx.version(), 'QT', PySide6.__version__)"
+      - name: Collect and execute full source suite in bounded processes
+        shell: bash
+        run: |
+          mkdir -p "$V2_EVIDENCE"
+          set +e
+          dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            python scripts/v2_native_suite_runner.py \
+            --label linux-collection --output "$V2_EVIDENCE" \
+            --timeout-seconds 180 -- --collect-only -q tests
+          collect_exit=$?
+          dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            python scripts/v2_native_suite_runner.py \
+            --label linux-full-suite --output "$V2_EVIDENCE" \
+            --timeout-seconds 600 -- tests
+          suite_exit=$?
+          # Secondary diagnosis only: keep the original missing-doc test
+          # FAILED, then continue other tests to find F-03 native aborts.
+          # --maxfail=0 overrides the runner's first-failure limit.
+          dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            python scripts/v2_native_suite_runner.py \
+            --label linux-after-docs-probe --output "$V2_EVIDENCE" \
+            --timeout-seconds 600 -- tests \
+            -k 'not test_referenced_local_files_exist' --maxfail=0
+          continued_exit=$?
+          # F-03 controlled A/B: the crash involved Qt's GLib dispatcher
+          # entering wxApp::DoIdle at an FTP widget concurrency test.
+          dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            python scripts/v2_native_suite_runner.py \
+            --label linux-ftp-isolated --output "$V2_EVIDENCE" \
+            --timeout-seconds 120 -- tests/test_ftp_widget_backend_concurrency.py
+          ftp_isolated_exit=$?
+          dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            python scripts/v2_native_suite_runner.py \
+            --label linux-ftp-prefix --output "$V2_EVIDENCE" \
+            --timeout-seconds 180 -- \
+            tests/test_ftp_widget_activity_rows_history.py \
+            tests/test_ftp_widget_backend_concurrency.py
+          ftp_prefix_exit=$?
+          dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            python scripts/v2_native_prefix_bisect.py \
+            --output "$V2_EVIDENCE" --timeout-seconds 240
+          prefix_bisect_exit=$?
+          printf 'source_sha=%s\ncollection_exit=%s\nsuite_exit=%s\ncontinued_exit=%s\nftp_isolated_exit=%s\nftp_prefix_exit=%s\nprefix_bisect_exit=%s\n' \
+            "$(git rev-parse HEAD)" "$collect_exit" "$suite_exit" "$continued_exit" "$ftp_isolated_exit" "$ftp_prefix_exit" "$prefix_bisect_exit" \
+            > "$V2_EVIDENCE/runner-exits.txt"
+          echo "Linux collection=$collect_exit, full=$suite_exit, investigation=$continued_exit"
+          tail -n 35 "$V2_EVIDENCE/linux-after-docs-probe.stdout.log" || true
+          tail -n 35 "$V2_EVIDENCE/linux-ftp-isolated.stdout.log" || true
+          tail -n 35 "$V2_EVIDENCE/linux-ftp-prefix.stdout.log" || true
+          tail -n 25 "$V2_EVIDENCE/linux-first-prefix-half.stdout.log" || true
+          tail -n 25 "$V2_EVIDENCE/linux-second-prefix-half.stdout.log" || true
+          tail -n 35 "$V2_EVIDENCE/linux-full-suite.stdout.log" || true
+          tail -n 20 "$V2_EVIDENCE/linux-collection.stdout.log" || true
+          if [ "$collect_exit" -ne 0 ] || [ "$suite_exit" -ne 0 ]; then
+            echo "::error::F03 incomplete/abnormal: inspect last-started tests and JUnit artifact."
+            exit 1
+          fi
+      - name: Upload Linux source JUnit and exit evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: v2-f03-linux-${{ github.sha }}
+          path: .tmp/v2-f03-f04/linux/**
+          retention-days: 7
+          if-no-files-found: warn
+
+  windows-webview:
+    name: Windows hosted native source WebView modules
+    runs-on: windows-latest
+    timeout-minutes: 16
+    env:
+      PYTHONPATH: src
+      HPC_GUI_DISABLE_WEBENGINE: "1"
+      V2_EVIDENCE: .tmp/v2-f03-f04/windows
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Python 3.14
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.14"
+      - name: Install Windows source GUI dependencies
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements-release.lock
+          python -m pip install "PySide6==6.11.2" "pyftpdlib>=1.5.9"
+          python -m pip install --no-deps -e .
+          python -c "import wx, PySide6; print('WX', wx.version(), 'QT', PySide6.__version__)"
+      - name: Bounded source WebView tests with native exit evidence
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:V2_EVIDENCE | Out-Null
+          python scripts/v2_native_suite_runner.py --label windows-webview-source --output $env:V2_EVIDENCE --timeout-seconds 300 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py tests/test_wx_terminal_native_teardown_contracts.py
+          $result = $LASTEXITCODE
+          # Preserve the first failure; isolate the failing WebView creation
+          # test and run all the *other* module tests separately.
+          python scripts/v2_native_suite_runner.py --label windows-webview-isolated --output $env:V2_EVIDENCE --timeout-seconds 120 -- tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
+          $isolated = $LASTEXITCODE
+          python scripts/v2_native_suite_runner.py --label windows-webview-remainder --output $env:V2_EVIDENCE --timeout-seconds 300 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py tests/test_wx_terminal_native_teardown_contracts.py -k 'not test_wx_terminal_webview_page_loads_and_posts_ready' --maxfail=0
+          $remainder = $LASTEXITCODE
+          # Order dependence: all lifecycle tests before the one WebView2
+          # ready test, versus just the last lifecycle test before it.
+          python scripts/v2_native_suite_runner.py --label windows-lifecycle-prefix --output $env:V2_EVIDENCE --timeout-seconds 180 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
+          $prefix = $LASTEXITCODE
+          python scripts/v2_native_suite_runner.py --label windows-last-lifecycle-pair --output $env:V2_EVIDENCE --timeout-seconds 150 -- tests/test_wx_terminal_webview_lifecycle.py::test_wx_terminal_embedded_connect_to_ssh tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
+          $pair = $LASTEXITCODE
+          # Fresh profile control; do not change application/profile defaults.
+          $originalProfile = $env:WEBVIEW2_USER_DATA_FOLDER
+          $env:WEBVIEW2_USER_DATA_FOLDER = Join-Path $env:V2_EVIDENCE "separate-edge-profile"
+          python scripts/v2_native_suite_runner.py --label windows-fresh-profile --output $env:V2_EVIDENCE --timeout-seconds 180 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
+          $fresh = $LASTEXITCODE
+          $env:WEBVIEW2_USER_DATA_FOLDER = $originalProfile
+          # Exact first ten tests: lifecycle, static bridge assets, then ready.
+          # The shorter lifecycle+ready prefix previously passed.
+          python scripts/v2_native_suite_runner.py --label windows-assets-prefix --output $env:V2_EVIDENCE --timeout-seconds 180 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_assets_are_local_and_vendored tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
+          $assetsPrefix = $LASTEXITCODE
+          # Only the profile changes; retain the entire original three-module
+          # order and a distinct data directory for each experiment.
+          $env:WEBVIEW2_USER_DATA_FOLDER = Join-Path $env:V2_EVIDENCE "trio-fresh-edge-profile"
+          python scripts/v2_native_suite_runner.py --label windows-full-trio-fresh --output $env:V2_EVIDENCE --timeout-seconds 240 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py tests/test_wx_terminal_native_teardown_contracts.py
+          $freshTrio = $LASTEXITCODE
+          $env:WEBVIEW2_USER_DATA_FOLDER = $originalProfile
+          "source_sha=$(git rev-parse HEAD)" | Out-File -Encoding utf8 (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          "webview_exit=$result" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          "isolated_exit=$isolated" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          "remainder_exit=$remainder" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          "lifecycle_prefix_exit=$prefix" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          "last_lifecycle_pair_exit=$pair" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          "fresh_profile_exit=$fresh" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          "assets_prefix_exit=$assetsPrefix" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          "full_trio_fresh_exit=$freshTrio" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          foreach ($name in @("windows-webview-source","windows-webview-isolated","windows-webview-remainder","windows-lifecycle-prefix","windows-last-lifecycle-pair","windows-fresh-profile","windows-assets-prefix","windows-full-trio-fresh")) {
+            $log = Join-Path $env:V2_EVIDENCE "$name.stdout.log"
+            if (Test-Path $log) { Get-Content $log -Tail 25 }
+          }
+          if ($result -ne 0 -or $isolated -ne 0 -or $remainder -ne 0) {
+            Write-Host "::error::Windows F04 source tests not accepted; see all three distinct receipts."
+            exit 1
+          }
+      - name: Upload Windows source native evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: v2-f04-windows-${{ github.sha }}
+          path: .tmp/v2-f03-f04/windows/**
+          retention-days: 7
+          if-no-files-found: warn

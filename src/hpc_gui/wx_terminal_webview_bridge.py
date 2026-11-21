@@ -18,7 +18,8 @@ class TerminalBridgeMixin:
         except Exception:
             controller = None
         try:
-            if not self._closed:
+            current = getattr(self, "_webview", None)
+            if not self._closed and (controller is None or controller is current):
                 import wx
                 wx.CallAfter(self._navigate_after_creation, controller)
         finally:
@@ -59,6 +60,21 @@ class TerminalBridgeMixin:
             pass
 
     def _on_loaded(self, event):
+        # Ignore queued load notifications from retired native controllers
+        # and from panels whose parent already began teardown.
+        try:
+            source = event.GetEventObject()
+        except Exception:
+            source = None
+        current = getattr(self, "_webview", None)
+        if getattr(self, "_closed", False) or (
+            current is not None and source is not None and source is not current
+        ):
+            try:
+                event.Skip()
+            except Exception:
+                pass
+            return
         # The legacy wxPython Edge binding has no CREATED event: page-loaded
         # is the first proof that its native controller completed creation.
         self._native_created = True
@@ -83,15 +99,17 @@ class TerminalBridgeMixin:
         if not getattr(self, "_page_loaded", True):
             return
         script = (
-            "const terminal = document.getElementById('terminal');"
-            f"if (terminal) terminal.setAttribute('aria-label', {json.dumps(label, ensure_ascii=False)});"
+            "window.hpcSetAccessibilityLabel && "
+            f"window.hpcSetAccessibilityLabel({json.dumps(label, ensure_ascii=False)});"
         )
 
         def update_dom_label() -> None:
             if getattr(self, "_closed", False) or getattr(self, "_webview", webview) is not webview:
                 return
             try:
-                webview.RunScript(script)
+                # Linux uses the strict-CSP local fragment transport; a
+                # direct RunScript eval is disallowed by the terminal page.
+                self._run_js(script)
             except Exception:
                 pass
 
@@ -106,6 +124,12 @@ class TerminalBridgeMixin:
         update_dom_label()
 
     def _on_error(self, event):
+        if getattr(self, "_closed", False):
+            try:
+                event.Skip()
+            except Exception:
+                pass
+            return
         # wxWidgets emits ERROR after its native WebView2 create callback
         # completes with E_ABORT. Do not mistake it for a page load failure:
         # only now is the failed controller safe to retire before retrying.
@@ -154,7 +178,9 @@ class TerminalBridgeMixin:
             except Exception:
                 pass
             import wx
-            wx.CallLater(300, self._retry_webview_creation, True)
+            self._native_retry_timer = wx.CallLater(
+                300, self._retry_webview_creation, True
+            )
         try:
             event.Skip()
         except Exception:
@@ -292,6 +318,7 @@ class TerminalBridgeMixin:
         generation is bumped.
         """
         self._native_retry_scheduled = False
+        self._native_retry_timer = None
         try:
             if self._closed or self._ready:
                 return

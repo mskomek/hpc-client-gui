@@ -12,7 +12,7 @@ FRAGMENT_WRITE_CHARS = 2048
 MAX_ACK_RETRIES = 2
 RETRYABLE_METHODS = frozenset({
     "hpcClear", "hpcFocus", "hpcSetFontSize", "hpcFit", "hpcFind",
-    "hpcGetScreenState",
+    "hpcGetScreenState", "hpcSetAccessibilityLabel",
 })
 OUTPUT_LIMIT_NOTICE = "\r\n[Terminal output paused: local bridge queue limit reached]\r\n"
 _COMMAND_OVERHEAD_BYTES = 128

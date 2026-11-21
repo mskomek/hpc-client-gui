@@ -115,6 +115,7 @@ jobs:
           tests/test_wx_terminal_diagnostic.py
           tests/test_cli_profile_refactor_contracts.py
           tests/test_wx_shell_teardown_contracts.py
+          tests/test_wx_application_native_exit_policy.py
           tests/test_wx_shortcut_preferences.py
           tests/test_wx_shell_sizing.py
           tests/test_wx_clipboard.py
@@ -125,4 +126,11 @@ jobs:
           tests/test_x11_server_discovery.py
           tests/test_x11_server_startup.py
           tests/test_wx_webview_native_retry.py
+          tests/test_wx_terminal_native_teardown_contracts.py
+          -q --tb=short
+      - name: Original close ownership contract (Windows wxPython)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest
+          tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_close_releases_native_webview
           -q --tb=short

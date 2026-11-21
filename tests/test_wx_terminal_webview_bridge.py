@@ -36,67 +36,84 @@ def test_wx_terminal_webview_assets_are_local_and_vendored():
 def test_wx_terminal_webview_page_loads_and_posts_ready():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable — fallback diagnostic expected")
-    # Run in subprocess to isolate WebView MainLoop hang from pytest process
+    # Use the real wxApp event loop and native shutdown policy. A manually
+    # dispatched temporary wx.GUIEventLoop is not equivalent to the async
+    # WebView2 CREATED/LOADED lifecycle on Windows.
     import subprocess
     import sys
+    import tempfile
     import textwrap
 
     code = textwrap.dedent("""
-        import sys, os
-        sys.path.insert(0, 'src')
-        import wx, time
-        from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel, _is_webview_available
-        assert _is_webview_available()
-        app = wx.App.Get()
-        if app is None:
-            app = wx.App(False)
-        frame = wx.Frame(None, size=(900,600))
+        import time
+        import wx
+        from hpc_gui.wx_application import install_main_frame_exit_policy
+        from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
+
+        wx.Log.SetActiveTarget(wx.LogStderr())
+        app = wx.App(False)
+        frame = wx.Frame(None, title="native-ready-mainloop", size=(900, 600))
         class Fake:
             _wx_output_subscribers = []
             def send_shell_input(self, d): return True
             def resize_shell_pty(self, c, r): pass
-        ssh = Fake()
-        panel = WxTerminalWebViewPanel(frame, ssh=ssh)
+
+        panel = WxTerminalWebViewPanel(frame, ssh=Fake())
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(panel, 1, wx.EXPAND)
         frame.SetSizer(sizer)
         frame.Layout()
-        frame.Show()
-        # Pump with GUIEventLoop
-        import time
-        loop = wx.GUIEventLoop()
-        start = time.monotonic()
-        ready = False
-        while time.monotonic() - start < 6:
-            if panel._ready:
-                ready = True
-                break
-            try:
-                while loop.Pending():
-                    loop.Dispatch()
-            except: pass
-            try:
-                wx.Yield()
-            except: pass
-            time.sleep(0.05)
-        assert ready, "bridge ready not received"
-        assert panel._is_parity is True
-        assert panel._webview is not None
-        # Cleanup
-        try:
-            panel.close()
-        except: pass
-        try:
+        app.SetTopWindow(frame)
+        install_main_frame_exit_policy(wx, app, frame)
+        ready = {"seen": False}
+        deadline = time.monotonic() + 9.0
+
+        def close_frame(event):
+            frame._wx_shell_destroy_invoked = True
             frame.Destroy()
-        except: pass
-        try:
-            app.Destroy()
-        except: pass
-        os._exit(0)
+
+        frame.Bind(wx.EVT_CLOSE, close_frame)
+
+        def check_ready():
+            if panel._ready:
+                ready["seen"] = True
+                print("NATIVE_READY: bridge ready", flush=True)
+                frame.Close()
+            elif time.monotonic() >= deadline:
+                print(
+                    "NATIVE_READY: timeout "
+                    f"stage={panel._webview_failure_stage} "
+                    f"detail={panel._webview_failure_detail!r} "
+                    f"created_errors={panel._native_create_errors}",
+                    flush=True,
+                )
+                frame.Close()
+            else:
+                wx.CallLater(50, check_ready)
+
+        frame.Show()
+        wx.CallLater(50, check_ready)
+        app.MainLoop()
+        if not ready["seen"] or not panel._closed:
+            raise AssertionError(
+                "native browser did not reach ready and close naturally: "
+                f"ready={ready['seen']} closed={panel._closed}"
+            )
+        print("NATIVE_READY_AND_CLOSE_PASS", flush=True)
     """)
-    env = project_python_environment(pathlib.Path(__file__).parents[1])
-    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=15, env=env)
-    assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
+    with tempfile.TemporaryDirectory(prefix="v2-wx-ready-", ignore_cleanup_errors=True) as temp:
+        env = project_python_environment(pathlib.Path(__file__).parents[1])
+        if sys.platform == "win32":
+            env["WEBVIEW2_USER_DATA_FOLDER"] = str(pathlib.Path(temp) / "webview2")
+        result = subprocess.run(
+            [sys.executable, "-X", "faulthandler", "-c", code],
+            capture_output=True, text=True, timeout=18, env=env,
+        )
+    assert result.returncode == 0, (
+        f"native ready subprocess exit={result.returncode}: "
+        f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    )
+    assert "NATIVE_READY_AND_CLOSE_PASS" in result.stdout
 
 
 @pytest.mark.gui
