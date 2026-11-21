@@ -94,8 +94,19 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
         except: pass
         os._exit(0)
     """)
-    env = project_python_environment(pathlib.Path(__file__).parents[1])
-    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=15, env=env)
+    import tempfile
+
+    # Use a fresh WebView2 data folder for this native subprocess. Earlier
+    # lifecycle probes exit abruptly and may retain Edge children briefly;
+    # a shared profile can cause 0x80004004 during asynchronous creation.
+    with tempfile.TemporaryDirectory(prefix="v2-wx-ready-", ignore_cleanup_errors=True) as temp:
+        env = project_python_environment(pathlib.Path(__file__).parents[1])
+        if sys.platform == "win32":
+            env["WEBVIEW2_USER_DATA_FOLDER"] = str(pathlib.Path(temp) / "webview2")
+        result = subprocess.run(
+            [sys.executable, "-c", code], capture_output=True,
+            text=True, timeout=15, env=env,
+        )
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
