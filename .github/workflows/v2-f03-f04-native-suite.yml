@@ -69,10 +69,20 @@ jobs:
             --label linux-full-suite --output "$V2_EVIDENCE" \
             --timeout-seconds 600 -- tests
           suite_exit=$?
-          printf 'source_sha=%s\ncollection_exit=%s\nsuite_exit=%s\n' \
-            "$(git rev-parse HEAD)" "$collect_exit" "$suite_exit" \
+          # Secondary diagnosis only: keep the original missing-doc test
+          # FAILED, then continue other tests to find F-03 native aborts.
+          # --maxfail=0 overrides the runner's first-failure limit.
+          dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            python scripts/v2_native_suite_runner.py \
+            --label linux-after-docs-probe --output "$V2_EVIDENCE" \
+            --timeout-seconds 600 -- tests \
+            -k 'not test_referenced_local_files_exist' --maxfail=0
+          continued_exit=$?
+          printf 'source_sha=%s\ncollection_exit=%s\nsuite_exit=%s\ncontinued_exit=%s\n' \
+            "$(git rev-parse HEAD)" "$collect_exit" "$suite_exit" "$continued_exit" \
             > "$V2_EVIDENCE/runner-exits.txt"
-          echo "Linux collection exit $collect_exit; suite exit $suite_exit"
+          echo "Linux collection=$collect_exit, full=$suite_exit, investigation=$continued_exit"
+          tail -n 35 "$V2_EVIDENCE/linux-after-docs-probe.stdout.log" || true
           tail -n 35 "$V2_EVIDENCE/linux-full-suite.stdout.log" || true
           tail -n 20 "$V2_EVIDENCE/linux-collection.stdout.log" || true
           if [ "$collect_exit" -ne 0 ] || [ "$suite_exit" -ne 0 ]; then
@@ -118,14 +128,23 @@ jobs:
           New-Item -ItemType Directory -Force -Path $env:V2_EVIDENCE | Out-Null
           python scripts/v2_native_suite_runner.py --label windows-webview-source --output $env:V2_EVIDENCE --timeout-seconds 300 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py tests/test_wx_terminal_native_teardown_contracts.py
           $result = $LASTEXITCODE
+          # Preserve the first failure; isolate the failing WebView creation
+          # test and run all the *other* module tests separately.
+          python scripts/v2_native_suite_runner.py --label windows-webview-isolated --output $env:V2_EVIDENCE --timeout-seconds 120 -- tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_webview_page_loads_and_posts_ready
+          $isolated = $LASTEXITCODE
+          python scripts/v2_native_suite_runner.py --label windows-webview-remainder --output $env:V2_EVIDENCE --timeout-seconds 300 -- tests/test_wx_terminal_webview_lifecycle.py tests/test_wx_terminal_webview_bridge.py tests/test_wx_terminal_native_teardown_contracts.py -k 'not test_wx_terminal_webview_page_loads_and_posts_ready' --maxfail=0
+          $remainder = $LASTEXITCODE
           "source_sha=$(git rev-parse HEAD)" | Out-File -Encoding utf8 (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
           "webview_exit=$result" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
-          if (Test-Path (Join-Path $env:V2_EVIDENCE "windows-webview-source.stdout.log")) {
-            Get-Content (Join-Path $env:V2_EVIDENCE "windows-webview-source.stdout.log") -Tail 35
+          "isolated_exit=$isolated" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          "remainder_exit=$remainder" | Add-Content (Join-Path $env:V2_EVIDENCE "runner-exits.txt")
+          foreach ($name in @("windows-webview-source","windows-webview-isolated","windows-webview-remainder")) {
+            $log = Join-Path $env:V2_EVIDENCE "$name.stdout.log"
+            if (Test-Path $log) { Get-Content $log -Tail 25 }
           }
-          if ($result -ne 0) {
-            Write-Host "::error::Windows WebView source failed or timed out; hosted runner is not Kole."
-            exit $result
+          if ($result -ne 0 -or $isolated -ne 0 -or $remainder -ne 0) {
+            Write-Host "::error::Windows F04 source tests not accepted; see all three distinct receipts."
+            exit 1
           }
       - name: Upload Windows source native evidence
         if: ${{ always() }}
