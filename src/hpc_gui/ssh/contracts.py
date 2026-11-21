@@ -59,6 +59,7 @@ class SSHConnInfo:
     key_path: str = ""
     host_key_policy: str = "accept-new"
     x11_forwarding: bool = False
+    x11_trusted: bool = False
     timeout: Optional[float] = None
     keepalive_interval_seconds: int = _KEEPALIVE_INTERVAL_DEFAULT
     known_hosts_path: str = ""
