@@ -36,7 +36,13 @@ def test_native_webview_parent_close_returns_mainloop():
 
         app = wx.App(False)
         frame = wx.Frame(None, title="native-close-probe", size=(840, 540))
+        def exit_policy():
+            getter = getattr(app, "GetExitOnFrameDelete", None)
+            return getter() if callable(getter) else "not-exposed"
+
+        print(f"NATIVE_STAGE: exit_policy_before={exit_policy()}", flush=True)
         panel = WxTerminalWebViewPanel(frame)
+        print(f"NATIVE_STAGE: exit_policy_after={exit_policy()}", flush=True)
         print("NATIVE_STAGE: constructed", flush=True)
         assert panel._webview is not None, "native WebView unavailable"
         root = wx.BoxSizer(wx.VERTICAL)
@@ -165,6 +171,8 @@ def test_native_webview_direct_destroy_exits_mainloop():
         app = wx.App(False)
         frame = wx.Frame(None, title="native-direct-destroy-control", size=(840, 540))
         panel = WxTerminalWebViewPanel(frame)
+        getter = getattr(app, "GetExitOnFrameDelete", None)
+        print(f"NATIVE_STAGE: exit_policy_direct={getter() if callable(getter) else 'not-exposed'}", flush=True)
         assert panel._webview is not None, "native WebView unavailable"
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(panel, 1, wx.EXPAND)
@@ -269,4 +277,54 @@ def test_minimal_webview_frame_close_returns_mainloop():
     assert result.returncode == 0 and "MINIMAL_WEBVIEW_EXITED" in result.stdout, (
         f"minimal WebView exit={result.returncode}: "
         f"stdout={result.stdout!r}, stderr={result.stderr!r}"
+    )
+
+
+def test_terminal_fallback_panel_exits_mainloop():
+    """Control: the terminal panel itself, without a native WebKit child."""
+    if sys.platform.startswith("linux") and not os.environ.get("DISPLAY"):
+        pytest.skip("real X display required; run under Xvfb or GNOME")
+
+    script = textwrap.dedent(
+        """
+        import wx
+        import hpc_gui.wx_terminal_webview as module
+        module._is_webview_available = lambda: False
+
+        app = wx.App(False)
+        frame = wx.Frame(None, title="terminal-fallback-control")
+        panel = module.WxTerminalWebViewPanel(frame)
+        assert panel._webview is None
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(panel, 1, wx.EXPAND)
+        frame.SetSizer(sizer)
+        app.SetTopWindow(frame)
+        frame.Show()
+
+        def close_now():
+            print(f"FALLBACK: close_return={frame.Close()}", flush=True)
+
+        wx.CallLater(600, close_now)
+        app.MainLoop()
+        assert panel._closed, "fallback panel did not close"
+        print("FALLBACK_MAINLOOP_EXITED", flush=True)
+        """
+    )
+    env = project_python_environment(pathlib.Path(__file__).resolve().parents[1])
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=12,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        pytest.fail(
+            f"fallback panel control hung: stdout={exc.stdout!r} stderr={exc.stderr!r}"
+        )
+    assert result.returncode == 0 and "FALLBACK_MAINLOOP_EXITED" in result.stdout, (
+        f"fallback panel exit={result.returncode}, stdout={result.stdout!r}, "
+        f"stderr={result.stderr!r}"
     )
