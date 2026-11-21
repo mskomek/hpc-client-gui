@@ -29,8 +29,13 @@ def open_x11_shell(
         forwarder.close()
         raise X11Unavailable("local X server is unavailable") from exc
 
-    transport = client.get_transport()
-    if transport is None or not transport.is_active():
+    try:
+        transport = client.get_transport()
+        active = transport is not None and transport.is_active()
+    except Exception as exc:
+        forwarder.close()
+        raise X11Unavailable("SSH transport could not be inspected") from exc
+    if not active:
         forwarder.close()
         raise X11Unavailable("SSH transport is inactive")
     channel = None
