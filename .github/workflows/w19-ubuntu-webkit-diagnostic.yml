@@ -14,6 +14,8 @@ on:
       - "src/hpc_gui/assets/terminal/wx_bridge.js"
       - "tests/test_w19_connection_lifecycle.py"
       - "tests/test_wx_terminal_webview_readback.py"
+      - "tests/test_wx_terminal_native_close_acceptance.py"
+      - "src/hpc_gui/wx_terminal_webview_lifecycle.py"
   workflow_dispatch:
 
 permissions:
@@ -83,12 +85,20 @@ jobs:
             > .tmp/w19-native/w19-gdb.log 2>&1
           lifecycle_rc=$?
           echo "lifecycle_exit=$lifecycle_rc" >> .tmp/w19-native/identity.txt
+          timeout --signal=TERM --kill-after=5s 75s \
+            dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            python -m pytest -q -s --tb=short \
+            tests/test_wx_terminal_native_close_acceptance.py \
+            > .tmp/w19-native/natural-close.log 2>&1
+          natural_close_rc=$?
+          echo "natural_close_exit=$natural_close_rc" >> .tmp/w19-native/identity.txt
+          tail -n 35 .tmp/w19-native/natural-close.log
           tail -n 35 .tmp/w19-native/readback.log
           # -vv prints the exact last test reached; -q previously hid it.
           grep -n -E '::test_|Program received signal|SIGSEGV|wxBookCtrlBase|wxNotebook|exited normally' \
             .tmp/w19-native/w19-gdb.log | tail -n 35 || true
           tail -n 50 .tmp/w19-native/w19-gdb.log
-          if [ "$readback_rc" -ne 0 ] || [ "$lifecycle_rc" -ne 0 ]; then
+          if [ "$readback_rc" -ne 0 ] || [ "$lifecycle_rc" -ne 0 ] || [ "$natural_close_rc" -ne 0 ]; then
             echo "::error::W19 native Linux regression remains; inspect artifact logs/backtrace."
             echo "FAIL" > .tmp/w19-native/verdict.txt
             exit 1
