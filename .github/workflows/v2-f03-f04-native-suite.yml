@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/v2-f03-f04-native-suite.yml"
       - "scripts/v2_native_suite_runner.py"
+      - "scripts/v2_native_prefix_bisect.py"
       - "src/hpc_gui/wx_terminal_webview.py"
       - "src/hpc_gui/wx_terminal_webview_bridge.py"
       - "tests/conftest.py"
@@ -92,13 +93,19 @@ jobs:
             tests/test_ftp_widget_activity_rows_history.py \
             tests/test_ftp_widget_backend_concurrency.py
           ftp_prefix_exit=$?
-          printf 'source_sha=%s\ncollection_exit=%s\nsuite_exit=%s\ncontinued_exit=%s\nftp_isolated_exit=%s\nftp_prefix_exit=%s\n' \
-            "$(git rev-parse HEAD)" "$collect_exit" "$suite_exit" "$continued_exit" "$ftp_isolated_exit" "$ftp_prefix_exit" \
+          dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            python scripts/v2_native_prefix_bisect.py \
+            --output "$V2_EVIDENCE" --timeout-seconds 240
+          prefix_bisect_exit=$?
+          printf 'source_sha=%s\ncollection_exit=%s\nsuite_exit=%s\ncontinued_exit=%s\nftp_isolated_exit=%s\nftp_prefix_exit=%s\nprefix_bisect_exit=%s\n' \
+            "$(git rev-parse HEAD)" "$collect_exit" "$suite_exit" "$continued_exit" "$ftp_isolated_exit" "$ftp_prefix_exit" "$prefix_bisect_exit" \
             > "$V2_EVIDENCE/runner-exits.txt"
           echo "Linux collection=$collect_exit, full=$suite_exit, investigation=$continued_exit"
           tail -n 35 "$V2_EVIDENCE/linux-after-docs-probe.stdout.log" || true
           tail -n 35 "$V2_EVIDENCE/linux-ftp-isolated.stdout.log" || true
           tail -n 35 "$V2_EVIDENCE/linux-ftp-prefix.stdout.log" || true
+          tail -n 25 "$V2_EVIDENCE/linux-first-prefix-half.stdout.log" || true
+          tail -n 25 "$V2_EVIDENCE/linux-second-prefix-half.stdout.log" || true
           tail -n 35 "$V2_EVIDENCE/linux-full-suite.stdout.log" || true
           tail -n 20 "$V2_EVIDENCE/linux-collection.stdout.log" || true
           if [ "$collect_exit" -ne 0 ] || [ "$suite_exit" -ne 0 ]; then
