@@ -180,6 +180,7 @@ class SSHClientWrapper:
                 HostKeyRejectedError,
                 JumpAuthenticationError,
                 JumpForwardingDeniedError,
+                X11Unavailable,
             ),
         )
 
