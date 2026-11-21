@@ -68,9 +68,21 @@ def test_production_native_destroy_event_exits_real_webview_mainloop():
                 event_object = event.GetEventObject()
             except Exception:
                 event_object = None
+            try:
+                source_id = native_target.GetId() if native_target is not None else None
+                parent = native_target.GetParent() if native_target is not None else None
+                parent_is_none = parent is None
+                top_level = isinstance(native_target, wx.TopLevelWindow)
+                frame_id = frame.GetId()
+            except Exception as exc:
+                source_id = frame_id = None
+                parent_is_none = top_level = False
+                print(f"POLICY: source_fields_error={type(exc).__name__}", flush=True)
             print(
                 f"POLICY: destroy_event source={describe_window(native_target)} "
-                f"event_object={describe_window(event_object)}",
+                f"event_object={describe_window(event_object)} "
+                f"source_id={source_id} frame_id={frame_id} "
+                f"is_top_level={top_level} parent_none={parent_is_none}",
                 flush=True,
             )
             event.Skip()
