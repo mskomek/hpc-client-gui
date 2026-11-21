@@ -80,15 +80,16 @@ class TerminalLifecycleMixin:
             except Exception:
                 pass
 
-    def close(self, *, parent_teardown=False):
-        """Release Python-side state; the parent owns native child destruction.
+    def close(self):
+        """Release Python state without double-destroying parent-owned children.
 
-        Direct close() preserves standalone panel behavior. Destroy() and
-        EVT_WINDOW_DESTROY call with parent_teardown=True to prevent two
-        native Destroy calls on the same WebView during wx parent teardown.
+        Keep the zero-argument callback contract for cleanup registries and
+        compatibility subclasses. Destroy/EVT_WINDOW_DESTROY mark native
+        parent ownership before calling this hook.
         """
         if self._closed:
             return
+        parent_teardown = bool(getattr(self, "_native_parent_teardown", False))
         webview = self._webview
         self._closed = True
         self._webview = None
@@ -224,7 +225,8 @@ class TerminalLifecycleMixin:
                 destroyed = None
         try:
             if destroyed is self or (destroyed is not None and destroyed == self):
-                self.close(parent_teardown=True)
+                self._native_parent_teardown = True
+                self.close()
         except RuntimeError:
             pass
         try:
@@ -241,7 +243,8 @@ class TerminalLifecycleMixin:
 
     # For lifecycle
     def Destroy(self):  # type: ignore[override]
-        self.close(parent_teardown=True)
+        self._native_parent_teardown = True
+        self.close()
         try:
             return super().Destroy()  # type: ignore
         except Exception:
