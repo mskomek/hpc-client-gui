@@ -112,6 +112,7 @@ jobs:
           tests/test_wx_terminal_webview_factory.py
           tests/test_wx_packaged_terminal_activation.py
           tests/test_wx_terminal_mount_order.py
+          tests/test_qt_wx_collection_order.py
           tests/test_wx_terminal_diagnostic.py
           tests/test_cli_profile_refactor_contracts.py
           tests/test_wx_shell_teardown_contracts.py
