@@ -92,7 +92,9 @@ def test_panel_destroy_leaves_child_destruction_to_native_parent(pending):
 
     assert panel.parent_destroys == 1
     assert panel.native_child.destroys == 1
-    assert panel.native_child.stops == (0 if pending else 1)
+    # Parent teardown must not call native Stop(): WebKitGTK and WebView2
+    # can still be running backend callbacks while their child is destroyed.
+    assert panel.native_child.stops == 0
     assert retry.stops == 1
     assert panel._native_retry_timer is None
     assert panel._native_retry_scheduled is False
@@ -100,16 +102,45 @@ def test_panel_destroy_leaves_child_destruction_to_native_parent(pending):
     assert panel._generation == 1
 
 
-def test_explicit_close_preserves_standalone_child_destruction():
+def test_explicit_close_releases_state_but_parent_owns_native_child():
     panel = _Panel()
 
     panel.close()
     panel.close()
 
     assert panel.native_child.stops == 1
-    assert panel.native_child.destroys == 1
+    assert panel.native_child.destroys == 0
     assert panel.parent_destroys == 0
     assert panel._generation == 1
+
+    # A later parent destruction releases exactly one native child, without
+    # issuing a second Stop() or running Python cleanup twice.
+    assert panel.Destroy() is True
+    assert panel.native_child.stops == 1
+    assert panel.native_child.destroys == 1
+    assert panel.parent_destroys == 1
+    assert panel._generation == 1
+
+
+def test_pending_native_create_is_not_stopped_or_destroyed_on_close():
+    panel = _Panel(pending=True)
+
+    panel.close()
+
+    assert panel.native_child.stops == 0
+    assert panel.native_child.destroys == 0
+    assert panel.Destroy() is True
+    assert panel.native_child.destroys == 1
+
+
+def test_close_during_native_deletion_does_not_touch_webview():
+    panel = _Panel()
+    panel.IsBeingDeleted = lambda: True
+
+    panel.close()
+
+    assert panel.native_child.stops == 0
+    assert panel.native_child.destroys == 0
 
 
 def test_native_parent_destroy_event_does_not_destroy_child_twice():
@@ -125,6 +156,7 @@ def test_native_parent_destroy_event_does_not_destroy_child_twice():
 
     panel._on_destroy(Event())
     assert panel.native_child.destroys == 0
+    assert panel.native_child.stops == 0
     assert panel._closed is True
     assert calls == ["skip"]
 
