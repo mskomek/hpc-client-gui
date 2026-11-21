@@ -8,6 +8,37 @@ from hpc_gui.core.i18n import load_saved_language, system_default_language
 from hpc_gui.wx_runtime import environment_without_qt_graphics
 
 
+def install_main_frame_exit_policy(wx, app, frame) -> None:
+    """Exit the production wx loop once the main window is natively gone.
+
+    Destroy() returning is not proof the native HWND has been released. Queue
+    ExitMainLoop from the real frame's destruction event instead of guessing
+    a WebView2 callback delay. Child destroy events may propagate to frame.
+    This hook intentionally is not installed for packaged smoke mode, whose
+    test harness owns the event-loop lifecycle.
+    """
+    app.SetExitOnFrameDelete(True)
+    exit_queued = False
+
+    def on_destroyed(event):
+        nonlocal exit_queued
+        try:
+            try:
+                destroyed = event.GetWindow()
+            except (AttributeError, RuntimeError):
+                destroyed = None
+            if destroyed is frame and not exit_queued:
+                exit_queued = True
+                try:
+                    wx.CallAfter(app.ExitMainLoop)
+                except Exception as exc:
+                    frame._wx_shell_exit_loop_error_type = type(exc).__name__
+        finally:
+            event.Skip()
+
+    frame.Bind(wx.EVT_WINDOW_DESTROY, on_destroyed)
+
+
 def activate_terminal_for_packaged_smoke(frame) -> bool:
     """Exercise the real notebook navigation before native WebView2 creation."""
     controls = getattr(frame, "_wx_shell_controls", {}) or {}
@@ -78,6 +109,7 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
             except Exception:
                 pass
         app.SetTopWindow(frame)
+        install_main_frame_exit_policy(wx, app, frame)
         frame.Show()
         try:
             frame.Raise()
