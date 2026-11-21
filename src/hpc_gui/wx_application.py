@@ -28,13 +28,17 @@ def install_main_frame_exit_policy(wx, app, frame) -> None:
             except (AttributeError, RuntimeError):
                 destroyed = None
             if destroyed is frame and not exit_queued:
-                exit_queued = True
                 try:
                     wx.CallAfter(app.ExitMainLoop)
                 except Exception as exc:
                     frame._wx_shell_exit_loop_error_type = type(exc).__name__
+                else:
+                    exit_queued = True
         finally:
-            event.Skip()
+            try:
+                event.Skip()
+            except (AttributeError, RuntimeError):
+                pass
 
     frame.Bind(wx.EVT_WINDOW_DESTROY, on_destroyed)
 
