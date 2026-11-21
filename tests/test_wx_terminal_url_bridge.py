@@ -162,7 +162,7 @@ def test_accessible_label_limit_matches_javascript_utf16_units():
         payload = json.loads(unquote(fragment.removeprefix("#hpc=")))
         assert payload["arg"] == value
 
-    for value in (rejected, "\\ud800"):
+    for value in (rejected, chr(0xD800)):
         script = (
             "window.hpcSetAccessibilityLabel && "
             f"window.hpcSetAccessibilityLabel({json.dumps(value)});"
