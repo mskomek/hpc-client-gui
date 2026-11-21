@@ -53,7 +53,20 @@ def test_native_webview_parent_close_returns_mainloop():
             print(f"NATIVE_STAGE: frame_destroy_event own={own_window}", flush=True)
             event.Skip()
 
+        def observe_close(event):
+            print(
+                f"NATIVE_STAGE: close_event_begin can_veto={event.CanVeto()} "
+                f"vetoed={event.GetVeto()}",
+                flush=True,
+            )
+            event.Skip()
+            print(
+                f"NATIVE_STAGE: close_event_skip vetoed={event.GetVeto()}",
+                flush=True,
+            )
+
         frame.Bind(wx.EVT_WINDOW_DESTROY, observe_destroy)
+        frame.Bind(wx.EVT_CLOSE, observe_close)
         frame.Show()
         print("NATIVE_STAGE: shown", flush=True)
 
@@ -64,12 +77,15 @@ def test_native_webview_parent_close_returns_mainloop():
 
         def inspect_after_close():
             try:
-                top_count = len(wx.GetTopLevelWindows())
+                windows = wx.GetTopLevelWindows()
+                top_count = len(windows)
+                description = [(w.GetName(), w.IsShown(), w.IsBeingDeleted()) for w in windows]
             except Exception:
-                top_count = -1
+                top_count, description = -1, []
             print(
                 f"NATIVE_STAGE: after_close panel_closed={panel._closed} "
-                f"top_windows={top_count} frame_shown={frame.IsShown()}" ,
+                f"top_windows={top_count} frame_shown={frame.IsShown()} "
+                f"top_detail={description!r}",
                 flush=True,
             )
 
@@ -162,7 +178,20 @@ def test_native_webview_direct_destroy_exits_mainloop():
             result = frame.Destroy()
             print(f"NATIVE_STAGE: force_destroy_returned {result}", flush=True)
 
+        def inspect_after_destroy():
+            try:
+                windows = wx.GetTopLevelWindows()
+                details = [(w.GetName(), w.IsShown(), w.IsBeingDeleted()) for w in windows]
+            except Exception as exc:
+                details = f"error:{type(exc).__name__}"
+            print(
+                f"NATIVE_STAGE: after_force_destroy panel_closed={panel._closed} "
+                f"top_detail={details!r}",
+                flush=True,
+            )
+
         wx.CallLater(600, destroy_now)
+        wx.CallLater(2500, inspect_after_destroy)
         app.MainLoop()
         assert panel._closed, "panel destroy callback was not received"
         print("NATIVE_DIRECT_DESTROY_EXITED", flush=True)
@@ -188,3 +217,56 @@ def test_native_webview_direct_destroy_exits_mainloop():
         f"stderr={result.stderr!r}"
     )
     assert "NATIVE_DIRECT_DESTROY_EXITED" in result.stdout
+
+
+def test_minimal_webview_frame_close_returns_mainloop():
+    """Control case distinguishes native WebKitGTK backend from panel lifecycle."""
+    if sys.platform.startswith("linux") and not os.environ.get("DISPLAY"):
+        pytest.skip("real X display required; run under Xvfb or GNOME")
+
+    code = textwrap.dedent(
+        """
+        import wx
+        import wx.html2
+        app = wx.App(False)
+        frame = wx.Frame(None, title="minimal-webview-control")
+        view = wx.html2.WebView.New(frame)
+        assert view is not None
+        frame.SetSizer(wx.BoxSizer(wx.VERTICAL))
+        frame.GetSizer().Add(view, 1, wx.EXPAND)
+        frame.Layout()
+        app.SetTopWindow(frame)
+        frame.Show()
+        def observe(event):
+            print(
+                f"MINIMAL: close_event can_veto={event.CanVeto()} "
+                f"vetoed={event.GetVeto()}",
+                flush=True,
+            )
+            event.Skip()
+        frame.Bind(wx.EVT_CLOSE, observe)
+        def close_now():
+            print(f"MINIMAL: Close return={frame.Close()}", flush=True)
+        wx.CallLater(600, close_now)
+        app.MainLoop()
+        print("MINIMAL_WEBVIEW_EXITED", flush=True)
+        """
+    )
+    env = project_python_environment(pathlib.Path(__file__).resolve().parents[1])
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=12,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        pytest.fail(
+            f"minimal WebView control hung: stdout={exc.stdout!r} stderr={exc.stderr!r}"
+        )
+    assert result.returncode == 0 and "MINIMAL_WEBVIEW_EXITED" in result.stdout, (
+        f"minimal WebView exit={result.returncode}: "
+        f"stdout={result.stdout!r}, stderr={result.stderr!r}"
+    )
