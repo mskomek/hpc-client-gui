@@ -146,12 +146,15 @@ class TerminalLifecycleMixin:
             unsubscribe_language_change(self._lang_cb)
         except Exception:
             pass
-        # Release the native WebView2 controller. When wx is already tearing
-        # down this panel (IsBeingDeleted), an explicit Destroy races the
-        # native WebView2 teardown and is a known access-violation source
-        # (HPC-W05-TODO-LIFECYCLE-NATIVE-002): stop the loader best-effort,
-        # detach our reference, and let the parent destroy the child.
-        # Destroy explicitly only while the panel is not being deleted.
+        # The owning wx panel controls the native lifetime of its WebView
+        # children. close() also runs as a cleanup callback while the frame is
+        # still alive, so destroying the child here can race queued WebView2
+        # creation events or a later parent-driven teardown. Only detach our
+        # Python reference; wx will destroy the child once with its parent.
+        #
+        # Stop() is useful for an initialized, still-live view, but it is not
+        # safe during a native destroy event or while a WebView2 controller is
+        # still being created asynchronously.
         being_deleted = False
         try:
             is_being_deleted = getattr(self, "IsBeingDeleted", None)
@@ -159,27 +162,23 @@ class TerminalLifecycleMixin:
                 being_deleted = bool(is_being_deleted())
         except Exception:
             being_deleted = False
-        if webview is not None:
-            # Stop() can race an unfinished asynchronous WebView2 native
-            # create callback. The owning wx parent will release the child.
-            native_create_pending = (
-                parent_teardown
-                and not getattr(self, "_native_created", False)
-                and (
-                    getattr(self, "_webview_pending_native", False)
-                    or getattr(self, "_webview_legacy_edge", False)
-                )
+        native_create_pending = (
+            not getattr(self, "_native_created", False)
+            and (
+                getattr(self, "_webview_pending_native", False)
+                or getattr(self, "_webview_legacy_edge", False)
             )
-            if not native_create_pending:
-                try:
-                    webview.Stop()
-                except Exception:
-                    pass
-            if not being_deleted and not parent_teardown:
-                try:
-                    webview.Destroy()
-                except Exception:
-                    pass
+        )
+        if (
+            webview is not None
+            and not parent_teardown
+            and not being_deleted
+            and not native_create_pending
+        ):
+            try:
+                webview.Stop()
+            except Exception:
+                pass
 
     def _update_status(self, state: str):
         """Update the connection status label. States: disconnected, connecting, connected, reconnecting."""
