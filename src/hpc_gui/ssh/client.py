@@ -346,11 +346,16 @@ class SSHClientWrapper:
         self.log("SSH: connected, SFTP ready")
 
     def _start_shell_session(self) -> None:
+        required_x11 = bool(getattr(self.info, "x11_forwarding", False))
         if not self.client:
+            if required_x11:
+                raise X11Unavailable("SSH client is unavailable for requested X11")
             return
         self._stop_shell_session()
         transport = self.client.get_transport()
         if transport is None or not transport.is_active():
+            if required_x11:
+                raise X11Unavailable("SSH transport is inactive for requested X11")
             return
         session = InteractiveShellSession(
             invoke_shell=self._invoke_shell,
@@ -363,7 +368,7 @@ class SSHClientWrapper:
         if not session.start():
             # X11 was explicitly required: never quietly continue as an SFTP-
             # only connection and present the SSH setup as successful.
-            if bool(getattr(self.info, "x11_forwarding", False)):
+            if required_x11:
                 raise X11Unavailable("X11 shell could not start")
             return
         self._shell_session = session
