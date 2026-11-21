@@ -146,6 +146,7 @@ def test_relay_channel_count_is_bounded_and_closed_requests_rejected(monkeypatch
         def __init__(self, *, target, args, name, daemon):
             self.target = target
             self.args = args
+            self.name = name
         def start(self):
             starts.append(self)
 
@@ -167,7 +168,8 @@ def test_relay_channel_count_is_bounded_and_closed_requests_rejected(monkeypatch
     after_close = Channel()
     relay._on_x11_channel(after_close, None)
     assert after_close.closed is True
-    assert len(starts) == 8
+    # close() also schedules bounded cleanup workers for the eight relays.
+    assert len([item for item in starts if item.name == "hpc_gui_x11_relay"]) == 8
 
 
 class _FakeLocalDisplay:
@@ -254,3 +256,91 @@ def test_closed_forwarder_refuses_new_channel_without_local_connection():
     relay._relay(channel)
     assert display.connections == []
     assert channel.closed
+
+@pytest.mark.parametrize("blocked_side", ["channel", "local"])
+def test_close_interrupts_active_relay_during_blocked_send(blocked_side):
+    """A closing UI must not wait for a peer that stopped consuming X11 data."""
+    import threading
+    import time
+
+    class BlockingChannel(_FakeChannel):
+        def __init__(self, packets):
+            super().__init__(packets)
+            self.entered = threading.Event()
+            self.released = threading.Event()
+
+        def sendall(self, _data):
+            self.entered.set()
+            assert self.released.wait(2), "remote send did not unblock"
+
+        def shutdown(self, _how):
+            self.released.set()
+
+    class BlockingLocal(_CaptureLocalSocket):
+        def __init__(self):
+            super().__init__()
+            self.entered = threading.Event()
+            self.released = threading.Event()
+
+        def sendall(self, data):
+            if data == b"relay payload":
+                self.entered.set()
+                assert self.released.wait(2), "local send did not unblock"
+            else:
+                super().sendall(data)
+
+        def shutdown(self, _how):
+            self.released.set()
+
+        def settimeout(self, _timeout):
+            pass
+
+    display = _FakeLocalDisplay()
+    local = BlockingLocal()
+    display.connect = lambda timeout=5.0: local
+    relay = X11Forwarder(display, cookie_reader=lambda _: b"R" * 16)
+    channel = BlockingChannel([_setup_packet(relay._fake_cookie)])
+    endpoint = channel if blocked_side == "channel" else local
+    relay._pump = lambda remote, sock: endpoint.sendall(b"relay payload")
+    relay._on_x11_channel(channel, None)
+    try:
+        assert endpoint.entered.wait(2), "relay did not reach blocking send"
+        before = time.monotonic()
+        relay.close()
+        assert time.monotonic() - before < 1.0, "close blocked the caller"
+        assert endpoint.released.wait(2), "shutdown did not interrupt send"
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline and relay._active_relays:
+            time.sleep(0.01)
+        assert relay._active_relays == 0
+        assert channel.closed and local.closed
+    finally:
+        relay.close()
+
+
+def test_close_stays_bounded_when_channel_close_itself_blocks():
+    import threading
+    import time
+
+    class BlockingCloseChannel:
+        def __init__(self):
+            self.entered = threading.Event()
+            self.release = threading.Event()
+
+        def shutdown(self, _how):
+            pass
+
+        def close(self):
+            self.entered.set()
+            assert self.release.wait(2)
+
+    channel = BlockingCloseChannel()
+    relay = X11Forwarder(cookie_reader=lambda _: b"R" * 16)
+    with relay._relay_lock:
+        relay._relay_channels.add(channel)
+    before = time.monotonic()
+    relay.close()
+    assert time.monotonic() - before < 1.0
+    assert channel.entered.wait(2)
+    channel.release.set()
+
