@@ -145,3 +145,28 @@ def test_accessible_label_is_bounded_and_rejects_non_string_payloads():
     for value in (too_long, None, 7):
         with pytest.raises(ValueError):
             encode_terminal_fragment(1, "hpcSetAccessibilityLabel", value)
+
+def test_accessible_label_limit_matches_javascript_utf16_units():
+    """A Python-short emoji string can still exceed JS's 256-unit limit."""
+    import pytest
+
+    accepted = "🙂" * 128  # 256 JavaScript UTF-16 code units
+    rejected = "🙂" * 129  # 258 UTF-16 units, but only 129 Python characters
+    for value in (accepted, "Uçbirim"):
+        script = (
+            "window.hpcSetAccessibilityLabel && "
+            f"window.hpcSetAccessibilityLabel({json.dumps(value)});"
+        )
+        assert parse_terminal_call(script) == ("hpcSetAccessibilityLabel", value)
+        fragment = encode_terminal_fragment(1, "hpcSetAccessibilityLabel", value)
+        payload = json.loads(unquote(fragment.removeprefix("#hpc=")))
+        assert payload["arg"] == value
+
+    for value in (rejected, "\\ud800"):
+        script = (
+            "window.hpcSetAccessibilityLabel && "
+            f"window.hpcSetAccessibilityLabel({json.dumps(value)});"
+        )
+        assert parse_terminal_call(script) is None
+        with pytest.raises(ValueError):
+            encode_terminal_fragment(1, "hpcSetAccessibilityLabel", value)
