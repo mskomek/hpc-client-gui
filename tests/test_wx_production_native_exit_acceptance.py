@@ -46,6 +46,30 @@ def test_production_native_destroy_event_exits_real_webview_mainloop():
         install_main_frame_exit_policy(wx, app, frame)
         print("POLICY: installed", flush=True)
 
+        def trace_destroy(event):
+            try:
+                native_target = event.GetWindow()
+                native_self = native_target is frame
+                native_panel = native_target is panel
+            except Exception as exc:
+                native_self, native_panel = False, False
+                print(f"POLICY: GetWindow_error={type(exc).__name__}", flush=True)
+            try:
+                event_object = event.GetEventObject()
+                object_self = event_object is frame
+                object_panel = event_object is panel
+            except Exception:
+                object_self, object_panel = False, False
+            print(
+                f"POLICY: destroy_event GetWindow_frame={native_self} "
+                f"GetWindow_panel={native_panel} EventObject_frame={object_self} "
+                f"EventObject_panel={object_panel}",
+                flush=True,
+            )
+            event.Skip()
+
+        frame.Bind(wx.EVT_WINDOW_DESTROY, trace_destroy)
+
         def close(event):
             if event.GetVeto():
                 print("POLICY: explicit veto", flush=True)
@@ -55,7 +79,21 @@ def test_production_native_destroy_event_exits_real_webview_mainloop():
 
         frame.Bind(wx.EVT_CLOSE, close)
         frame.Show()
+
+        def inspect_after_destroy():
+            try:
+                top_windows = [w.GetName() for w in wx.GetTopLevelWindows()]
+            except Exception as exc:
+                top_windows = [type(exc).__name__]
+            print(
+                f"POLICY: after_destroy panel_closed={panel._closed} "
+                f"top_windows={top_windows!r} "
+                f"exit_policy_error={getattr(frame, '_wx_shell_exit_loop_error_type', '')}",
+                flush=True,
+            )
+
         wx.CallLater(600, frame.Close)
+        wx.CallLater(2500, inspect_after_destroy)
         app.MainLoop()
 
         assert panel._closed, "native terminal cleanup was not called"
