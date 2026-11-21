@@ -59,8 +59,8 @@ def test_native_webview_parent_close_returns_mainloop():
 
         def close_frame():
             print("NATIVE_STAGE: close_begin", flush=True)
-            frame.Close()
-            print("NATIVE_STAGE: close_returned", flush=True)
+            accepted = frame.Close()
+            print(f"NATIVE_STAGE: close_returned accepted={accepted}", flush=True)
 
         def inspect_after_close():
             try:
@@ -69,7 +69,7 @@ def test_native_webview_parent_close_returns_mainloop():
                 top_count = -1
             print(
                 f"NATIVE_STAGE: after_close panel_closed={panel._closed} "
-                f"top_windows={top_count}",
+                f"top_windows={top_count} frame_shown={frame.IsShown()}" ,
                 flush=True,
             )
 
@@ -134,3 +134,57 @@ def test_blank_native_wx_frame_exits_mainloop():
         f"stdout={result.stdout!r}, stderr={result.stderr!r}"
     )
     assert "BLANK_MAINLOOP_EXITED" in result.stdout
+
+
+def test_native_webview_direct_destroy_exits_mainloop():
+    if sys.platform.startswith("linux") and not os.environ.get("DISPLAY"):
+        pytest.skip("real X display required; run under Xvfb or GNOME")
+
+    script = textwrap.dedent(
+        """
+        import wx
+        import wx.html2
+        from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
+
+        app = wx.App(False)
+        frame = wx.Frame(None, title="native-direct-destroy-control", size=(840, 540))
+        panel = WxTerminalWebViewPanel(frame)
+        assert panel._webview is not None, "native WebView unavailable"
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(panel, 1, wx.EXPAND)
+        frame.SetSizer(sizer)
+        frame.Layout()
+        app.SetTopWindow(frame)
+        frame.Show()
+
+        def destroy_now():
+            print("NATIVE_STAGE: force_destroy_begin", flush=True)
+            result = frame.Destroy()
+            print(f"NATIVE_STAGE: force_destroy_returned {result}", flush=True)
+
+        wx.CallLater(600, destroy_now)
+        app.MainLoop()
+        assert panel._closed, "panel destroy callback was not received"
+        print("NATIVE_DIRECT_DESTROY_EXITED", flush=True)
+        """
+    )
+    env = project_python_environment(pathlib.Path(__file__).resolve().parents[1])
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=12,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        pytest.fail(
+            "direct frame Destroy did not finish native MainLoop: "
+            f"stdout={exc.stdout!r} stderr={exc.stderr!r}"
+        )
+    assert result.returncode == 0, (
+        f"direct Destroy exit={result.returncode}, stdout={result.stdout!r}, "
+        f"stderr={result.stderr!r}"
+    )
+    assert "NATIVE_DIRECT_DESTROY_EXITED" in result.stdout
