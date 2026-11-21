@@ -163,22 +163,23 @@ def test_production_native_destroy_event_exits_real_webview_mainloop():
         """
     )
     env = project_python_environment(pathlib.Path(__file__).resolve().parents[1])
-    try:
-        result = subprocess.run(
-            [sys.executable, "-c", script],
-            capture_output=True,
-            text=True,
-            env=env,
-            timeout=15,
-            check=False,
+    for attempt in range(1, 4):
+        try:
+            result = subprocess.run(
+                [sys.executable, "-c", script],
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=15,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            pytest.fail(
+                f"production policy timed out (attempt {attempt}/3): "
+                f"stdout={exc.stdout!r} stderr={exc.stderr!r}"
+            )
+        assert result.returncode == 0, (
+            f"production policy exit={result.returncode} (attempt {attempt}/3), "
+            f"stdout={result.stdout!r}, stderr={result.stderr!r}"
         )
-    except subprocess.TimeoutExpired as exc:
-        pytest.fail(
-            f"production policy timed out: stdout={exc.stdout!r} "
-            f"stderr={exc.stderr!r}"
-        )
-    assert result.returncode == 0, (
-        f"production policy exit={result.returncode}, "
-        f"stdout={result.stdout!r}, stderr={result.stderr!r}"
-    )
-    assert "PRODUCTION_POLICY_MAINLOOP_EXITED" in result.stdout
+        assert "PRODUCTION_POLICY_MAINLOOP_EXITED" in result.stdout
