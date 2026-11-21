@@ -104,3 +104,89 @@ def test_untrusted_cookie_failure_does_not_create_fallback(tmp_path, monkeypatch
         create_untrusted_cookie(source, ":0", runner=lambda *_args, **_kwargs: failure)
     assert list(tmp_path.glob("hpc-x11-*.xauth")) == []
 
+def test_default_forwarder_uses_untrusted_cookie_and_deletes_private_copy(tmp_path):
+    authority = tmp_path / "private.xauth"
+    authority.write_bytes(b"private authority")
+    cookie = b"U" * 16
+    calls = []
+
+    def generate(source, name):
+        calls.append((source, name))
+        return authority, cookie
+
+    forwarder = x11_forward.X11Forwarder(
+        cookie_reader=lambda _display: pytest.fail("trusted cookie is forbidden by default"),
+        untrusted_cookie_factory=generate,
+    )
+    try:
+        assert forwarder._real_cookie == cookie
+        assert len(calls) == 1
+        assert calls[0][1] == forwarder.display.name
+        assert not forwarder._allow_empty_auth
+    finally:
+        forwarder.close()
+        forwarder.close()
+    assert not authority.exists()
+
+
+def test_explicit_trusted_forwarder_avoids_untrusted_cookie_generation():
+    reader_called = []
+
+    def cookie_reader(_display):
+        reader_called.append(True)
+        return b"T" * 16
+
+    forwarder = x11_forward.X11Forwarder(
+        trusted=True,
+        cookie_reader=cookie_reader,
+        untrusted_cookie_factory=lambda *_args: pytest.fail("must not generate untrusted"),
+    )
+    try:
+        assert forwarder._real_cookie == b"T" * 16
+        assert reader_called == [True]
+    finally:
+        forwarder.close()
+
+
+def test_untrusted_cookie_failure_never_falls_back_to_trusted():
+    with pytest.raises(RuntimeError, match="Untrusted X11 cookie unavailable"):
+        x11_forward.X11Forwarder(
+            cookie_reader=lambda _display: pytest.fail("must not use trusted fallback"),
+            untrusted_cookie_factory=lambda *_args: (_ for _ in ()).throw(
+                RuntimeError("SECURITY extension missing")
+            ),
+        )
+
+
+def test_invalid_untrusted_cookie_removes_temporary_authority(tmp_path):
+    authority = tmp_path / "generated.xauth"
+    authority.write_text("sensitive", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="Untrusted X11 cookie unavailable"):
+        x11_forward.X11Forwarder(
+            untrusted_cookie_factory=lambda *_args: (authority, b"invalid"),
+        )
+    assert not authority.exists()
+
+
+def test_unauthenticated_relay_cannot_be_enabled_in_untrusted_mode():
+    with pytest.raises(ValueError, match="requires explicit trusted"):
+        x11_forward.X11Forwarder(
+            allow_unauthenticated_loopback=True,
+            untrusted_cookie_factory=lambda *_args: pytest.fail("no generation expected"),
+        )
+
+
+def test_explicit_server_rejection_is_not_silent():
+    class RejectedChannel:
+        def request_x11(self, **_kwargs):
+            return False
+
+    forwarder = x11_forward.X11Forwarder(
+        trusted=True, cookie_reader=lambda _display: b"C" * 16
+    )
+    try:
+        with pytest.raises(RuntimeError, match="rejected X11 forwarding"):
+            forwarder.request(RejectedChannel())
+    finally:
+        forwarder.close()
+
