@@ -99,15 +99,17 @@ class TerminalBridgeMixin:
         if not getattr(self, "_page_loaded", True):
             return
         script = (
-            "const terminal = document.getElementById('terminal');"
-            f"if (terminal) terminal.setAttribute('aria-label', {json.dumps(label, ensure_ascii=False)});"
+            "window.hpcSetAccessibilityLabel && "
+            f"window.hpcSetAccessibilityLabel({json.dumps(label, ensure_ascii=False)});"
         )
 
         def update_dom_label() -> None:
             if getattr(self, "_closed", False) or getattr(self, "_webview", webview) is not webview:
                 return
             try:
-                webview.RunScript(script)
+                # Linux uses the strict-CSP local fragment transport; a
+                # direct RunScript eval is disallowed by the terminal page.
+                self._run_js(script)
             except Exception:
                 pass
 
