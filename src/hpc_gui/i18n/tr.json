@@ -23,6 +23,8 @@
     "ssh_key": "SSH Anahtar Dosyası (ops.)",
     "browse": "Seç",
     "x11_enable": "X11 yönlendirme (grafik arayüzlü uygulamalar için)",
+    "x11_trusted": "Güvenilir X11 (-Y; uzak GUI uygulamaları ekranınızı kontrol edebilir)",
+    "x11_trusted_tip": "Kısıtlı X11 için işaretlemeyin. Yalnızca X SECURITY kullanılamıyorsa ve sunucuya güveniyorsanız açın.",
     "dry_run": "Simülasyon / Deneme çalıştırması (uzak sistem olmadan arayüz testi)",
     "connect": "Bağlan",
     "duplicate": "Profili çoğalt",

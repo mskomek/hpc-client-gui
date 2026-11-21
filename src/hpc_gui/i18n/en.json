@@ -23,6 +23,8 @@
     "ssh_key": "SSH key file (opt.)",
     "browse": "Browse",
     "x11_enable": "Enable X11 forwarding (for GUI apps)",
+    "x11_trusted": "Trusted X11 (-Y; remote GUI apps may control your display)",
+    "x11_trusted_tip": "Leave unchecked for restricted X11. Enable only for trusted servers when X SECURITY is unavailable.",
     "dry_run": "Simulation / Dry-run (UI test without a remote system)",
     "connect": "Connect",
     "duplicate": "Duplicate profile",
