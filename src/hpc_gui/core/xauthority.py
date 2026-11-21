@@ -33,6 +33,22 @@ def find_xauth_executable() -> str | None:
     return next((item for item in candidates if item and Path(item).is_file()), None)
 
 
+def _cookies_from_xauth_output(text: str) -> list[bytes]:
+    """Select only valid MIT cookies; exclude other Xauthority protocols."""
+    cookies = []
+    for line in text.splitlines():
+        parts = line.split()
+        if len(parts) < 3 or parts[1] != _MIT_COOKIE.decode("ascii"):
+            continue
+        try:
+            value = bytes.fromhex(parts[2])
+        except ValueError:
+            continue
+        if len(value) == 16:
+            cookies.append(value)
+    return cookies
+
+
 def create_untrusted_cookie(
     authority_path: str | Path,
     display_name: str,
@@ -58,28 +74,28 @@ def create_untrusted_cookie(
             temp_path.chmod(0o600)
         env = os.environ.copy()
         env["XAUTHORITY"] = str(temp_path)
+        list_command = [executable, "-f", str(temp_path), "list", display_name]
+        original = runner(
+            list_command, capture_output=True, text=True, timeout=5, env=env,
+        )
+        if original.returncode != 0:
+            raise RuntimeError("cannot inspect existing trusted X11 credentials")
+        trusted_cookies = set(_cookies_from_xauth_output(original.stdout or ""))
         command = [executable, "-f", str(temp_path), "generate", display_name,
                    ".", "untrusted", "timeout", str(max(1, int(timeout_seconds)))]
         generated = runner(command, capture_output=True, text=True, timeout=10, env=env)
         if generated.returncode != 0:
             raise RuntimeError("local X server does not support untrusted X11 cookies")
         listed = runner(
-            [executable, "-f", str(temp_path), "list", display_name],
-            capture_output=True, text=True, timeout=5, env=env,
+            list_command, capture_output=True, text=True, timeout=5, env=env,
         )
-        cookie = None
-        for line in (listed.stdout or "").splitlines():
-            parts = line.split()
-            if len(parts) >= 3 and parts[1] == _MIT_COOKIE.decode():
-                try:
-                    candidate = bytes.fromhex(parts[2])
-                except ValueError:
-                    continue
-                if len(candidate) == 16:
-                    cookie = candidate
-        if listed.returncode != 0 or cookie is None:
-            raise RuntimeError("xauth did not return a generated X11 cookie")
-        return temp_path, cookie
+        new_cookies = [
+            cookie for cookie in _cookies_from_xauth_output(listed.stdout or "")
+            if cookie not in trusted_cookies
+        ]
+        if listed.returncode != 0 or len(set(new_cookies)) != 1:
+            raise RuntimeError("xauth did not return a distinct untrusted X11 cookie")
+        return temp_path, new_cookies[0]
     except Exception:
         temp_path.unlink(missing_ok=True)
         raise
