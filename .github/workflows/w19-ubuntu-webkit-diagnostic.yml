@@ -19,6 +19,9 @@ on:
       - "src/hpc_gui/wx_application.py"
       - "src/hpc_gui/wx_terminal_webview_lifecycle.py"
       - "scripts/diagnose_wx_native_close_gdb.py"
+      - "src/hpc_gui/wx_terminal_url_bridge.py"
+      - "tests/test_wx_terminal_url_bridge.py"
+      - "tests/test_wx_terminal_native_teardown_contracts.py"
   workflow_dispatch:
 
 permissions:
@@ -74,6 +77,7 @@ jobs:
           set +e
           printf 'source_sha=%s\n' "$(git rev-parse HEAD)" > .tmp/w19-native/identity.txt
           python --version >> .tmp/w19-native/identity.txt
+          echo "pr_head_sha=${{ github.event.pull_request.head.sha || github.sha }}" >> .tmp/w19-native/identity.txt
           timeout --signal=TERM --kill-after=5s 70s \
             dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
             python -m pytest -q -s --tb=short \
@@ -117,14 +121,18 @@ jobs:
             > .tmp/w19-native/production-hang-gdb.log 2>&1
           hang_gdb_rc=$?
           echo "production_hang_gdb_exit=$hang_gdb_rc" >> .tmp/w19-native/identity.txt
-          if grep -qE 'exited normally' .tmp/w19-native/production-hang-gdb.log; then
-            echo "production_hang_backtrace=NOT_NEEDED_EXITED" >> .tmp/w19-native/identity.txt
+          if [ "$hang_gdb_rc" -eq 0 ] \
+            && grep -qE 'exited normally' .tmp/w19-native/production-hang-gdb.log \
+            && grep -Fq 'GDB_PROBE: natural_mainloop_exit panel_closed=True' \
+              .tmp/w19-native/production-hang-gdb.log; then
+            hang_probe_state=NOT_NEEDED_EXITED
           elif grep -qE 'received signal SIGALRM' .tmp/w19-native/production-hang-gdb.log \
             && grep -q 'Thread 1 (' .tmp/w19-native/production-hang-gdb.log; then
-            echo "production_hang_backtrace=CAPTURED" >> .tmp/w19-native/identity.txt
+            hang_probe_state=CAPTURED
           else
-            echo "production_hang_backtrace=NOT_CAPTURED" >> .tmp/w19-native/identity.txt
+            hang_probe_state=NOT_CAPTURED
           fi
+          echo "production_hang_backtrace=$hang_probe_state" >> .tmp/w19-native/identity.txt
           # A/B probe: preserve the wx error text via stderr instead of
           # wxLogGui's invisible modal wxMessageDialog. It is diagnostic only;
           # a successful probe does not override the existing red native tests.
@@ -155,8 +163,27 @@ jobs:
           grep -n -E '::test_|Program received signal|SIGSEGV|wxBookCtrlBase|wxNotebook|exited normally' \
             .tmp/w19-native/w19-gdb.log | tail -n 35 || true
           tail -n 50 .tmp/w19-native/w19-gdb.log
-          if [ "$readback_rc" -ne 0 ] || [ "$lifecycle_rc" -ne 0 ] || [ "$natural_close_rc" -ne 0 ] || [ "$production_close_rc" -ne 0 ] || [ "$stderr_log_ab_rc" -ne 0 ] || [ "$csp_violation" -ne 0 ]; then
-            echo "::error::W19 native Linux regression remains; inspect artifact logs/backtrace."
+          # A zero pytest status alone cannot prove the expected native cases
+          # ran: a missing X display may produce skipped tests with exit 0.
+          # Require the actual suite summaries and all three subprocess marks.
+          native_receipts_ok=1
+          grep -Eq '1 passed in [0-9]' .tmp/w19-native/readback.log || native_receipts_ok=0
+          grep -Eq '7 passed in [0-9]' .tmp/w19-native/w19-gdb.log || native_receipts_ok=0
+          grep -Eq '6 passed in [0-9]' .tmp/w19-native/natural-close.log || native_receipts_ok=0
+          grep -Eq '1 passed in [0-9]' .tmp/w19-native/production-close.log || native_receipts_ok=0
+          for attempt in 1 2 3; do
+            grep -Fq "PRODUCTION_POLICY_ATTEMPT_PASS=${attempt}/3" \
+              .tmp/w19-native/production-close.log || native_receipts_ok=0
+          done
+          echo "native_receipts_verified=$native_receipts_ok" >> .tmp/w19-native/identity.txt
+          # The native debugger is an independent regression probe. A captured
+          # hung stack is useful evidence but is not a passing close acceptance.
+          if [ "$readback_rc" -ne 0 ] || [ "$lifecycle_rc" -ne 0 ] \
+            || [ "$natural_close_rc" -ne 0 ] || [ "$production_close_rc" -ne 0 ] \
+            || [ "$hang_gdb_rc" -ne 0 ] || [ "$hang_probe_state" != "NOT_NEEDED_EXITED" ] \
+            || [ "$native_receipts_ok" -ne 1 ] || [ "$stderr_log_ab_rc" -ne 0 ] \
+            || [ "$csp_violation" -ne 0 ]; then
+            echo "::error::W19 native acceptance or evidence gate failed; inspect artifacts."
             echo "FAIL" > .tmp/w19-native/verdict.txt
             exit 1
           fi
@@ -167,5 +194,5 @@ jobs:
         with:
           name: w19-ubuntu-native-${{ github.sha }}
           path: .tmp/w19-native/**
-          retention-days: 7
-          if-no-files-found: warn
+          retention-days: 30
+          if-no-files-found: error

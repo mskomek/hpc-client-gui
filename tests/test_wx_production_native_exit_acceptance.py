@@ -183,3 +183,4 @@ def test_production_native_destroy_event_exits_real_webview_mainloop():
             f"stdout={result.stdout!r}, stderr={result.stderr!r}"
         )
         assert "PRODUCTION_POLICY_MAINLOOP_EXITED" in result.stdout
+        print(f"PRODUCTION_POLICY_ATTEMPT_PASS={attempt}/3", flush=True)
