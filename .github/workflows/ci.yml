@@ -158,7 +158,12 @@ jobs:
           tests/test_linux_update_handoff.py
           tests/test_debug_support_runtime.py
           tests/test_crash_logging_filter.py
+          tests/test_wx_crash_reporting_runtime.py::test_headless_exception_hook_persists_without_gui_imports
           -q --tb=short
+      - name: Native wx crash diagnostics (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest tests/test_wx_crash_reporting_runtime.py::test_wx_previous_and_live_crash_diagnostics -q --tb=short
       - name: Native wx independent updater helper (Windows)
         if: runner.os == 'Windows'
         run: python -m pytest tests/test_wx_updater_helper_native.py -q --tb=short
