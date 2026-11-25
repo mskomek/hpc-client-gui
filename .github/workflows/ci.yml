@@ -146,6 +146,17 @@ jobs:
         run: >-
           python -m pytest tests/test_wx_transfer_parallel_hint.py -q --tb=short
 
+      - name: Headless updater and diagnostic regressions
+        run: >-
+          python -m pytest
+          tests/test_updater_helper.py
+          tests/test_linux_update_handoff.py
+          tests/test_debug_support_runtime.py
+          tests/test_crash_logging_filter.py
+          -q --tb=short
+      - name: Native wx independent updater helper (Windows)
+        if: runner.os == 'Windows'
+        run: python -m pytest tests/test_wx_updater_helper_native.py -q --tb=short
 
   qt-removal-readiness:
     name: Strict Qt removal readiness (stacked migration)
