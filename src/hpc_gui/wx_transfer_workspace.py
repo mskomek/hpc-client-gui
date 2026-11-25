@@ -22,6 +22,7 @@ def _build_transfers(parent, controller=None, embedded=False):
         host, finish = make_host(parent, title=t("transfer.ftp_activity_title"), size=(520, 260), embedded=True)
         panel = wx.Panel(host)
         status = wx.StaticText(panel, label=t("transfer.no_active_transfer"))
+        parallel_hint = wx.StaticText(panel, label="")
         notebook = wx.Notebook(panel)
 
         def _make_list():
@@ -64,12 +65,14 @@ def _build_transfers(parent, controller=None, embedded=False):
         btn_sizer.AddStretchSpacer(1)
         layout = wx.BoxSizer(wx.VERTICAL)
         layout.Add(status, 0, wx.ALL | wx.EXPAND, 6)
+        layout.Add(parallel_hint, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 6)
         layout.Add(notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
         layout.Add(btn_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
         panel.SetSizer(layout)
         state = {"closed": False, "controller": controller, "queue_map": {}, "failed_map": {}, "completed_map": {}, "row_token": {}, "row_seq": 0}
         controls = {
             "status": status,
+            "parallel_hint": parallel_hint,
             "notebook": notebook,
             "queue": queue_list,
             "failed": failed_list,
@@ -83,15 +86,17 @@ def _build_transfers(parent, controller=None, embedded=False):
         host_sizer.Add(panel, 1, wx.EXPAND)
         host.SetSizer(host_sizer)
     else:
-        host, finish = make_host(parent, title=t("transfer.ftp_activity_title"), size=(520, 150), embedded=False)
+        host, finish = make_host(parent, title=t("transfer.ftp_activity_title"), size=(620, 190), embedded=False)
         panel = wx.Panel(host)
         title = wx.StaticText(panel, label=t("transfer.ftp_activity_title"))
         detail = wx.StaticText(panel, label=t("transfer.no_active_transfer"))
+        parallel_hint = wx.StaticText(panel, label="")
         gauge = wx.Gauge(panel, range=1)
         cancel = wx.Button(panel, label=t("transfer.cancel"))
         layout = wx.BoxSizer(wx.VERTICAL)
         layout.Add(title, 0, wx.ALL | wx.EXPAND, 8)
         layout.Add(detail, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 8)
+        layout.Add(parallel_hint, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 8)
         layout.Add(gauge, 0, wx.ALL | wx.EXPAND, 8)
         layout.Add(cancel, 0, wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
         panel.SetSizer(layout)
@@ -100,7 +105,8 @@ def _build_transfers(parent, controller=None, embedded=False):
         host.SetSizer(host_sizer)
         host.Layout()
         state = {"closed": False, "controller": controller}
-        controls = {"title": title, "detail": detail, "gauge": gauge, "cancel": cancel}
+        controls = {"title": title, "detail": detail, "gauge": gauge, "cancel": cancel,
+                    "parallel_hint": parallel_hint}
         status = detail
 
     def post(callback, *args):
