@@ -417,6 +417,10 @@ def run_helper(config_path: Path) -> int:
         if started:
             worker.join()
         dialog.Destroy()
+        # Destroy() may defer native top-level deletion until idle. This
+        # independent helper has no outer MainLoop after ShowModal returns.
+        _application.ProcessPendingEvents()
+        _application.ProcessIdle()
 
 
 def _localized_progress_text(message: str, translate) -> str:
