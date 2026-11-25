@@ -66,10 +66,9 @@ elif "--updater-helper" in sys.argv[1:]:
 elif _is_cli_invocation(sys.argv[1:]):
     from hpc_gui.cli.main import run_cli
 else:
-    if DEFAULT_GUI_RUNTIME == "wx":
-        from hpc_gui.wx_shell import main
-    else:
-        from hpc_gui.app import main
+    if DEFAULT_GUI_RUNTIME != "wx":
+        raise RuntimeError("V2 requires the wx GUI runtime")
+    from hpc_gui.wx_shell import main
 
 if _PERFORMANCE_PROBE is not None:
     _PERFORMANCE_PROBE.mark("application_imports_complete")
