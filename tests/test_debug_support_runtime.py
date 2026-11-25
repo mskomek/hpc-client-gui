@@ -91,3 +91,33 @@ def test_cli_gui_rejects_non_wx_runtime(monkeypatch):
     monkeypatch.setattr(gui, "DEFAULT_GUI_RUNTIME", "qt")
     with pytest.raises(RuntimeError, match="requires the wx GUI runtime"):
         gui.launch_gui()
+
+
+@pytest.mark.contract
+@pytest.mark.subprocess
+@pytest.mark.regression
+def test_pytest_fixture_collection_does_not_import_legacy_qt():
+    script = """
+import importlib.abc
+import runpy
+import sys
+from pathlib import Path
+
+attempts = []
+class Guard(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if (fullname.split('.')[0] in {'PySide6', 'PyQt5', 'PyQt6', 'shiboken6'}
+                or fullname == 'hpc_gui.ui'
+                or fullname.startswith('hpc_gui.ui.')):
+            attempts.append(fullname)
+            raise ImportError(fullname)
+sys.meta_path.insert(0, Guard())
+runpy.run_path(str(Path('tests/conftest.py').resolve()))
+assert not attempts, attempts
+"""
+    root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [sys.executable, "-c", script], cwd=root,
+        capture_output=True, text=True, timeout=30,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
