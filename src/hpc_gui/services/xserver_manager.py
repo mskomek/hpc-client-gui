@@ -177,11 +177,9 @@ def _file_lock(path: Path, timeout_s: float = 6.0):
             pass
 
 
-def _prompt_install(parent, log: Optional[Callable[[str], None]] = None) -> bool:
-    from PySide6.QtWidgets import QMessageBox
+def _prompt_install(parent, log: Optional[Callable[[str], None]] = None, confirm=None) -> bool:
     msg = "VcXsrv is required. Open its official download page?"
-    ret = QMessageBox.question(parent, t("xserver.required_title"), msg, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-    if ret != QMessageBox.StandardButton.Yes:
+    if confirm is None or not confirm(parent, t("xserver.required_title"), msg):
         return False
     webbrowser.open("https://sourceforge.net/projects/vcxsrv/files/vcxsrv/")
     _log(log, "VcXsrv official download page opened; automatic installer execution is disabled.")
@@ -201,6 +199,7 @@ def ensure_x_server_running(
     display: int = 0,
     parent=None,
     allow_download: bool = True,
+    confirm=None,
 ) -> bool:
     """Return True only if a usable local X server is available.
 
@@ -231,7 +230,7 @@ def ensure_x_server_running(
     if not xexe:
         _log(log, t("xserver.local_not_found"))
         if allow_download and parent is not None:
-            if _prompt_install(parent, log=log):
+            if _prompt_install(parent, log=log, confirm=confirm):
                 xexe = vcxsrv_executable_path()
 
     if not xexe:

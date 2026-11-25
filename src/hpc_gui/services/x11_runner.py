@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import codecs
+import os
 import shutil
+import subprocess
+from threading import Lock, Thread
 from typing import Callable
-
-from PySide6.QtCore import QProcess
 
 from hpc_gui.core.i18n import t
 from hpc_gui.services.putty_manager import ensure_plink_available
@@ -38,13 +40,15 @@ class X11Runner:
     - dependency preflight (plink + local X server on Windows; system OpenSSH
       + DISPLAY on Linux)
     - command routing for likely X11 commands
-    - QProcess lifecycle + cleanup
+    - subprocess lifecycle + cleanup
     """
 
-    def __init__(self, *, log_cb: Callable[[str], None], parent=None):
+    def __init__(self, *, log_cb: Callable[[str], None], parent=None, confirm=None):
         self._log = log_cb
         self._parent = parent
-        self._bg_procs: list[QProcess] = []
+        self._confirm = confirm
+        self._bg_procs: list[subprocess.Popen] = []
+        self._lock = Lock()
 
     def _system_ssh_available(self) -> bool:
         return shutil.which("ssh") is not None
@@ -54,9 +58,9 @@ class X11Runner:
             return True
         p = parent or self._parent
         if _is_windows():
-            if not ensure_plink_available(log=self._log, parent=p):
+            if not ensure_plink_available(log=self._log, parent=p, confirm=self._confirm):
                 return False
-            if not ensure_x_server_running(self._log, parent=p, allow_download=allow_download):
+            if not ensure_x_server_running(self._log, parent=p, allow_download=allow_download, confirm=self._confirm):
                 return False
             return True
         if _is_macos():
@@ -89,7 +93,7 @@ class X11Runner:
             return True
 
         p = parent or self._parent
-        if not ensure_x_server_running(self._log, parent=p, allow_download=True):
+        if not ensure_x_server_running(self._log, parent=p, allow_download=True, confirm=self._confirm):
             self._log("X11: Yerel X server başlatılamadı veya hazır değil.")
             return True
 
@@ -105,81 +109,73 @@ class X11Runner:
             host_key_policy=(getattr(info, "host_key_policy", "accept-new") or "accept-new"),
         )
         if not launch:
-            self._log(
-                "X11 baslatici bulunamadi. Windows'ta plink.exe (PuTTY) gerekli.\n"
-                "Standalone modda program plink.exe'yi kullanici dizinine indirir:\n"
-                " - ~/.truba_slurm_gui/third_party/putty/plink.exe"
-            )
+            self._log("X11: install system OpenSSH or PuTTY from its official source.")
             return True
 
-        proc = QProcess(p)
-        try:
-            from PySide6.QtCore import QProcessEnvironment
-
-            env = QProcessEnvironment.systemEnvironment()
-            if (not env.contains("DISPLAY")) or (not env.value("DISPLAY")):
-                env.insert("DISPLAY", "localhost:0.0")
-            proc.setProcessEnvironment(env)
-        except Exception:
-            pass
-
-        proc.setProgram(launch.program)
-        proc.setArguments(launch.args)
-        proc.readyReadStandardError.connect(lambda: self._append_process_io(proc, err=True))
-        proc.readyReadStandardOutput.connect(lambda: self._append_process_io(proc, err=False))
-
+        env = os.environ.copy()
+        if not env.get("DISPLAY"):
+            env["DISPLAY"] = "localhost:0.0"
         cmd_show = " ".join([launch.program] + launch.display_args)
+        try:
+            proc = subprocess.Popen(
+                [launch.program, *launch.args], env=env,
+                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) if _is_windows() else 0,
+            )
+        except OSError as exc:
+            self._log(t("login.stderr").format(data=str(exc)))
+            return True
 
-        def _on_finished(code, _status):
-            self._log(t("login.x11_finished").format(code=code))
-            try:
-                self._bg_procs.remove(proc)
-            except Exception:
-                pass
-            try:
-                from hpc_gui.services.process_registry import unregister
-
-                pid = int(proc.processId() or 0)
-                if pid:
-                    unregister(pid)
-            except Exception:
-                pass
-
-        def _on_started():
+        with self._lock:
+            self._bg_procs.append(proc)
             try:
                 from hpc_gui.services.process_registry import register
 
-                pid = int(proc.processId() or 0)
-                if pid:
-                    register(pid, kind=f"x11_{launch.backend}")
+                register(proc.pid, kind=f"x11_{launch.backend}")
             except Exception:
                 pass
-
-        proc.finished.connect(_on_finished)
-        proc.started.connect(_on_started)
         self._log(t("login.x11_started").format(cmd=cmd_show))
-        self._bg_procs.append(proc)
-        proc.start()
+
+        readers = [
+            Thread(target=self._read_stream, args=(proc.stdout, False), daemon=True),
+            Thread(target=self._read_stream, args=(proc.stderr, True), daemon=True),
+        ]
+        for reader in readers:
+            reader.start()
+
+        def reap():
+            code = proc.wait()
+            for reader in readers:
+                reader.join(timeout=1)
+            with self._lock:
+                self._bg_procs.remove(proc)
+                try:
+                    from hpc_gui.services.process_registry import unregister
+
+                    unregister(proc.pid)
+                except Exception:
+                    pass
+            self._log(t("login.x11_finished").format(code=code))
+
+        Thread(target=reap, daemon=True, name="x11-process-reaper").start()
         return True
 
     def shutdown(self, *, close_x11_procs: bool, close_vcxsrv: bool) -> None:
         if close_x11_procs:
-            for p in list(self._bg_procs):
+            with self._lock:
+                active = list(self._bg_procs)
+            for proc in active:
                 try:
-                    if p.state() != QProcess.ProcessState.NotRunning:
-                        p.terminate()
-                        p.waitForFinished(1000)
-                except Exception:
+                    if proc.poll() is None:
+                        proc.terminate()
+                        try:
+                            proc.wait(timeout=1)
+                        except subprocess.TimeoutExpired:
+                            proc.kill()
+                            proc.wait(timeout=1)
+                except (OSError, subprocess.TimeoutExpired):
+                    # Keep ownership registered until the reaper observes exit.
                     pass
-                try:
-                    from hpc_gui.services.process_registry import unregister
-
-                    pid = int(p.processId() or 0)
-                    if pid:
-                        unregister(pid)
-                except Exception:
-                    pass
-            self._bg_procs.clear()
 
         if close_vcxsrv:
             try:
@@ -187,11 +183,21 @@ class X11Runner:
             except Exception:
                 pass
 
-    def _append_process_io(self, proc: QProcess, *, err: bool) -> None:
-        data = bytes(proc.readAllStandardError() if err else proc.readAllStandardOutput()).decode(errors="replace")
-        if not data.strip():
+    def _read_stream(self, stream, err: bool) -> None:
+        if stream is None:
             return
-        if err:
-            self._log(t("login.stderr").format(data=data.rstrip()))
-        else:
-            self._log(data.rstrip())
+        decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+        from hpc_gui.core.log_redaction import redact_text
+
+        try:
+            with stream:
+                while True:
+                    chunk = stream.read1(4096)
+                    data = decoder.decode(chunk, final=not chunk)
+                    if data.strip():
+                        safe = redact_text(data.rstrip())
+                        self._log(t("login.stderr").format(data=safe) if err else safe)
+                    if not chunk:
+                        break
+        except (OSError, ValueError):
+            pass

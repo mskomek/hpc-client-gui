@@ -84,7 +84,16 @@ class LoginWidget(QWidget):
 
     def __init__(self):
         super().__init__()
-        self._x11_runner = X11Runner(log_cb=self.append_console, parent=self)
+        def confirm_x11(parent, title, message):
+            answer = QMessageBox.question(
+                parent, title, message,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            return answer == QMessageBox.StandardButton.Yes
+
+        self._x11_runner = X11Runner(
+            log_cb=self.append_console, parent=self, confirm=confirm_x11,
+        )
 
         # ---- Left: profiles
         self.profiles_list = QListWidget()

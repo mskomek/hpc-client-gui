@@ -24,24 +24,15 @@ def plink_path() -> Path:
     return third_party_dir() / "putty" / "plink.exe"
 
 
-def _prompt_download_plink(parent) -> bool:
-    """Ask user permission before downloading plink.exe."""
-    try:
-        from PySide6.QtWidgets import QMessageBox
-    except Exception:
+def _prompt_download_plink(parent, confirm=None) -> bool:
+    """Request consent to open the official download page, never install."""
+    if confirm is None:
         return False
-
     msg = t("putty.needed_msg").format(url=PUTTY_PLINK_URL)
-    ret = QMessageBox.question(
-        parent,
-        t("putty.needed_title"),
-        msg,
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-    )
-    return ret == QMessageBox.StandardButton.Yes
+    return bool(confirm(parent, t("putty.needed_title"), msg))
 
 
-def ensure_plink_available(*, log: Optional[Callable[[str], None]] = None, parent=None) -> bool:
+def ensure_plink_available(*, log: Optional[Callable[[str], None]] = None, parent=None, confirm=None) -> bool:
     """Ensure plink.exe exists (Windows only)."""
 
     if platform.system().lower() != "windows":
@@ -60,7 +51,7 @@ def ensure_plink_available(*, log: Optional[Callable[[str], None]] = None, paren
         _log(log, t("putty.parent_none_log"))
         return False
 
-    if not _prompt_download_plink(parent):
+    if not _prompt_download_plink(parent, confirm):
         _log(log, t("putty.download_cancelled"))
         return False
     webbrowser.open("https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html")
