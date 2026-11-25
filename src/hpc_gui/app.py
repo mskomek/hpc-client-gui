@@ -150,6 +150,28 @@ def _show_main_window(window: MainWindow, available) -> None:
     window.showNormal()
 
 
+def _show_legacy_crash_dialog(parent=None) -> None:
+    try:
+        from PySide6.QtCore import QTimer
+
+        from hpc_gui.ui.dialogs.send_logs_dialog import SendLogsDialog
+
+        def _show():
+            try:
+                flag = read_crash_flag()
+                dlg = SendLogsDialog(parent, crash_context=True, crash_summary=flag.get("summary", "") if flag else "")
+                dlg.setAttribute(getattr(dlg, "WA_DeleteOnClose", True))
+                dlg.show()
+                dlg.raise_()
+                dlg.activateWindow()
+            except Exception:
+                pass
+
+        QTimer.singleShot(300, _show)
+    except Exception:
+        pass
+
+
 def main() -> int:
     _performance_mark("main_entered")
     app = QApplication(sys.argv)
@@ -168,7 +190,7 @@ def main() -> int:
     # Logging (file-backed, rotating). Must not crash the GUI.
     setup_logging(level=logging.INFO)
     install_crash_logging()
-    install_excepthook()
+    install_excepthook(_show_legacy_crash_dialog)
     qInstallMessageHandler(_qt_message_handler)
     logging.getLogger("hpc_gui").info("process started pid=%s", os.getpid())
     logging.getLogger("hpc_gui.graphics").info(

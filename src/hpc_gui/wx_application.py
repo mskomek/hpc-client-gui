@@ -125,6 +125,9 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
         app.MainLoop()
         return 0 if smoke_state["result"] == "PASS" else 1
 
+    from hpc_gui.wx_crash_reporting import install_wx_crash_reporting
+
+    report_previous_crash = install_wx_crash_reporting(app)
     profiles = []
     try:
         from hpc_gui.config.storage import load_profiles
@@ -155,6 +158,7 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
         app.SetTopWindow(frame)
         install_main_frame_exit_policy(wx, app, frame)
         frame.Show()
+        report_previous_crash(frame)
         try:
             frame.Raise()
         except Exception:
