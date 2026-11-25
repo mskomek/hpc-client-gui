@@ -199,3 +199,35 @@ def test_gate_requires_platforms_runtime_p0_and_clean_tree():
 
 def test_true_go_fixture():
     assert gate()[0] == "GO"
+
+
+def test_source_scan_detects_literal_dynamic_qt_imports(tmp_path):
+    root = git_fixture(tmp_path, {
+        "src/hpc_gui/dynamic.py": (
+            "import importlib as loader\n"
+            "from importlib import import_module as load\n"
+            "import PyQt5.QtWidgets\n"
+            "loader.import_module('PySide6.QtCore')\n"
+            "load(name='PyQt6.QtGui')\n"
+            "__import__('shiboken6')\n"
+            "load('wx')\n"
+            "note = 'PySide6.QtWidgets'\n"
+        ),
+    })
+    assert {row["import"] for row in production_qt_imports(root)} == {
+        "PyQt5.QtWidgets", "PySide6.QtCore", "PyQt6.QtGui", "shiboken6",
+    }
+
+
+def test_pyqt_dependency_and_packaging_families_are_detected(tmp_path):
+    root = git_fixture(tmp_path, {
+        "requirements-release.lock": "PyQt5==5.15\nPyQt6-sip==13.9\n",
+        "build/gui.spec": "hiddenimports=['PyQt6.QtWidgets']\n",
+        "build/cli.spec": "Analysis(excludes=['PyQt5'])\n",
+    })
+    assert {row["normalized"] for row in dependency_records(root)} == {
+        "pyqt5", "pyqt6-sip",
+    }
+    assert {row["reference"] for row in packaging_blockers(root)} == {
+        "PyQt6.QtWidgets",
+    }
