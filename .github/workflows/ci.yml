@@ -32,8 +32,8 @@ jobs:
           python-version: "3.14"
       - name: Install architecture test runner
         run: python -m pip install "pytest>=7"
-      - name: Architecture gate regression tests
-        run: python -m pytest tests/test_source_architecture_gate.py -q
+      - name: Architecture and Qt removal gate regression tests
+        run: python -m pytest tests/test_source_architecture_gate.py tests/test_qt_removal_gate.py -q
       - name: Enforce global source size, dependencies, cycles and public APIs
         run: >-
           python scripts/check_source_architecture.py
