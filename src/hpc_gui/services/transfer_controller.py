@@ -37,6 +37,8 @@ class TransferController:
         history_limit: int = 1000,
         on_queue: Callable[[str, TransferItem], None] | None = None,
         on_progress: Callable[[TransferItem, int, int], None] | None = None,
+        on_start: Callable[[], None] | None = None,
+        on_done: Callable[[], None] | None = None,
     ) -> None:
         self.items = self._normalize(list(items))
         self._run_item = run_item
@@ -46,6 +48,8 @@ class TransferController:
         self._completed: deque[TransferItem] = deque(maxlen=max(1, history_limit))
         self._on_queue = on_queue
         self._on_progress = on_progress
+        self._on_start = on_start
+        self._on_done = on_done
         self._cancel = Event()
         self._stop_after_current = Event()
         self._lock = Lock()
@@ -91,6 +95,8 @@ class TransferController:
                 self._done.clear()
                 self._accepting = True
                 self._thread = Thread(target=self._run, daemon=True)
+                if self._on_start:
+                    self._on_start()
                 self._thread.start()
 
     def enqueue(self, items: Iterable[TransferItem]) -> bool:
@@ -235,3 +241,5 @@ class TransferController:
                     self._emit_queue("queued", item)
             finally:
                 self._done.set()
+                if self._on_done:
+                    self._on_done()
