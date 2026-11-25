@@ -52,6 +52,7 @@ class TransferController:
         self._start_lock = Lock()
         self._thread: Thread | None = None
         self._done = Event()
+        self._accepting = False
 
     @staticmethod
     def _normalize(items: list[TransferItem]) -> list[TransferItem]:
@@ -83,9 +84,14 @@ class TransferController:
                 if not self._done.is_set():
                     return
                 previous.join()
-            self._done.clear()
-            self._thread = Thread(target=self._run, daemon=True)
-            self._thread.start()
+            with self._lock:
+                if self._done.is_set():
+                    self._cancel.clear()
+                    self._stop_after_current.clear()
+                self._done.clear()
+                self._accepting = True
+                self._thread = Thread(target=self._run, daemon=True)
+                self._thread.start()
 
     def enqueue(self, items: Iterable[TransferItem]) -> bool:
         """Append work to a currently running queue."""
@@ -95,7 +101,7 @@ class TransferController:
         with self._lock:
             if self._cancel.is_set() or self._stop_after_current.is_set():
                 return False
-            if self._done.is_set() or not self._thread or not self._thread.is_alive():
+            if not self._accepting or self._done.is_set():
                 return False
             self.items.extend(additions)
             self._pending.extend(additions)
@@ -107,20 +113,24 @@ class TransferController:
         return self._done.wait(timeout)
 
     def cancel_all(self) -> None:
-        self._cancel.set()
-        self._stop_after_current.set()
+        with self._lock:
+            self._cancel.set()
+            self._stop_after_current.set()
 
     def stop_after_current(self) -> None:
-        self._stop_after_current.set()
+        with self._lock:
+            self._stop_after_current.set()
 
     def retry_failed(self) -> int:
         with self._lock:
+            if self._thread is not None and not self._done.is_set():
+                return 0
             restored = [item for item, _error in self._failed]
             self._failed.clear()
             self._pending = restored + self._pending
             self.items = list(self._pending)
-        self._cancel.clear()
-        self._stop_after_current.clear()
+            self._cancel.clear()
+            self._stop_after_current.clear()
         # HPC-W06-XFER-010: a retry is a new clear operation state.  Re-announce
         # restored items as queued (mirroring enqueue) so subscribers clear
         # their failed/completed rows instead of showing the item twice.
@@ -129,8 +139,8 @@ class TransferController:
         return len(restored)
 
     def clear_pending(self) -> None:
-        self._stop_after_current.set()
         with self._lock:
+            self._stop_after_current.set()
             self._pending.clear()
 
     def remove_pending_items(self, items: Iterable[TransferItem]) -> int:
@@ -146,11 +156,23 @@ class TransferController:
             for item in self._pending:
                 if id(item) in selected:
                     item.priority = priority
-    def _start_item(self, item: TransferItem) -> None:
+    def _take_batch(self, previous_op: str | None) -> list[TransferItem]:
+        """Claim pending items atomically; stop/clear/remove cannot race selection."""
         with self._lock:
-            if item in self._pending:
-                self._pending.remove(item)
-        self._emit_queue("started", item)
+            if self._cancel.is_set() or self._stop_after_current.is_set() or not self._pending:
+                self._accepting = False
+                return []
+            first = self._pending[0]
+            limit = self.parallel_limit
+            if first.op not in {"upload", "download"} or previous_op in {"delete", "delete_local"}:
+                limit = 1
+            count = 1
+            while (count < min(limit, len(self._pending))
+                   and self._pending[count].op in {"upload", "download"}):
+                count += 1
+            batch = self._pending[:count]
+            del self._pending[:count]
+            return batch
 
     def _finish_item(self, item: TransferItem, error: str | None) -> None:
         if error is None:
@@ -182,49 +204,32 @@ class TransferController:
             return item, str(exc)
 
     def _run(self) -> None:
-        next_index = 0
+        previous_op = None
         try:
             with ThreadPoolExecutor(max_workers=self.parallel_limit) as executor:
-                while next_index < len(self.items):
-                    if self._cancel.is_set():
-                        break
-                    item = self.items[next_index]
-                    if item.op not in {"upload", "download"}:
-                        next_index += 1
-                        self._start_item(item)
-                        result, error = self._one(item)
+                while batch := self._take_batch(previous_op):
+                    for item in batch:
+                        self._emit_queue("started", item)
+                    previous_op = batch[-1].op
+                    if batch[0].op not in {"upload", "download"}:
+                        result, error = self._one(batch[0])
                         self._finish_item(result, error)
                         if error == "cancelled":
-                            break
+                            self.cancel_all()
                         continue
-                    batch = []
-                    force_single = next_index > 0 and self.items[next_index - 1].op in {"delete", "delete_local"}
-                    while (
-                        next_index < len(self.items)
-                        and len(batch) < (1 if force_single else self.parallel_limit)
-                        and not self._stop_after_current.is_set()
-                        and self.items[next_index].op in {"upload", "download"}
-                    ):
-                        item = self.items[next_index]
-                        next_index += 1
-                        batch.append(item)
-                        self._start_item(item)
                     futures = {executor.submit(self._one, item): item for item in batch}
                     while futures:
                         done, _ = wait(futures, return_when=FIRST_COMPLETED)
                         for future in done:
-                            item = futures.pop(future)
+                            futures.pop(future)
                             result, error = future.result()
                             self._finish_item(result, error)
                             if error == "cancelled":
-                                self._cancel.set()
-                    # Drain the whole batch even after a cancel. The executor
-                    # waits for those futures on shutdown regardless, and
-                    # abandoning them here means their items never reach
-                    # _finish_item, so subscribers keep showing them as active.
-                    if self._cancel.is_set():
-                        break
+                                self.cancel_all()
+                    # Drain all claimed items before honoring stop/cancel.
         finally:
+            with self._lock:
+                self._accepting = False
             try:
                 for item in self.pending:
                     self._emit_queue("queued", item)
