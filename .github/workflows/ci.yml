@@ -140,12 +140,17 @@ jobs:
           python -m pytest
           tests/test_transfer_concurrency.py
           tests/test_transfer_controller.py
+          tests/test_transfer_cancel_recovery.py
           -q --tb=short
       - name: Native wx transfer limit parity (Windows)
         if: runner.os == 'Windows'
         run: >-
           python -m pytest tests/test_wx_transfer_parallel_hint.py -q --tb=short
 
+      - name: Native wx cancel and retry recovery (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest tests/test_wx_transfer_cancel_recovery_native.py -q --tb=short
       - name: Headless updater and diagnostic regressions
         run: >-
           python -m pytest
