@@ -1,27 +1,14 @@
-"""Regression tests for cancelling an in-flight transfer.
-
-Cancelling used to strand the running item: the dialog's cancelled branch
-returned before the shared cleanup, so the item stayed in ``_active_items``
-(its "Running: ..." row never cleared, and ``start``/``process_queue``
-refused to run again), and the controller abandoned the rest of a parallel
-batch without reporting those items at all.
-"""
+"""Transfer cancellation and queue recovery regressions on the shared engine."""
 
 from __future__ import annotations
 
-import os
 import threading
 import time
 import unittest
 
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-from PySide6.QtWidgets import QApplication
-
 from hpc_gui.services.transfer_controller import TransferController, TransferItem
-from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
 
 
 class TransferControllerCancelTests(unittest.TestCase):
@@ -62,90 +49,81 @@ class TransferControllerCancelTests(unittest.TestCase):
         )
 
 
-class TransferDialogCancelTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.app = QApplication.instance() or QApplication([])
+@pytest.mark.unit
+@pytest.mark.concurrency
+@pytest.mark.parametrize("action", ["stop", "clear", "remove", "cancel"])
+def test_queue_recovery_does_not_run_removed_or_completed_items(action):
+    entered = threading.Event()
+    release = threading.Event()
+    calls = []
+    first = TransferItem("download", "/first", "first")
+    second = TransferItem("download", "/second", "second")
+    third = TransferItem("mkdir_remote", "", "/third")
 
-    def _dialog(self, items, run_item, parallel_limit: int = 1) -> TransferDialog:
-        dialog = TransferDialog(
-            title="test",
-            items=items,
-            run_item=run_item,
-            parallel_limit=parallel_limit,
-        )
-        self.addCleanup(dialog.deleteLater)
-        return dialog
+    def run(item, progress):
+        calls.append(item)
+        if item is first and len(calls) == 1:
+            entered.set()
+            assert release.wait(5)
+        progress(1, 1)
 
-    def _pump(self, predicate, timeout: float = 5.0) -> None:
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            self.app.processEvents()
-            if predicate():
-                return
-            time.sleep(0.005)
-        self.app.processEvents()
-
-    @pytest.mark.integration
-    @pytest.mark.concurrency
-    def test_cancelled_item_leaves_the_active_list_and_can_be_restarted(self) -> None:
-        attempts: list[str] = []
-
-        def run(item, progress=None):
-            attempts.append(item.src)
-            # Only the first attempt stalls; progress() is what observes the
-            # cancel, so nothing else may end the loop or the race is lost.
-            if progress is None or len(attempts) > 1:
-                return
-            for _ in range(2000):
-                progress(1, 2)
-                time.sleep(0.005)
-
-        item = TransferItem("download", "/remote/big.bin", "big.bin")
-        dialog = self._dialog([item], run)
-        dialog.start()
-        self._pump(lambda: bool(dialog._active_items))
-        self.assertEqual(dialog._active_items, [item])
-
-        dialog.cancel_all()
-        self._pump(lambda: not dialog._running and not dialog._active_items)
-
-        # It must not stay pinned as the running transfer...
-        self.assertEqual(dialog._active_items, [])
-        self.assertIsNone(dialog._active_item)
-        self.assertEqual(dialog._completed, [])
-        # ...and it must land somewhere retryable.
-        self.assertEqual([failed for failed, _err in dialog._errors], [item])
-
-        self.assertEqual(dialog.retry_all_errors(), 1)
-        self._pump(lambda: len(attempts) >= 2)
-        self.assertEqual(attempts, ["/remote/big.bin", "/remote/big.bin"])
-
-    @pytest.mark.integration
-    @pytest.mark.concurrency
-    def test_cancel_does_not_wedge_process_queue(self) -> None:
-        def run(item, progress=None):
-            if progress is None:
-                return
-            for _ in range(2000):
-                progress(1, 2)
-                time.sleep(0.005)
-
-        items = [
-            TransferItem("download", "/remote/a", "a"),
-            TransferItem("download", "/remote/b", "b"),
-        ]
-        dialog = self._dialog(items, run)
-        dialog.start()
-        self._pump(lambda: bool(dialog._active_items))
-        dialog.cancel_all()
-        self._pump(lambda: not dialog._running and not dialog._active_items)
-
-        dialog._pending = [items[1]]
-        self.assertTrue(dialog.process_queue())
-        dialog.cancel_all()
-        self._pump(lambda: not dialog._running and not dialog._active_items)
+    controller = TransferController([first, second, third], run)
+    controller.start()
+    try:
+        assert entered.wait(5)
+        if action == "stop":
+            controller.stop_after_current()
+        elif action == "clear":
+            controller.clear_pending()
+        elif action == "remove":
+            assert controller.remove_pending_items([second]) == 1
+        else:
+            controller.cancel_all()
+            assert controller.retry_failed() == 0
+    finally:
+        release.set()
+    assert controller.wait(5), "queue failed to terminate"
+    if action == "remove":
+        assert calls == [first, third]
+        assert controller.completed == [first, third]
+        assert not controller.pending
+    elif action == "clear":
+        assert calls == [first]
+        assert not controller.pending
+        controller.start()
+        assert controller.wait(5)
+        assert calls == [first]
+    elif action == "stop":
+        assert calls == [first]
+        assert controller.completed == [first]
+        assert controller.pending == [second, third]
+        controller.start()
+        assert controller.wait(5)
+        assert calls == [first, second, third]
+        assert controller.completed == [first, second, third]
+    else:
+        assert calls == [first]
+        assert controller.failed == [(first, "cancelled")]
+        assert not controller.completed
+        assert controller.pending == [second, third]
+        assert controller.retry_failed() == 1
+        controller.start()
+        assert controller.wait(5)
+        assert calls == [first, first, second, third]
+        assert not controller.failed
+        assert controller.completed == [first, second, third]
+    assert not controller.pending
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.mark.unit
+@pytest.mark.concurrency
+def test_completed_queue_restart_is_not_a_second_transfer():
+    item = TransferItem("download", "/first", "first")
+    calls = []
+    controller = TransferController([item], lambda item, progress: calls.append(item))
+    controller.start()
+    assert controller.wait(5)
+    controller.start()
+    assert controller.wait(5)
+    assert calls == [item]
+    assert controller.completed == [item]
