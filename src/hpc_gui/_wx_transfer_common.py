@@ -76,6 +76,22 @@ def update_button_state(host, state, controls, embedded: bool) -> None:
         return
     ctrl = state.get("controller")
     try:
+        hint = controls.get("parallel_hint")
+        if hint is not None:
+            configured = getattr(ctrl, "configured_parallel_limit", None)
+            effective = getattr(getattr(ctrl, "engine", None), "parallel_limit", None)
+            label = ""
+            if type(configured) is int and type(effective) is int:
+                if configured != effective:
+                    label = t("transfer.parallel_hint_pair").format(
+                        configured=configured, effective=effective,
+                        reason=t("transfer.parallel_reduced_backend"),
+                    )
+                else:
+                    label = t("transfer.parallel_hint_effective").format(
+                        configured=configured, effective=effective,
+                    )
+            hint.SetLabel(label)
         if embedded:
             has_cancel = _has_cancel(ctrl)
             has_clear = _has_clear(ctrl)
