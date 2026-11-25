@@ -420,7 +420,12 @@ def run_helper(config_path: Path) -> int:
         # Destroy() may defer native top-level deletion until idle. This
         # independent helper has no outer MainLoop after ShowModal returns.
         _application.ProcessPendingEvents()
-        _application.ProcessIdle()
+        # The idle-processing API belongs to the event loop, not wx.App.
+        # A temporary loop restores the previous native loop on exit.
+        cleanup_loop = wx.GUIEventLoop()
+        with wx.EventLoopActivator(cleanup_loop):
+            cleanup_loop.ProcessIdle()
+            _application.ProcessPendingEvents()
 
 
 def _localized_progress_text(message: str, translate) -> str:
