@@ -373,6 +373,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         on_queue=queue_event,
         on_progress=progress_event,
     )
+    controller.configured_parallel_limit = configured_parallel_limit
     if _transfer_checksum_requested():
         controller.set_checksum_enabled(True)
     if transfer_window:
