@@ -58,7 +58,9 @@ def test_queue_recovery_does_not_run_removed_or_completed_items(action):
     calls = []
     first = TransferItem("download", "/first", "first")
     second = TransferItem("download", "/second", "second")
-    third = TransferItem("mkdir_remote", "", "/third")
+    # Mixed operation queues retain their input order; directory creation
+    # alone would be intentionally normalized ahead of uploads/downloads.
+    third = TransferItem("delete", "/third", "")
 
     def run(item, progress):
         calls.append(item)
