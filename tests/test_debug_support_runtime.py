@@ -44,3 +44,50 @@ assert not attempts, attempts
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "wxpython=test-wx-version" in result.stderr
+
+
+@pytest.mark.contract
+@pytest.mark.subprocess
+@pytest.mark.regression
+@pytest.mark.parametrize("arguments", [[], ["--wx"], ["--updater-helper", "unused.json"], ["version"]])
+def test_v2_entrypoint_never_imports_legacy_gui(arguments):
+    script = """
+import importlib.abc
+import runpy
+import sys
+
+attempts = []
+class Guard(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if (fullname.split('.')[0] in {'PySide6', 'PyQt5', 'PyQt6', 'shiboken6'}
+                or fullname == 'hpc_gui.app'
+                or fullname.startswith('hpc_gui.ui.')):
+            attempts.append(fullname)
+            raise ImportError(fullname)
+sys.meta_path.insert(0, Guard())
+namespace = runpy.run_module('hpc_gui.__main__', run_name='entrypoint_probe')
+if '--updater-helper' in sys.argv:
+    assert callable(namespace['run_helper'])
+elif 'version' in sys.argv:
+    assert callable(namespace['run_cli'])
+else:
+    assert namespace['main'].__module__ == 'hpc_gui.wx_shell'
+assert not attempts, attempts
+"""
+    root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join([str(root / "src"), env.get("PYTHONPATH", "")])
+    result = subprocess.run(
+        [sys.executable, "-c", script, *arguments], cwd=root, env=env,
+        capture_output=True, text=True, timeout=30,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.contract
+def test_cli_gui_rejects_non_wx_runtime(monkeypatch):
+    from hpc_gui.cli import gui
+
+    monkeypatch.setattr(gui, "DEFAULT_GUI_RUNTIME", "qt")
+    with pytest.raises(RuntimeError, match="requires the wx GUI runtime"):
+        gui.launch_gui()
