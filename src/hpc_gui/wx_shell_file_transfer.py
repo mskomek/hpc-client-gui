@@ -1,7 +1,7 @@
 """wx shell file transfer workflows."""
 from __future__ import annotations
 
-from threading import Event, Thread
+from threading import Event
 from pathlib import PurePosixPath
 from hpc_gui.services.transfer_session_controller import TransferSessionController
 from hpc_gui.services.transfer_controller import TransferCancelled
@@ -359,6 +359,16 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         if bool(getattr(files, "supports_parallel_transfers", False))
         else 1
     )
+    sessions = session_state.setdefault("transfer_sessions", set())
+
+    def register_run():
+        sessions.add(controller)
+
+    def finish_run():
+        sessions.discard(controller)
+        if transfer_window:
+            transfer_window._wx_transfer_finish()
+
     controller = TransferSessionController(
         items,
         run_item,
@@ -372,6 +382,8 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         verify=lambda item: _verify_transfer_item(files, item),
         on_queue=queue_event,
         on_progress=progress_event,
+        on_start=register_run,
+        on_done=finish_run,
     )
     controller.configured_parallel_limit = configured_parallel_limit
     if _transfer_checksum_requested():
@@ -380,17 +392,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         transfer_window._wx_transfer_set_controller(controller)
     if session_state.get("conflict_policy"):
         controller.set_conflict_policy(session_state["conflict_policy"])
-    sessions = session_state.setdefault("transfer_sessions", set())
-    sessions.add(controller)
     controller.start()
-
-    def forget_when_done():
-        controller.engine.wait()
-        sessions.discard(controller)
-        if transfer_window:
-            transfer_window._wx_transfer_finish()
-
-    Thread(target=forget_when_done, daemon=True).start()
     if lifecycle is not None:
         register_cleanup = lifecycle.register_cleanup
         try:
