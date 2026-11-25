@@ -33,7 +33,8 @@ PACKAGED_CHECKS = (
     "clean_shutdown",
 )
 MANUAL_CHECKS = ("launch", "connection", "terminal", "files", "jobs", "plugins", "shutdown")
-QT_PACKAGING_PREFIXES = ("pyside6", "shiboken6", "qtcore", "qtgui", "qtwidgets", "qtsvg", "qtweb")
+QT_PACKAGING_PREFIXES = ("pyside6", "shiboken6", "pyqt5", "pyqt6", "qtcore", "qtgui", "qtwidgets", "qtsvg", "qtweb")
+QT_IMPORT_ROOTS = frozenset({"PySide6", "shiboken6", "PyQt5", "PyQt6"})
 
 
 class GateScanError(RuntimeError):
@@ -121,7 +122,7 @@ def normalize_distribution(name: str) -> str:
 
 
 def _dependency_names(line: str) -> list[str]:
-    pattern = r"(?i)(?<![A-Za-z0-9])((?:pyside[-_.]?6(?:[-_.](?:addons|essentials))?)|shiboken[-_.]?6)(?=$|[\s<>=!~;,\"'])"
+    pattern = r"(?i)(?<![A-Za-z0-9])((?:pyside[-_.]?6(?:[-_.](?:addons|essentials))?)|shiboken[-_.]?6|pyqt[-_.]?[56](?:[-_.](?:sip|qt[56]))?)(?=$|[\s<>=!~;,\"'])"
     return [match.group(1) for match in re.finditer(pattern, line)]
 
 
@@ -137,9 +138,48 @@ def dependency_records(root: Path, *, return_scanned: bool = False):
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
             for raw in _dependency_names(line):
                 normalized = normalize_distribution(raw)
-                if normalized in {"pyside6", "pyside6-addons", "pyside6-essentials", "shiboken6"}:
+                if normalized.replace("-", "").startswith(("pyside6", "shiboken6", "pyqt5", "pyqt6")):
                     records.append({"source": name, "dependency": raw, "normalized": normalized})
     return (records, scanned) if return_scanned else records
+
+
+def _qt_import_names(tree: ast.Module):
+    """Find direct and literal dynamic Qt imports, including importlib aliases."""
+    importlib_names = {"importlib"}
+    dynamic_names = {"__import__"}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "importlib":
+                    importlib_names.add(alias.asname or alias.name)
+        elif isinstance(node, ast.ImportFrom) and node.module == "importlib":
+            for alias in node.names:
+                if alias.name == "import_module":
+                    dynamic_names.add(alias.asname or alias.name)
+    for node in ast.walk(tree):
+        names = []
+        if isinstance(node, ast.Import):
+            names = [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names = [node.module]
+        elif isinstance(node, ast.Call):
+            func = node.func
+            dynamic = (
+                isinstance(func, ast.Name) and func.id in dynamic_names
+                or isinstance(func, ast.Attribute)
+                and func.attr == "import_module"
+                and isinstance(func.value, ast.Name)
+                and func.value.id in importlib_names
+            )
+            if dynamic:
+                arg = node.args[0] if node.args else next(
+                    (kw.value for kw in node.keywords if kw.arg == "name"), None
+                )
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    names = [arg.value]
+        for name in names:
+            if name.split(".", 1)[0] in QT_IMPORT_ROOTS:
+                yield node, name
 
 
 def production_qt_imports(root: Path, *, return_scanned: bool = False):
@@ -151,11 +191,8 @@ def production_qt_imports(root: Path, *, return_scanned: bool = False):
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         except (OSError, SyntaxError, UnicodeError) as exc:
             raise SourceScanError(f"production source AST scan failed: {rel}: {type(exc).__name__}: {exc}") from exc
-        for node in ast.walk(tree):
-            names = [alias.name for alias in node.names] if isinstance(node, ast.Import) else [node.module] if isinstance(node, ast.ImportFrom) and node.module else []
-            for name in names:
-                if name == "PySide6" or name.startswith("PySide6.") or name == "shiboken6" or name.startswith("shiboken6."):
-                    records.append({"path": rel, "line": node.lineno, "import": name, "category": "framework-neutralize" if "/core/" in rel or "/services/" in rel else "wx-replacement", "reason": "production Qt import", "migration_target": "framework-neutral service or wx adapter", "parity_ids": []})
+        for node, name in _qt_import_names(tree):
+            records.append({"path": rel, "line": node.lineno, "import": name, "category": "framework-neutralize" if "/core/" in rel or "/services/" in rel else "wx-replacement", "reason": "production Qt import", "migration_target": "framework-neutral service or wx adapter", "parity_ids": []})
     return (records, [_relative(root, path) for path in files]) if return_scanned else records
 
 
