@@ -267,7 +267,20 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         return decision["value"]
 
     def run_item(item, progress, *, conflict_decision=None):
-        _run_file_view_item(files, item, progress, conflict_decision=conflict_decision)
+        # FTP advertises serial queueing, but the browser/control connection
+        # must still be independent of each transfer. SSH handles channel
+        # isolation internally, so it does not need a second backend wrapper.
+        opener = getattr(files, "open_transfer_backend", None)
+        if item.op not in {"upload", "download"} or not callable(opener):
+            _run_file_view_item(files, item, progress, conflict_decision=conflict_decision)
+            return
+        backend = opener()
+        if backend is None or backend is files:
+            raise RuntimeError("Transfer backend factory did not return an isolated backend")
+        try:
+            _run_file_view_item(backend, item, progress, conflict_decision=conflict_decision)
+        finally:
+            backend.close()
 
     transfer_window = None
     # Prefer embedded transfers panel when shell has one and caller is the shell frame
