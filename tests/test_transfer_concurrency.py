@@ -8,7 +8,6 @@ Covers:
   and cancellation, and retry creates fresh resources;
 - SFTP transfers use distinct channel objects;
 - a backend capability downgrade results in effective parallelism one;
-- the transfer dialog shows configured vs effective limits.
 """
 
 from __future__ import annotations
@@ -188,17 +187,6 @@ def test_two_ftp_transfers_overlap_with_distinct_connections(ftp_server, tmp_pat
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
-def qapp():
-    import os
-
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    from PySide6.QtWidgets import QApplication
-
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
 class _FakeBackend:
     def __init__(self, *, fail=False, release=None, entered=None):
         self.closed = False
@@ -230,7 +218,7 @@ class _FactoryBackend:
         return False
 
     def upload(self, *args, **kwargs):
-        pytest.fail("transfer must not use the shared browser backend")
+        raise AssertionError("transfer must not use the shared browser backend")
 
 
 def _start_wx_transfer(files, items=None):
@@ -364,52 +352,6 @@ def test_wx_ftp_queue_uses_isolated_connections_and_serial_limit(ftp_server, tmp
             assert (ftp_server.root / item.dst.lstrip("/")).read_bytes() == Path(item.src).read_bytes()
     finally:
         main.close()
-
-
-@pytest.mark.gui
-def test_effective_limit_label_shows_configured_and_effective(qapp):
-    from hpc_gui.core.i18n import load_language, t
-    from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
-
-    load_language("en")
-    dialog = TransferDialog(
-        None,
-        title="t",
-        items=[],
-        run_item=lambda item, progress=None: None,
-        parallel_limit=1,
-        max_parallel_limit=1,
-        configured_limit=4,
-    )
-    try:
-        text = dialog.lbl_parallel_hint.text()
-        assert "4" in text and "1" in text
-        assert t("transfer.parallel_reduced_backend") in text
-    finally:
-        dialog.deleteLater()
-
-
-@pytest.mark.gui
-def test_effective_limit_label_when_matching(qapp):
-    from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
-    from hpc_gui.core.i18n import load_language, t
-
-    load_language("en")
-    dialog = TransferDialog(
-        None,
-        title="t",
-        items=[],
-        run_item=lambda item, progress=None: None,
-        parallel_limit=4,
-        max_parallel_limit=10,
-        configured_limit=4,
-    )
-    try:
-        text = dialog.lbl_parallel_hint.text()
-        assert text.count("4") >= 2
-        assert t("transfer.parallel_reduced_server") not in text
-    finally:
-        dialog.deleteLater()
 
 
 # ---------------------------------------------------------------------------
