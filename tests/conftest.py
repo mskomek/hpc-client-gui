@@ -62,16 +62,17 @@ else:
 
     wx.App.__init__ = _wx_app_init_without_modal_logging
 
-try:
-    # Lightweight runs such as the Plugin API contract suite execute without
-    # Qt installed; the startup-popup guard below only applies then.
-    from hpc_gui.ui import main_window as main_window_module  # noqa: E402
-except ImportError:  # pragma: no cover - exercised only in non-Qt environments
-    main_window_module = None
-
-
 @pytest.fixture(autouse=True)
-def _no_main_window_startup_popups():
+def _no_main_window_startup_popups(request):
+    # Preserve the legacy guard for tests that explicitly use Qt or have
+    # already imported MainWindow during collection. Never import Qt merely
+    # because it happens to be installed on a wx/portable test runner.
+    main_window_module = sys.modules.get("hpc_gui.ui.main_window")
+    if main_window_module is None and request.node.get_closest_marker("qt"):
+        try:
+            from hpc_gui.ui import main_window as main_window_module
+        except ImportError:
+            main_window_module = None
     if main_window_module is None:
         yield
         return
