@@ -148,6 +148,9 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
     from hpc_gui.wx_crash_reporting import install_wx_crash_reporting
 
     report_previous_crash = install_wx_crash_reporting(app)
+    from hpc_gui.core.i18n import validate_language_files
+
+    validate_language_files()
     profiles = []
     try:
         from hpc_gui.config.storage import load_profiles
@@ -192,6 +195,9 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
         frame.Show()
         _performance_call("mark", "main_window_shown")
         report_previous_crash(frame)
+        from hpc_gui.wx_startup_notices import show_startup_notices
+
+        wx.CallAfter(show_startup_notices, frame)
         try:
             frame.Raise()
         except Exception:

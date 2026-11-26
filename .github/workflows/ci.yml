@@ -130,6 +130,8 @@ jobs:
           tests/test_ui_errors.py
           tests/test_shared_ui_contracts.py
           tests/test_startup_i18n.py
+          tests/test_wx_startup_notices.py::test_startup_notices_persist_version_and_welcome_choice
+          tests/test_wx_startup_notices.py::test_failed_changelog_does_not_mark_version_seen
           tests/test_performance_probe.py::PerformanceProbeTests::test_slow_event_loop_tick_is_recorded
           tests/test_performance_probe.py::PerformanceProbeTests::test_fast_event_loop_tick_does_not_write_delay
           tests/test_macos_product_surface.py::test_application_identity_uses_product_name
@@ -177,6 +179,10 @@ jobs:
           tests/test_wx_debug_telemetry_native.py
           tests/test_w15_fresh_user_startup.py::test_closed_port_connect_fails_visibly_without_connected_state
           -q --tb=short
+      - name: Native wx startup notices (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest tests/test_wx_startup_notices.py::test_native_startup_dialogs_are_read_only_and_opt_out_is_persisted -q --tb=short
       - name: Native wx performance recorder (Windows)
         if: runner.os == 'Windows'
         run: >-
