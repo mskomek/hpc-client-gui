@@ -215,3 +215,92 @@ def test_transfer_item_trailing_cached_size_keeps_positional_construction():
     sized = TransferItem("upload", "local.bin", "/remote/local.bin", False, "High", 2048)
     assert sized.cached_size == 2048 and sized.priority == "High"
     assert TransferItem("download", "/remote/b.bin", "b.bin", cached_size=777).cached_size == 777
+
+
+@pytest.mark.unit
+def test_mixed_mutation_plan_preserves_original_execution_order():
+    items = [
+        TransferItem("mkdir_remote", "", "/remote/root"),
+        TransferItem("upload", "one.bin", "/remote/root/one.bin"),
+        TransferItem("delete", "", "/remote/old.bin"),
+        TransferItem("upload", "two.bin", "/remote/root/two.bin"),
+    ]
+    calls = []
+    controller = TransferController(items, lambda item, progress: calls.append(item), parallel_limit=3)
+    assert controller.pending == items
+    controller.start()
+    assert controller.wait(5)
+    assert not controller.failed
+    assert calls == items
+
+
+@pytest.mark.unit
+@pytest.mark.concurrency
+def test_delete_barrier_serializes_next_transfer_before_later_items():
+    items = [
+        TransferItem("delete", "", "/remote/a.bin"),
+        TransferItem("upload", "a.bin", "/remote/a.bin"),
+        TransferItem("upload", "b.bin", "/remote/b.bin"),
+    ]
+    deleted = threading.Event()
+    first_entered = threading.Event()
+    first_finished = threading.Event()
+    second_entered = threading.Event()
+    release = threading.Event()
+
+    def run(item, progress):
+        if item is items[0]:
+            deleted.set()
+        elif item is items[1]:
+            assert deleted.is_set()
+            first_entered.set()
+            assert release.wait(5)
+            first_finished.set()
+        else:
+            second_entered.set()
+            assert first_finished.is_set()
+
+    controller = TransferController(items, run, parallel_limit=2)
+    try:
+        controller.start()
+        assert first_entered.wait(5)
+        assert not second_entered.is_set()
+    finally:
+        release.set()
+        assert controller.wait(5)
+    assert second_entered.is_set()
+    assert not controller.failed
+    assert controller.completed == items
+
+
+@pytest.mark.unit
+@pytest.mark.concurrency
+def test_transfer_parallel_limit_bounds_inflight_work():
+    items = [TransferItem("download", f"/remote/{i}", str(i)) for i in range(3)]
+    started = []
+    finished = []
+    two_started = threading.Event()
+    release = threading.Event()
+    lock = threading.Lock()
+
+    def run(item, progress):
+        with lock:
+            started.append(item)
+            if len(started) == 2:
+                two_started.set()
+        assert release.wait(5)
+        with lock:
+            finished.append(item)
+
+    controller = TransferController(items, run, parallel_limit=2)
+    try:
+        controller.start()
+        assert two_started.wait(5)
+        with lock:
+            assert len(started) == 2 and not finished
+    finally:
+        release.set()
+        assert controller.wait(5)
+    assert not controller.failed
+    assert {id(item) for item in started} == {id(item) for item in items}
+    assert {id(item) for item in finished} == {id(item) for item in items}
