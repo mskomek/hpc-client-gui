@@ -19,9 +19,8 @@ import logging
 import sys
 import time
 import wx
-from unittest.mock import patch
 from hpc_gui.core.debug_telemetry import TelemetryRecorder
-from hpc_gui.wx_debug_telemetry import install_wx_debug_telemetry, observe_wx_window
+from hpc_gui.wx_debug_telemetry import install_wx_debug_telemetry, observe_wx_window, handle_navigation_key
 
 records = []
 class Capture(logging.Handler):
@@ -44,11 +43,20 @@ frame.Show()
 app.ProcessPendingEvents()
 
 def key(target, code):
-    event = wx.KeyEvent(wx.wxEVT_CHAR_HOOK)
-    event.m_keyCode = code
-    event.SetEventObject(target)
-    with patch.object(wx.Window, 'FindFocus', return_value=target):
-        frame.GetEventHandler().ProcessEvent(event)
+    # wx.KeyEvent's Python attributes do not reliably populate the native
+    # event's key code. Exercise the exact production handler with real wx
+    # controls and key/modifier values at the event boundary.
+    class Event:
+        skipped = False
+        def GetKeyCode(self):
+            return code
+        def GetModifiers(self):
+            return wx.MOD_NONE
+        def Skip(self):
+            self.skipped = True
+    event = Event()
+    handle_navigation_key(wx, recorder, event, focused=target)
+    assert event.skipped
 
 key(button, wx.WXK_DELETE)
 assert any('key=%s modifiers=0' % wx.WXK_DELETE in item for item in records), records

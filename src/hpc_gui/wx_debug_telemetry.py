@@ -6,6 +6,29 @@ import weakref
 from hpc_gui.core.debug_telemetry import TelemetryRecorder, is_source_run
 
 
+def handle_navigation_key(wx, recorder, event, *, focused=None) -> None:
+    """Record only structural navigation keys; never text or printable input."""
+    safe_keys = {
+        wx.WXK_DELETE, wx.WXK_BACK, wx.WXK_ESCAPE, wx.WXK_TAB,
+        wx.WXK_LEFT, wx.WXK_RIGHT, wx.WXK_UP, wx.WXK_DOWN,
+        wx.WXK_HOME, wx.WXK_END, wx.WXK_PAGEUP, wx.WXK_PAGEDOWN,
+        *(getattr(wx, f"WXK_F{i}") for i in range(1, 13)),
+    }
+
+    navigation_controls = (wx.Button, wx.ListCtrl, wx.TreeCtrl, wx.Notebook, wx.CheckBox, wx.RadioButton)
+
+    try:
+        if focused is None:
+            focused = wx.Window.FindFocus()
+        if (focused is not None and isinstance(focused, navigation_controls)
+                and event.GetKeyCode() in safe_keys):
+            recorder.key(type(focused).__name__, event.GetKeyCode(), event.GetModifiers())
+    except (AttributeError, RuntimeError):
+        pass
+    finally:
+        event.Skip()
+
+
 def install_wx_debug_telemetry(frame, notebook, *, recorder=None):
     """Observe the main shell without reading labels, inputs, or terminal content."""
     if not is_source_run():
@@ -15,14 +38,6 @@ def install_wx_debug_telemetry(frame, notebook, *, recorder=None):
     recorder = recorder or TelemetryRecorder()
     state = {"index": notebook.GetSelection(), "since": recorder.clock(), "generation": 0}
     notebook_ref = weakref.ref(notebook)
-    safe_keys = {
-        wx.WXK_DELETE, wx.WXK_BACK, wx.WXK_ESCAPE, wx.WXK_TAB,
-        wx.WXK_LEFT, wx.WXK_RIGHT, wx.WXK_UP, wx.WXK_DOWN,
-        wx.WXK_HOME, wx.WXK_END, wx.WXK_PAGEUP, wx.WXK_PAGEDOWN,
-        *(getattr(wx, f"WXK_F{i}") for i in range(1, 13)),
-    }
-
-    navigation_controls = (wx.Button, wx.ListCtrl, wx.TreeCtrl, wx.Notebook, wx.CheckBox, wx.RadioButton)
 
     def on_button(event):
         try:
@@ -34,16 +49,7 @@ def install_wx_debug_telemetry(frame, notebook, *, recorder=None):
             event.Skip()
 
     def on_key(event):
-        try:
-            focused = wx.Window.FindFocus()
-            # Text entry and printable keys are excluded even in a source run.
-            if (focused is not None and isinstance(focused, navigation_controls)
-                    and event.GetKeyCode() in safe_keys):
-                recorder.key(type(focused).__name__, event.GetKeyCode(), event.GetModifiers())
-        except (AttributeError, RuntimeError):
-            pass
-        finally:
-            event.Skip()
+        handle_navigation_key(wx, recorder, event)
 
     def on_tab(event):
         try:
