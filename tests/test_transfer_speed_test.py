@@ -61,3 +61,21 @@ def test_speed_test_failure_still_cleans_local_and_remote_files(monkeypatch, tmp
     assert not files.remote
     assert len(files.removed) == 1
     assert sorted(path.name for path in tmp_path.iterdir()) == []
+
+
+def test_speed_test_reports_remote_cleanup_failure_and_cleans_local_files(monkeypatch, tmp_path) -> None:
+    def named_temporary_file(**_kwargs):
+        return (tmp_path / "speed.bin").open("w+b")
+
+    monkeypatch.setattr(transfer_speed_test.tempfile, "NamedTemporaryFile", named_temporary_file)
+
+    class RemovalFailFiles(_Files):
+        def remove(self, remote_path):
+            self.removed.append(remote_path)
+            raise OSError("remote remove failed")
+
+    files = RemovalFailFiles()
+    with pytest.raises(RuntimeError, match="remote temporary file cleanup failed"):
+        run_transfer_speed_test(files, remote_dir="/scratch/test", size_mib=1)
+    assert len(files.removed) == 1
+    assert sorted(path.name for path in tmp_path.iterdir()) == []
