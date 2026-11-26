@@ -16,7 +16,7 @@ from hpc_gui.config.system_profile import format_remote_path, normalize_system_s
 
 from hpc_gui.ui.async_call import AsyncCall
 
-from ._jobs_output_text import _LIVE_TAIL_INTERVAL_MS, _LIVE_TAIL_MAX_RETRY_INTERVAL_MS, _LIVE_TAIL_SLOW_INTERVAL_MS
+from hpc_gui.services.job_output_text import _LIVE_TAIL_INTERVAL_MS, _LIVE_TAIL_MAX_RETRY_INTERVAL_MS, _LIVE_TAIL_SLOW_INTERVAL_MS
 
 from ._jobs_output_follower_views import _OutputFollowerWidget
 from ._jobs_output_follower_windows import _SingleFileFollowerWidget

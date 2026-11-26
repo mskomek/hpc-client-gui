@@ -18,7 +18,7 @@ from hpc_gui.core.i18n import t
 
 from hpc_gui.ui.async_call import AsyncCall
 
-from ._jobs_output_text import (
+from hpc_gui.services.job_output_text import (
     _LIVE_TAIL_FILE_RETRY_INTERVAL_MS,
     _LIVE_TAIL_FILE_RETRY_WINDOW_SECONDS,
     _LIVE_TAIL_INITIAL_RETRY_SECONDS,

@@ -16,7 +16,7 @@ from hpc_gui.services.slurm_script_parser import storage_area_for_path
 
 from hpc_gui.config.system_profile import format_remote_path, normalize_system_settings
 
-from ._jobs_output_text import _ansi_to_html, _bounded_output_text
+from hpc_gui.services.job_output_text import _ansi_to_html, _bounded_output_text
 
 
 
