@@ -130,6 +130,8 @@ jobs:
           tests/test_ui_errors.py
           tests/test_shared_ui_contracts.py
           tests/test_startup_i18n.py
+          tests/test_performance_probe.py::PerformanceProbeTests::test_slow_event_loop_tick_is_recorded
+          tests/test_performance_probe.py::PerformanceProbeTests::test_fast_event_loop_tick_does_not_write_delay
           tests/test_macos_product_surface.py::test_application_identity_uses_product_name
           tests/test_linux_x11.py
           tests/test_macos_x11.py
@@ -175,6 +177,10 @@ jobs:
           tests/test_wx_debug_telemetry_native.py
           tests/test_w15_fresh_user_startup.py::test_closed_port_connect_fails_visibly_without_connected_state
           -q --tb=short
+      - name: Native wx performance recorder (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest tests/test_performance_probe.py::PerformanceProbeTests::test_wx_event_loop_block_is_detected -q --tb=short
       - name: Native wx crash diagnostics (Windows)
         if: runner.os == 'Windows'
         run: >-

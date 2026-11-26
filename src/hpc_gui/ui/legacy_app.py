@@ -280,7 +280,13 @@ def main() -> int:
     probe = _performance_probe()
     if probe is not None:
         try:
-            probe.attach_to_app(app)
+            def schedule(interval, heartbeat):
+                timer = QTimer(app)
+                timer.timeout.connect(heartbeat)
+                timer.start(interval)
+                return timer.stop
+
+            probe.attach_to_scheduler(schedule)
         except Exception:
             probe = None
 

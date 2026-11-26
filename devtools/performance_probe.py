@@ -25,7 +25,7 @@ class PerformanceSession:
         self.interval_ms, self.slow_ms, self._now = interval_ms, slow_ms, now
         self._started_at = now()
         self._expected_tick: float | None = None
-        self._timer = None
+        self._stop_timer = None
         self._finished = False
         self._profiler = cProfile.Profile()
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -40,15 +40,35 @@ class PerformanceSession:
     def mark(self, name: str) -> None:
         self.write_event("startup_checkpoint", name=name, elapsed_ms=round((self._now() - self._started_at) * 1000, 3))
 
-    def attach_to_app(self, app: Any) -> None:
-        from PySide6.QtCore import QTimer
-        timer = QTimer(app)
-        timer.setInterval(self.interval_ms)
-        timer.timeout.connect(self._heartbeat)
+    def attach_to_scheduler(self, schedule) -> None:
+        """The GUI owns the timer; the recorder only owns its cleanup callback."""
+        if self._finished or self._stop_timer is not None:
+            return
         self._expected_tick = self._now() + self.interval_ms / 1000
-        timer.start()
-        self._timer = timer
+        self._stop_timer = schedule(self.interval_ms, self._heartbeat)
         self.mark("event_loop_monitor_attached")
+
+    def attach_to_app(self, app: Any) -> None:
+        import wx
+
+        def schedule(interval, heartbeat):
+            timer = wx.Timer(app)
+
+            def tick(_event):
+                heartbeat()
+
+            app.Bind(wx.EVT_TIMER, tick, timer)
+            if not timer.Start(interval):
+                app.Unbind(wx.EVT_TIMER, source=timer, handler=tick)
+                raise RuntimeError("Could not start the performance timer")
+
+            def stop():
+                timer.Stop()
+                app.Unbind(wx.EVT_TIMER, source=timer, handler=tick)
+
+            return stop
+
+        self.attach_to_scheduler(schedule)
 
     def measure_tick(self, observed_at: float) -> float:
         if self._expected_tick is None:
@@ -72,8 +92,13 @@ class PerformanceSession:
         if self._finished:
             return
         self._finished = True
-        if self._timer is not None:
-            self._timer.stop()
+        if self._stop_timer is not None:
+            try:
+                self._stop_timer()
+            except RuntimeError:
+                pass  # Native app may already have been destroyed at exit.
+            finally:
+                self._stop_timer = None
         self._profiler.disable()
         self._write_profile_summary()
         self.write_event("session_end", exit_code=exit_code, elapsed_ms=round((self._now() - self._started_at) * 1000, 3))
@@ -113,6 +138,11 @@ def mark(name: str) -> None:
 def attach_to_app(app: Any) -> None:
     if _SESSION is not None:
         _SESSION.attach_to_app(app)
+
+
+def attach_to_scheduler(schedule) -> None:
+    if _SESSION is not None:
+        _SESSION.attach_to_scheduler(schedule)
 
 
 def finish(exit_code: int | None = None) -> None:

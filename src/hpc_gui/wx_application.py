@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 
 from hpc_gui.core.i18n import load_saved_language, system_default_language
 from hpc_gui.wx_runtime import environment_without_qt_graphics
@@ -104,6 +105,15 @@ def configure_application_identity(app) -> None:
     app.SetVendorName("mskomek")
 
 
+def _performance_call(method, *args) -> None:
+    probe = sys.modules.get("_hpc_gui_perf_probe")
+    if probe is not None and not getattr(sys, "frozen", False):
+        try:
+            getattr(probe, method)(*args)
+        except Exception:
+            pass  # Optional diagnostics must never block the normal runtime.
+
+
 def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
     clean_environment = environment_without_qt_graphics()
     for name in set(os.environ) - set(clean_environment):
@@ -133,6 +143,8 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
         return 0 if smoke_state["result"] == "PASS" else 1
 
     configure_application_identity(app)
+    _performance_call("mark", "wx_application_created")
+    _performance_call("attach_to_app", app)
     from hpc_gui.wx_crash_reporting import install_wx_crash_reporting
 
     report_previous_crash = install_wx_crash_reporting(app)
@@ -163,6 +175,7 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
                 splash.Destroy()
             except Exception:
                 pass
+        _performance_call("mark", "main_window_created")
         app.SetTopWindow(frame)
         install_main_frame_exit_policy(wx, app, frame)
         from hpc_gui.wx_debug_telemetry import install_wx_debug_telemetry
@@ -177,6 +190,7 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
 
                 logging.getLogger("hpc_gui.debug.telemetry").exception("telemetry setup failed")
         frame.Show()
+        _performance_call("mark", "main_window_shown")
         report_previous_crash(frame)
         try:
             frame.Raise()
@@ -196,5 +210,10 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
 
     # Keep the timer-driven startup controller alive until it opens the frame.
     _ = startup_flow
-    app.MainLoop()
-    return 0
+    exit_code = 1
+    try:
+        app.MainLoop()
+        exit_code = 0
+        return exit_code
+    finally:
+        _performance_call("finish", exit_code)
