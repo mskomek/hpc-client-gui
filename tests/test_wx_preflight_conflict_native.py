@@ -25,6 +25,8 @@ import wx
 from hpc_gui.core.i18n import load_language, t
 from hpc_gui.config.storage import get_upload_preflight_confirmation_enabled, set_upload_preflight_confirmation_enabled
 from hpc_gui.services.transfer_controller import TransferItem
+from hpc_gui.services.files_mock import MockFilesBackend
+from hpc_gui.wx_shell_file_transfer import _start_file_transfers
 from hpc_gui.services.transfer_conflict_policy import ConflictFileInfo
 from hpc_gui.wx_shell_upload import prepare_upload
 from hpc_gui.wx_upload_preflight import create_upload_preflight
@@ -170,6 +172,70 @@ with patch("hpc_gui.wx_upload_preflight.create_upload_preflight", side_effect=As
                    lambda *args, **kwargs: started.append(args[2]), generation=state["generation"])
 assert len(started) == 2 and not errors
 set_upload_preflight_confirmation_enabled(True)
+
+# Real queue execution for a plan containing only an empty folder.
+empty_backend = MockFilesBackend()
+empty_backend.mkdir("/remote")
+empty_session = {"files": empty_backend, "profile": {"transfer_parallelism": 1}}
+empty_state = {"session": empty_session, "generation": 1, "ftp_transfer_type": "binary"}
+empty_path = source / "empty"
+controllers = []
+
+def start_empty(state, _lifecycle, items, **kwargs):
+    assert [(it.op, it.dst) for it in items] == [("mkdir_remote", "/remote/empty")]
+    controllers.append(_start_file_transfers(state, None, items, files_backend=kwargs["files_backend"]))
+
+def prepare_empty():
+    prepare_upload(empty_state, lifecycle, parent, empty_session, empty_backend,
+                   [empty_path], "/remote", start_empty, generation=1)
+
+for accepted in (False, True):
+    deadline = time.monotonic() + 5
+    inspected = []
+
+    def answer_empty():
+        dialogs = [w for w in wx.GetTopLevelWindows()
+                   if hasattr(w, "_wx_upload_preflight_controls") and w.IsModal()]
+        if not dialogs:
+            if time.monotonic() < deadline:
+                wx.CallLater(20, answer_empty)
+            else:
+                errors.append("empty-folder preflight not observed")
+            return
+        dialog = dialogs[0]
+        code = wx.ID_CANCEL
+        try:
+            assert not controllers and not empty_backend.exists("/remote/empty")
+            c = dialog._wx_upload_preflight_controls
+            assert c["listing"].GetItemCount() == 1
+            assert c["listing"].GetItemText(0, 2) == "/remote/empty"
+            inspected.append(True)
+            code = wx.ID_OK if accepted else wx.ID_CANCEL
+        except Exception:
+            errors.append(traceback.format_exc())
+        finally:
+            dialog.EndModal(code)
+
+    wx.CallLater(30, answer_empty)
+    prepare_empty()
+    assert inspected and not errors, errors
+    if not accepted:
+        assert not controllers and not empty_backend.exists("/remote/empty")
+    else:
+        assert len(controllers) == 1 and controllers[0].engine.wait(5)
+        assert not controllers[0].engine.failed
+        assert empty_backend.is_dir("/remote/empty")
+
+# Disabled preflight still executes a real mkdir, without constructing a modal.
+empty_backend.remove("/remote/empty")
+set_upload_preflight_confirmation_enabled(False)
+with patch("hpc_gui.wx_upload_preflight.create_upload_preflight",
+           side_effect=AssertionError("disabled preflight created a dialog")):
+    prepare_empty()
+assert len(controllers) == 2 and controllers[-1].engine.wait(5)
+assert not controllers[-1].engine.failed and empty_backend.is_dir("/remote/empty")
+set_upload_preflight_confirmation_enabled(True)
+app.ProcessPendingEvents()
 
 print("preflight complete; conflict start", flush=True)
 live = {"value": True}

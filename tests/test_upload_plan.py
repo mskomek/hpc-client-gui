@@ -137,3 +137,87 @@ def test_existing_remote_directory_is_safe_to_merge(backend_kind):
     assert files.is_dir("/remote/nested")
     if backend_kind == "ftp":
         assert created == ["/remote/nested"]
+
+
+def test_shell_upload_plans_on_worker_and_serial_backend_keeps_folder_order(tmp_path, monkeypatch):
+    from threading import Event, get_ident
+    from contextlib import contextmanager
+
+    from hpc_gui import wx_shell_files, wx_shell_upload
+    from hpc_gui.services.files_mock import MockFilesBackend
+
+    main_thread = get_ident()
+    planning, release, started = Event(), Event(), Event()
+    thread_ids = []
+    calls = []
+
+    class SerialFiles(MockFilesBackend):
+        supports_parallel_transfers = False
+        active = 0
+        max_active = 0
+
+        @contextmanager
+        def operation(self, op, path):
+            self.active += 1
+            self.max_active = max(self.max_active, self.active)
+            calls.append((op, path, get_ident()))
+            try:
+                yield
+            finally:
+                self.active -= 1
+
+        def mkdir(self, path):
+            with self.operation("mkdir", path):
+                super().mkdir(path)
+
+        def upload(self, src, dst):
+            with self.operation("upload", dst):
+                super().upload(src, dst)
+
+    files = SerialFiles()
+    session = {"files": files, "profile": {"transfer_parallelism": 5}}
+    state = {"session": session, "generation": 1,
+             "_embedded_remote_files_panel": SimpleNamespace(
+                 _wx_remote_model=SimpleNamespace(current_path="/remote"))}
+    controllers = []
+    original_plan = wx_shell_upload.build_upload_plan
+    original_start = wx_shell_files._start_file_transfers
+
+    def slow_plan(paths, destination):
+        thread_ids.append(get_ident())
+        planning.set()
+        assert release.wait(5)
+        return original_plan(paths, destination)
+
+    def start(*args, **kwargs):
+        controllers.append(original_start(*args, **kwargs))
+        started.set()
+
+    monkeypatch.setattr(wx_shell_upload, "build_upload_plan", slow_plan)
+    monkeypatch.setattr(wx_shell_files, "_start_file_transfers", start)
+    monkeypatch.setattr(wx_shell_files, "_get_editor_manager", lambda *args: None)
+    roots = []
+    for name in ("first", "second"):
+        root = tmp_path / name
+        root.mkdir()
+        (root / "input.txt").write_text(name)
+        roots.append(root)
+
+    callbacks = wx_shell_files._local_files_callbacks(state, None, None)
+    try:
+        callbacks["upload"](roots)
+        assert planning.wait(5)
+        assert thread_ids[0] != main_thread
+        assert not calls and not started.is_set()
+    finally:
+        release.set()
+    assert started.wait(5)
+    assert controllers[0].engine.wait(5)
+    assert not controllers[0].engine.failed
+    assert controllers[0].configured_parallel_limit == 5
+    assert files.max_active == 1
+    assert [(op, path) for op, path, _thread in calls] == [
+        ("mkdir", "/remote/first"), ("upload", "/remote/first/input.txt"),
+        ("mkdir", "/remote/second"), ("upload", "/remote/second/input.txt"),
+    ]
+    assert all(thread != main_thread for _, _, thread in calls)

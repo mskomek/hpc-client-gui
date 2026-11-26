@@ -29,6 +29,7 @@ def test_retired_startup_has_no_tracked_executable_references():
         r"|\b(?:JobsWidget|OutputsWidget)\b|hpc_gui[./]ui[./]widgets[./](?:jobs_widget|outputs_widget)\b"
         r"|\b(?:DirectoryListAppearance|DirectoryEntryDelegate|SplitterRatioKeeper|install_directory_list_appearance|install_main_browser_splitter_ratios)\b"
         r"|hpc_gui[./]ui[./](?:directory_list_appearance|splitter_ratio)\b"
+        r"|\btest_ftp_widget_transfer_preflight_pipeline\b"
     )
     candidates = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "src", "tests", "scripts", "devtools", "build", ".github"],
