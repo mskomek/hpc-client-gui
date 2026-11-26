@@ -126,6 +126,7 @@ jobs:
           tests/test_x11_server_discovery.py
           tests/test_x11_server_startup.py
           tests/test_x11_runner_subprocess.py
+          tests/test_terminal_bridge.py
           tests/test_linux_x11.py
           tests/test_macos_x11.py
           tests/test_wx_webview_native_retry.py
