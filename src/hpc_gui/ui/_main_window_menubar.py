@@ -125,21 +125,6 @@ class _MainWindowMenubarMixin:
             self._plugins_dynamic_before = all_actions[-2]  # bottom sep
         self._plugins_dynamic_separator_top = all_actions[3] if len(all_actions) > 3 else None
 
-        # --- Help ---
-        self._help_menu = menubar.addMenu(t("menu.help"))
-        self._act_help_center = QAction(t("menu.help_center"), self)
-        try:
-            from PySide6.QtGui import QKeySequence
-            self._act_help_center.setShortcut(QKeySequence("F1"))
-        except Exception:
-            pass
-        self._act_help_center.triggered.connect(self._open_help)
-        self._help_menu.addAction(self._act_help_center)
-        self._help_menu.addSeparator()
-        self._act_send_logs = QAction(t("menu.send_logs"), self)
-        self._act_send_logs.triggered.connect(self._open_send_logs)
-        self._help_menu.addAction(self._act_send_logs)
-
         # --- Compact upper-right utilities: language + plain version text ---
         lang_container = QWidget(self)
         lang_container.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
@@ -211,12 +196,6 @@ class _MainWindowMenubarMixin:
             self._act_plugins_updates.setText(t("menu.check_plugin_updates"))
         if hasattr(self, "_act_request_plugin"):
             self._act_request_plugin.setText(t("menu.request_plugin"))
-        if hasattr(self, "_help_menu"):
-            self._help_menu.setTitle(t("menu.help"))
-        if hasattr(self, "_act_help_center"):
-            self._act_help_center.setText(t("menu.help_center"))
-        if hasattr(self, "_act_send_logs"):
-            self._act_send_logs.setText(t("menu.send_logs"))
         # Language menu labels / selected language display
         if hasattr(self, "_act_tr"):
             self._act_tr.setText(t("language.turkish"))

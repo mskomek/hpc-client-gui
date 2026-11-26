@@ -14,6 +14,7 @@ def test_retired_startup_has_no_tracked_executable_references():
         r"|\bQuickTourOverlay\b|hpc_gui\.ui\.dialogs\.quick_tour|\bstart_quick_tour\b|\b_act_quick_tour\b"
         r"|\bAboutDialog\b|hpc_gui\.ui\.dialogs\.about_dialog|\b_open_about\b|\b_act_about\b"
         r"|\bUpdateSplash\b|\b_main_window_updates\b|\b_MainWindowUpdatesMixin\b|hpc_gui\.ui\.splash_screen"
+        r"|\bHelpDialog\b|\bSendLogsDialog\b|hpc_gui\.ui\.dialogs\.(?:help_dialog|send_logs_dialog)"
     )
     candidates = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "src", "tests", "scripts", "devtools", "build", ".github"],

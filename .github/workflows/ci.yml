@@ -130,6 +130,8 @@ jobs:
           tests/test_ui_errors.py
           tests/test_shared_ui_contracts.py
           tests/test_startup_i18n.py
+          tests/test_wx_help.py
+          tests/test_wx_logs.py
           tests/test_startup_changelog.py
           tests/test_retired_startup_boundary.py
           tests/test_startup_checks.py
@@ -202,7 +204,7 @@ jobs:
       - name: Native wx quick tour and product icon (Windows)
         if: runner.os == 'Windows'
         run: >-
-          python -m pytest tests/test_wx_tour_icon_native.py tests/test_about_dialog.py -q --tb=short
+          python -m pytest tests/test_wx_tour_icon_native.py tests/test_about_dialog.py tests/test_wx_help_send_logs_native.py -q --tb=short
       - name: Native wx performance recorder (Windows)
         if: runner.os == 'Windows'
         run: >-

@@ -2,7 +2,7 @@
 
 Mixin owning tab composition fan-out (session changes, polling sync),
 shell/editor routing, script-submission follow, job polling/finish
-notices and the simple Help/Settings/Logs/About/Tour openers. The
+notices and the settings opener. The
 ``get_sbatch_follow_mode`` helper patched by tests at
 ``hpc_gui.ui.main_window`` is resolved through the facade at call time.
 """
@@ -22,8 +22,6 @@ from hpc_gui.config.storage import (
 from . import _main_window_contracts as _contracts
 from hpc_gui.core.i18n import t
 from .async_call import AsyncCall
-from .dialogs.help_dialog import HelpDialog
-from .dialogs.send_logs_dialog import SendLogsDialog
 from .dialogs.settings_dialog import SettingsDialog
 from .widgets.editor_widget import EditorWidget
 
@@ -39,13 +37,6 @@ class _MainWindowWorkspaceMixin:
     def run_shell_in_terminal(self, script_path: str) -> None:
         self.run_shell_batch_in_terminal([script_path])
 
-    def _open_help(self):
-        try:
-            dlg = HelpDialog(self)
-            dlg.exec()
-        except Exception:
-            pass
-
     def _open_settings(self):
         try:
             dlg = SettingsDialog(
@@ -58,13 +49,6 @@ class _MainWindowWorkspaceMixin:
             self.jobs_outputs.apply_refresh_settings()
             self._sync_command_polling()
             self.ftp.apply_settings()
-        except Exception:
-            pass
-
-    def _open_send_logs(self):
-        try:
-            dlg = SendLogsDialog(self, crash_context=False)
-            dlg.exec()
         except Exception:
             pass
 

@@ -91,9 +91,7 @@ from hpc_gui.services.app_updater import (
     is_newer_version as is_newer_version,
     launch_update_installer as launch_update_installer,
 )
-from .dialogs.help_dialog import HelpDialog as HelpDialog
 from .dialogs.settings_dialog import SettingsDialog as SettingsDialog
-from .dialogs.send_logs_dialog import SendLogsDialog as SendLogsDialog
 
 from hpc_gui import __version__ as __version__
 
@@ -103,7 +101,6 @@ __all__ = [
     'DirectoriesWidget',
     'EditorWidget',
     'FtpWidget',
-    'HelpDialog',
     'JobsOutputsWidget',
     'LoginWidget',
     'LogsWidget',
@@ -139,7 +136,6 @@ __all__ = [
     'Qt',
     'SBATCH_FOLLOW_MODE_NEW_TABS_SPLIT',
     'SBATCH_FOLLOW_MODE_OUTPUTS_TAB',
-    'SendLogsDialog',
     'SettingsDialog',
     'Signal',
     'Slot',

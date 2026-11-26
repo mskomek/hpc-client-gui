@@ -31,7 +31,8 @@ def test_qt_shell_has_menu_plugins_help():
     src = read_main_window()
     assert 'self._menu_menu = menubar.addMenu(t("menu.menu"))' in src
     assert 'self._plugins_menu = menubar.addMenu(t("menu.plugins"))' in src
-    assert 'self._help_menu = menubar.addMenu(t("menu.help"))' in src
+    wx_src = pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
+    assert 'menubar.Append(help_menu, t("menu.help"))' in wx_src
     # Old code dumped all shell commands under Help – must be gone
     assert 'COMMAND_REGISTRY.by_context("shell")' not in src
 
@@ -79,9 +80,9 @@ def test_menu_ownership():
     assert 'self._act_request_plugin' in src
     # Ensure Send Logs not in Menu, plugin management not in Help
     # Check that Send Logs action is under Help menu
-    assert 'self._act_send_logs' in src
+    assert 'act_logs = help_menu.Append(wx.ID_ANY, t("menu.send_logs"))' in wx_src
     # Verify Help contains Help Center, Send Logs, About
-    assert 'self._act_help_center' in src
+    assert 'act_help = help_menu.Append(wx.ID_HELP, t("menu.help_center"))' in wx_src
     assert 'help_items["about"] = act_about' in pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
     # Ensure old duplicate standalone top-right buttons gone (already checked)
 
@@ -96,13 +97,13 @@ def test_version_not_only_in_about():
 
 @pytest.mark.audit
 def test_command_palette_not_miswired():
-    src = read_main_window()
-    # Command Palette must NOT call HelpDialog
-    assert "self._act_command_palette" not in src or "HelpDialog" not in src.split("self._act_command_palette")[0][-500:] if "self._act_command_palette" in src else True
-    # If command palette entry exists, it must not trigger _open_help
-    if "_act_command_palette" in src:
-        # Find its triggered connection
-        assert "_open_help" not in src.split("_act_command_palette")[1][:500]
+    wx_src = pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
+    dispatch = pathlib.Path("src/hpc_gui/wx_shell_dispatch.py").read_text(encoding="utf-8")
+    assert 'wx.EVT_MENU, lambda _e: _dispatch("APP-HELP"' in wx_src
+    for line in wx_src.splitlines():
+        if "PALETTE" in line.upper() and "Bind(" in line:
+            assert "APP-HELP" not in line
+    assert 'from hpc_gui.wx_help import show_help' in dispatch
 
 
 @pytest.mark.audit
