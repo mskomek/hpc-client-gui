@@ -40,7 +40,6 @@ def _build_plugins(
     normalized_tab = str(initial_tab or "discover").strip().lower()
     if normalized_tab not in _VIEW_IDS:
         normalized_tab = "discover"
-    # Spec §91: Plugins 800×600 resizable, §92 split 30-35% / 65-70%
     host, finish = make_host(parent, title=t("plugins.dialog_title"), size=(800, 600), embedded=embedded)
     panel = wx.Panel(host)
     root_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -92,8 +91,6 @@ def _build_plugins(
     root_sizer.Add(top, 0, wx.EXPAND)
     root_sizer.Add(list_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     root_sizer.Add(empty_note, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
-    # W33 (HPC-W08-LIFE-005): state the real enable/disable behavior where
-    # the toggle is offered; a bare checkbox is misleading.
     effect_note = wx.StaticText(
         panel,
         label=t("plugins.lifecycle_effect_note"),
@@ -103,7 +100,6 @@ def _build_plugins(
     except Exception:
         pass
     root_sizer.Add(effect_note, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
-    # Spec §16 footer 12-16px
     root_sizer.Add(btn_row, 0, wx.EXPAND | wx.ALL, 16)
     panel.SetSizer(root_sizer)
 
@@ -136,8 +132,6 @@ def _build_plugins(
         list_ctrl.DeleteAllItems()
         for card in visible:
             idx = list_ctrl.InsertItem(list_ctrl.GetItemCount(), card.name or card.plugin_id)
-            # W26 (HPC-W06-TODO-PLUGIN-COMPAT-001): version, install/enabled
-            # state and compatibility must be visible where relevant.
             from hpc_gui.services.plugin_manager_state import capability_label
             state_bits = [t("plugins.installed_badge") if card.installed else t("plugins.installed_not_installed")]
             if card.installed:
@@ -166,10 +160,11 @@ def _build_plugins(
         return visible[idx]
 
     trusted_controls, refresh_trusted = install_trusted_tool_controls(wx, panel, host, root_sizer, btn_row, model, state, _selected_card)
-    from ._wx_plugins_management import install_problem_control
+    from ._wx_plugins_management import install_problem_control, notify_plugin_change
     problem_control, refresh_problems = install_problem_control(wx, panel, root_sizer, model)
     management_controls, refresh_management = install_management_controls(
-        wx, panel, host, root_sizer, model, state, _selected_card, lambda: _refresh_list())
+        wx, panel, host, root_sizer, model, state, _selected_card, lambda: _refresh_list(),
+        lambda: notify_plugin_change(parent))
     def _update_buttons():
         card = _selected_card()
         refresh_trusted(card)
@@ -327,6 +322,7 @@ def _build_plugins(
                 if error is not None:
                     wx.MessageBox(install_error_message(error), t("plugins.dialog_title"), wx.OK | wx.ICON_ERROR, host)
                 else:
+                    notify_plugin_change(parent)
                     wx.MessageBox(install_summary_text(payload_entry, outcome),
                                   t("plugins.dialog_title"), wx.OK | wx.ICON_INFORMATION, host)
             finally:
@@ -364,6 +360,8 @@ def _build_plugins(
                 except Exception:
                     pass
             model.reload_installed()
+            if error is None:
+                notify_plugin_change(parent)
             _refresh_list()
 
         Thread(target=worker, daemon=True).start()
@@ -404,6 +402,8 @@ def _build_plugins(
                 except Exception:
                     pass
             model.reload_installed()
+            if error is None:
+                notify_plugin_change(parent)
             _refresh_list()
 
         Thread(target=worker, daemon=True).start()

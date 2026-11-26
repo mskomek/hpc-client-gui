@@ -29,6 +29,8 @@ load_language("en")
 app = wx.App(False)
 app.SetExitOnFrameDelete(False)
 frame = wx.Frame(None)
+changed = []
+frame._wx_rebuild_plugins_menu = lambda: changed.append(True)
 root = sys.argv[1]
 pid = "org.hpcclient.truba"
 install(Path(root), version="2.0.0")
@@ -146,6 +148,7 @@ with patch.object(wx, "MessageBox", message):
     with patch.object(wx, "LaunchDefaultBrowser", lambda url: opened.append(url) or True):
         click("request")
     assert opened == [PLUGIN_REQUEST_URL]
+    assert changed == [True] * 5  # activate, rollback, disable, enable, remove; no failed/cancelled action
 assert not any(m.split(".")[0] in {"PySide6","PyQt5","PyQt6","shiboken6"} for m in sys.modules)
 frame.Destroy()
 app.ProcessPendingEvents()

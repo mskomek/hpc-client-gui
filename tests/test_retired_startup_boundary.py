@@ -21,6 +21,7 @@ def test_retired_startup_has_no_tracked_executable_references():
         r"|\bEditorLintingMixin\b|hpc_gui\.ui\.widgets\.editor_linting"
         r"|\b(?:LocalLintToolsMixin|RemoteLintToolsMixin|_RemoteLintWorker|_RemoteLintSignals|host_tool_page|build_ansys_lint_results_dialog|show_ansys_lint_results)\b"
         r"|hpc_gui\.ui\.(?:dialogs\.(?:ansys_lint_results_dialog|linter_tool_host|plugin_manager_state)|widgets\._(?:local|remote)_lint_tools)"
+        r"|hpc_gui/ui/dialogs/plugin_manager_state\.py"
     )
     candidates = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "src", "tests", "scripts", "devtools", "build", ".github"],

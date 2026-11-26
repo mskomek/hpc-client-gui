@@ -8,7 +8,7 @@ from hpc_gui.services.plugin_manager_state import is_newer_version
 from hpc_gui.services.plugin_request import PLUGIN_REQUEST_URL, is_allowed_plugin_request_url
 
 
-def install_management_controls(wx, panel, host, root_sizer, model, state, selected_card, refresh_list):
+def install_management_controls(wx, panel, host, root_sizer, model, state, selected_card, refresh_list, notify_changed):
     row = wx.WrapSizer(wx.HORIZONTAL)
     details = wx.Button(panel, label=t("plugins.details"))
     versions = wx.Choice(panel)
@@ -80,6 +80,8 @@ def install_management_controls(wx, panel, host, root_sizer, model, state, selec
                 return
             state["in_flight"] = False
             model.reload_installed()
+            if error is None:
+                notify_changed()
             key = "plugins.version_switch_failed" if error else "plugins.version_switch_success"
             wx.MessageBox(t(key).format(name=card.name, version=target),
                           t("plugins.version_switch_confirm_title"),
@@ -122,3 +124,16 @@ def install_problem_control(wx, panel, root_sizer, model):
         panel.Layout()
 
     return note, refresh
+
+
+
+def notify_plugin_change(parent):
+    """Refresh the host's plugin contributions only after a successful mutation."""
+    import logging
+
+    callback = getattr(parent, "_wx_rebuild_plugins_menu", None)
+    if callable(callback):
+        try:
+            callback()
+        except Exception:
+            logging.getLogger(__name__).exception("Refreshing plugin menu after mutation failed")

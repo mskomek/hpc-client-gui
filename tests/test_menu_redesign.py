@@ -21,7 +21,7 @@ def read_plugin_manager_dialog() -> str:
     modules = (
         "src/hpc_gui/ui/dialogs/plugin_manager_dialog.py",
         "src/hpc_gui/ui/dialogs/plugin_manager_cards.py",
-        "src/hpc_gui/ui/dialogs/plugin_manager_state.py",
+        "src/hpc_gui/services/plugin_manager_state.py",
     )
     return "\n".join(pathlib.Path(path).read_text(encoding="utf-8") for path in modules)
 
