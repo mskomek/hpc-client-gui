@@ -83,9 +83,6 @@ class _MainWindowMenubarMixin:
 
         # --- Menu ---
         self._menu_menu = menubar.addMenu(t("menu.menu"))
-        self._act_settings = QAction(t("menu.settings"), self)
-        self._act_settings.triggered.connect(self._open_settings)
-        self._menu_menu.addAction(self._act_settings)
         # Command Palette only if a REAL implementation exists – omit the fake Help wiring
         # No visible Command Palette entry when none exists; Help stays on F1.
         self._menu_menu.addSeparator()
@@ -141,8 +138,6 @@ class _MainWindowMenubarMixin:
         # Menus
         if hasattr(self, "_menu_menu"):
             self._menu_menu.setTitle(t("menu.menu"))
-        if hasattr(self, "_act_settings"):
-            self._act_settings.setText(t("menu.settings"))
         if hasattr(self, "_act_exit"):
             self._act_exit.setText(t("menu.exit"))
         # Language menu labels / selected language display

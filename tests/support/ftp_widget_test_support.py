@@ -48,7 +48,6 @@ from hpc_gui.ui.dialogs.transfer_dialog import (
     TransferItem,
     TransferPreflightDialog,
 )
-from hpc_gui.ui.dialogs.settings_dialog import SettingsDialog
 from hpc_gui.ui.main_window import MainWindow
 from hpc_gui.ui.widgets.directories_widget import (
     DirectoriesWidget,
@@ -289,7 +288,6 @@ __all__ = [
     'RemoteDirPanel',
     'RemoteEntry',
     'SSHFilesBackend',
-    'SettingsDialog',
     'SimpleNamespace',
     'TransferConflictDecision',
     'TransferConflictDialog',

@@ -32,7 +32,6 @@ PUBLIC_FACADES = (
     "src/hpc_gui/wx_splash.py",
     "src/hpc_gui/wx_updater_view.py",
     "src/hpc_gui/ui/dialogs/connection_dialog.py",
-    "src/hpc_gui/ui/dialogs/settings_dialog.py",
     "src/hpc_gui/ui/dialogs/transfer_dialog.py",
 )
 

@@ -141,8 +141,11 @@ def build_settings_preferences(
     remote_paths.Add(reset_remote, 0, wx.ALL, 4)
 
     def reset_remote_defaults(_event=None):
-        remote_controls["profile_scratch_dir"].SetValue("")
-        remote_controls["profile_home_dir"].SetValue("")
+        from hpc_gui.config.system_profile import hpc_default_remote_paths
+
+        defaults = hpc_default_remote_paths()
+        remote_controls["profile_scratch_dir"].SetValue(defaults["scratch_dir"])
+        remote_controls["profile_home_dir"].SetValue(defaults["home_dir"])
 
     reset_remote.Bind(wx.EVT_BUTTON, reset_remote_defaults)
 

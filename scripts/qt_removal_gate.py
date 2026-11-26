@@ -184,7 +184,7 @@ def _qt_import_names(tree: ast.Module):
 
 def production_qt_imports(root: Path, *, return_scanned: bool = False):
     records: list[dict[str, object]] = []
-    files = [path for path in git_tracked_files(root) if _relative(root, path).startswith("src/") and path.suffix == ".py"]
+    files = [path for path in git_tracked_files(root) if path.is_file() and _relative(root, path).startswith("src/") and path.suffix == ".py"]
     for path in files:
         rel = _relative(root, path)
         try:
@@ -211,7 +211,7 @@ def _packaging_record(path: Path, root: Path, node: ast.AST, value: str) -> dict
 
 def packaging_blockers(root: Path, *, return_scanned: bool = False):
     blockers: list[dict[str, object]] = []
-    specs = [path for path in git_tracked_files(root) if _relative(root, path).startswith("build/") and path.suffix == ".spec"]
+    specs = [path for path in git_tracked_files(root) if path.is_file() and _relative(root, path).startswith("build/") and path.suffix == ".spec"]
     for path in specs:
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))

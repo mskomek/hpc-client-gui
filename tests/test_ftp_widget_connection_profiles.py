@@ -1,14 +1,10 @@
 from __future__ import annotations
 
 from support.ftp_widget_test_support import (
-    ASCII,
-    AUTO,
-    BINARY,
     ConnectionDialog,
     FtpWidgetTestCase,
     GENERIC_SLURM_DEFAULTS,
     LoginWidget,
-    SettingsDialog,
     patch,
     pytest,
     save_user_system_template,
@@ -249,23 +245,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
     @pytest.mark.gui
     @pytest.mark.qt
     @pytest.mark.semantic
-    def test_settings_offer_exact_transfer_modes_and_default_auto(self) -> None:
-        with patch(
-            "hpc_gui.ui.dialogs.settings_dialog.get_ftp_transfer_type",
-            return_value=AUTO,
-        ):
-            dialog = SettingsDialog()
-            try:
-                self.assertEqual(
-                    [
-                        dialog.cb_ftp_transfer_type.itemData(index)
-                        for index in range(dialog.cb_ftp_transfer_type.count())
-                    ],
-                    [AUTO, BINARY, ASCII],
-                )
-                self.assertEqual(dialog.cb_ftp_transfer_type.currentData(), AUTO)
-            finally:
-                dialog.deleteLater()
 
     @pytest.mark.contract
     @pytest.mark.regression

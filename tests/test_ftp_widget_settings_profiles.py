@@ -2,11 +2,7 @@ from __future__ import annotations
 
 from support.ftp_widget_test_support import (
     FtpWidgetTestCase,
-    GENERIC_SLURM_DEFAULTS,
     LoginWidget,
-    QApplication,
-    Qt,
-    SettingsDialog,
     SimpleNamespace,
     _Files,
     patch,
@@ -48,14 +44,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
 
     @pytest.mark.gui
     @pytest.mark.qt
-    def test_profile_remote_controls_disabled_without_active_profile(self) -> None:
-        dialog = SettingsDialog()
-        try:
-            self.assertFalse(dialog.ftp_scratch_dir.isEnabled())
-            self.assertFalse(dialog.ftp_home_dir.isEnabled())
-            self.assertFalse(dialog.btn_ftp_reset_defaults.isEnabled())
-        finally:
-            dialog.deleteLater()
 
     @pytest.mark.integration
     @pytest.mark.semantic
@@ -114,65 +102,9 @@ class FtpWidgetTests(FtpWidgetTestCase):
     @pytest.mark.gui
     @pytest.mark.qt
     @pytest.mark.semantic
-    def test_sbatch_follow_mode_settings_have_all_tooltips(self) -> None:
-        with patch(
-            "hpc_gui.ui.dialogs.settings_dialog.get_sbatch_follow_mode",
-            return_value="outputs_tab",
-        ):
-            dialog = SettingsDialog()
-        try:
-            expected_modes = {
-                "none",
-                "outputs_tab",
-                "new_tabs_split",
-                "new_window_combined",
-                "new_windows_split",
-            }
-            self.assertEqual(
-                {
-                    dialog.cb_sbatch_follow_mode.itemData(index)
-                    for index in range(dialog.cb_sbatch_follow_mode.count())
-                },
-                expected_modes,
-            )
-            for index in range(dialog.cb_sbatch_follow_mode.count()):
-                self.assertTrue(
-                    dialog.cb_sbatch_follow_mode.itemData(
-                        index, Qt.ItemDataRole.ToolTipRole
-                    ).strip()
-                )
-            with patch(
-                "hpc_gui.ui.dialogs.settings_dialog.update_settings"
-            ) as update:
-                dialog.cb_sbatch_follow_mode.setCurrentIndex(
-                    dialog.cb_sbatch_follow_mode.findData("new_windows_split")
-                )
-                dialog.btn_apply.click()
-            self.assertEqual(
-                update.call_args.args[0]["sbatch_follow_mode"],
-                "new_windows_split",
-            )
-        finally:
-            dialog.deleteLater()
 
     @pytest.mark.contract
     @pytest.mark.regression
-    def test_sbatch_follow_mode_settings_migrate_and_persist(self) -> None:
-        from hpc_gui.config import storage
-
-        with patch.object(storage, "load_settings", return_value={
-            "focus_jobs_outputs_after_submission_enabled": False,
-        }):
-            self.assertEqual(storage.get_sbatch_follow_mode(), "none")
-        with patch.object(storage, "load_settings", return_value={
-            "focus_jobs_outputs_after_submission_enabled": True,
-        }):
-            self.assertEqual(storage.get_sbatch_follow_mode(), "outputs_tab")
-        with patch.object(storage, "load_settings", return_value={}):
-            self.assertEqual(storage.get_sbatch_follow_mode(), "outputs_tab")
-        with patch.object(storage, "update_settings") as update:
-            self.assertEqual(storage.set_sbatch_follow_mode("new_tabs_split"), "new_tabs_split")
-            update.assert_called_once_with({"sbatch_follow_mode": "new_tabs_split"})
 
     @pytest.mark.integration
     @pytest.mark.semantic
@@ -190,144 +122,3 @@ class FtpWidgetTests(FtpWidgetTestCase):
         )
         self.assertEqual(self.widget.panel_scratch.current_dir, "/arf/scratch/alice")
         self.assertEqual(self.widget.panel_home.current_dir, "/arf/home/alice")
-
-    @pytest.mark.gui
-    @pytest.mark.qt
-    @pytest.mark.semantic
-    def test_settings_apply_persists_without_closing_and_close_rejects(self) -> None:
-        dialog = SettingsDialog()
-        try:
-            dialog.show()
-            QApplication.processEvents()
-            # FM-04: the global transfer-parallelism editor was removed;
-            # per-profile value is the single user-facing source of truth.
-            dialog.cb_upload_preflight_confirmation.setChecked(False)
-            with patch(
-                "hpc_gui.ui.dialogs.settings_dialog.update_settings"
-            ) as update:
-                dialog.btn_apply.click()
-
-            update.assert_called_once()
-            self.assertNotIn(
-                "transfer_parallelism",
-                update.call_args.args[0],
-                "Settings dialog must not write a global transfer_parallelism value",
-            )
-            self.assertEqual(
-                update.call_args.args[0]["upload_preflight_confirmation_enabled"],
-                False,
-            )
-            self.assertTrue(dialog.isVisible())
-            self.assertEqual(dialog.btn_apply.text(), "Apply")
-            self.assertEqual(dialog.btn_close.text(), "Close")
-
-            dialog.btn_close.click()
-            self.assertFalse(dialog.isVisible())
-            self.assertEqual(dialog.result(), SettingsDialog.DialogCode.Rejected)
-        finally:
-            dialog.deleteLater()
-
-    @pytest.mark.gui
-    @pytest.mark.qt
-    @pytest.mark.semantic
-    def test_settings_controls_upload_preflight_confirmation(self) -> None:
-        with patch(
-            "hpc_gui.ui.dialogs.settings_dialog.get_upload_preflight_confirmation_enabled",
-            return_value=True,
-        ):
-            dialog = SettingsDialog()
-        try:
-            self.assertTrue(dialog.cb_upload_preflight_confirmation.isChecked())
-            self.assertEqual(
-                dialog.cb_upload_preflight_confirmation.text(),
-                "Show upload plan confirmation",
-            )
-            with patch(
-                "hpc_gui.ui.dialogs.settings_dialog.update_settings"
-            ) as update:
-                dialog.cb_upload_preflight_confirmation.setChecked(False)
-                dialog.btn_apply.click()
-                self.assertFalse(
-                    update.call_args.args[0]["upload_preflight_confirmation_enabled"]
-                )
-
-                dialog.cb_upload_preflight_confirmation.setChecked(True)
-                dialog.btn_apply.click()
-                self.assertTrue(
-                    update.call_args.args[0]["upload_preflight_confirmation_enabled"]
-                )
-        finally:
-            dialog.deleteLater()
-
-    @pytest.mark.gui
-    @pytest.mark.qt
-    @pytest.mark.semantic
-    def test_settings_edit_and_reset_profile_remote_defaults(self) -> None:
-        cfg = SimpleNamespace(
-            username="alice",
-            system_settings={
-                "scratch_dir": "/custom/scratch/{user}",
-                "home_dir": "/custom/home/{user}",
-            },
-        )
-        updates = []
-        dialog = SettingsDialog(
-            session={
-                "connected": True,
-                "profile_name": "alice@truba",
-                "cfg": cfg,
-            },
-            update_remote_defaults=lambda scratch, home: updates.append(
-                (scratch, home)
-            ),
-        )
-        try:
-            self.assertTrue(dialog.ftp_scratch_dir.isEnabled())
-            self.assertEqual(
-                dialog.ftp_scratch_dir.text(),
-                "/custom/scratch/{user}",
-            )
-            dialog._reset_ftp_defaults()
-            self.assertEqual(updates, [])
-            self.assertEqual(
-                dialog.ftp_home_dir.text(),
-                GENERIC_SLURM_DEFAULTS["home_dir"],
-            )
-            with patch(
-                "hpc_gui.ui.dialogs.settings_dialog.update_settings"
-            ):
-                dialog.btn_apply.click()
-            self.assertEqual(
-                updates,
-                [
-                    (
-                        GENERIC_SLURM_DEFAULTS["scratch_dir"],
-                        GENERIC_SLURM_DEFAULTS["home_dir"],
-                    )
-                ],
-            )
-        finally:
-            dialog.deleteLater()
-
-    @pytest.mark.gui
-    @pytest.mark.qt
-    @pytest.mark.semantic
-    def test_settings_lists_and_clears_file_associations(self) -> None:
-        with patch(
-            "hpc_gui.ui.dialogs.settings_dialog.get_file_associations",
-            return_value={".slurm": r"C:\Tools\editor.exe"},
-        ):
-            dialog = SettingsDialog()
-        try:
-            self.assertEqual(dialog.file_associations_list.count(), 1)
-            self.assertIn(".slurm", dialog.file_associations_list.item(0).text())
-            dialog.file_associations_list.setCurrentRow(0)
-            with patch(
-                "hpc_gui.ui.dialogs.settings_dialog.clear_file_association",
-                return_value={},
-            ) as clear_assoc:
-                dialog._clear_selected_file_association()
-            clear_assoc.assert_called_once_with(".slurm")
-            self.assertEqual(dialog.file_associations_list.count(), 0)
-        finally:
-            dialog.deleteLater()

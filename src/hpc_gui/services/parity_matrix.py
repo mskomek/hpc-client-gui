@@ -44,7 +44,7 @@ FEATURE_EVIDENCE = {
     "GUI-PLUGIN-002": Evidence("COVERED", "ansys_lint_results_dialog.py", "wx_ansys_view.py; wx_ansys.py", "test_wx_ansys_view.py; test_wx_ansys.py", "Wave 54: real wx event -> file_chooser seam -> WxAnsysModel -> engine -> visible ListCtrl with grouped severity, details, copy/docs, EN/TR and close-in-flight safety. 8 view tests + 2 model tests."),
     "GUI-SET-001": Evidence(
         "COVERED",
-        "settings_dialog.py",
+        "retired Qt Settings dialog",
         "wx_settings.py; wx_settings_view.py; wx_settings_preferences.py; wx_shortcut_editor.py; wx_shortcuts.py",
         "test_wx_settings.py; test_wx_settings_preferences_native.py; test_wx_settings_speed_native.py; test_wx_shortcut_preferences.py; test_transfer_speed_test.py; test_transfer_speed_test_ssh_wire.py",
         "wx covers global/profile preference controls, runtime language changes, refresh/live tracking, transfer mode and checksum, terminal graphics reset, remote cache clearing, remote path defaults, asynchronous speed testing, file associations, Smart Open reset, Apply/Cancel, profile/plugin preservation, and editable persisted shortcuts. Applying shortcut changes refreshes shell accelerators on the wx event loop.",

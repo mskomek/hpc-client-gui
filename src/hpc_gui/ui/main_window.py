@@ -89,7 +89,6 @@ from hpc_gui.services.app_updater import (
     is_newer_version as is_newer_version,
     launch_update_installer as launch_update_installer,
 )
-from .dialogs.settings_dialog import SettingsDialog as SettingsDialog
 
 from hpc_gui import __version__ as __version__
 
@@ -133,7 +132,6 @@ __all__ = [
     'Qt',
     'SBATCH_FOLLOW_MODE_NEW_TABS_SPLIT',
     'SBATCH_FOLLOW_MODE_OUTPUTS_TAB',
-    'SettingsDialog',
     'Signal',
     'Slot',
     'app_updater',

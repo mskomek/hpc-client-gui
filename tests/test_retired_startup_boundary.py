@@ -32,6 +32,8 @@ def test_retired_startup_has_no_tracked_executable_references():
         r"|\btest_ftp_widget_transfer_preflight_pipeline\b"
         r"|\bremote_entry_helpers\b"
         r"|\b(?:_LocalUploadPlanJob|_local_upload_plan_jobs|_next_local_upload_plan_id|_apply_local_upload_incremental_gui|_advance_local_upload_plan|_iter_local_upload_plan|RemoteTransferUploadPlanMixin|_remote_transfer_upload_plan)\b"
+        r"|hpc_gui[./]ui[./]dialogs[./](?:settings_dialog|_settings_dialog_(?:file_associations|transfer_actions))"
+        r"|\b(?:SettingsDialog|_SettingsDialogFileAssociationsMixin|_SettingsDialogTransferActionsMixin|_open_settings|_act_settings)\b"
     )
     candidates = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "src", "tests", "scripts", "devtools", "build", ".github"],
@@ -40,7 +42,7 @@ def test_retired_startup_has_no_tracked_executable_references():
     hits = []
     for name in candidates:
         path = root / name
-        if not name or path.resolve() == Path(__file__).resolve():
+        if not name or not path.is_file() or path.resolve() == Path(__file__).resolve():
             continue
         if path.suffix not in {".py", ".spec", ".ps1", ".sh", ".yml", ".yaml", ".toml", ".bat", ".cmd"}:
             continue

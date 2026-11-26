@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import sys
-import tempfile
 import threading
 import unittest
 from pathlib import Path
@@ -248,32 +247,6 @@ class ParallelismSourceOfTruthTests(unittest.TestCase):
         self.assertEqual(coerce_profile_transfer_parallelism(99, 1), 10)
         self.assertEqual(coerce_profile_transfer_parallelism("bad", 1), 1)
 
-
-    @pytest.mark.gui
-    @pytest.mark.qt
-    def test_settings_dialog_has_no_global_parallelism_editor(self) -> None:
-        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-        QApplication.instance() or QApplication([])
-        from hpc_gui.core.i18n import load_language
-        from hpc_gui.ui.dialogs.settings_dialog import SettingsDialog
-
-        load_language("en")
-        with tempfile.TemporaryDirectory() as home, mock.patch.object(
-            Path, "home", return_value=Path(home)
-        ):
-            dialog = SettingsDialog()
-            try:
-                from PySide6.QtWidgets import QAbstractButton, QGroupBox, QLabel
-
-                visible_texts = [
-                    widget.text()
-                    for widget in dialog.findChildren(QLabel) + dialog.findChildren(QAbstractButton)
-                ] + [widget.title() for widget in dialog.findChildren(QGroupBox)]
-                self.assertFalse(
-                    any("parallel" in text.casefold() for text in visible_texts)
-                )
-            finally:
-                dialog.deleteLater()
 
 
 class TransferChannelSafetyTests(unittest.TestCase):

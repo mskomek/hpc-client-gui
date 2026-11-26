@@ -39,6 +39,8 @@ def test_settings_apply_persists_global_preferences_and_graphics_reset(app, monk
     monkeypatch.setattr(storage, "update_settings", lambda patch: updates.append(dict(patch)) or dict(patch))
     monkeypatch.setattr(settings_model, "persist_model_snapshot", lambda snapshot: snapshots.append(snapshot))
     monkeypatch.setattr(storage, "set_transfer_checksum_verification_enabled", lambda _value: False)
+    preflight = []
+    monkeypatch.setattr(storage, "set_upload_preflight_confirmation_enabled", lambda value: preflight.append(value) or value)
     monkeypatch.setattr(wx, "MessageBox", lambda *args, **kwargs: shown.append(args[0]) or wx.OK)
 
     frame = wx.Frame(None)
@@ -47,12 +49,18 @@ def test_settings_apply_persists_global_preferences_and_graphics_reset(app, monk
     preferences["jobs_outputs_refresh_interval_seconds"].SetValue(29)
     preferences["live_tracking_warning_interval_seconds"].SetValue(90)
     preferences["squeue_auto_refresh_enabled"].SetValue(False)
-    ftp_choice, _ftp_values = preferences["ftp_transfer_type"]
+    ftp_choice, ftp_values = preferences["ftp_transfer_type"]
+    assert ftp_values == ("auto", "binary", "ascii")
+    assert ftp_choice.GetSelection() == 0
     ftp_choice.SetSelection(2)
-    follow_choice, _follow_values = preferences["sbatch_follow_mode"]
+    follow_choice, follow_values = preferences["sbatch_follow_mode"]
+    assert set(follow_values) == {
+        "none", "outputs_tab", "new_tabs_split", "new_window_combined", "new_windows_split"
+    }
     follow_choice.SetSelection(0)
     graphics_choice, _graphics_values = preferences["terminal_graphics_mode"]
     graphics_choice.SetSelection(2)
+    host._wx_settings_controls["upload_preflight"].SetValue(False)
     host._wx_settings_controls["reset_terminal_graphics"].Command(
         wx.CommandEvent(
             wx.wxEVT_BUTTON,
@@ -71,6 +79,7 @@ def test_settings_apply_persists_global_preferences_and_graphics_reset(app, monk
     assert updates[-1]["sbatch_follow_mode"] == "none"
     assert updates[-1]["terminal_graphics_mode"] == "auto"
     assert updates[-1]["terminal_graphics_auto_compatibility"] is False
+    assert snapshots[0].global_settings["upload_preflight_confirmation"] is False
     host.Destroy()
     frame.Destroy()
 
@@ -135,6 +144,8 @@ def test_settings_profile_paths_are_applied_without_losing_profile_fields(app, m
     monkeypatch.setattr(storage, "load_profiles", lambda: [dict(profile)])
     monkeypatch.setattr(storage, "get_file_associations", lambda: {})
     monkeypatch.setattr(storage, "set_transfer_checksum_verification_enabled", lambda _value: False)
+    preflight = []
+    monkeypatch.setattr(storage, "set_upload_preflight_confirmation_enabled", lambda value: preflight.append(value) or value)
     monkeypatch.setattr(settings_model, "persist_model_snapshot", lambda _snapshot: None)
     writes = []
     monkeypatch.setattr(storage, "update_settings", lambda patch: writes.append(dict(patch)) or dict(patch))
@@ -181,6 +192,72 @@ def test_settings_cancel_does_not_persist_staged_preferences(app, monkeypatch):
     frame.Destroy()
 
 
+def test_settings_profile_paths_require_profile_and_reset_to_generic_defaults(app, monkeypatch):
+    import hpc_gui.config.storage as storage
+    import hpc_gui.wx_settings as settings_model
+    import hpc_gui.wx_settings_view as view
+    from hpc_gui.config.system_profile import hpc_default_remote_paths
+
+    monkeypatch.setattr(storage, "load_settings", lambda: {})
+    monkeypatch.setattr(storage, "get_file_associations", lambda: {})
+    monkeypatch.setattr(storage, "load_profiles", lambda: [])
+    frame = wx.Frame(None)
+    empty = view.build_settings_panel(frame, settings_model.WxSettingsModel())
+    controls = empty._wx_settings_preference_controls
+    assert not controls["profile_scratch_dir"].IsEnabled()
+    assert not controls["profile_home_dir"].IsEnabled()
+    assert not empty._wx_settings_controls["reset_remote_defaults"].IsEnabled()
+    empty.Destroy()
+
+    profile = {
+        "name": "lab",
+        "system": {"scratch_dir": "/custom/scratch", "home_dir": "/custom/home"},
+    }
+    writes = []
+    monkeypatch.setattr(storage, "load_profiles", lambda: [dict(profile)])
+    monkeypatch.setattr(storage, "get_last_profile_name", lambda: "lab")
+    monkeypatch.setattr(storage, "upsert_profile", lambda value: writes.append(dict(value)))
+    monkeypatch.setattr(storage, "set_transfer_checksum_verification_enabled", lambda _value: False)
+    preflight = []
+    monkeypatch.setattr(storage, "set_upload_preflight_confirmation_enabled", lambda value: preflight.append(value) or value)
+    monkeypatch.setattr(settings_model, "persist_model_snapshot", lambda _snapshot: None)
+    monkeypatch.setattr(storage, "update_settings", lambda patch: dict(patch))
+    monkeypatch.setattr(wx, "MessageBox", lambda *args, **kwargs: wx.OK)
+    host = view.build_settings_panel(
+        frame, settings_model.WxSettingsModel(),
+        session_state={"session": {"connected": True, "profile_name": "lab", "profile": profile}},
+    )
+    fields = host._wx_settings_preference_controls
+    assert fields["profile_scratch_dir"].IsEnabled()
+    reset = host._wx_settings_controls["reset_remote_defaults"]
+    reset.GetEventHandler().ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, reset.GetId()))
+    defaults = hpc_default_remote_paths()
+    assert fields["profile_scratch_dir"].GetValue() == defaults["scratch_dir"]
+    assert fields["profile_home_dir"].GetValue() == defaults["home_dir"]
+    apply = host._wx_settings_controls["apply"]
+    apply.GetEventHandler().ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, apply.GetId()))
+    _pump(app, lambda: bool(writes))
+    assert writes[-1]["system"] == defaults
+    host.Destroy()
+    frame.Destroy()
+
+
+def test_macos_settings_hide_vcxsrv_exit_option(app, monkeypatch):
+    import hpc_gui.config.storage as storage
+    import hpc_gui.wx_settings as settings_model
+    import hpc_gui.wx_settings_view as view
+
+    monkeypatch.setattr(wx, "GetOsDescription", lambda: "macOS")
+    monkeypatch.setattr(storage, "load_settings", lambda: {})
+    monkeypatch.setattr(storage, "load_profiles", lambda: [])
+    monkeypatch.setattr(storage, "get_file_associations", lambda: {})
+    frame = wx.Frame(None)
+    host = view.build_settings_panel(frame, settings_model.WxSettingsModel())
+    assert not host._wx_settings_preference_controls["close_vcxsrv_on_exit"].IsShown()
+    host.Destroy()
+    frame.Destroy()
+
+
 def test_settings_shortcut_editor_changes_resets_and_persists_bindings(app, monkeypatch):
     import hpc_gui.config.storage as storage
     import hpc_gui.wx_settings as settings_model
@@ -190,6 +267,8 @@ def test_settings_shortcut_editor_changes_resets_and_persists_bindings(app, monk
     monkeypatch.setattr(storage, "load_profiles", lambda: [])
     monkeypatch.setattr(storage, "get_file_associations", lambda: {})
     monkeypatch.setattr(storage, "set_transfer_checksum_verification_enabled", lambda _value: False)
+    preflight = []
+    monkeypatch.setattr(storage, "set_upload_preflight_confirmation_enabled", lambda value: preflight.append(value) or value)
     snapshots = []
     updates = []
     original_persist = settings_model.persist_model_snapshot

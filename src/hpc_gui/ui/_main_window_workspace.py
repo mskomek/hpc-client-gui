@@ -2,7 +2,7 @@
 
 Mixin owning tab composition fan-out (session changes, polling sync),
 shell/editor routing, script-submission follow, job polling/finish
-notices and the settings opener. The
+notices. The
 ``get_sbatch_follow_mode`` helper patched by tests at
 ``hpc_gui.ui.main_window`` is resolved through the facade at call time.
 """
@@ -22,7 +22,6 @@ from hpc_gui.config.storage import (
 from . import _main_window_contracts as _contracts
 from hpc_gui.core.i18n import t
 from .async_call import AsyncCall
-from .dialogs.settings_dialog import SettingsDialog
 from .widgets.editor_widget import EditorWidget
 
 
@@ -36,21 +35,6 @@ class _MainWindowWorkspaceMixin:
 
     def run_shell_in_terminal(self, script_path: str) -> None:
         self.run_shell_batch_in_terminal([script_path])
-
-    def _open_settings(self):
-        try:
-            dlg = SettingsDialog(
-                self,
-                session=getattr(self, "_session", None),
-                update_remote_defaults=self.login.update_active_profile_remote_defaults,
-                clear_remote_directory_cache=self.ftp.clear_remote_directory_caches,
-            )
-            dlg.exec()
-            self.jobs_outputs.apply_refresh_settings()
-            self._sync_command_polling()
-            self.ftp.apply_settings()
-        except Exception:
-            pass
 
     def on_session_changed(self, session):
         self._job_poll_generation += 1
