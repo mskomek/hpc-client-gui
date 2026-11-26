@@ -74,7 +74,8 @@ def create_template_browser(parent, templates, *, provider_template=None):
             elif var.type == "integer":
                 # Text preserves arbitrary integer bounds without native C-int truncation.
                 field = wx.TextCtrl(form, value=str(var.default) if var.default is not None else "1")
-                getter = lambda field=field: field.GetValue().strip() or None
+                def getter(field=field):
+                    return field.GetValue().strip() or None
             elif var.name == "partition" and partitions:
                 choices = list(dict.fromkeys((*partitions, *var.choices)))
                 field = wx.ComboBox(form, choices=choices, value=str(var.default or choices[0]))
@@ -86,7 +87,8 @@ def create_template_browser(parent, templates, *, provider_template=None):
             else:
                 initial = var.default if var.default is not None else (account if var.name == "account" else "")
                 field = wx.TextCtrl(form, value=str(initial))
-                getter = lambda field=field: field.GetValue().strip() or None
+                def getter(field=field):
+                    return field.GetValue().strip() or None
             fields[var.name] = (field, getter)
             text = wx.StaticText(form, label=label)
             text.Wrap(180)
