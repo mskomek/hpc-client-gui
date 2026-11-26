@@ -30,12 +30,15 @@ def request_conflict_decision(parent, files, item, current, metadata):
 
             def poll():
                 nonlocal timer
-                if not dialog.IsModal():
-                    return
-                if not current() or not parent_alive():
-                    dialog.EndModal(wx.ID_CANCEL)
-                    return
-                timer = wx.CallLater(50, poll)
+                try:
+                    if not dialog.IsModal():
+                        return
+                    if not current() or not parent_alive():
+                        dialog.EndModal(wx.ID_CANCEL)
+                        return
+                    timer = wx.CallLater(50, poll)
+                except RuntimeError:
+                    ready.set()
 
             timer = wx.CallLater(50, poll)
             if dialog.ShowModal() != wx.ID_OK or not current():

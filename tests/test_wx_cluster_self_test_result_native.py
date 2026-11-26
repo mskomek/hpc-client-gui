@@ -14,6 +14,7 @@ def test_native_result_renders_observations_and_copies_safe_text(tmp_path):
     root = Path(__file__).resolve().parents[1]
     script = """
 import wx
+import traceback
 from unittest.mock import patch
 from hpc_gui.core.i18n import load_language
 from hpc_gui.services.cluster_self_test import ClusterSelfTestResult, SelfTestSection, SelfTestItem
@@ -51,13 +52,18 @@ def click(button):
     evt.SetEventObject(button)
     button.GetEventHandler().ProcessEvent(evt)
 
+errors = []
 def act():
-    click(controls["copy"])
-    click(controls["again"])
+    try:
+        click(controls["copy"])
+        click(controls["again"])
+    except Exception:
+        errors.append(traceback.format_exc())
+        dialog.EndModal(wx.ID_CANCEL)
 
 with patch.object(wx, "TheClipboard", Clipboard()):
     wx.CallLater(50, act)
-    assert dialog.ShowModal() == RUN_AGAIN_ID
+    assert dialog.ShowModal() == RUN_AGAIN_ID, errors
 assert len(copied) == 1 and "ssh: PASS" in copied[0] and "status: PASS" in copied[0]
 assert "password" not in copied[0]
 dialog.Destroy()
