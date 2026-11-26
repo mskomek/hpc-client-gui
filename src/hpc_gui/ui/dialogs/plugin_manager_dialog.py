@@ -42,8 +42,8 @@ from hpc_gui.plugins.storage import read_active_versions, read_disabled_ids
 from hpc_gui.services.plugin_request import PLUGIN_REQUEST_URL
 from hpc_gui.ui.async_call import AsyncCall
 from hpc_gui.ui.dialogs import plugin_manager_cards as plugin_cards
-from hpc_gui.ui.dialogs import plugin_manager_state as plugin_state
-from hpc_gui.ui.dialogs.plugin_manager_state import capability_label
+from hpc_gui.services import plugin_manager_state as plugin_state
+from hpc_gui.services.plugin_manager_state import capability_label
 
 __all__ = [
     "PLUGIN_REQUEST_URL",

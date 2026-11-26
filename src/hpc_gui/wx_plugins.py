@@ -311,7 +311,10 @@ class WxPluginManagerModel:
                 continue
             if normalized == "updates" and not (card.update_available and card.installed):
                 continue
-            if query and query not in _search_text_for_card(card):
+            raw = self.registry_entries.get(card.plugin_id, {})
+            search_text = " ".join((_search_text_for_card(card), str(raw.get("publisher", "")),
+                                    *self.other_versions.get(card.plugin_id, ()), card.active_version or "")).lower()
+            if query and query not in search_text:
                 continue
             selected.append(card)
         return tuple(selected)

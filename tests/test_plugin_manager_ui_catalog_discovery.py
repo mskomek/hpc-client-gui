@@ -1,277 +1,130 @@
-"""Wave 05 tests: Plugins button and Plugin Manager dialog states.
+"""Wave 05 catalogue cases migrated to the actual wx manager model."""
+from hpc_gui.core.i18n import load_language, t
+from hpc_gui.plugins.state import record_installed_version
+from hpc_gui.wx_plugins import WxPluginManagerModel
 
-All registry/installer interactions use injected fetchers and patched
-service functions; nothing touches the network.
-"""
+FLUENT = "org.hpcclient.fluent"
+TRUBA = "org.hpcclient.truba"
+FUTURE = "org.hpcclient.future"
 
-from __future__ import annotations
 
-pytest_plugins = ('support.test_plugin_manager_ui_shared',)
-from support.test_plugin_manager_ui_shared import (
-    PluginManagerDialog,
-    VALID_REGISTRY,
-    _buttons_of_card,
-    apply_registry,
-    discover_buttons,
-    discover_cards,
-    discover_labels,
-    grouped_registry,
-    json,
-    make_entry,
-    mock,
-    pytest,
-    t,
-)
+def entry(pid, name, version, capability, requires=">=1.4.0"):
+    return {"id": pid, "name": name, "version": version, "type": capability,
+            "requires_app": requires, "publisher": "HPC Client GUI",
+            "description": f"{name} plugin."}
 
-@pytest.mark.gui
-def test_mocked_registry_populates_discover(qapp, monkeypatch):
-    monkeypatch.setattr(
-        "hpc_gui.ui.dialogs.plugin_manager_dialog.read_active_versions",
-        lambda: {},
-    )
-    monkeypatch.setattr(
-        "hpc_gui.ui.dialogs.plugin_manager_dialog.read_disabled_ids",
-        lambda: set(),
-    )
-    dialog = PluginManagerDialog(fetcher=lambda url, limit: (_ for _ in ()).throw(OSError()))
-    try:
-        apply_registry(dialog)
-        assert t("plugins.status_online") in dialog.status_label.text()
 
-        texts = []
-        container = dialog.discover_list.widget()
-        for label in container.findChildren(type(dialog.status_label)):
-            texts.append(label.text())
-        joined = "\n".join(texts)
-        assert "TRUBA" in joined
-        assert t("plugins.installed_badge") not in joined or "TRUBA" in joined
+def basic():
+    return {"plugins": [entry(TRUBA, "TRUBA", "1.0.0", "cluster-profile"),
+                        entry(FUTURE, "Future", "9.9.9", "lint-rules", ">=99.0.0")]}
 
-        # Incompatible plugin's install button is disabled.
-        buttons = [w for w in container.findChildren(__import__("PySide6.QtWidgets", fromlist=["QPushButton"]).QPushButton)]
-        future_button = next(b for b in buttons if b.text() == t("plugins.incompatible"))
-        assert not future_button.isEnabled()
-        truba_install = next(b for b in buttons if b.text() == t("plugins.install"))
-        assert truba_install.isEnabled()
-    finally:
-        dialog.deleteLater()
 
-@pytest.mark.gui
-def test_updates_tab_lists_newer_compatible_version(qapp):
-    dialog = PluginManagerDialog()
-    try:
-        dialog._registry = json.loads(json.dumps(VALID_REGISTRY))
-        dialog._registry_source = "network"
+def grouped():
+    return {"plugins": [entry(TRUBA, "TRUBA", "1.0.0", "cluster-profile"),
+                        entry(FLUENT, "Fluent Tools", "0.2.0", "lint-rules"),
+                        entry(FLUENT, "Fluent Tools", "0.1.0", "lint-rules")]}
 
-        dialog._populate_updates({"org.hpcclient.truba": "0.9.0"})
-        container = dialog.updates_list.widget()
-        text = "\n".join(
-            label.text()
-            for label in container.findChildren(type(dialog.status_label))
-        )
-        assert "0.9.0" in text and "1.0.0" in text
 
-        # Up-to-date plugins produce the empty-state message.
-        dialog._populate_updates({"org.hpcclient.truba": "1.0.0"})
-        text = "\n".join(
-            label.text()
-            for label in dialog.updates_list.widget().findChildren(type(dialog.status_label))
-        )
-        assert t("plugins.no_updates") in text
-    finally:
-        dialog.deleteLater()
+def build(tmp_path, registry, active=None, disabled=()):
+    model = WxPluginManagerModel(root=tmp_path, app_version="2.0.0")
+    for pid, version in (active or {}).items():
+        record_installed_version(pid, version, root=tmp_path)
+    for pid in disabled:
+        model.set_enabled(pid, False)
+    model.build_cards_from_registry(registry, "network")
+    return model
 
-@pytest.mark.gui
-def test_search_filter_hides_non_matching_cards(qapp):
-    dialog = PluginManagerDialog()
-    apply_registry(dialog)
 
-    container = dialog.discover_list.widget()
-    cards = [
-        child for child in container.findChildren(__import__("PySide6.QtWidgets", fromlist=["QFrame"]).QFrame)
-        if child.property("searchText")
-    ]
-    assert len(cards) == 2
+def find(model, pid):
+    return next(card for card in model.cards if card.plugin_id == pid)
 
-    dialog.search_box.setText("TRUBA")
-    visibility = {card.property("searchText"): card.isVisibleTo(container) for card in cards}
-    truba_cards = [v for k, v in visibility.items() if "truba" in k]
-    future_cards = [v for k, v in visibility.items() if "future" in k.lower()]
-    assert any(truba_cards)
-    assert all(not v for v in future_cards)
 
-    dialog.search_box.setText("")
-    assert all(card.isVisibleTo(container) for card in cards)
+def test_mocked_registry_populates_discover(tmp_path):
+    model = build(tmp_path, basic())
+    assert model.registry_source == "network"
+    assert {c.plugin_id for c in model.filtered_cards()} == {TRUBA, FUTURE}
+    assert find(model, TRUBA).compatible and not find(model, TRUBA).installed
+    assert not find(model, FUTURE).compatible
 
-@pytest.mark.gui
-def test_discover_groups_multiple_versions_under_one_card(qapp):
-    dialog = PluginManagerDialog()
-    try:
-        dialog._registry = grouped_registry()
-        dialog._registry_source = "network"
-        dialog._populate_discover({})
 
-        cards = discover_cards(dialog)
-        assert len(cards) == 2  # one per plugin id, not per version
+def test_updates_tab_lists_newer_compatible_version(tmp_path):
+    model = build(tmp_path, basic(), {TRUBA: "0.9.0"})
+    update, = model.filtered_cards("updates")
+    assert (update.active_version, update.version) == ("0.9.0", "1.0.0")
+    record_installed_version(TRUBA, "1.0.0", root=tmp_path)
+    model.reload_installed()
+    assert model.filtered_cards("updates") == ()
 
-        texts = discover_labels(dialog)
-        assert any("v0.2.0" in text for text in texts)
-        assert not any(
-            text.startswith("Fluent Tools v0.1.0") for text in texts
-        )
-        # Older version remains visible in the catalogue details row.
-        assert any(t("plugins.other_versions_catalog") in text and "0.1.0" in text for text in texts)
-    finally:
-        dialog.deleteLater()
 
-@pytest.mark.gui
-def test_discover_selects_latest_compatible_with_incompatible_newer(qapp):
-    registry = grouped_registry()
-    registry["plugins"].append(
-        make_entry(
-            "org.hpcclient.fluent", "Fluent Tools", "9.9.9", "lint-rules",
-            requires_app=">=99.0.0",
-        )
-    )
-    dialog = PluginManagerDialog()
-    try:
-        dialog._registry = registry
-        dialog._registry_source = "network"
-        dialog._populate_discover({})
+def test_search_filter_hides_non_matching_cards(tmp_path):
+    model = build(tmp_path, basic())
+    assert len(model.filtered_cards()) == 2
+    assert [c.plugin_id for c in model.filtered_cards(needle="TRUBA")] == [TRUBA]
+    assert len(model.filtered_cards(needle="")) == 2
 
-        cards = discover_cards(dialog)
-        assert len(cards) == 2
-        texts = discover_labels(dialog)
-        # The compatible 0.2.0 is primary; the incompatible 9.9.9 does not
-        # shadow it and is not offered as an installable card.
-        assert any("v0.2.0" in text for text in texts)
-        assert not any("v9.9.9" in text for text in texts)
 
-        install_buttons = [b for b in discover_buttons(dialog) if b.text() == t("plugins.install")]
-        assert all(b.isEnabled() for b in install_buttons)
-    finally:
-        dialog.deleteLater()
+def test_discover_groups_multiple_versions_under_one_card(tmp_path):
+    model = build(tmp_path, grouped())
+    assert len(model.cards) == 2
+    card = find(model, FLUENT)
+    assert card.version == "0.2.0"
+    assert model.other_versions[FLUENT] == ("0.1.0",)
+    assert "0.1.0" in model.details_for(card)
 
-@pytest.mark.gui
-def test_discover_shows_only_incompatible_state_when_nothing_compatible(qapp):
-    registry = {
-        **grouped_registry(),
-        "plugins": [make_entry("org.hpcclient.future", "Future", "2.0.0", "lint-rules", ">=99.0.0")],
-    }
-    dialog = PluginManagerDialog()
-    try:
-        dialog._registry = registry
-        dialog._registry_source = "network"
-        dialog._populate_discover({})
-        buttons = discover_buttons(dialog)
-        incompatible = [b for b in buttons if b.text() == t("plugins.incompatible")]
-        assert incompatible and not incompatible[0].isEnabled()
-    finally:
-        dialog.deleteLater()
 
-@pytest.mark.gui
-def test_discover_update_detection(qapp):
-    dialog = PluginManagerDialog()
-    try:
-        dialog._registry = grouped_registry()
-        dialog._registry_source = "network"
-        dialog._populate_discover({"org.hpcclient.fluent": "0.1.0"})
+def test_discover_selects_latest_compatible_with_incompatible_newer(tmp_path):
+    registry = grouped()
+    registry["plugins"].append(entry(FLUENT, "Fluent Tools", "9.9.9", "lint-rules", ">=99.0.0"))
+    model = build(tmp_path, registry)
+    assert len(model.cards) == 2
+    assert find(model, FLUENT).version == "0.2.0"
+    assert all(card.compatible for card in model.cards)
+    assert all(card.version != "9.9.9" for card in model.cards)
 
-        texts = discover_labels(dialog)
-        assert any(t("plugins.update_available") in text for text in texts)
-        fluent_buttons = _buttons_of_card(dialog, "fluent")
-        assert any(b.text() == t("plugins.update") for b in fluent_buttons)
-        assert not any(b.text() == t("plugins.install") for b in fluent_buttons)
-    finally:
-        dialog.deleteLater()
 
-@pytest.mark.gui
-def test_discover_latest_version_installed_shows_no_update(qapp):
-    dialog = PluginManagerDialog()
-    try:
-        dialog._registry = grouped_registry()
-        dialog._registry_source = "network"
-        # Active 0.2.0 (latest): installed badge only, never a downgrade.
-        dialog._populate_discover({"org.hpcclient.fluent": "0.2.0"})
+def test_discover_shows_only_incompatible_state_when_nothing_compatible(tmp_path):
+    model = build(tmp_path, {"plugins": [entry(FUTURE, "Future", "2.0.0", "lint-rules", ">=99.0.0")]})
+    card, = model.cards
+    assert not card.compatible
 
-        texts = discover_labels(dialog)
-        assert any(t("plugins.installed_badge") in text for text in texts)
-        assert not any(t("plugins.update_available") in text for text in texts)
-        assert not any(
-            b.text() == t("plugins.update")
-            for b in _buttons_of_card(dialog, "fluent")
-        )
-    finally:
-        dialog.deleteLater()
 
-@pytest.mark.gui
-def test_discover_newer_active_version_gets_no_update_offer(qapp):
-    dialog = PluginManagerDialog()
-    try:
-        dialog._registry = grouped_registry()
-        dialog._registry_source = "network"
-        # A newer active version than the registry must not offer updates
-        # (no downgrade presented as an update).
-        dialog._populate_discover({"org.hpcclient.fluent": "9.0.0"})
-        assert not any(
-            b.text() == t("plugins.update")
-            for b in _buttons_of_card(dialog, "fluent")
-        )
-    finally:
-        dialog.deleteLater()
+def test_discover_update_detection(tmp_path):
+    model = build(tmp_path, grouped(), {FLUENT: "0.1.0"})
+    assert find(model, FLUENT).update_available
+    assert find(model, FLUENT).installed
+    assert model.filtered_cards("updates") == (find(model, FLUENT),)
 
-@pytest.mark.gui
-def test_discover_disabled_plugin_state(qapp):
-    dialog = PluginManagerDialog()
-    try:
-        dialog._registry = grouped_registry()
-        dialog._registry_source = "network"
-        with mock.patch(
-            "hpc_gui.ui.dialogs.plugin_manager_dialog.read_disabled_ids",
-            return_value={"org.hpcclient.fluent"},
-        ):
-            dialog._populate_discover({"org.hpcclient.fluent": "0.2.0"})
-        texts = discover_labels(dialog)
-        assert any(t("plugins.disabled_label") in text for text in texts)
-    finally:
-        dialog.deleteLater()
 
-@pytest.mark.gui
-def test_search_filter_after_grouping(qapp):
-    dialog = PluginManagerDialog()
-    try:
-        dialog._registry = grouped_registry()
-        dialog._registry_source = "network"
-        dialog._populate_discover({})
+def test_discover_latest_version_installed_shows_no_update(tmp_path):
+    model = build(tmp_path, grouped(), {FLUENT: "0.2.0"})
+    assert find(model, FLUENT).installed and not find(model, FLUENT).update_available
 
-        cards = discover_cards(dialog)
-        dialog.search_box.setText("fluent")
-        visible = {c.property("searchText"): c.isVisibleTo(c.parentWidget()) for c in cards}
-        assert any(v and "fluent" in k for k, v in visible.items())
-        assert all(not v for k, v in visible.items() if "truba" in k)
 
-        # Old versions are searchable too.
-        dialog.search_box.setText("0.1.0")
-        matches = [c for c in cards if c.isVisibleTo(c.parentWidget())]
-        assert len(matches) == 1 and "fluent" in matches[0].property("searchText")
+def test_discover_newer_active_version_gets_no_update_offer(tmp_path):
+    model = build(tmp_path, grouped(), {FLUENT: "9.0.0"})
+    assert find(model, FLUENT).active_version == "9.0.0"
+    assert not find(model, FLUENT).update_available
 
-        dialog.search_box.setText("")
-        assert all(c.isVisibleTo(c.parentWidget()) for c in cards)
-    finally:
-        dialog.deleteLater()
 
-@pytest.mark.gui
-def test_updates_tab_uses_grouped_latest(qapp):
-    dialog = PluginManagerDialog()
-    dialog._registry = grouped_registry()
-    dialog._registry_source = "network"
+def test_discover_disabled_plugin_state(tmp_path):
+    model = build(tmp_path, grouped(), {FLUENT: "0.2.0"}, [FLUENT])
+    load_language("en")
+    card = find(model, FLUENT)
+    assert not card.enabled
+    assert t("plugins.installed_disabled") in model.details_for(card)
 
-    dialog._populate_updates({"org.hpcclient.fluent": "0.1.0"})
-    container = dialog.updates_list.widget()
-    text = "\n".join(label.text() for label in container.findChildren(type(dialog.status_label)))
-    assert "0.1.0" in text and "0.2.0" in text
 
-    dialog._populate_updates({"org.hpcclient.fluent": "0.2.0"})
-    text = "\n".join(
-        label.text() for label in dialog.updates_list.widget().findChildren(type(dialog.status_label))
-    )
-    assert t("plugins.no_updates") in text
+def test_search_filter_after_grouping(tmp_path):
+    model = build(tmp_path, grouped())
+    for needle in ("fluent", "0.1.0"):
+        assert [c.plugin_id for c in model.filtered_cards(needle=needle)] == [FLUENT]
+    assert len(model.filtered_cards()) == 2
+
+
+def test_updates_tab_uses_grouped_latest(tmp_path):
+    model = build(tmp_path, grouped(), {FLUENT: "0.1.0"})
+    update, = model.filtered_cards("updates")
+    assert (update.active_version, update.version) == ("0.1.0", "0.2.0")
+    record_installed_version(FLUENT, "0.2.0", root=tmp_path)
+    model.reload_installed()
+    assert model.filtered_cards("updates") == ()

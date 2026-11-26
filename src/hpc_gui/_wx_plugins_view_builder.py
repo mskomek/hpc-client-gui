@@ -79,6 +79,8 @@ def _build_plugins(
     top.Add(search, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 12)
     top.Add(status, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 12)
 
+    empty_note = wx.StaticText(panel, label="")
+    empty_note.Hide()
     btn_row = wx.BoxSizer(wx.HORIZONTAL)
     btn_row.Add(btn_refresh, 0, wx.RIGHT, 8)
     btn_row.Add(btn_install, 0, wx.RIGHT, 8)
@@ -89,6 +91,7 @@ def _build_plugins(
 
     root_sizer.Add(top, 0, wx.EXPAND)
     root_sizer.Add(list_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    root_sizer.Add(empty_note, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     # W33 (HPC-W08-LIFE-005): state the real enable/disable behavior where
     # the toggle is offered; a bare checkbox is misleading.
     effect_note = wx.StaticText(
@@ -135,19 +138,24 @@ def _build_plugins(
             idx = list_ctrl.InsertItem(list_ctrl.GetItemCount(), card.name or card.plugin_id)
             # W26 (HPC-W06-TODO-PLUGIN-COMPAT-001): version, install/enabled
             # state and compatibility must be visible where relevant.
-            state_bits = []
-            state_bits.append("installed" if card.installed else "available")
-            state_bits.append("enabled" if card.enabled else "disabled")
+            from hpc_gui.services.plugin_manager_state import capability_label
+            state_bits = [t("plugins.installed_badge") if card.installed else t("plugins.installed_not_installed")]
+            if card.installed:
+                state_bits.append(t("plugins.active_badge") if card.enabled else t("plugins.disabled_label"))
             if card.problem:
                 state_bits.append(t("plugins.invalid_plugin"))
             if not card.compatible:
-                state_bits.append("incompatible")
+                state_bits.append(t("plugins.incompatible"))
             if card.update_available:
-                state_bits.append("update-available")
+                state_bits.append(t("plugins.update_available"))
+            state_bits.extend(capability_label(cap) for cap in card.capabilities)
             detail = f"{card.version} {' / '.join(state_bits)}"
             if card.active_version and card.active_version != card.version:
-                detail += f" (active {card.active_version})"
+                detail += f" ({t('plugins.active_badge')} {card.active_version})"
             list_ctrl.SetItem(idx, 1, detail)
+        empty_keys = {"discover": "plugins.no_plugins", "installed": "plugins.no_installed", "updates": "plugins.no_updates"}
+        empty_note.SetLabel(t(empty_keys[view]) if not needle else "")
+        empty_note.Show(not visible and not needle)
         refresh_problems(view)
         _update_buttons()
 
@@ -426,6 +434,9 @@ def _build_plugins(
             current_view=_current_view,
             update_buttons=_update_buttons,
         )
+        if not state["closed"]:
+            status.SetLabel(_loading_label() if state["in_flight"] else _status_label_for_source(model.registry_source))
+            _refresh_list()
 
     btn_refresh.Bind(wx.EVT_BUTTON, refresh_registry)
     btn_install.Bind(wx.EVT_BUTTON, do_install)
@@ -468,11 +479,12 @@ def _build_plugins(
         "install": btn_install,
         "disable": btn_disable,
         "remove": btn_remove,
-        "close": btn_close, "problems": problem_control, **trusted_controls, **management_controls,
+        "close": btn_close, "empty_note": empty_note, "problems": problem_control, **trusted_controls, **management_controls,
     }
     host._wx_plugins_model = model
     host._wx_plugins_state = state
 
+    status.SetLabel(_status_label_for_source(model.registry_source))
     _refresh_list()
     finish()
     if not embedded and not model.cards:

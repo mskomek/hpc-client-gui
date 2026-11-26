@@ -54,6 +54,7 @@ manifest = NS(id=pid, version="1", publisher="HPC Client GUI", plugin_api=2,
               capabilities=["linter-tool"], entrypoints={"linter_engine":"engine/ansys_lint/__init__.py"})
 plugin = NS(manifest=manifest)
 opened = []
+errors_details = []
 with patch("hpc_gui.plugins.loader.load_installed_plugins", return_value=NS(plugins=[plugin])),      patch("hpc_gui.services.wx_plugin_menu_host.WxPluginMenuHost.open_trusted_tool",
            lambda self, plugin: opened.append(plugin) or True):
     select(0)
@@ -61,6 +62,12 @@ with patch("hpc_gui.plugins.loader.load_installed_plugins", return_value=NS(plug
     assert note.IsShown() and t("plugins.trusted_tool_disclosure_short") in note.GetLabel().replace("\n", " ")
     click()
     assert opened == [plugin]
+    with patch.object(wx, "MessageBox", lambda msg, *a: errors_details.append(msg)):
+        detail = controls["details"]
+        event = wx.CommandEvent(wx.EVT_BUTTON.typeId, detail.GetId())
+        event.SetEventObject(detail)
+        detail.GetEventHandler().ProcessEvent(event)
+    assert t("plugins.trusted_tool_disclosure") in errors_details[0]
     select(1)
     assert not button.IsEnabled()
     click()

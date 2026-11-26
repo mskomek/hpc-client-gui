@@ -29,7 +29,7 @@ from hpc_gui.plugins.compatibility import (
     effective_requires_app,
     entry_is_app_compatible,
 )
-from hpc_gui.ui.dialogs import plugin_manager_state as state
+from hpc_gui.services import plugin_manager_state as state
 
 
 def make_scroll_list() -> QScrollArea:
