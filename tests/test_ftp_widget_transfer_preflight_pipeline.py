@@ -6,7 +6,6 @@ from support.ftp_widget_test_support import (
     QApplication,
     SimpleNamespace,
     TransferDialog,
-    TransferItem,
     _Files,
     _PlannedOp,
     patch,
