@@ -36,14 +36,28 @@ splash.Show()
 flow = start_startup_flow(app, splash, lambda: completed.append(True))
 
 def pump_until(predicate, timeout=8):
+    if predicate():
+        return
+    # The production startup is driven by native timer messages inside a
+    # running event loop. ProcessPendingEvents/Yield alone do not reliably
+    # dispatch those messages on Windows.
+    loop = wx.GUIEventLoop()
     deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        app.ProcessPendingEvents()
-        wx.YieldIfNeeded()
+    timer = None
+    def check():
+        nonlocal timer
         if predicate():
-            return
-        time.sleep(.01)
-    raise AssertionError('startup condition timed out')
+            loop.Exit(0)
+        elif time.monotonic() >= deadline:
+            loop.Exit(1)
+        else:
+            timer = wx.CallLater(20, check)
+    with wx.EventLoopActivator(loop):
+        timer = wx.CallLater(20, check)
+        code = loop.Run()
+    if timer is not None:
+        timer.Stop()
+    assert code == 0 and predicate(), 'native startup condition timed out'
 
 pump_until(lambda: completed == [True])
 assert splash._wx_splash_state['stages']['preferences'] == 'complete'
