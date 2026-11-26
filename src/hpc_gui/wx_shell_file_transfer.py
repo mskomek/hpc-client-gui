@@ -8,6 +8,7 @@ from hpc_gui.services.transfer_conflict_policy import (
     available_rename_destination, conflict_target, destination_exists, read_conflict_metadata, resolve_conflict_action,
 )
 import inspect
+from pathlib import Path
 from hpc_gui.core.i18n import t
 
 
@@ -39,6 +40,11 @@ def _run_file_view_item(files, item, progress, *, conflict_decision=None):
             raise
         except Exception as error:
             raise RuntimeError(f"Download failed ({item.src} -> {item.dst}): {error}") from error
+    elif item.op == "mkdir_local":
+        target = Path(item.dst)
+        if target.is_symlink():
+            raise ValueError(f"Unsafe local directory symlink: {target}")
+        target.mkdir(parents=True, exist_ok=True)
     elif item.op == "mkdir_remote":
         try:
             files.mkdir(item.dst)

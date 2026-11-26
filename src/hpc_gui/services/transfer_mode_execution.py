@@ -1,6 +1,7 @@
 """Mode-aware execution for the native file queue, independent of GUI toolkit."""
 from __future__ import annotations
 
+from pathlib import Path
 from hpc_gui.services.transfer_conflict_policy import destination_exists
 from hpc_gui.services.transfer_mode import (
     BINARY, CHUNK_SIZE, download_with_mode, is_known_text_path,
@@ -17,6 +18,8 @@ def execute_with_mode(files, item, progress, requested, decision, raw_transfer, 
     requested = normalize_transfer_mode(requested)
     final_exists = destination_exists(files, item.op, item.dst)
     if final_exists and decision == "resume":
+        if item.op == "download" and Path(item.dst).is_symlink():
+            raise ValueError("Refusing to resume into a local symlink")
         if item.op == "upload":
             with open(item.src, "rb") as stream:
                 effective = resolve_transfer_mode(item.src, requested, stream.read(CHUNK_SIZE))

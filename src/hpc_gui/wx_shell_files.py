@@ -4,12 +4,12 @@ from __future__ import annotations
 from pathlib import Path
 from pathlib import PurePosixPath
 from threading import Thread
-from hpc_gui.services.transfer_controller import TransferItem
 import shlex
 from hpc_gui.core.i18n import t
 from hpc_gui.wx_shell_terminal import _run_shell_in_terminal
 from hpc_gui.wx_shell_file_transfer import _start_file_transfers
 from hpc_gui.wx_shell_upload import prepare_upload
+from hpc_gui.wx_shell_download import prepare_download
 
 
 def _editor_session_key(session_state):
@@ -284,7 +284,9 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
             return True
 
     def remote_operation(action, paths, destination=""):
-        files = _resolve_files()
+        session = _resolve_session()
+        files = session.get("files")
+        generation = session_state.get("generation")
         if action == "delete" and files:
             for remote_path in paths:
                 files.remove(remote_path, recursive=True)
@@ -298,14 +300,12 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
                 (files.copy if action == "copy" else files.move)(remote_path, target)
             return
         if action == "download" and files and destination:
-            items = [TransferItem("download", remote_path, str(Path(destination) / PurePosixPath(remote_path).name)) for remote_path in paths]
-            _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
+            prepare_download(session_state, lifecycle, parent, session, files, paths,
+                             destination, _start_file_transfers, generation=generation)
             return
         if action == "upload" and files and destination:
-            session = _resolve_session()
             prepare_upload(session_state, lifecycle, parent, session, files, paths,
-                           destination, _start_file_transfers,
-                           generation=session_state.get("generation"))
+                           destination, _start_file_transfers, generation=generation)
             return
         if action == "new_folder" and files and destination:
             files.mkdir(destination)
