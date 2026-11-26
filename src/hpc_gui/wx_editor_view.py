@@ -297,6 +297,8 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
         event.Skip()
 
     def refresh_labels(_language=None):
+        if state["closed"]:
+            return
         try:
             _rl = t("editor.remote") if t("editor.remote") != "[editor.remote]" else t("dirs.path")
             remote_label.SetLabel(_rl)
@@ -350,13 +352,14 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
 
     subscribe_language_change(refresh_labels)
     host.bind_host_close(close)
-    if on_destroy is not None:
-        def destroyed(event):
+    def destroyed(event):
+        if event.GetEventObject() is host:
+            state["closed"] = True
             unsubscribe_language_change(refresh_labels)
             notify_destroy()
-            event.Skip()
+        event.Skip()
 
-        host.Bind(wx.EVT_WINDOW_DESTROY, destroyed)
+    host.Bind(wx.EVT_WINDOW_DESTROY, destroyed)
     host._wx_editor_controls = {"editor": editor, "save": save, "submit": submit, "run": run, "status": status, "doc_tabs": doc_tabs, "find_in": find_in, "replace_in": replace_in, "find_next": btn_find_next, "find_prev": btn_find_prev, "match_case": chk_match_case, "replace": btn_replace, "replace_all": btn_replace_all, "find_label": find_label, "replace_label": replace_label}
     host._wx_editor_header = {"path": remote_path, "path_label": remote_label, "open": btn_open, "new_template": btn_template, "lint": btn_lint, "array": btn_array, "header": header, "doc_tabs": doc_tabs, "remote_label": remote_label}
     host._wx_editor_state = state

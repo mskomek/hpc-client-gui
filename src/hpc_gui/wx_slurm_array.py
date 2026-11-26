@@ -32,9 +32,13 @@ def create_array_dialog(parent, script_text):
     root.Add(grid, 1, wx.ALL | wx.EXPAND, 12)
     error = wx.StaticText(dialog, label="")
     root.Add(error, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
-    buttons = dialog.CreateStdDialogButtonSizer(wx.OK | wx.CANCEL)
+    buttons = wx.StdDialogButtonSizer()
+    ok = wx.Button(dialog, wx.ID_OK)
+    cancel = wx.Button(dialog, wx.ID_CANCEL)
+    buttons.AddButton(ok)
+    buttons.AddButton(cancel)
+    buttons.Realize()
     root.Add(buttons, 0, wx.ALL | wx.EXPAND, 12)
-    ok = dialog.FindWindowById(wx.ID_OK)
     result = {"text": None}
 
     try:
@@ -60,10 +64,23 @@ def create_array_dialog(parent, script_text):
             error.SetLabel(str(exc))
             ok.Disable()
 
+    refreshing = False
+
     def refresh(_event=None):
+        nonlocal refreshing
+        if refreshing:
+            return
+        refreshing = True
+        try:
+            refresh_fields()
+        finally:
+            refreshing = False
+
+    def refresh_fields():
         enabled = array.GetValue()
         for field in (*fields.values(), directive):
-            field.Enable(enabled)
+            if field.IsEnabled() != enabled:
+                field.Enable(enabled)
         if enabled:
             try:
                 spec = SlurmArraySpec(fields["start"].GetValue(), fields["end"].GetValue(),

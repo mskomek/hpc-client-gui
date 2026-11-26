@@ -34,8 +34,13 @@ def create_template_browser(parent, templates, *, provider_template=None):
     right.Add(error, 0, wx.EXPAND | wx.TOP, 8)
     body.Add(right, 2, wx.EXPAND | wx.ALL, 10)
     root.Add(body, 1, wx.EXPAND)
-    root.Add(dialog.CreateStdDialogButtonSizer(wx.OK | wx.CANCEL), 0, wx.ALL | wx.EXPAND, 10)
-    ok = dialog.FindWindowById(wx.ID_OK)
+    buttons = wx.StdDialogButtonSizer()
+    ok = wx.Button(dialog, wx.ID_OK)
+    cancel = wx.Button(dialog, wx.ID_CANCEL)
+    buttons.AddButton(ok)
+    buttons.AddButton(cancel)
+    buttons.Realize()
+    root.Add(buttons, 0, wx.ALL | wx.EXPAND, 10)
     fields = {}
     result = {"value": None}
 
