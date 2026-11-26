@@ -1,13 +1,10 @@
 """Remote transfer-execution leaf for the file-manager remote panel.
 
-Owns ``RemoteTransferExecMixin``: the ``_FileOpWorker`` single-batch worker,
-the plan runner (``_run_plan_with_progress`` with ``TransferDialog`` wiring,
+Owns ``RemoteTransferExecMixin``: the plan runner (``_run_plan_with_progress`` with ``TransferDialog`` wiring,
 transfer-key dedup, and transfer-activity callbacks), item execution with
 integrity verification, and the lifecycle-critical ``shutdown()``. Planning
 (workers, conflict bridge, confirmation gate) lives in ``_remote_transfer_plan``;
-directional plan builders live in the download/upload/copy-move leaves; progress
-UI, audit journal, and diagnostic persistence live in
-``_remote_transfer_progress``; all are reached via ``self``.
+directional plan builders live in the download/upload/copy-move leaves.
 
 Lifecycle ordering preserved verbatim: cancel active worker → quit/wait(1500)
 active thread → mark planning jobs cancelled → rescue-close a blocking SFTP
@@ -29,7 +26,7 @@ import os
 import shutil
 from typing import Dict, List, Tuple
 
-from PySide6.QtCore import QObject, QThread, Signal, Slot
+from PySide6.QtCore import QThread
 
 from hpc_gui.config.storage import (
     coerce_profile_transfer_parallelism,
@@ -41,64 +38,6 @@ from hpc_gui.services.transfer_mode import download_with_mode, upload_with_mode
 from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog, TransferItem
 from hpc_gui.ui.widgets._remote_mutations import _PlannedOp
 from hpc_gui.ui.widgets._remote_transfer_plan import _TransferPlanWorker
-
-
-class _FileOpWorker(QObject):
-    progress = Signal(int, str)  # step, label
-    finished = Signal(bool, str)  # cancelled, message
-
-    def __init__(self, files_backend, plan: List[_PlannedOp]):
-        super().__init__()
-        self._files = files_backend
-        self._plan = plan
-        self._cancel = False
-
-    @Slot()
-    def cancel(self) -> None:
-        self._cancel = True
-
-    @Slot()
-    def run(self) -> None:
-        total = len(self._plan)
-        for i, op in enumerate(self._plan, start=1):
-            if self._cancel:
-                self.finished.emit(True, t("dirs.cancelled"))
-                return
-            label = f"{i}/{total}: {os.path.basename((op.dst or op.src).rstrip('/'))}"
-            self.progress.emit(i, label)
-            try:
-                if op.op == "delete":
-                    # delete remote path (dst)
-                    self._files.remove(op.dst, recursive=op.recursive)
-                elif op.op == "copy":
-                    self._files.copy(op.src, op.dst, recursive=op.recursive)
-                elif op.op == "move":
-                    self._files.move(op.src, op.dst)
-                elif op.op == "upload":
-                    # upload local (src) -> remote (dst)
-                    self._files.upload(op.src, op.dst)
-                elif op.op == "download":
-                    # download remote (src) -> local (dst)
-                    self._files.download_toggle(op.src, op.dst) if hasattr(self._files, 'download_toggle') else self._files.download(op.src, op.dst)
-                elif op.op == "mkdir_remote":
-                    self._files.mkdir(op.dst)
-                elif op.op == "mkdir_local":
-                    os.makedirs(op.dst, exist_ok=True)
-                elif op.op == "delete_local":
-                    # delete local path (dst)
-                    if os.path.isdir(op.dst):
-                        shutil.rmtree(op.dst, ignore_errors=True)
-                    else:
-                        try:
-                            os.remove(op.dst)
-                        except FileNotFoundError:
-                            pass
-                else:
-                    raise RuntimeError(f"Unknown op: {op.op}")
-            except Exception as e:
-                self.finished.emit(False, f"{label}\n{e}")
-                return
-        self.finished.emit(False, "")
 
 
 class RemoteTransferExecMixin:
@@ -352,6 +291,40 @@ class RemoteTransferExecMixin:
                 f"local={result.local_digest}, remote={result.remote_digest}"
             )
 
+    def _persist_batch_state(self, remaining: List[_PlannedOp], *, title: str) -> None:
+        """Write remaining batch operations to ~/.truba_slurm_gui/last_batch.json.
+
+        This is *logs-only* / diagnostics; it does not auto-resume.
+        """
+        try:
+            import json
+            import os
+            import time
+
+            from hpc_gui.core.paths import app_data_dir
+
+            out_path = app_data_dir() / "last_batch.json"
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "ts": int(time.time()),
+                "title": title,
+                "remaining": [
+                    {
+                        "op": op.op,
+                        "src": op.src,
+                        "dst": op.dst,
+                        "recursive": bool(op.recursive),
+                    }
+                    for op in remaining
+                ],
+            }
+            out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            if os.name == "posix":
+                out_path.chmod(0o600)
+        except Exception:
+            pass
+
+
     def shutdown(self) -> None:
         """Cancel any in-flight batch operation (best-effort).
 
@@ -424,5 +397,4 @@ class RemoteTransferExecMixin:
 
 __all__ = [
     "RemoteTransferExecMixin",
-    "_FileOpWorker",
 ]

@@ -25,6 +25,7 @@ def test_retired_startup_has_no_tracked_executable_references():
         r"|\b(?:PluginManagerDialog|QtPluginMenuHost|_MainWindowPluginsMixin)\b"
         r"|hpc_gui[./]ui[./](?:dialogs[./]plugin_manager_(?:dialog|cards)|plugin_menu_qt_host|_main_window_plugins)"
         r"|\b(?:test_plugin_manager_ui_shared|test_plugin_manager_ui_install_update_lifecycle)\b"
+        r"|\b(?:_FileOpWorker|_TransferWorker|RemoteTransferProgressMixin|_remote_transfer_progress)\b"
     )
     candidates = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "src", "tests", "scripts", "devtools", "build", ".github"],

@@ -15,8 +15,6 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QGroupBox,
-    QListWidget,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -79,14 +77,12 @@ from hpc_gui.ui.widgets._remote_transfer_copy_move import RemoteTransferCopyMove
 from hpc_gui.ui.widgets._remote_transfer_download import RemoteTransferDownloadMixin
 from hpc_gui.ui.widgets._remote_transfer_exec import (
     RemoteTransferExecMixin,
-    _FileOpWorker as _FileOpWorker,  # noqa: F401 — legacy re-export
 )
 from hpc_gui.ui.widgets._remote_transfer_plan import (
     RemoteTransferPlanMixin,
     _LocalUploadPlanJob as _LocalUploadPlanJob,  # noqa: F401 — legacy re-export
     _TransferPlanWorker as _TransferPlanWorker,  # noqa: F401 — legacy re-export
 )
-from hpc_gui.ui.widgets._remote_transfer_progress import RemoteTransferProgressMixin
 from hpc_gui.ui.widgets._remote_transfer_ui import RemoteTransferUiMixin
 from hpc_gui.ui.widgets._remote_transfer_upload import RemoteTransferUploadMixin
 from hpc_gui.ui.widgets._remote_transfer_upload_plan import RemoteTransferUploadPlanMixin
@@ -110,7 +106,6 @@ class RemoteDirPanel(
     RemoteContextMenuMixin,
     RemoteTransferPlanMixin,
     RemoteTransferExecMixin,
-    RemoteTransferProgressMixin,
     RemoteTransferDownloadMixin,
     RemoteTransferUploadPlanMixin,
     RemoteTransferUploadMixin,
@@ -320,27 +315,12 @@ class RemoteDirPanel(
         lay.addWidget(self.directory_tabs)
         lay.addWidget(self.tabs)
 
-        # Transfer queue (batch view)
-        self.queue_group = QGroupBox(t("dirs.queue_title"))
-        qlay = QVBoxLayout(self.queue_group)
-        self.queue_current = QLabel("-")
-        self.queue_list = QListWidget()
-        self.queue_list.setMinimumHeight(80)
-        self.queue_current_label = QLabel(t("dirs.queue_current"))
-        qlay.addWidget(self.queue_current_label)
-
-        # ---- active batch tracking (for graceful shutdown / diagnostics)
+        # Active batch tracking retained for legacy shutdown callers.
         self._active_thread: Optional[QThread] = None
-        self._active_worker: Optional[_FileOpWorker] = None
+        self._active_worker: object = None
         self._active_plan: List[_PlannedOp] = []
         self._active_step: int = 0
         self._active_title: str = ""
-        qlay.addWidget(self.queue_current)
-        self.queue_next_label = QLabel(t("dirs.queue_pending"))
-        qlay.addWidget(self.queue_next_label)
-        qlay.addWidget(self.queue_list)
-        self.queue_group.setVisible(False)
-        lay.addWidget(self.queue_group)
 
         self._update_undo_enabled()
         self._update_navigation_controls()
@@ -357,9 +337,6 @@ class RemoteDirPanel(
         binding = active_binding("FILE-NEW-FOLDER", current_os())
         self.btn_new_folder.setToolTip(f"{t('dirs.new_folder')} ({binding})" if binding else t("dirs.new_folder"))
         self.path_label.setText(t("dirs.path"))
-        self.queue_group.setTitle(t("dirs.queue_title"))
-        self.queue_current_label.setText(t("dirs.queue_current"))
-        self.queue_next_label.setText(t("dirs.queue_pending"))
         tab_keys = ("all", "folders", "iso", "archives", "slurm", "shell", "other")
         for index, key in enumerate(tab_keys):
             self.tabs.setTabText(index, t(f"dirs.tab_{key}"))

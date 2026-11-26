@@ -5,7 +5,7 @@ import time  # noqa: F401 - compatibility patch target for transfer tests
 from threading import Thread as Thread  # noqa: F401
 from typing import Callable, List
 
-from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import QListWidgetItem, QMenu  # noqa: F401
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -123,35 +123,6 @@ class TransferPreflightDialog(QDialog):
         bottom_row.addWidget(self.buttons)
         root.addLayout(bottom_row)
         self.resize(850, 480)
-
-
-class _TransferWorker(QObject):
-    progress = Signal(int, object)
-    finished = Signal(object, bool, str)
-
-    def __init__(self, items: List[TransferItem], run_item: Callable[[TransferItem], None]):
-        super().__init__()
-        self._items = list(items)
-        self._run_item = run_item
-        self._cancel = False
-
-    @Slot()
-    def cancel(self) -> None:
-        self._cancel = True
-
-    @Slot()
-    def run(self) -> None:
-        for idx, item in enumerate(self._items, start=1):
-            if self._cancel:
-                self.finished.emit(item, True, t("dirs.cancelled"))
-                return
-            self.progress.emit(idx, item)
-            try:
-                self._run_item(item)
-            except Exception as exc:
-                self.finished.emit(item, False, str(exc))
-                return
-        self.finished.emit(None, False, "")
 
 
 class TransferDialog(_TransferDialogViews, _TransferDialogExecution, _TransferDialogQueue, QDialog):
