@@ -24,9 +24,7 @@ from __future__ import annotations
 
 import os
 import shutil
-from typing import Dict, List, Tuple
-
-from PySide6.QtCore import QThread
+from typing import Dict, List, Protocol, Tuple
 
 from hpc_gui.config.storage import (
     coerce_profile_transfer_parallelism,
@@ -35,9 +33,19 @@ from hpc_gui.config.storage import (
 from hpc_gui.core.i18n import t
 from hpc_gui.services.transfer_integrity import VerificationState, verify_transfer
 from hpc_gui.services.transfer_mode import download_with_mode, upload_with_mode
-from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog, TransferItem
+from hpc_gui.services.transfer_controller import TransferItem
+from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
 from hpc_gui.ui.widgets._remote_mutations import _PlannedOp
-from hpc_gui.ui.widgets._remote_transfer_plan import _TransferPlanWorker
+
+
+class _PlanningThread(Protocol):
+    def quit(self) -> None: ...
+    def wait(self, timeout: int) -> bool: ...
+    def isRunning(self) -> bool: ...
+
+
+class _PlanningWorker(Protocol):
+    cancelled: bool
 
 
 class RemoteTransferExecMixin:
@@ -54,7 +62,7 @@ class RemoteTransferExecMixin:
     _show_transfer_dialog: bool
     _transfer_activity_callback: object
     _local_upload_plan_jobs: dict
-    _planning_jobs: Dict[int, Tuple[QThread, object]]
+    _planning_jobs: Dict[int, Tuple[_PlanningThread, _PlanningWorker]]
     _local_target_refresh_callback: object
 
     def _run_plan_with_progress(
@@ -331,7 +339,7 @@ class RemoteTransferExecMixin:
         This does not add new UX; it only prevents orphan threads and
         persists remaining steps as a diagnostic artifact.
         """
-        still_running: Dict[int, Tuple[QThread, _TransferPlanWorker]] = {}
+        still_running: Dict[int, Tuple[_PlanningThread, _PlanningWorker]] = {}
         try:
             if self._active_worker is not None:
                 try:

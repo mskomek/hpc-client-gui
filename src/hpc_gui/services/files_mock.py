@@ -54,6 +54,8 @@ class MockFilesBackend(FilesBackend):
         cur = posixpath.dirname(_norm(path))
         pending = []
         while cur and cur not in self._dirs:
+            if cur in self._files:
+                raise NotADirectoryError(cur)
             pending.append(cur)
             cur = posixpath.dirname(cur)
         for item in reversed(pending):
@@ -155,6 +157,10 @@ class MockFilesBackend(FilesBackend):
 
     def mkdir(self, remote_dir: str) -> None:
         remote_dir = _norm(remote_dir)
+        if remote_dir in self._files:
+            raise NotADirectoryError(remote_dir)
+        if remote_dir in self._dirs:
+            return
         self._ensure_parent_dirs(remote_dir)
         self._dirs.add(remote_dir)
         self._mode[remote_dir] = stat.S_IFDIR | 0o755

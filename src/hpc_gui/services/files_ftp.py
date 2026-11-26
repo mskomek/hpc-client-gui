@@ -355,8 +355,6 @@ class FTPFilesBackend(FilesBackend):
         if remote_dir == "/":
             return
         self._ensure_parent_dirs(posixpath.join(remote_dir, "placeholder"))
-        if not self.exists(remote_dir):
-            self.ftp.mkd(remote_dir)
 
     def copy(self, src_remote_path: str, dst_remote_path: str, recursive: bool = False) -> None:
         src = _norm(src_remote_path)
@@ -417,9 +415,13 @@ class FTPFilesBackend(FilesBackend):
         current = ""
         for part in parts:
             current = _norm(posixpath.join(current, part))
-            if not self.exists(current):
-                try:
-                    self.ftp.mkd(current)
-                except error_perm:
-                    if not self.exists(current):
-                        raise
+            if self.is_dir(current):
+                continue
+            if self.exists(current):
+                raise NotADirectoryError(current)
+            try:
+                self.ftp.mkd(current)
+            except error_perm:
+                # A concurrent mkdir is benign only if it made a directory.
+                if not self.is_dir(current):
+                    raise

@@ -48,7 +48,8 @@ from hpc_gui.ui.dialogs.transfer_conflict_dialog import (
     TransferConflictDialog,
     TransferConflictInfo,
 )
-from hpc_gui.ui.dialogs.transfer_dialog import TransferItem, TransferPreflightDialog
+from hpc_gui.services.transfer_controller import TransferItem
+from hpc_gui.ui.dialogs.transfer_dialog import TransferPreflightDialog
 from hpc_gui.ui.widgets._remote_mutations import _PlannedOp
 from hpc_gui.services.transfer_conflict_policy import (
     clear_session_conflict_action,

@@ -39,9 +39,9 @@ from hpc_gui.services.files_base import RemoteEntry
 from hpc_gui.services.directory_comparison import ComparableEntry
 from hpc_gui.core.platform import current_os
 from hpc_gui.services.shortcut_preferences import active_binding
+from hpc_gui.services.transfer_controller import TransferItem as TransferItem
 from hpc_gui.ui.dialogs.transfer_dialog import (
     TransferDialog as TransferDialog,  # noqa: F401 — annotation use + legacy re-export
-    TransferItem as TransferItem,  # noqa: F401 — annotation use + legacy re-export
     TransferPreflightDialog as TransferPreflightDialog,  # noqa: F401 — legacy re-export
 )
 from hpc_gui.ui.widgets._fm_dnd_contract import (

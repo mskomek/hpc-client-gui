@@ -70,3 +70,70 @@ def test_preflight_preference_round_trips_through_wx_settings(tmp_path, monkeypa
     persist_model_snapshot(model.snapshot())
     assert get_upload_preflight_confirmation_enabled() is False
     assert build_model_from_storage().global_settings["upload_preflight_confirmation"] is False
+
+
+@pytest.mark.parametrize("backend_kind", ["ftp", "mock"])
+@pytest.mark.parametrize("nested", [False, True])
+def test_upload_directory_collision_preserves_remote_file(tmp_path, backend_kind, nested):
+    from hpc_gui.services.files_mock import MockFilesBackend
+    from hpc_gui.wx_shell_file_transfer import _start_file_transfers
+    from test_transfer_resume_semantics import ftp_backend
+
+    occupied = "/remote/occupied"
+    created = []
+    if backend_kind == "ftp":
+        files = ftp_backend({occupied: b"original"})
+        store = files.ftp.files
+
+        def mkdir(path):
+            created.append(path)
+            assert path not in store
+            files.ftp.dirs.add(path)
+
+        files.ftp.mkd = mkdir
+    else:
+        files = MockFilesBackend()
+        files.mkdir("/remote")
+        store = files._files
+        store[occupied] = b"original"
+
+    directory = occupied + "/nested" if nested else occupied
+    source = tmp_path / "source"
+    source.write_bytes(b"payload")
+    target = directory + "/file"
+    items = [TransferItem("mkdir_remote", "", directory),
+             TransferItem("upload", str(source), target)]
+    state = {"session": {"files": files}, "ftp_transfer_type": "binary"}
+    controller = _start_file_transfers(state, None, items)
+    assert controller.engine.wait(5)
+    assert len(controller.engine.failed) == 2
+    assert not controller.engine.completed
+    assert store[occupied] == b"original" and target not in store
+    assert not files.is_dir(occupied)
+    assert not created
+
+
+@pytest.mark.parametrize("backend_kind", ["ftp", "mock"])
+def test_existing_remote_directory_is_safe_to_merge(backend_kind):
+    from hpc_gui.services.files_mock import MockFilesBackend
+    from test_transfer_resume_semantics import ftp_backend
+
+    if backend_kind == "ftp":
+        files = ftp_backend()
+        created = []
+
+        def mkdir(path):
+            created.append(path)
+            files.ftp.dirs.add(path)
+
+        files.ftp.mkd = mkdir
+    else:
+        files = MockFilesBackend()
+        files.mkdir("/remote")
+
+    files.mkdir("/remote")
+    files.mkdir("/remote/nested")
+    files.mkdir("/remote/nested")
+    assert files.is_dir("/remote/nested")
+    if backend_kind == "ftp":
+        assert created == ["/remote/nested"]
