@@ -146,6 +146,19 @@ class FakeSFTP:
 def ftp_backend(files=None):
     backend = FTPFilesBackend.__new__(FTPFilesBackend)
     backend.ftp = FakeFTP(files)
+
+    def open_transfer_backend():
+        connection = FakeFTP()
+        connection.files = backend.ftp.files
+        connection.dirs = backend.ftp.dirs
+        connection.transfer_commands = backend.ftp.transfer_commands
+        connection.rest_offsets = backend.ftp.rest_offsets
+        isolated = FTPFilesBackend.__new__(FTPFilesBackend)
+        isolated.ftp = connection
+        isolated._closed = False
+        return isolated
+
+    backend.open_transfer_backend = open_transfer_backend
     return backend
 
 
