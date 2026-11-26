@@ -5,10 +5,9 @@ from threading import Event
 from hpc_gui.services.transfer_session_controller import TransferSessionController
 from hpc_gui.services.transfer_controller import TransferCancelled
 from hpc_gui.services.transfer_conflict_policy import (
-    available_rename_destination, destination_exists, resolve_conflict_action,
+    available_rename_destination, destination_exists, read_conflict_metadata, resolve_conflict_action,
 )
 import inspect
-import os
 from hpc_gui.core.i18n import t
 
 
@@ -147,110 +146,41 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
     """Queue file-view transfers through the shared transfer lifecycle."""
     from hpc_gui.wx_transfer_workspace import create_transfer_progress
     from hpc_gui.services.upload_plan import transfer_limits
-    from hpc_gui.services.transfer_conflict_policy import get_session_conflict_action
 
     session = session_state.get("session") or {}
     files = files_backend or session.get("files")
     if not files or not items:
         raise RuntimeError(t("common.no_connection"))
 
-    rename_for_all = {"enabled": False}
+    generation = session_state.get("generation")
 
-    def conflict_evaluator(item, action):
-        def metadata(path, *, local):
-            try:
-                if local:
-                    info = os.stat(path)
-                    return int(info.st_size), int(info.st_mtime)
-                size, mtime = files.stat(path)
-                return int(size), int(mtime)
-            except Exception:
-                return None, None
-
-        source_local = item.op == "upload"
-        target_local = item.op == "download"
-        source_size, source_mtime = metadata(item.src, local=source_local)
-        target_size, target_mtime = metadata(item.dst, local=target_local)
-        return resolve_conflict_action(
-            action,
-            source_size=source_size,
-            target_size=target_size,
-            source_mtime=source_mtime,
-            target_mtime=target_mtime,
+    def current():
+        return (
+            session_state.get("session") is session
+            and session_state.get("generation") == generation
+            and not getattr(lifecycle, "shutdown_started", False)
+            and not controller.engine.cancel_requested
         )
 
-    def wx_conflict_resolver(item):
-        import wx
+    def conflict_evaluator(item, action):
+        source, target = read_conflict_metadata(files, item)
+        return resolve_conflict_action(
+            action, source_size=source.size, target_size=target.size,
+            source_mtime=source.mtime, target_mtime=target.mtime,
+        )
 
-        if (
-            session_state.get("conflict_policy") == "rename"
-            or rename_for_all["enabled"]
-            or get_session_conflict_action(item.op) == "rename"
-        ):
-            candidate = available_rename_destination(files, item.op, item.dst)
-            return ("rename", candidate) if candidate is not None else "cancel"
-
-        from hpc_gui.wx_transfer_conflict_dialog import create_wx_transfer_conflict_dialog
-
-        decision = {"value": "cancel"}
-        ready = Event()
-
-        def ask():
-            try:
-                dlg = create_wx_transfer_conflict_dialog(parent, files, item)
-                if not dlg:
-                    decision["value"] = "cancel"
-                    return
-                dlg.ShowModal()
-                raw = dlg._wx_conflict_result["value"]
-                apply_all = bool(
-                    getattr(dlg, "_wx_conflict_apply_all", None)
-                    and dlg._wx_conflict_apply_all.GetValue()
-                )
-                always_use = bool(
-                    getattr(dlg, "_wx_conflict_always_use", None)
-                    and dlg._wx_conflict_always_use.GetValue()
-                )
-                downloads_only = bool(
-                    getattr(dlg, "_wx_conflict_downloads_only", None)
-                    and dlg._wx_conflict_downloads_only.GetValue()
-                )
-                # if rename, raw is tuple
-                if isinstance(raw, tuple) and raw and raw[0] == "rename":
-                    selected = raw
-                    if apply_all:
-                        rename_for_all["enabled"] = True
-                else:
-                    # map string decisions
-                    selected = raw if raw in {
-                        "overwrite",
-                        "overwrite_if_newer",
-                        "overwrite_if_size_differs",
-                        "overwrite_if_size_differs_or_newer",
-                        "skip",
-                        "resume",
-                        "cancel",
-                    } else "cancel"
-                decision["value"] = (
-                    {
-                        "value": selected,
-                        "apply_all": apply_all,
-                        "always_use": always_use,
-                        "downloads_only": downloads_only,
-                    }
-                    if apply_all or always_use
-                    else selected
-                )
-                dlg.Destroy()
-            finally:
-                ready.set()
-
-        try:
-            wx.CallAfter(ask)
-        except BaseException:
+    def automatic_rename(item):
+        if not current():
             return "cancel"
-        ready.wait()
-        return decision["value"]
+        candidate = available_rename_destination(files, item.op, item.dst)
+        return ("rename", candidate) if candidate is not None and current() else "cancel"
+
+    def wx_conflict_resolver(item):
+        from hpc_gui.wx_conflict_bridge import request_conflict_decision
+
+        return request_conflict_decision(
+            parent, files, item, current, read_conflict_metadata(files, item),
+        )
 
     def run_item(item, progress, *, conflict_decision=None):
         # FTP advertises serial queueing, but the browser/control connection
@@ -355,6 +285,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         if transfer_window:
             transfer_window._wx_transfer_finish(owner=controller)
 
+    custom_resolver = conflict_resolver or session_state.get("conflict_resolver")
     controller = TransferSessionController(
         items,
         run_item,
@@ -363,7 +294,8 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
             item.op in {"upload", "download"}
             and _destination_exists(files, item.op, item.dst)
         ),
-        conflict_resolver=conflict_resolver or session_state.get("conflict_resolver") or (wx_conflict_resolver if parent else None),
+        conflict_resolver=custom_resolver or (wx_conflict_resolver if parent else None),
+        conflict_rename=automatic_rename if parent and custom_resolver is None else None,
         conflict_evaluator=conflict_evaluator,
         verify=lambda item: _verify_transfer_item(files, item),
         on_queue=queue_event,

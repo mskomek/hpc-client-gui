@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from hpc_gui.services.transfer_conflict_policy import (
-    destination_exists, destination_path, rename_destination,
+    ConflictFileInfo, destination_exists, destination_path, format_conflict_metadata, rename_destination,
 )
 
 from hpc_gui.core.i18n import t
@@ -15,7 +15,7 @@ def _supports_resume(files, item) -> bool:
     return callable(getattr(files, f"resume_{item.op}", None))
 
 
-def create_transfer_conflict_dialog(parent, files, item):
+def create_transfer_conflict_dialog(parent, files, item, *, metadata=None):
     """Create a purpose-built native wx conflict dialog."""
     try:
         import wx
@@ -30,7 +30,18 @@ def create_transfer_conflict_dialog(parent, files, item):
     msg = wx.StaticText(panel, label=message)
     msg.Wrap(460)
     sizer.Add(msg, 0, wx.ALL | wx.EXPAND, 12)
-    btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+    source, target = metadata or (ConflictFileInfo(item.src), ConflictFileInfo(item.dst))
+    info_controls = {}
+    for key, info in (("source", source), ("target", target)):
+        size, mtime = format_conflict_metadata(info)
+        label = wx.StaticText(panel, label=t("transfer." + key + "_file"))
+        sizer.Add(label, 0, wx.LEFT | wx.RIGHT | wx.TOP, 12)
+        path = wx.TextCtrl(panel, value=info.path, style=wx.TE_READONLY)
+        sizer.Add(path, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
+        details = wx.StaticText(panel, label=t("transfer.conflict_file_info").format(size=size, mtime=mtime))
+        sizer.Add(details, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+        info_controls[key] = {"path": path, "details": details}
+    btn_sizer = wx.WrapSizer(wx.HORIZONTAL)
     overwrite = wx.Button(panel, label=t("dirs.conflict_overwrite"))
     conditional = {
         action: wx.Button(
@@ -62,6 +73,10 @@ def create_transfer_conflict_dialog(parent, files, item):
     dlg_sizer = wx.BoxSizer(wx.VERTICAL)
     dlg_sizer.Add(panel, 1, wx.EXPAND)
     dlg.SetSizerAndFit(dlg_sizer)
+    dlg.SetMinSize((500, 400))
+    dlg.SetSize((680, 520))
+    cancel.SetDefault()
+    dlg._wx_conflict_metadata_controls = info_controls
 
     result = {"value": "cancel", "rename_target": None}
 

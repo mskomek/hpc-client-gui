@@ -39,6 +39,7 @@ class TransferSessionController:
         *,
         conflict_check=None,
         conflict_resolver=None,
+        conflict_rename=None,
         conflict_evaluator=None,
         verify=None,
         **kwargs,
@@ -46,6 +47,7 @@ class TransferSessionController:
         self._run_item_backend = run_item
         self._conflict_check = conflict_check
         self._conflict_resolver = conflict_resolver
+        self._conflict_rename = conflict_rename
         self._conflict_evaluator = conflict_evaluator
         self._verify = verify
         parameters = inspect.signature(run_item).parameters
@@ -62,6 +64,8 @@ class TransferSessionController:
         decision = None
         if self._conflict_check:
             with self._conflict_resolution_lock:
+                if self.engine.cancel_requested:
+                    raise TransferCancelled()
                 if self._conflict_check(item):
                     direction = item.op if item.op in {"upload", "download"} else "other"
                     decision = get_session_conflict_action(direction)
@@ -72,7 +76,9 @@ class TransferSessionController:
                                 decision = queue_action
                         if decision is None:
                             decision = self.conflict_policy
-                    if decision in {"ask", "rename"}:
+                    if decision == "rename" and self._conflict_rename is not None:
+                        decision = self._conflict_rename(item)
+                    elif decision in {"ask", "rename"}:
                         if not self._conflict_resolver:
                             raise RuntimeError("transfer conflict requires a decision")
                         resolved = self._conflict_resolver(item)
@@ -84,6 +90,8 @@ class TransferSessionController:
                             always_use = bool(resolved.get("always_use"))
                             downloads_only = bool(resolved.get("downloads_only"))
                             resolved = resolved["value"]
+                        if self.engine.cancel_requested:
+                            raise TransferCancelled()
                         decision = resolved
                         action = (
                             decision[0]
@@ -114,6 +122,8 @@ class TransferSessionController:
                             decision = "skip"
                         else:
                             decision = self._conflict_evaluator(item, decision)
+            if self.engine.cancel_requested:
+                raise TransferCancelled()
             if decision is not None:
                 if isinstance(decision, tuple) and decision and decision[0] == "rename":
                     item.dst = str(decision[1])

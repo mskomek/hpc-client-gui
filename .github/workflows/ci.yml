@@ -171,7 +171,7 @@ jobs:
       - name: Native wx cancel and retry recovery (Windows)
         if: runner.os == 'Windows'
         run: >-
-          python -m pytest tests/test_wx_transfer_cancel_recovery_native.py tests/test_wx_transfer_queue_menu_native.py -q --tb=short
+          python -m pytest tests/test_wx_transfer_cancel_recovery_native.py tests/test_wx_transfer_queue_menu_native.py tests/test_wx_preflight_conflict_native.py -q --tb=short
       - name: Headless updater and diagnostic regressions
         run: >-
           python -m pytest

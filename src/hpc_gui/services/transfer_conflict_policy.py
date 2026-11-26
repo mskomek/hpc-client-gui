@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from threading import RLock
 import os
@@ -52,6 +54,38 @@ def available_rename_destination(files, direction: str, destination: str) -> str
         if not destination_exists(files, direction, candidate):
             return candidate
     return None
+
+
+@dataclass(frozen=True)
+class ConflictFileInfo:
+    path: str
+    size: int | None = None
+    mtime: int | None = None
+
+
+def read_conflict_metadata(files, item) -> tuple[ConflictFileInfo, ConflictFileInfo]:
+    """Read metadata on the transfer worker, never on the GUI thread."""
+    def read(path, local):
+        try:
+            if local:
+                info = os.stat(path)
+                size, mtime = info.st_size, info.st_mtime
+            else:
+                size, mtime = files.stat(path)
+            return ConflictFileInfo(path, int(size), int(mtime))
+        except Exception:
+            return ConflictFileInfo(path)
+
+    return read(item.src, item.op == "upload"), read(item.dst, item.op == "download")
+
+
+def format_conflict_metadata(info: ConflictFileInfo) -> tuple[str, str]:
+    size = "-" if info.size is None else f"{info.size:,} B"
+    try:
+        mtime = datetime.fromtimestamp(info.mtime).isoformat(sep=" ", timespec="seconds") if info.mtime else "-"
+    except (ValueError, OSError, OverflowError):
+        mtime = "-"
+    return size, mtime
 
 
 def resolve_conflict_action(
@@ -116,6 +150,9 @@ def clear_session_conflict_action() -> None:
 
 
 __all__ = [
+    "ConflictFileInfo",
+    "read_conflict_metadata",
+    "format_conflict_metadata",
     "available_rename_destination",
     "destination_exists",
     "destination_path",
