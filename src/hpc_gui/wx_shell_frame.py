@@ -23,7 +23,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     try:
         import wx
     except ImportError as exc:
-        raise RuntimeError("wxPython is not installed; use the default Qt runtime") from exc
+        raise RuntimeError("wxPython is not installed") from exc
     if app is None:
         app = wx.GetApp()
         if app is None:
@@ -35,6 +35,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     default_size, min_size = shell_sizes(wx)
     frame = wx.Frame(None, title=f"{t('app.title')} {__version__}", size=default_size)
     frame._wx_app = app
+    from hpc_gui.wx_product_icon import apply_product_icon
+
+    apply_product_icon(frame)
     # Spec §3: recommended 1440×900 default, 1280×760 minimum; usable at ~1100×700 without clipping
     frame.SetMinSize(wx.Size(*min_size))
     panel = wx.Panel(frame)
@@ -77,7 +80,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     act_help = help_menu.Append(wx.ID_HELP, t("menu.help_center"))
     frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("APP-HELP", frame, lifecycle, session_state), act_help)
     help_items["help"] = act_help
-    help_items["tour"] = None
+    act_tour = help_menu.Append(wx.ID_ANY, t("menu.quick_tour"))
+    frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("APP-QUICK-TOUR", frame, lifecycle, session_state), act_tour)
+    help_items["tour"] = act_tour
     help_menu.AppendSeparator()
     act_logs = help_menu.Append(wx.ID_ANY, t("menu.send_logs"))
     frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("APP-SEND-LOGS", frame, lifecycle, session_state), act_logs)

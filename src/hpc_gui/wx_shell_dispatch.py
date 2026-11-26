@@ -17,6 +17,10 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         from hpc_gui.wx_help import show_help
 
         show_help(parent)
+    elif command_id == "APP-QUICK-TOUR":
+        from hpc_gui.wx_quick_tour import show_quick_tour
+
+        show_quick_tour(parent)
     elif command_id == "APP-SETTINGS":
         from hpc_gui.wx_settings_view import show_settings
         try:
