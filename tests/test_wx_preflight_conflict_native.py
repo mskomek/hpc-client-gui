@@ -60,10 +60,15 @@ def pump(predicate, timeout=5):
 
     def poll():
         nonlocal timer
+        # The conflict dialog owns a nested modal loop until its cancellation
+        # timer runs. Never Exit the suspended outer GUIEventLoop.
+        if wx.EventLoopBase.GetActive() is not loop:
+            timer = wx.CallLater(20, poll)
+            return
         if predicate():
-            loop.Exit(0)
+            loop.ScheduleExit(0)
         elif time.monotonic() >= deadline:
-            loop.Exit(1)
+            loop.ScheduleExit(1)
         else:
             timer = wx.CallLater(20, poll)
 
@@ -167,7 +172,9 @@ def invalidate():
         live["value"] = False
 wx.CallLater(30, invalidate)
 worker.start()
-pump(lambda: bool(decisions))
+pump(lambda: bool(decisions) and not any(
+    hasattr(w, "_wx_conflict_metadata_controls") and w.IsModal()
+    for w in wx.GetTopLevelWindows()))
 assert decisions == ["cancel"] and not errors, errors
 pump(lambda: not any(hasattr(w, "_wx_conflict_metadata_controls") for w in wx.GetTopLevelWindows()))
 assert not any(m.split(".")[0] in {"PySide6", "PyQt5", "PyQt6", "shiboken6"} for m in sys.modules)
