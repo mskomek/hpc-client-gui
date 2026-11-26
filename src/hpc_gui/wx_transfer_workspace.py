@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from hpc_gui._wx_transfer_common import add_row, post_to, update_button_state, update_tab_counts
+from time import monotonic
+
+from hpc_gui._wx_transfer_common import add_row, post_to, reset_progress, update_button_state, update_tab_counts
 from hpc_gui._wx_transfer_conflict import _supports_resume, create_transfer_conflict_dialog
 from hpc_gui._wx_transfer_detached import bind_detached
 from hpc_gui._wx_transfer_embedded import bind_embedded
@@ -119,6 +121,8 @@ def _build_transfers(parent, controller=None, embedded=False):
         def _do_set():
             if state.get("closed"):
                 return
+            if state.get("controller") is not value:
+                reset_progress(state)
             state["controller"] = value
             if embedded and value is not None:
                 eng = getattr(value, "engine", None)
@@ -165,9 +169,11 @@ def _build_transfers(parent, controller=None, embedded=False):
         post(cb)
 
     def _post_progress(item, done, total, *, owner=None):
+        observed_at = monotonic()
+
         def cb():
             if owner is None or state.get("controller") is owner:
-                update_progress(item, done, total)
+                update_progress(item, done, total, now=observed_at)
 
         post(cb)
 

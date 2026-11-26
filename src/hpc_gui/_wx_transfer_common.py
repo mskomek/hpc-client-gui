@@ -3,6 +3,18 @@
 from __future__ import annotations
 
 from hpc_gui.core.i18n import t
+from hpc_gui.services.transfer_progress import ProgressSamples
+
+
+def progress_text(state, item, done, total, *, now=None):
+    samples = state.setdefault("progress_samples", ProgressSamples())
+    return samples.detail(item, done, total, now=now)
+
+
+def reset_progress(state, item=None):
+    samples = state.get("progress_samples")
+    if samples is not None:
+        samples.reset(item)
 
 
 def gauge_range_value(done: int, total: int) -> tuple[int, int]:

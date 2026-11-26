@@ -6,6 +6,8 @@ from typing import Any
 
 from hpc_gui._wx_transfer_common import (
     add_row,
+    progress_text,
+    reset_progress,
     priority_label,
     find_row,
     is_safe,
@@ -33,6 +35,8 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
             return
         try:
             iid = id(item)
+            if event in {"started", "completed", "failed", "removed"}:
+                reset_progress(state, item)
             if event in ("queued", "started"):
                 for _map_name, _list in (("failed_map", failed_list), ("completed_map", completed_list)):
                     if iid in state[_map_name]:
@@ -132,14 +136,14 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
         except RuntimeError:
             return
 
-    def update_progress(item, done, total):
+    def update_progress(item, done, total, *, now=None):
         if not is_safe(host, state, status):
             return
         try:
             iid = id(item)
             row = find_row(state, queue_list, iid)
             try:
-                label = t("transfer.progress_detail").format(item=item.label(), done=done, total=total, speed="", eta="")
+                label = progress_text(state, item, done, total, now=now)
             except Exception:
                 label = f"{done}/{total}"
             if row != -1:
@@ -264,6 +268,7 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                     pass
             return
         state["closed"] = True
+        reset_progress(state)
         try:
             from hpc_gui.core.i18n import unsubscribe_language_change as _unsub
 
