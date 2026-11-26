@@ -39,3 +39,15 @@ class TelemetryRecorder:
             "ui.tab ready scope=%s tab=%d render_ms=%d",
             scope, index, max(0, int((self.clock() - since) * 1000)),
         )
+
+
+    def window_shown(self, kind: str) -> None:
+        self.log.info("ui.window shown kind=%s", kind)
+
+    def window_ready(self, kind: str, since: float) -> None:
+        self.log.info("ui.window ready kind=%s render_ms=%d",
+                      kind, max(0, int((self.clock() - since) * 1000)))
+
+    def window_hidden(self, kind: str, since: float) -> None:
+        self.log.info("ui.window hidden kind=%s visible_ms=%d",
+                      kind, max(0, int((self.clock() - since) * 1000)))

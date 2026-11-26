@@ -28,6 +28,9 @@ def create_startup_notice(parent, title, text, *, allow_opt_out=False):
     import wx
 
     dialog = wx.Dialog(parent, title=title, style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
+    from hpc_gui.wx_debug_telemetry import install_optional_window_telemetry
+
+    install_optional_window_telemetry(dialog)
     layout = wx.BoxSizer(wx.VERTICAL)
     content = wx.TextCtrl(dialog, value=text, style=wx.TE_MULTILINE | wx.TE_READONLY)
     content.SetInsertionPoint(0)

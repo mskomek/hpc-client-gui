@@ -27,7 +27,6 @@ from hpc_gui.ui._main_window_contracts import (
     show_exception as show_exception,
 )
 from hpc_gui.core.debug_telemetry import is_source_run
-from hpc_gui.ui.debug_telemetry import DebugTelemetry
 from hpc_gui.core.i18n import t
 from .async_call import AsyncCall
 from .splash_screen import UpdateSplash
@@ -225,10 +224,6 @@ class MainWindow(
         self.tabs.addTab(
             self.logs, t("tabs.logs") if t("tabs.logs") != "[tabs.logs]" else "Logs"
         )
-        if is_source_run():
-            telemetry = QApplication.instance().findChild(DebugTelemetry)
-            if telemetry is not None:
-                telemetry.observe_tab_widget(self.tabs, "main")
         self.tabs.currentChanged.connect(self._sync_command_polling)
         self.jobs_outputs.polling_visibility_changed.connect(
             self._sync_command_polling

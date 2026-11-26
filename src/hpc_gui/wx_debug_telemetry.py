@@ -78,3 +78,77 @@ def install_wx_debug_telemetry(frame, notebook, *, recorder=None):
     frame.Bind(wx.EVT_CHAR_HOOK, on_key)
     notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, on_tab)
     return recorder
+
+
+def observe_wx_window(window, *, recorder=None):
+    """Observe a specific owned top-level, never a global native event filter."""
+    if not is_source_run():
+        return None
+    import wx
+
+    existing = getattr(window, "_wx_window_telemetry", None)
+    if existing is not None:
+        return existing
+    recorder = recorder or TelemetryRecorder()
+    kind = type(window).__name__
+    state = {"since": None, "generation": 0}
+    ref = weakref.ref(window)
+
+    def hidden():
+        since = state["since"]
+        state["since"] = None
+        state["generation"] += 1
+        if since is not None:
+            recorder.window_hidden(kind, since)
+
+    def on_show(event):
+        try:
+            if event.GetEventObject() is not window:
+                return
+            if not event.IsShown():
+                hidden()
+                return
+            if state["since"] is not None:
+                return
+            since = recorder.clock()
+            state["since"] = since
+            state["generation"] += 1
+            generation = state["generation"]
+            recorder.window_shown(kind)
+
+            def ready():
+                current = ref()
+                try:
+                    if (current is not None and not current.IsBeingDeleted()
+                            and current.IsShown() and state["generation"] == generation):
+                        recorder.window_ready(kind, since)
+                except RuntimeError:
+                    pass
+
+            wx.CallAfter(ready)
+        except (AttributeError, RuntimeError):
+            pass
+        finally:
+            event.Skip()
+
+    def on_destroy(event):
+        try:
+            if event.GetWindow() is window:
+                hidden()
+        except (AttributeError, RuntimeError):
+            pass
+        finally:
+            event.Skip()
+
+    window.Bind(wx.EVT_SHOW, on_show)
+    window.Bind(wx.EVT_WINDOW_DESTROY, on_destroy)
+    window._wx_window_telemetry = recorder
+    return recorder
+
+
+def install_optional_window_telemetry(window) -> None:
+    try:
+        observe_wx_window(window)
+    except Exception:
+        # Diagnostics must not prevent creating the real window.
+        pass

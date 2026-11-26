@@ -10,7 +10,7 @@ import pytest
 def test_retired_startup_has_no_tracked_executable_references():
     root = Path(__file__).resolve().parents[1]
     retired = re.compile(
-        r"\blegacy_app\b|\bwelcome_dialog\b|\bWelcomeDialog\b"
+        r"\blegacy_app\b|\bwelcome_dialog\b|\bWelcomeDialog\b|hpc_gui\.ui\.debug_telemetry"
     )
     candidates = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "src", "tests", "scripts", "devtools", "build", ".github"],
