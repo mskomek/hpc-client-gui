@@ -184,6 +184,10 @@ jobs:
         if: runner.os == 'Windows'
         run: >-
           python -m pytest tests/test_wx_startup_notices.py::test_native_startup_dialogs_are_read_only_and_opt_out_is_persisted -q --tb=short
+      - name: Native wx quick tour and product icon (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest tests/test_wx_tour_icon_native.py -q --tb=short
       - name: Native wx performance recorder (Windows)
         if: runner.os == 'Windows'
         run: >-
