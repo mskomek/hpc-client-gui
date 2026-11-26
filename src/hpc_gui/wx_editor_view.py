@@ -225,14 +225,19 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     btn_template.Bind(wx.EVT_BUTTON, _on_template)
     btn_lint.Bind(wx.EVT_BUTTON, _on_lint)
 
-    def _editor_key(event):
-        if event.GetKeyCode() == wx.WXK_F8 and not event.ControlDown() and not event.AltDown():
-            if btn_lint.IsEnabled():
-                _on_lint(event)
-            return
-        event.Skip()
+    # Bind an actual native accelerator rather than synthesizing key state.
+    lint_command_id = wx.NewIdRef()
 
-    editor.Bind(wx.EVT_KEY_DOWN, _editor_key)
+    def _lint_command(event):
+        if btn_lint.IsEnabled() and not state["closed"]:
+            _on_lint(event)
+
+    panel.Bind(wx.EVT_MENU, _lint_command, id=int(lint_command_id))
+    panel.SetAcceleratorTable(wx.AcceleratorTable([
+        (wx.ACCEL_NORMAL, wx.WXK_F8, int(lint_command_id)),
+        (wx.ACCEL_SHIFT, wx.WXK_F8, int(lint_command_id)),
+    ]))
+    host._wx_lint_accelerator = (panel, lint_command_id)
     btn_array.Bind(wx.EVT_BUTTON, _on_array)
     btn_find_next.Bind(wx.EVT_BUTTON, lambda _event: _wx_find_next())
     btn_find_prev.Bind(wx.EVT_BUTTON, lambda _event: _wx_find_previous())

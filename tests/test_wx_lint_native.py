@@ -74,20 +74,24 @@ editor = host._wx_editor_controls["editor"]
 assert editor.GetStringSelection() == "second"
 assert not host._wx_editor_model.controller.active.dirty
 
-# Native keyboard dispatch is also exercised without writing/submitting a file.
+# Exercise the native accelerator's command event. Physical key injection
+# needs an interactive desktop and is not claimed by this subprocess.
 with patch("hpc_gui.services.editor_lint.EditorLintPipeline.collect", collect):
+    panel, command_id = host._wx_lint_accelerator
+    assert panel.GetAcceleratorTable().IsOk()
+    assert host._wx_editor_header["lint"].IsEnabled()
     wx.CallLater(30, answer)
-    key = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
-    key.m_keyCode = wx.WXK_F8
-    key.SetEventObject(editor)
-    editor.GetEventHandler().ProcessEvent(key)
+    event = wx.CommandEvent(wx.EVT_MENU.typeId, int(command_id))
+    event.SetEventObject(panel)
+    assert panel.GetEventHandler().ProcessEvent(event)
+    assert host._wx_editor_state["lint_running"]
     deadline = __import__("time").monotonic() + 8
     while host._wx_editor_state.get("lint_running") and __import__("time").monotonic() < deadline:
         wx.Yield()
         __import__("time").sleep(.01)
 assert not errors, errors
 assert calls == [("/remote/job.jou", "first\nsecond\nthird\n", "org.test"),
-                 ("/remote/job.jou", "first\nsecond\nthird\n", None)]
+                 ("/remote/job.jou", "first\nsecond\nthird\n", None)], calls
 d = NS(code="C1", severity=NS(value="warning"), line=2, column=3, message="finding",
        explanation="reason", suggested_fix="fix it", source_url="https://example.test/doc", is_heuristic=True)
 f = NS(file_path="job.jou", detection=NS(product="fluent", detected_version="25.2"),
