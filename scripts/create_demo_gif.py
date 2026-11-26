@@ -267,13 +267,13 @@ def _run_demo(workspace, emit, *, connection_only=False):
         select("NAV-FILES")
         local = pages["NAV-FILES"]["local"]
         remote = pages["NAV-FILES"]["remote"]
-        local._wx_local_model.navigate(workspace)
-        local._wx_local_controls["path"].SetValue(str(workspace))
-        local._wx_local_refresh()
         remote._wx_remote_controls["navigate"](WORKDIR)
         remote._wx_remote_controls["load"]()
         listing = local._wx_local_controls["listing"]
-        _pump(wx, app, lambda: listing.GetItemCount() >= 3, "local listing")
+        _pump(wx, app, lambda: {"case", "mesh", "run.slurm"}.issubset(
+            {listing.GetItemText(i) for i in range(listing.GetItemCount())}), "profile local start directory")
+        assert local._wx_local_model.current_path == workspace.resolve()
+        assert local._wx_local_tabs[local._wx_local_notebook.GetSelection()]["path"] == workspace.resolve()
         _select_rows(listing, ("case", "mesh", "run.slurm"))
         emit(wx, app, frame, "selected")
         _click(wx, pages["NAV-FILES"]["upload_selected"])
@@ -338,6 +338,9 @@ def _run_demo(workspace, emit, *, connection_only=False):
             app.ProcessPendingEvents()
             loop.ProcessIdle()
             app.ProcessPendingEvents()
+        store = state.pop("_job_record_store", None)
+        if store is not None:
+            store.close()
         del lifecycle
 
 

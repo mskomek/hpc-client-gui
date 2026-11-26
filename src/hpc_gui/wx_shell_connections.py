@@ -36,9 +36,7 @@ def _connection_callbacks(session_state, parent, lifecycle):
             target = Path(local_start_dir).expanduser()
             if target.is_dir():
                 try:
-                    local_panel._wx_local_model.navigate(target)
-                    local_panel._wx_local_controls["path"].SetValue(str(target.resolve()))
-                    local_panel._wx_local_refresh()
+                    local_panel._wx_local_navigate(target)
                 except (OSError, RuntimeError):
                     pass
         ssh = session.get("ssh") if isinstance(session, dict) else None
