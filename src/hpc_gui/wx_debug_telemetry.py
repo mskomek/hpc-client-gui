@@ -22,10 +22,14 @@ def install_wx_debug_telemetry(frame, notebook, *, recorder=None):
         *(getattr(wx, f"WXK_F{i}") for i in range(1, 13)),
     }
 
+    navigation_controls = (wx.Button, wx.ListCtrl, wx.TreeCtrl, wx.Notebook, wx.CheckBox, wx.RadioButton)
+
     def on_button(event):
         try:
             target = event.GetEventObject()
             recorder.action(type(target).__name__)
+        except (AttributeError, RuntimeError):
+            pass
         finally:
             event.Skip()
 
@@ -33,9 +37,11 @@ def install_wx_debug_telemetry(frame, notebook, *, recorder=None):
         try:
             focused = wx.Window.FindFocus()
             # Text entry and printable keys are excluded even in a source run.
-            if (focused is not None and not isinstance(focused, wx.TextEntry)
+            if (focused is not None and isinstance(focused, navigation_controls)
                     and event.GetKeyCode() in safe_keys):
                 recorder.key(type(focused).__name__, event.GetKeyCode(), event.GetModifiers())
+        except (AttributeError, RuntimeError):
+            pass
         finally:
             event.Skip()
 
@@ -63,6 +69,8 @@ def install_wx_debug_telemetry(frame, notebook, *, recorder=None):
                     pass
 
             wx.CallAfter(ready)
+        except (AttributeError, RuntimeError):
+            pass
         finally:
             event.Skip()
 

@@ -42,7 +42,7 @@ from hpc_gui.config.storage import (
     set_upload_preflight_confirmation_enabled,
 )
 from hpc_gui.core.i18n import t
-from hpc_gui.core.ui_errors import show_exception
+from hpc_gui.ui._exception_dialog import show_exception
 from hpc_gui.ui.dialogs.transfer_conflict_dialog import (
     TransferConflictDecision,
     TransferConflictDialog,

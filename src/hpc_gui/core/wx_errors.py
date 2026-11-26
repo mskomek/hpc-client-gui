@@ -7,7 +7,7 @@ every mandatory wx action failure must produce a visible user error carrying
 a stable diagnostic code plus a structured log entry.  Silent
 ``except Exception: pass`` on a user-visible dispatch path is forbidden.
 
-The Qt surface already has :func:`hpc_gui.core.ui_errors.show_exception`;
+The legacy Qt surface uses :func:`hpc_gui.ui._exception_dialog.show_exception`;
 this module is its wx counterpart.  ``wx`` is imported lazily so importing
 this helper never makes ``wx`` mandatory for non-GUI processes.
 """

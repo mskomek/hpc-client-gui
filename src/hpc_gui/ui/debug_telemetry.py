@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 """Legacy Qt telemetry adapter; V2 wx telemetry does not import this module."""
+from __future__ import annotations
 
 import time
 from typing import Any

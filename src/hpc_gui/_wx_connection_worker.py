@@ -305,7 +305,7 @@ def run_connect_selected(host, model, get_selection: Callable[[], str], load_liv
             )
             wx.MessageBox(diagnostic, title, wx.OK | wx.ICON_ERROR)
             if progress_view is not None:
-                progress_view.set_stage(diagnostic)
+                progress_view.set_stage(msg)
         else:
             status.SetLabel(t("login.status_connected"))
             model.progress_callback = None

@@ -161,7 +161,13 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
 
         notebook = (getattr(frame, "_wx_shell_controls", {}) or {}).get("notebook")
         if notebook is not None:
-            install_wx_debug_telemetry(frame, notebook)
+            try:
+                install_wx_debug_telemetry(frame, notebook)
+            except Exception:
+                # Source diagnostics must never prevent the shell from starting.
+                import logging
+
+                logging.getLogger("hpc_gui.debug.telemetry").exception("telemetry setup failed")
         frame.Show()
         report_previous_crash(frame)
         try:
