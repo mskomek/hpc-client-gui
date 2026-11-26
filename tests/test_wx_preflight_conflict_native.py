@@ -22,7 +22,7 @@ from threading import Thread
 from types import SimpleNamespace
 from unittest.mock import patch
 import wx
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import load_language, t
 from hpc_gui.config.storage import get_upload_preflight_confirmation_enabled, set_upload_preflight_confirmation_enabled
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.services.transfer_conflict_policy import ConflictFileInfo
@@ -205,6 +205,56 @@ pump(lambda: bool(decisions) and not any(
     for w in wx.GetTopLevelWindows()))
 assert decisions == ["cancel"] and not errors, errors
 pump(lambda: not any(hasattr(w, "_wx_conflict_metadata_controls") for w in wx.GetTopLevelWindows()))
+
+# Exercise actual native button bindings and all scope controls, not a
+# replacement dialog or a synthetic controller decision.
+files.resume_upload = lambda *args: None
+live["value"] = True
+for action in ("skip", "overwrite", "overwrite_if_newer", "overwrite_if_size_differs",
+               "overwrite_if_size_differs_or_newer", "resume"):
+    decisions.clear()
+    deadline = time.monotonic() + 5
+
+    def choose():
+        dialogs = [w for w in wx.GetTopLevelWindows()
+                   if hasattr(w, "_wx_conflict_controls") and w.IsModal()]
+        if not dialogs:
+            if time.monotonic() < deadline:
+                wx.CallLater(20, choose)
+            else:
+                errors.append("native conflict choices not observed")
+                live["value"] = False
+            return
+        dialog = dialogs[0]
+        try:
+            controls = dialog._wx_conflict_controls
+            assert set(controls) == {
+                "overwrite", "overwrite_if_newer", "overwrite_if_size_differs",
+                "overwrite_if_size_differs_or_newer", "resume", "rename", "skip", "cancel",
+            }
+            assert all(control is not None for control in controls.values())
+            assert dialog.GetTitle() == t("transfer.conflict_title")
+            for control in (dialog._wx_conflict_apply_all, dialog._wx_conflict_always_use,
+                            dialog._wx_conflict_downloads_only):
+                assert not control.GetValue()
+                control.SetValue(True)
+            button = controls[action]
+            assert button.ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, button.GetId()))
+        except Exception:
+            errors.append(traceback.format_exc())
+            if dialog.IsModal():
+                dialog.EndModal(wx.ID_CANCEL)
+
+    worker = Thread(target=lambda: decisions.append(
+        request_conflict_decision(parent, files, item, lambda: live["value"], metadata)), daemon=True)
+    wx.CallLater(30, choose)
+    worker.start()
+    pump(lambda: bool(decisions))
+    assert not errors, errors
+    assert decisions == [{"value": action, "apply_all": True,
+                          "always_use": True, "downloads_only": True}]
+    pump(lambda: not any(hasattr(w, "_wx_conflict_metadata_controls") for w in wx.GetTopLevelWindows()))
+
 assert not any(m.split(".")[0] in {"PySide6", "PyQt5", "PyQt6", "shiboken6"} for m in sys.modules)
 parent.Destroy()
 app.ProcessPendingEvents()

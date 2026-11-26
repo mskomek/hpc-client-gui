@@ -10,17 +10,12 @@ from support.ftp_widget_test_support import (
     RemoteDirPanel,
     RemoteEntry,
     SimpleNamespace,
-    TransferConflictDecision,
-    TransferConflictDialog,
-    TransferConflictInfo,
     _Files,
     _PlannedOp,
     _ProgressUploadFiles,
     _ResumableFiles,
     _ascii_bytes_for_local,
     _ascii_bytes_for_remote,
-    clear_session_conflict_action,
-    datetime,
     download_with_mode,
     patch,
     pytest,
@@ -54,101 +49,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
 
         self.assertEqual(events, [])
 
-    @pytest.mark.integration
-    def test_always_use_conflict_action_lasts_only_for_current_process(self) -> None:
-        source = TransferConflictInfo("/source", size=10, mtime=20)
-        target = TransferConflictInfo("/target", size=10, mtime=10)
-        first_panel = RemoteDirPanel()
-        second_panel = RemoteDirPanel()
-        # Reset directly rather than via patch.object: patch.object restores
-        # whatever value was present on entry when its own `with` exits, which
-        # would silently wipe out the session state _resolve_conflict sets
-        # during the block below before the second panel gets a chance to see it.
-        clear_session_conflict_action()
-        try:
-            with patch.object(
-                TransferConflictDialog,
-                "get_decision",
-                return_value=TransferConflictDecision("overwrite_if_newer", always_use=True),
-            ) as get_decision:
-                with patch.object(
-                    first_panel, "_conflict_info", side_effect=[source, target]
-                ):
-                    self.assertEqual(first_panel._resolve_conflict("/target", src="/source"), "overwrite_all")
-
-                with patch.object(
-                    second_panel, "_conflict_info", side_effect=[source, target]
-                ):
-                    self.assertEqual(second_panel._resolve_conflict("/target", src="/source"), "overwrite")
-
-            self.assertEqual(get_decision.call_count, 1)
-        finally:
-            clear_session_conflict_action()
-            first_panel.deleteLater()
-            second_panel.deleteLater()
-
-    @pytest.mark.unit
-    def test_conditional_conflict_actions_are_resolved_safely(self) -> None:
-        source = TransferConflictInfo("/source", size=10, mtime=20)
-        target = TransferConflictInfo("/target", size=10, mtime=10)
-        self.assertEqual(
-            RemoteDirPanel._normalize_conflict_decision(
-                TransferConflictDecision("overwrite_if_newer"),
-                source,
-                target,
-            ),
-            "overwrite",
-        )
-        self.assertEqual(
-            RemoteDirPanel._normalize_conflict_decision(
-                TransferConflictDecision("overwrite_if_size_differs"),
-                source,
-                target,
-            ),
-            "skip",
-        )
-        self.assertEqual(
-            RemoteDirPanel._normalize_conflict_decision(
-                TransferConflictDecision("resume"),
-                source,
-                target,
-            ),
-            "resume",
-        )
-
-    @pytest.mark.gui
-    @pytest.mark.qt
-    def test_conflict_dialog_exposes_requested_actions_and_checks(self) -> None:
-        dialog = TransferConflictDialog(
-            source=TransferConflictInfo("/source/file.txt", size=10, mtime=2),
-            target=TransferConflictInfo("/target/file.txt", size=5, mtime=1),
-        )
-        try:
-            self.assertEqual(
-                set(dialog.action_buttons),
-                {
-                    "overwrite",
-                    "overwrite_if_newer",
-                    "overwrite_if_size_differs",
-                    "overwrite_if_size_differs_or_newer",
-                    "resume",
-                    "rename",
-                    "skip",
-                },
-            )
-            dialog.action_buttons["skip"].setChecked(True)
-            dialog.cb_always.setChecked(True)
-            decision = dialog.decision()
-            self.assertEqual(decision.action, "skip")
-            self.assertTrue(decision.always_use)
-            self.assertEqual(dialog.windowTitle(), "Target file already exists")
-            local_ts = int(datetime.datetime(2025, 11, 16, 11, 26, 39).timestamp())
-            self.assertEqual(
-                TransferConflictDialog._format_time(local_ts),
-                "11/16/2025 11:26:39 AM",
-            )
-        finally:
-            dialog.deleteLater()
 
     @pytest.mark.integration
     @pytest.mark.semantic

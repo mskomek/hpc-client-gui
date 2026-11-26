@@ -288,3 +288,33 @@ def test_bare_rename_without_target_is_not_a_transfer_decision():
     assert controller.engine.wait(5)
     assert not observed and item.dst == "/work/old"
     assert "Rename requires an explicit destination" in controller.engine.failed[0][1]
+
+
+@pytest.mark.parametrize("action,source_size,target_size,source_mtime,target_mtime,expected", [
+    ("overwrite_if_newer", 10, 10, 20, 10, "overwrite"),
+    ("overwrite_if_newer", 10, 10, 10, 20, "skip"),
+    ("overwrite_if_size_differs", 10, 10, 20, 10, "skip"),
+    ("overwrite_if_size_differs", 10, 5, 10, 10, "overwrite"),
+    ("overwrite_if_size_differs_or_newer", 10, 5, 10, 20, "overwrite"),
+    ("overwrite_if_size_differs_or_newer", 10, 10, 20, 10, "overwrite"),
+    ("overwrite_if_size_differs_or_newer", 10, 10, 10, 20, "skip"),
+    ("resume", 10, 10, 20, 10, "resume"),
+])
+def test_retired_conflict_policy_matrix(action, source_size, target_size, source_mtime, target_mtime, expected):
+    from hpc_gui.services.transfer_conflict_policy import resolve_conflict_action
+
+    assert resolve_conflict_action(
+        action, source_size=source_size, target_size=target_size,
+        source_mtime=source_mtime, target_mtime=target_mtime,
+    ) == expected
+
+
+def test_conflict_metadata_formats_local_time_and_bytes():
+    from datetime import datetime
+
+    from hpc_gui.services.transfer_conflict_policy import ConflictFileInfo, format_conflict_metadata
+
+    timestamp = int(datetime(2025, 11, 16, 11, 26, 39).timestamp())
+    assert format_conflict_metadata(ConflictFileInfo("source", 1234, timestamp)) == (
+        "1,234 B", "2025-11-16 11:26:39",
+    )
