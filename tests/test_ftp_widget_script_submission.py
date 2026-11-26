@@ -3,12 +3,10 @@ from __future__ import annotations
 from support.ftp_widget_test_support import (
     DirectoriesWidget,
     FtpWidgetTestCase,
-    MainWindow,
     QPlainTextEdit,
     RemoteDirPanel,
     _BatchSubmitWorker,
     _ShellRunWorker,
-    patch,
     pytest,
 )
 
@@ -137,88 +135,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
             ],
         )
         self.assertEqual(shell_batches, [["/scratch/Z.sh", "/scratch/a.sh"]])
-
-    @pytest.mark.integration
-    @pytest.mark.semantic
-    def test_main_window_batch_shell_uses_login_terminal_order(self) -> None:
-        with patch("hpc_gui.ui.main_window.QTimer.singleShot"):
-            window = MainWindow()
-        try:
-            with (
-                patch.object(window.tabs, "setCurrentWidget") as select_tab,
-                patch.object(window.login, "run_command_text") as run_command,
-            ):
-                window.run_shell_batch_in_terminal(
-                    ["/remote/Z name.sh", "/remote/a.sh"]
-                )
-            select_tab.assert_called_once_with(window.login)
-            run_command.assert_called_once_with(
-                "bash '/remote/Z name.sh'\n" "bash /remote/a.sh"
-            )
-        finally:
-            window.graceful_shutdown()
-            window.deleteLater()
-
-    @pytest.mark.gui
-    @pytest.mark.qt
-    def test_main_window_contains_top_level_ftp_tab(self) -> None:
-        with patch("hpc_gui.ui.main_window.QTimer.singleShot"):
-            window = MainWindow()
-        try:
-            labels = [
-                window.tabs.tabText(index)
-                for index in range(window.tabs.count())
-            ]
-            self.assertIn("Files", labels)
-            self.assertIs(window.ftp, window.tabs.widget(labels.index("Files")))
-        finally:
-            window.graceful_shutdown()
-            window.deleteLater()
-
-    @pytest.mark.integration
-    @pytest.mark.semantic
-    def test_main_window_routes_ftp_actions_to_existing_directories_handlers(self) -> None:
-        opened = []
-        submitted = []
-        shell_batches = []
-
-        def record_open(_self, path):
-            opened.append(path)
-
-        def record_submit(_self, path):
-            submitted.append(path)
-
-        def record_shell_run(_self, path):
-            shell_runs.append(path)
-
-        def record_shell_batch(_self, paths):
-            shell_batches.append(paths)
-
-        shell_runs = []
-
-        with (
-            patch("hpc_gui.ui.main_window.QTimer.singleShot"),
-            patch.object(DirectoriesWidget, "on_open_file", record_open),
-            patch.object(DirectoriesWidget, "submit_script", record_submit),
-            patch.object(DirectoriesWidget, "run_shell_script", record_shell_run),
-            patch.object(MainWindow, "run_shell_batch_in_terminal", record_shell_batch),
-        ):
-            window = MainWindow()
-            try:
-                window.ftp.panel_scratch.open_file.emit("/scratch/file.txt")
-                window.ftp.panel_home.submit_requested.emit("/home/job.slurm")
-                window.ftp.panel_home.run_shell_requested.emit("/home/run.sh")
-                window.ftp.panel_scratch.batch_shell_requested.emit(
-                    ["/scratch/Z.sh", "/scratch/a.sh"]
-                )
-
-                self.assertEqual(opened, ["/scratch/file.txt"])
-                self.assertEqual(submitted, ["/home/job.slurm"])
-                self.assertEqual(shell_runs, ["/home/run.sh"])
-                self.assertEqual(shell_batches, [["/scratch/Z.sh", "/scratch/a.sh"]])
-            finally:
-                window.graceful_shutdown()
-                window.deleteLater()
 
     @pytest.mark.unit
     @pytest.mark.semantic

@@ -212,6 +212,7 @@ def test_plugin_menu__lacking_capability_renders_disabled_and_unbound(wx_app, mo
         assert callable(frame._wx_rebuild_plugins_menu)
         frame._wx_rebuild_plugins_menu()
         plugins_menu = frame._wx_shell_plugins_menu
+        assert frame._wx_shell_plugins_sep_top in plugins_menu.GetMenuItems()
         roots = [
             item
             for item in plugins_menu.GetMenuItems()
@@ -232,6 +233,46 @@ def test_plugin_menu__lacking_capability_renders_disabled_and_unbound(wx_app, mo
             frame.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, child.GetId()))
             wx.Yield()
         assert dispatched == [], "disabled capability-gated items must stay unbound"
+
+        monkeypatch.setattr(
+            loader_module,
+            "load_installed_plugins",
+            lambda: types.SimpleNamespace(plugins=[]),
+        )
+        monkeypatch.setattr(contributions, "collect_plugin_menu_contributions", lambda _plugins: [])
+        frame._wx_rebuild_plugins_menu()
+        assert frame._wx_shell_plugins_sep_top is None
+    finally:
+        _close_shell(frame)
+
+
+def test_wx_menu_surface_routes_help_and_keeps_language_version(wx_app, monkeypatch):
+    import hpc_gui.wx_help as help_view
+
+    calls = []
+    monkeypatch.setattr(help_view, "show_help", lambda parent: calls.append(parent))
+    frame, _lifecycle, _session = wx_shell.create_shell_frame(wx_app)
+    try:
+        menu_bar = frame.GetMenuBar()
+        labels = [menu_bar.GetMenuLabel(index) for index in range(menu_bar.GetMenuCount())]
+        assert "Menu" in labels
+        assert "Plugins" in labels
+        assert "Help" in labels
+        assert any(label in {"Language", "Dil"} for label in labels)
+        assert any(label.startswith("v") for label in labels)
+
+        plugin_labels = [
+            item.GetItemLabelText()
+            for item in frame._wx_shell_plugins_menu.GetMenuItems()
+            if not item.IsSeparator()
+        ]
+        assert any("Browse" in label for label in plugin_labels)
+        assert any("Manage" in label for label in plugin_labels)
+        assert any("Plugin Updates" in label for label in plugin_labels)
+        assert any("Request" in label for label in plugin_labels)
+
+        _fire_menu(frame, frame._wx_shell_help_items["help"])
+        assert calls == [frame]
     finally:
         _close_shell(frame)
 
