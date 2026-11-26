@@ -21,8 +21,7 @@ Shared plan vocabulary (``_PlannedOp``) is imported from the sibling
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
-from typing import Dict, Generator, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from shiboken6 import isValid
 
@@ -57,12 +56,6 @@ from hpc_gui.services.transfer_conflict_policy import (
     resolve_conflict_action,
     set_session_conflict_action,
 )
-
-
-@dataclass
-class _LocalUploadPlanJob:
-    steps: Generator[None, None, Optional[List[_PlannedOp]]]
-    dest_dir: str
 
 
 class _TransferPlanWorker(QObject):
@@ -384,14 +377,11 @@ class RemoteTransferPlanMixin:
             return
         if job_id not in self._planning_jobs or not result:
             return
-        if result.get("conflict"):
-            # Only upload planning defers conflict resolution to the bounded
-            # GUI-thread planner. Remote download planning resolves conflicts
-            # on the worker thread and therefore never returns this sentinel.
-            self._apply_local_upload_incremental_gui(  # type: ignore[attr-defined]
-                result["paths"],
-                result["directory"],
-            )
+        if "session_owner" in result and (
+            self.session is not result["session_owner"]
+            or not self.session
+            or self.session.get("files") is not result["files_owner"]
+        ):
             return
         plan = result.get("plan") or []
         if not plan:
@@ -443,6 +433,5 @@ class RemoteTransferPlanMixin:
 
 __all__ = [
     "RemoteTransferPlanMixin",
-    "_LocalUploadPlanJob",
     "_TransferPlanWorker",
 ]

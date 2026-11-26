@@ -80,12 +80,10 @@ from hpc_gui.ui.widgets._remote_transfer_exec import (
 )
 from hpc_gui.ui.widgets._remote_transfer_plan import (
     RemoteTransferPlanMixin,
-    _LocalUploadPlanJob as _LocalUploadPlanJob,  # noqa: F401 — legacy re-export
     _TransferPlanWorker as _TransferPlanWorker,  # noqa: F401 — legacy re-export
 )
 from hpc_gui.ui.widgets._remote_transfer_ui import RemoteTransferUiMixin
 from hpc_gui.ui.widgets._remote_transfer_upload import RemoteTransferUploadMixin
-from hpc_gui.ui.widgets._remote_transfer_upload_plan import RemoteTransferUploadPlanMixin
 from hpc_gui.ui.widgets._remote_tree_view import (
     RemoteTreeViewMixin,
     _FILE_MODE_ROLE as _FILE_MODE_ROLE,  # noqa: F401 — legacy re-export
@@ -107,7 +105,6 @@ class RemoteDirPanel(
     RemoteTransferPlanMixin,
     RemoteTransferExecMixin,
     RemoteTransferDownloadMixin,
-    RemoteTransferUploadPlanMixin,
     RemoteTransferUploadMixin,
     RemoteTransferCopyMoveMixin,
     RemoteNavigationMixin,
@@ -175,8 +172,6 @@ class RemoteDirPanel(
         self._local_target_refresh_callback: Optional[Callable[[str], None]] = None
         self._transfer_dialogs: List[TransferDialog] = []
         self._active_transfer_keys: set[tuple[str, str, str]] = set()
-        self._local_upload_plan_jobs: Dict[int, _LocalUploadPlanJob] = {}
-        self._next_local_upload_plan_id = 0
         self._planning_jobs: Dict[int, Tuple[QThread, _TransferPlanWorker]] = {}
         self._next_planning_job_id = 0
         self._show_transfer_dialog = True

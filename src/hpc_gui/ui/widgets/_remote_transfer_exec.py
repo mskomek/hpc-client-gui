@@ -61,7 +61,6 @@ class RemoteTransferExecMixin:
     _active_title: str
     _show_transfer_dialog: bool
     _transfer_activity_callback: object
-    _local_upload_plan_jobs: dict
     _planning_jobs: Dict[int, Tuple[_PlanningThread, _PlanningWorker]]
     _local_target_refresh_callback: object
 
@@ -395,7 +394,6 @@ class RemoteTransferExecMixin:
                 pass
         finally:
             self._unregister_instance()
-            self._local_upload_plan_jobs.clear()
             self._planning_jobs = still_running
             self._active_thread = None
             self._active_worker = None

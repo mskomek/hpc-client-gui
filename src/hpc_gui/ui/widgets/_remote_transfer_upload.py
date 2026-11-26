@@ -1,9 +1,8 @@
-"""Execution flows for local-to-remote uploads.
+"""Legacy upload entry points sharing one traversal and conflict planner.
 
-This leaf owns synchronous upload execution and the incremental GUI-thread
-runner. Background and incremental plan construction lives in
-_remote_transfer_upload_plan. Conflict handling is coordinated by
-_remote_transfer_plan and execution by _remote_transfer_exec through self.
+The active wx runtime uses services.upload_plan and wx_shell_upload.
+This remaining legacy adapter uses its existing worker bridge for conflicts
+rather than scheduling filesystem or network probes on the GUI thread.
 """
 
 from __future__ import annotations
@@ -11,37 +10,35 @@ from __future__ import annotations
 import os
 from typing import List, Optional
 
-from PySide6.QtCore import QTimer
-
 from hpc_gui.core.i18n import t
+from hpc_gui.services.transfer_conflict_policy import read_conflict_metadata
+from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.ui.widgets._remote_mutations import _PlannedOp
-from hpc_gui.ui.widgets._remote_transfer_plan import (
-    _LocalUploadPlanJob,
-)
 
 
 class RemoteTransferUploadMixin:
-    """Local→remote upload flow ownership (mixed into ``RemoteDirPanel``)."""
+    """Local→remote upload flow ownership (mixed into the legacy panel)."""
 
     session: object
-    _local_upload_plan_jobs: dict
-    _next_local_upload_plan_id: int
 
-    def _apply_local_upload(self, local_paths: List[str], dest_dir: str) -> bool:
-        if not self.session or not self.session.get("files"):
-            return False
-        files = self.session["files"]
-
+    @staticmethod
+    def _normalize_upload_destination(dest_dir: str) -> str:
         dest_dir = (dest_dir or "/").strip()
         if not dest_dir.startswith("/"):
             dest_dir = "/" + dest_dir
-        dest_dir = dest_dir.rstrip("/") or "/"
+        return dest_dir.rstrip("/") or "/"
 
+    @staticmethod
+    def _build_local_upload_plan(files, local_paths, dest_dir, resolve, rename,
+                                 *, current=lambda: True):
+        """Return a mutation-free plan, or None for cancellation."""
         plan: List[_PlannedOp] = []
         policy: Optional[str] = None
 
         seen_sources: set[str] = set()
         for lp in local_paths:
+            if not current():
+                return None
             if not lp:
                 continue
             lp = os.path.abspath(lp)
@@ -54,6 +51,8 @@ class RemoteTransferUploadMixin:
 
             # conflict resolution on remote target
             while True:
+                if not current():
+                    return None
                 try:
                     exists = bool(files.exists(rp_base))
                 except Exception:
@@ -71,12 +70,7 @@ class RemoteTransferUploadMixin:
 
                 if exists:
                     if policy is None:
-                        action = self._resolve_conflict(  # type: ignore[attr-defined]
-                            rp_base,
-                            src=lp,
-                            source_is_local=True,
-                            target_is_local=False,
-                        )
+                        action = resolve(lp, rp_base)
                         if action.endswith("_all"):
                             policy = action.replace("_all", "")
                         action_simple = action.replace("_all", "")
@@ -84,12 +78,12 @@ class RemoteTransferUploadMixin:
                         action_simple = policy
 
                     if action_simple == "cancel":
-                        return False
+                        return None
                     if action_simple == "skip":
                         rp_base = None
                         break
                     if action_simple == "rename":
-                        new_dst = self._prompt_rename(dest_dir, name)  # type: ignore[attr-defined]
+                        new_dst = rename(dest_dir, name)
                         if not new_dst:
                             rp_base = None
                             break
@@ -115,6 +109,8 @@ class RemoteTransferUploadMixin:
                 plan.append(_PlannedOp(op="mkdir_remote", src="", dst=rp_base))
                 # walk local dir
                 for root, dirs, files_ls in os.walk(lp):
+                    if not current():
+                        return None
                     rel_root = os.path.relpath(root, lp)
                     rel_root = "" if rel_root == "." else rel_root
                     for d in dirs:
@@ -124,6 +120,8 @@ class RemoteTransferUploadMixin:
                         lfile = os.path.join(root, fn)
                         rfile = rp_base + ("/" + rel_root if rel_root else "") + "/" + fn
                         while True:
+                            if not current():
+                                return None
                             try:
                                 exists = bool(files.exists(rfile))
                             except Exception:
@@ -132,12 +130,7 @@ class RemoteTransferUploadMixin:
                                 break
 
                             if policy is None:
-                                action = self._resolve_conflict(  # type: ignore[attr-defined]
-                                    rfile,
-                                    src=lfile,
-                                    source_is_local=True,
-                                    target_is_local=False,
-                                )
+                                action = resolve(lfile, rfile)
                                 if action.endswith("_all"):
                                     policy = action.replace("_all", "")
                                 action_simple = action.replace("_all", "")
@@ -145,15 +138,12 @@ class RemoteTransferUploadMixin:
                                 action_simple = policy
 
                             if action_simple == "cancel":
-                                return False
+                                return None
                             if action_simple == "skip":
                                 rfile = None
                                 break
                             if action_simple == "rename":
-                                new_dst = self._prompt_rename(  # type: ignore[attr-defined]
-                                    rfile.rsplit("/", 1)[0],
-                                    fn,
-                                )
+                                new_dst = rename(rfile.rsplit("/", 1)[0], fn)
                                 if not new_dst:
                                     rfile = None
                                     break
@@ -173,79 +163,73 @@ class RemoteTransferUploadMixin:
                             continue
                         plan.append(_PlannedOp(op="upload", src=lfile, dst=rfile))
 
+        return plan if current() else None
+
+    def _apply_local_upload(self, local_paths: List[str], dest_dir: str) -> bool:
+        if not self.session or not self.session.get("files"):
+            return False
+        dest_dir = self._normalize_upload_destination(dest_dir)
+        plan = self._build_local_upload_plan(
+            self.session["files"], local_paths, dest_dir,
+            lambda src, dst: self._resolve_conflict(
+                dst, src=src, source_is_local=True, target_is_local=False),
+            self._prompt_rename,
+        )
+        if plan is None:
+            return False
         if not plan:
             return True
-
-        return self._run_plan_with_progress(  # type: ignore[attr-defined]
-            plan,
-            t("dirs.uploading"),
-            after_finished=lambda: self._finish_remote_directory_mutation([dest_dir]),  # type: ignore[attr-defined]
+        return self._run_plan_with_progress(
+            plan, t("dirs.uploading"),
+            after_finished=lambda: self._finish_remote_directory_mutation([dest_dir]),
             confirm_before_start=True,
         )
+
+    def _build_local_upload_plan_background(self, worker, files, local_paths, dest_dir):
+        session = self.session
+
+        def current():
+            return (not worker.cancelled and self.session is session
+                    and session and session.get("files") is files)
+
+        def resolve(src, dst):
+            if not current():
+                return "cancel"
+            source, target = read_conflict_metadata(files, TransferItem("upload", src, dst))
+            if not current():
+                return "cancel"
+            return worker.request_conflict_decision(source, target, direction="upload")
+
+        def rename(directory, name):
+            return worker.request_rename(directory, name) if current() else None
+
+        plan = self._build_local_upload_plan(
+            files, local_paths, dest_dir, resolve, rename, current=current,
+        )
+        if not plan or not current():
+            return {}
+        return {
+            "plan": plan,
+            "title": t("dirs.uploading"),
+            "affected_dirs": [self._normalize_remote_dir(dest_dir)],
+            "confirm_before_start": True,
+            "session_owner": session,
+            "files_owner": files,
+        }
 
     def _apply_local_upload_incremental(self, local_paths: List[str], dest_dir: str) -> bool:
         if not self.session or not self.session.get("files"):
             return False
-        normalized_dest = (dest_dir or "/").strip()
-        if not normalized_dest.startswith("/"):
-            normalized_dest = "/" + normalized_dest
-        normalized_dest = normalized_dest.rstrip("/") or "/"
+        normalized_dest = self._normalize_upload_destination(dest_dir)
         clean_paths = [path for path in local_paths if path]
         if not clean_paths:
             return True
         files = self.session["files"]
-        return self._start_transfer_planning(  # type: ignore[attr-defined]
+        return self._start_transfer_planning(
             "upload",
             lambda worker: self._build_local_upload_plan_background(
-                worker,
-                files,
-                clean_paths,
-                normalized_dest,
-            ),
+                worker, files, clean_paths, normalized_dest),
         )
 
 
-    def _apply_local_upload_incremental_gui(self, local_paths: List[str], dest_dir: str) -> bool:
-        if not self.session or not self.session.get("files"):
-            return False
-        dest_dir = (dest_dir or "/").strip()
-        if not dest_dir.startswith("/"):
-            dest_dir = "/" + dest_dir
-        dest_dir = dest_dir.rstrip("/") or "/"
-
-        job_id = self._next_local_upload_plan_id
-        self._next_local_upload_plan_id += 1
-        self._local_upload_plan_jobs[job_id] = _LocalUploadPlanJob(
-            steps=self._iter_local_upload_plan(local_paths, dest_dir),
-            dest_dir=dest_dir,
-        )
-        QTimer.singleShot(0, lambda current_job_id=job_id: self._advance_local_upload_plan(current_job_id))
-        return True
-
-    def _advance_local_upload_plan(self, job_id: int) -> None:
-        job = self._local_upload_plan_jobs.get(job_id)
-        if job is None:
-            return
-        try:
-            # One traversal/probe step per callback prevents slow remote exists
-            # calls or large local trees from monopolizing the GUI event loop.
-            next(job.steps)
-        except StopIteration as finished:
-            self._local_upload_plan_jobs.pop(job_id, None)
-            plan = finished.value
-            if not plan:
-                return
-            self._run_plan_with_progress(  # type: ignore[attr-defined]
-                plan,
-                t("dirs.uploading"),
-                after_finished=lambda dest=job.dest_dir: self._finish_remote_directory_mutation([dest]),  # type: ignore[attr-defined]
-                confirm_before_start=True,
-            )
-            return
-        QTimer.singleShot(0, lambda current_job_id=job_id: self._advance_local_upload_plan(current_job_id))
-
-
-
-__all__ = [
-    "RemoteTransferUploadMixin",
-]
+__all__ = ["RemoteTransferUploadMixin"]
