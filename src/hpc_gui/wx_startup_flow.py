@@ -9,7 +9,7 @@ from threading import Thread
 from hpc_gui import __version__
 from hpc_gui.core.i18n import t
 from hpc_gui.startup_update_state import StartupUpdateState
-from hpc_gui.wx_splash_stages import STATE_ACTIVE, STATE_COMPLETE
+from hpc_gui.wx_splash_stages import STATE_ACTIVE, STATE_COMPLETE, STATE_FAILED
 
 
 class StartupFlow:
@@ -26,10 +26,35 @@ class StartupFlow:
         self.update_check = StartupUpdateState()
         self.started_at = 0.0
         self.timer = None
+        self._helper_check = StartupUpdateState()
+        self._helper_started_at = 0.0
+        self._cancelled = False
+        self.splash.Bind(wx.EVT_WINDOW_DESTROY, self._on_destroy)
         self._start_update_check()
 
+    def _on_destroy(self, event) -> None:
+        try:
+            if event.GetWindow() is self.splash:
+                self.cancel()
+        finally:
+            event.Skip()
+
+    def cancel(self) -> None:
+        self._cancelled = True
+        self.update_check.skip()
+        self._helper_check.skip()
+        if self.timer is not None:
+            self.timer.Stop()
+            self.timer = None
+
     def _schedule(self, delay_ms: int, callback) -> None:
-        self.timer = self.wx.CallLater(delay_ms, callback)
+        def guarded():
+            if self._cancelled or self.splash._wx_splash_state.get("closed"):
+                return
+            callback()
+
+        if not self._cancelled:
+            self.timer = self.wx.CallLater(delay_ms, guarded)
 
     def _start_update_check(self) -> None:
         self.splash._wx_splash_set_stage("updates", STATE_ACTIVE)
@@ -127,7 +152,17 @@ class StartupFlow:
     def _start_preferences(self) -> None:
         self.splash._wx_splash_set_stage("preferences", STATE_ACTIVE)
         self.splash._wx_splash_set_progress(55, t("splash.loading_preferences"))
-        self.splash._wx_splash_append_log("Loading preferences...", "OK")
+        try:
+            from hpc_gui.config.storage import load_settings
+
+            load_settings()
+        except Exception:
+            logging.getLogger("hpc_gui.startup").exception("Preferences check failed")
+            self.splash._wx_splash_append_log("Preferences check failed", "")
+            self.splash._wx_splash_set_stage("preferences", STATE_FAILED)
+            self._schedule(200, self._start_helpers)
+            return
+        self.splash._wx_splash_append_log("Preferences loaded", "OK")
         self._schedule(500, self._finish_preferences)
 
     def _finish_preferences(self) -> None:
@@ -137,12 +172,41 @@ class StartupFlow:
     def _start_helpers(self) -> None:
         self.splash._wx_splash_set_stage("helpers", STATE_ACTIVE)
         self.splash._wx_splash_set_progress(85, t("splash.checking_helpers"))
-        self.splash._wx_splash_append_log("Checking SSH helper...", "OK")
-        self.splash._wx_splash_append_log("Checking SFTP helper...", "OK")
-        self._schedule(500, self._finish_helpers)
+        self.splash._wx_splash_append_log("Checking local SSH and SFTP support...", "")
+        self._helper_started_at = time.monotonic()
 
-    def _finish_helpers(self) -> None:
-        self.splash._wx_splash_set_stage("helpers", STATE_COMPLETE)
+        def worker():
+            from hpc_gui.startup_checks import check_startup_helpers
+
+            try:
+                result = check_startup_helpers()
+            except Exception as exc:
+                self._helper_check.complete(error=exc)
+            else:
+                self._helper_check.complete(result)
+
+        Thread(target=worker, daemon=True).start()
+        self._schedule(80, self._poll_helpers)
+
+    def _poll_helpers(self) -> None:
+        if self._helper_check.status == StartupUpdateState.CHECKING:
+            if time.monotonic() - self._helper_started_at < 5.0:
+                self._schedule(80, self._poll_helpers)
+                return
+            self._helper_check.timeout()
+        checks, error = self._helper_check.result()
+        if checks is None or error is not None:
+            self.splash._wx_splash_append_log("Local helper check unavailable", "")
+            ok = False
+        else:
+            ok = True
+            for name, available in checks.items():
+                self.splash._wx_splash_append_log(
+                    f"{name}: {'available' if available else 'unavailable'}",
+                    "OK" if available else "",
+                )
+                ok = ok and available
+        self.splash._wx_splash_set_stage("helpers", STATE_COMPLETE if ok else STATE_FAILED)
         self._schedule(200, self._show_ready)
 
     def _show_ready(self) -> None:

@@ -417,6 +417,16 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
 
     dlg.Bind(wx.EVT_CLOSE, on_close)
 
+    def on_destroy(evt):
+        # Destroy() does not necessarily emit EVT_CLOSE. Release subscriptions
+        # on the real top-level destroy event, not on child destruction.
+        if evt.GetWindow() is dlg:
+            on_close(evt)
+        else:
+            evt.Skip()
+
+    dlg.Bind(wx.EVT_WINDOW_DESTROY, on_destroy)
+
     # Expose API for external startup orchestration
     dlg._wx_splash_controls = {
         "brand_title": brand_title,

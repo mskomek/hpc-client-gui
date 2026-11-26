@@ -169,10 +169,16 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
     except Exception:
         splash = None
 
+    main_opened = False
+
     def show_main_window() -> None:
+        nonlocal main_opened
+        if main_opened:
+            return
         frame, _lifecycle, _session_state = create_shell_frame(
             app, defer_terminal_webview=True
         )
+        main_opened = True
         if splash is not None:
             try:
                 splash.Destroy()
