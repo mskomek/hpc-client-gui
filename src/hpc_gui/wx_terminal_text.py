@@ -136,7 +136,7 @@ def build_text_terminal_panel(
                             )
                     finally:
                         wx.TheClipboard.Close()
-            elif event.CmdDown() or event.ShiftDown():
+            elif event.ShiftDown():
                 text.Copy()
             else:
                 model.key_input("C")
