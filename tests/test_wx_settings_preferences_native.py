@@ -329,7 +329,7 @@ def test_settings_shortcut_editor_changes_resets_and_persists_bindings(app, monk
     controls["change"].Command(wx.CommandEvent(wx.wxEVT_BUTTON, controls["change"].GetId()))
     button = host._wx_settings_controls["apply"]
     button.Command(wx.CommandEvent(wx.wxEVT_BUTTON, button.GetId()))
-    _pump(app, lambda: len(updates) >= 2 or bool(errors))
+    _pump(app, lambda: (len(updates) >= 2 or bool(errors)) and bool(refreshed))
     app.Yield(True)
     assert not errors, errors
     assert refreshed
