@@ -180,6 +180,117 @@ def test_storage_add_edit_remove_and_validation(monkeypatch):
     finally:
         tmp.cleanup()
 
+@pytest.mark.gui
+@pytest.mark.wx
+def test_new_local_provider_storage_is_collected_without_template_provenance(monkeypatch):
+    tmp = _isolated_storage(monkeypatch)
+    app = wx.App.Get() or wx.App(False)
+    assert app is not None
+    frame = wx.Frame(None)
+    from hpc_gui.wx_connection_dialog import WxConnectionDialog
+    dialog = WxConnectionDialog(
+        frame, initial_profile={"name": "Custom HPC", "host": "h.example"},
+        mode="add", on_save=lambda _profile: True,
+    )
+    try:
+        dialog.storage_rows = [{
+            "id": "scratch", "label": "Scratch", "kind": "scratch",
+            "enabled": True, "path_template": "/scratch/{user}",
+            "access_context": "login-node",
+            "policy": {"backup": None, "retention_days": None},
+        }]
+        profile = dialog._collect_profile()
+        assert profile is not None
+        assert profile["provider_template"]["profile_id"] == "local"
+        assert profile["provider_template"]["storage"][0]["label"] == "Scratch"
+        assert "system_template_source" not in profile
+    finally:
+        dialog.Destroy()
+        frame.Destroy()
+        for _ in range(3):
+            wx.Yield()
+        tmp.cleanup()
+
+@pytest.mark.gui
+@pytest.mark.wx
+def test_local_provider_quota_never_collects_user_command(monkeypatch):
+    tmp = _isolated_storage(monkeypatch)
+    app = wx.App.Get() or wx.App(False)
+    assert app is not None
+    frame = wx.Frame(None)
+    from hpc_gui.wx_connection_dialog import WxConnectionDialog
+    dialog = WxConnectionDialog(
+        frame, initial_profile={"name": "Custom HPC", "host": "h.example"},
+        mode="add", on_save=lambda _profile: True,
+    )
+    try:
+        dialog._provider_template = {
+            "profile_id": "local", "storage": [],
+            "quota_sources": [{"command_template": ""}],
+        }
+        dialog._provider_origin = "local"
+        dialog._quota_source_declared = True
+        dialog.quota_enabled_cb.SetValue(True)
+        dialog.quota_command_ctrl.SetValue("touch /tmp/pwned")
+        profile = dialog._collect_profile()
+        assert profile is not None
+        assert profile["provider_template"]["quota_sources"][0]["command_template"] == ""
+    finally:
+        dialog.Destroy()
+        frame.Destroy()
+        for _ in range(3):
+            wx.Yield()
+        tmp.cleanup()
+
+@pytest.mark.gui
+@pytest.mark.wx
+def test_local_provider_survives_user_template_round_trip(monkeypatch):
+    from unittest.mock import patch
+    from hpc_gui.config.system_profile import save_user_system_template
+
+    tmp = _isolated_storage(monkeypatch)
+    app = wx.App.Get() or wx.App(False)
+    assert app is not None
+    frame = wx.Frame(None)
+    from hpc_gui.wx_connection_dialog import WxConnectionDialog
+    dialog = WxConnectionDialog(
+        frame, initial_profile={"name": "Custom HPC", "host": "h.example"},
+        mode="add", on_save=lambda _profile: True,
+    )
+    restored = None
+    try:
+        dialog._apply_system_template({
+            "name": "Custom HPC",
+            "provider_template": {
+                "profile_id": "local", "storage": [{
+                    "id": "scratch", "label": "Scratch", "kind": "scratch",
+                    "path_template": "/scratch/{user}",
+                    "policy": {"backup": False, "retention_days": 30},
+                }],
+            },
+        })
+        with (
+            patch("hpc_gui.config.system_profile.load_settings", return_value={"system_templates": []}),
+            patch("hpc_gui.config.system_profile.update_settings"),
+        ):
+            template = save_user_system_template("My University HPC", dialog._system_form_values())
+        restored = WxConnectionDialog(
+            frame, initial_profile={"name": "lab", "host": "h.example"},
+            mode="add", on_save=lambda _profile: True,
+        )
+        restored._apply_system_template(template)
+        assert restored._provider_origin == "local"
+        assert restored.storage_rows[0]["path_template"] == "/scratch/{user}"
+        assert restored.storage_rows[0]["policy"]["retention_days"] == 30
+    finally:
+        if restored is not None:
+            restored.Destroy()
+        dialog.Destroy()
+        frame.Destroy()
+        for _ in range(3):
+            wx.Yield()
+        tmp.cleanup()
+
 @pytest.mark.integration
 def test_quota_states_fail_closed():
     # disabled
