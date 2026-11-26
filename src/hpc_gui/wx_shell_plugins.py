@@ -40,24 +40,19 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
             from hpc_gui.plugins.ui_contributions import MenuContext
             sess = session_state.get("session") or {}
             connected = bool(sess.get("connected")) if isinstance(sess, dict) else False
-            editor_active = False
-            try:
-                # Heuristic: editor panel is current page
-                if "editor_panel" in locals() or "editor_panel" in globals():
-                    pass
-                # Use notebook current page check
-                cur = notebook.GetCurrentPage() if hasattr(notebook, "GetCurrentPage") else None
-                editor_active = cur is editor_panel if "editor_panel" in dir() else False
-                # Fallback: check page_controls
-                if not editor_active:
-                    try:
-                        ed_page = page_controls.get("NAV-EDITOR", {}).get("page")
-                        editor_active = notebook.GetCurrentPage() is ed_page if ed_page else False
-                    except Exception:
-                        pass
-            except Exception:
-                pass
+            cur = notebook.GetCurrentPage()
+            ed_page = page_controls.get("NAV-EDITOR", {}).get("page") or editor_panel
+            editor_active = cur is ed_page and ed_page is not None
             file_selected = False
+            files = page_controls.get("NAV-FILES", {})
+            if cur is files.get("page"):
+                for side in ("local", "remote"):
+                    panel = files.get(side)
+                    controls = getattr(panel, f"_wx_{side}_controls", {})
+                    listing = controls.get("listing")
+                    if listing is not None and listing.GetSelectedItemCount() > 0:
+                        file_selected = True
+                        break
             from hpc_gui.core.i18n import current_language
             return MenuContext(connected=connected, editor_active=editor_active, file_selected=file_selected, language=current_language())
         except Exception:
@@ -82,11 +77,14 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
             # Collect contributions
             result = load_installed_plugins()
             contribs = collect_plugin_menu_contributions(result.plugins)
+            owners = {plugin.manifest.id: plugin for plugin in result.plugins}
             ctx = _wx_current_context()
             for contrib in sorted(contribs, key=lambda c: (get_display_label(c.label, c.labels, ctx.language).casefold(), c.label.casefold(), c.plugin_id.casefold())):
                 lang = ctx.language
                 root_label = get_display_label(contrib.label, contrib.labels, lang)
                 root_menu = wx.Menu()
+                owning = owners.get(contrib.plugin_id)
+                caps = frozenset(owning.manifest.capabilities or ()) if owning else frozenset()
                 has_visible = False
                 for item in contrib.items:
                     from hpc_gui.plugins.ui_contributions import PluginMenuAction, PluginMenuSeparator, PluginMenuSubmenu
@@ -95,7 +93,6 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
                         has_visible = True
                         continue
                     if isinstance(item, PluginMenuSubmenu):
-                        caps = frozenset(_get_wx_plugin_caps(contrib.plugin_id))
                         show = evaluate_when(item.when, ctx, caps)
                         if not show and item.unavailable == "hide":
                             continue
@@ -115,20 +112,15 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
                                 act = sub_menu.Append(wx.ID_ANY, a_label)
                                 if not cond_ok and child.unavailable == "disable":
                                     act.Enable(False)
-                                # Capability guard & unsupported wx tool check
-                                owning = _find_wx_plugin(contrib.plugin_id)
                                 allowed = False
                                 if owning is not None:
                                     allowed, _ = can_execute_action(child.action, owning)
-                                if not allowed or (child.action == "plugin.open_trusted_tool" and not is_approved_trusted_tool(owning.manifest)):
+                                if not show or not cond_ok or not allowed or (child.action == "plugin.open_trusted_tool" and not is_approved_trusted_tool(owning.manifest)):
                                     act.Enable(False)
                                 else:
                                     # Bind with host-owned identity
-                                    def make_handler(action=child.action, pid=contrib.plugin_id):
-                                        def handler(_evt):
-                                            _wx_dispatch_plugin_action(action, pid)
-                                        return handler
-                                    handler = make_handler()
+                                    handler = _guarded_handler(child.action, contrib.plugin_id, contrib.plugin_version,
+                                                               child.when, item.when)
                                     frame.Bind(wx.EVT_MENU, handler, act)
                                     _wx_plugin_action_bindings.append((act.GetId(), handler))
                                 sub_has = True
@@ -149,7 +141,6 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
                                 pass
                         continue
                     if isinstance(item, PluginMenuAction):
-                        caps = frozenset(_get_wx_plugin_caps(contrib.plugin_id))
                         cond_ok = evaluate_when(item.when, ctx, caps)
                         if not cond_ok and item.unavailable == "hide":
                             continue
@@ -157,18 +148,13 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
                         act = root_menu.Append(wx.ID_ANY, a_label)
                         if not cond_ok and item.unavailable == "disable":
                             act.Enable(False)
-                        owning = _find_wx_plugin(contrib.plugin_id)
                         allowed = False
                         if owning is not None:
                             allowed, _ = can_execute_action(item.action, owning)
-                        if not allowed or (item.action == "plugin.open_trusted_tool" and not is_approved_trusted_tool(owning.manifest)):
+                        if not cond_ok or not allowed or (item.action == "plugin.open_trusted_tool" and not is_approved_trusted_tool(owning.manifest)):
                             act.Enable(False)
                         else:
-                            def make_handler(action=item.action, pid=contrib.plugin_id):
-                                def handler(_evt):
-                                    _wx_dispatch_plugin_action(action, pid)
-                                return handler
-                            handler = make_handler()
+                            handler = _guarded_handler(item.action, contrib.plugin_id, contrib.plugin_version, item.when)
                             frame.Bind(wx.EVT_MENU, handler, act)
                             _wx_plugin_action_bindings.append((act.GetId(), handler))
                         has_visible = True
@@ -206,16 +192,6 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
                 logging.getLogger("hpc_gui.wx_shell").warning("wx rebuild plugins menu failed: %s", e, exc_info=e)
             except Exception:
                 pass
-    def _get_wx_plugin_caps(plugin_id: str):
-        try:
-            from hpc_gui.plugins.loader import load_installed_plugins
-            res = load_installed_plugins()
-            for inst in res.plugins:
-                if inst.manifest.id == plugin_id:
-                    return tuple(inst.manifest.capabilities or ())
-        except Exception:
-            pass
-        return ()
     def _find_wx_plugin(plugin_id: str):
         try:
             from hpc_gui.plugins.loader import load_installed_plugins
@@ -226,12 +202,27 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
         except Exception:
             pass
         return None
-    def _wx_dispatch_plugin_action(action: str, plugin_id: str):
+    def _guarded_handler(action, plugin_id, version, *conditions):
+        def handler(_event):
+            from hpc_gui.plugins.ui_contributions import evaluate_when
+
+            plugin = _find_wx_plugin(plugin_id)
+            if plugin is None or plugin.manifest.version != version:
+                report_wx_action_error(frame, area="PLUGIN", message_key="plugins.action_failed",
+                                       technical_detail=f"{plugin_id}:{action}")
+                return
+            ctx = _wx_current_context()
+            caps = frozenset(plugin.manifest.capabilities or ())
+            if all(evaluate_when(when, ctx, caps) for when in conditions):
+                _wx_dispatch_plugin_action(action, plugin_id, expected_version=version)
+        return handler
+
+    def _wx_dispatch_plugin_action(action: str, plugin_id: str, *, expected_version=None):
         try:
             from hpc_gui.services.plugin_menu_actions import dispatch_plugin_menu_action
             from hpc_gui.services.wx_plugin_menu_host import WxPluginMenuHost
             plugin = _find_wx_plugin(plugin_id)
-            if plugin is None:
+            if plugin is None or (expected_version is not None and plugin.manifest.version != expected_version):
                 # W04 FIX-W04-A (DEF-W04-001): a stale plugin-menu click
                 # (menu rebuild raced an uninstall/disable) must be visible
                 # and diagnosable, never a silent no-op. No exception exists
@@ -277,3 +268,11 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
     frame._wx_dispatch_plugin_action = _wx_dispatch_plugin_action
 
     subscribe_language_change(refresh_labels)
+    from hpc_gui.core.i18n import unsubscribe_language_change
+
+    def on_destroy(event):
+        if event.GetEventObject() is frame:
+            unsubscribe_language_change(refresh_labels)
+        event.Skip()
+
+    frame.Bind(wx.EVT_WINDOW_DESTROY, on_destroy)
