@@ -133,7 +133,6 @@ def test_plugin_template_action_uses_explicit_api():
 
 @pytest.mark.audit
 @pytest.mark.wx
-@pytest.mark.qt
 def test_host_adapter_import_boundary():
     """Shared dispatcher must not import PySide6."""
     import pathlib
@@ -142,16 +141,12 @@ def test_host_adapter_import_boundary():
     assert "QDialog" not in shared
     assert "QVBoxLayout" not in shared
 
-    # Qt host must handle trusted tool, wx host must not open Qt dialog
-
-    # Check Qt host exists and imports Qt only there
-    qt_host_src = pathlib.Path("src/hpc_gui/ui/plugin_menu_qt_host.py").read_text(encoding="utf-8")
-    assert "QDialog" in qt_host_src
-    assert "load_tool_for_plugin" in qt_host_src
-
+    # The native host owns trusted tool loading without a Qt dialog.
     wx_host_src = pathlib.Path("src/hpc_gui/services/wx_plugin_menu_host.py").read_text(encoding="utf-8")
     assert "QDialog" not in wx_host_src
     assert "PySide6" not in wx_host_src
+    assert "load_tool_for_plugin" in wx_host_src
+    assert "show_ansys_lint" in wx_host_src
 
 
 @pytest.mark.contract

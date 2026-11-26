@@ -11,7 +11,7 @@ implementation owner -> test -> evidence.
 
 All storage uses disposable tmp roots; no network, no real user config,
 no CWD dependence. GUI claims use real wx runtime (event -> model ->
-readback) plus the Qt installed-tab note widget.
+readback) plus the native installed-tab note widget.
 """
 
 from __future__ import annotations
@@ -242,54 +242,3 @@ def test_life005_wx_view_states_effect_and_toggle_works(tmp_path: Path):
     model.set_enabled("org.hpcclient.truba", False)
     assert "org.hpcclient.truba" in read_disabled_ids(tmp_path)
     assert load_installed_plugins(root=tmp_path, app_version=APP_VERSION).plugins == []
-
-@pytest.mark.gui
-@pytest.mark.subprocess
-@pytest.mark.semantic
-def test_life005_qt_installed_tab_states_effect():
-    """LIFE-005 (Qt): the installed tab carries the lifecycle note widget.
-
-    Subprocess-isolated (offscreen): wx and Qt cannot share one Windows
-    process, so the dialog probe runs in a child interpreter following the
-    repository's established offscreen-subprocess pattern.
-    """
-    import os
-    import subprocess
-    import sys
-
-    root = Path(__file__).resolve().parents[1]
-    code = (
-        "import os\n"
-        "os.environ['QT_QPA_PLATFORM'] = 'offscreen'\n"
-        "from PySide6.QtWidgets import QApplication, QLabel\n"
-        "from hpc_gui.core.i18n import load_language\n"
-        "from hpc_gui.ui.dialogs.plugin_manager_dialog import PluginManagerDialog\n"
-        "load_language('en')\n"
-        "app = QApplication.instance() or QApplication([])\n"
-        "dlg = PluginManagerDialog(initial_tab='installed')\n"
-        "dlg.rebuild_tabs()\n"
-        "texts = [label.text() for label in dlg.installed_list.widget().findChildren(QLabel)]\n"
-        "assert any('restart' in text.lower() for text in texts), texts\n"
-        "note = dlg.installed_list.widget().findChild(QLabel, 'pluginLifecycleNote')\n"
-        "assert note is not None and 'next time plugins load' in note.text().lower()\n"
-        "print('qt-lifecycle-note=PASS', flush=True)\n"
-        "os._exit(0)\n"
-    )
-    result = subprocess.run(
-        [sys.executable, "-c", code],
-        cwd=root,
-        env={
-            **os.environ,
-            "QT_QPA_PLATFORM": "offscreen",
-            "PYTHONPATH": os.pathsep.join(
-                part
-                for part in (str(root / "src"), os.environ.get("PYTHONPATH", ""))
-                if part
-            ),
-        },
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
-    assert result.returncode == 0, f"Qt lifecycle note probe failed: {result.stdout}\n{result.stderr}"
-    assert "qt-lifecycle-note=PASS" in result.stdout

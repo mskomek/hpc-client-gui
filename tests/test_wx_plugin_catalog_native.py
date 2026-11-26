@@ -53,6 +53,15 @@ def select(name):
     return listing.GetItemText(row, 1)
 assert listing.GetItemCount() == 3
 assert c["status"].GetLabel() == t("plugins.status_online")
+# LIFE-005: installed view explicitly explains restart/load semantics.
+c["view"].SetSelection(1)
+view_event = wx.CommandEvent(wx.wxEVT_CHOICE, c["view"].GetId())
+view_event.SetEventObject(c["view"])
+c["view"].GetEventHandler().ProcessEvent(view_event)
+note = c["lifecycle_note"].GetLabel().lower()
+assert "restart" in note and "next time plugins load" in note
+c["view"].SetSelection(0)
+c["view"].GetEventHandler().ProcessEvent(view_event)
 assert t("plugins.incompatible") in select("Future")
 assert c["install"].GetLabel() == t("plugins.incompatible") and not c["install"].IsEnabled()
 assert t("plugins.capability_cluster_profile") in select("TRUBA")
