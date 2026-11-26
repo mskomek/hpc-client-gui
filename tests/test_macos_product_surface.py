@@ -7,13 +7,14 @@ import pytest
 @pytest.mark.unit
 @pytest.mark.semantic
 def test_application_identity_uses_product_name():
-    from hpc_gui.app import _configure_application_identity
+    from hpc_gui.wx_application import configure_application_identity
 
     app = mock.Mock()
-    _configure_application_identity(app)
+    configure_application_identity(app)
 
-    app.setApplicationName.assert_called_once_with("HPC Client GUI")
-    app.setApplicationDisplayName.assert_called_once_with("HPC Client GUI")
+    app.SetAppName.assert_called_once_with("HPC Client GUI")
+    app.SetAppDisplayName.assert_called_once_with("HPC Client GUI")
+    app.SetVendorName.assert_called_once_with("mskomek")
 
 
 @pytest.mark.gui

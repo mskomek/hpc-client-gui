@@ -21,6 +21,7 @@ import time
 import wx
 from hpc_gui.core.debug_telemetry import TelemetryRecorder
 from hpc_gui.wx_debug_telemetry import install_wx_debug_telemetry
+from hpc_gui.wx_application import configure_application_identity
 
 records = []
 class Capture(logging.Handler):
@@ -30,6 +31,10 @@ logger = logging.getLogger('test.wx.telemetry')
 logger.setLevel(logging.INFO)
 logger.addHandler(Capture())
 app = wx.App(False)
+configure_application_identity(app)
+assert app.GetAppName() == 'HPC Client GUI'
+assert app.GetAppDisplayName() == 'HPC Client GUI'
+assert app.GetVendorName() == 'mskomek'
 frame = wx.Frame(None)
 book = wx.Notebook(frame)
 first, second = wx.Panel(book), wx.Panel(book)

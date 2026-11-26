@@ -97,6 +97,13 @@ def activate_terminal_for_packaged_smoke(frame) -> bool:
     return True
 
 
+def configure_application_identity(app) -> None:
+    """Use the same product identity for ordinary wx desktop launches."""
+    app.SetAppName("HPC Client GUI")
+    app.SetAppDisplayName("HPC Client GUI")
+    app.SetVendorName("mskomek")
+
+
 def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
     clean_environment = environment_without_qt_graphics()
     for name in set(os.environ) - set(clean_environment):
@@ -125,6 +132,7 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
         app.MainLoop()
         return 0 if smoke_state["result"] == "PASS" else 1
 
+    configure_application_identity(app)
     from hpc_gui.wx_crash_reporting import install_wx_crash_reporting
 
     report_previous_crash = install_wx_crash_reporting(app)

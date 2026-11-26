@@ -12,7 +12,7 @@ from PySide6.QtCore import QRect
 from PySide6.QtWidgets import QApplication
 
 from hpc_gui import __version__
-from hpc_gui.app import _show_main_window
+from hpc_gui.ui.legacy_app import _show_main_window
 from hpc_gui.services.changelog import chronological_changelog
 from hpc_gui.ui.main_window import MainWindow
 
