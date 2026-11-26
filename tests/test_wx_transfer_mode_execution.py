@@ -123,3 +123,98 @@ def test_checksum_mismatch_does_not_publish_download(tmp_path, monkeypatch):
     assert "SHA-256 verification failed" in controller.engine.failed[0][1]
     assert local.read_bytes() == b"old"
     assert Path(str(local) + ".part").read_bytes() == b"new"
+
+
+
+class MemoryResumeStore:
+    def __init__(self):
+        self.records = {}
+
+    def get(self, key):
+        return self.records.get(key)
+
+    def save(self, key, identity, partial_path, partial_bytes):
+        self.records[key] = {"identity": dict(identity), "partial_path": partial_path,
+                             "partial_bytes": partial_bytes}
+
+    def remove(self, key):
+        self.records.pop(key, None)
+
+
+def test_matching_download_partial_resumes_and_stale_partial_stays(tmp_path, monkeypatch):
+    from hpc_gui.services import transfer_mode
+    from hpc_gui.services.transfer_resume_store import transfer_record_key
+
+    store = MemoryResumeStore()
+    monkeypatch.setattr(transfer_mode, "transfer_resume_store_for_backend", lambda _: store)
+
+    class ResumingFiles(MockFilesBackend):
+        def __init__(self):
+            super().__init__()
+            self.offsets = []
+
+        def resume_download(self, remote, local, progress_cb=None):
+            existing = Path(local).read_bytes()
+            self.offsets.append(len(existing))
+            Path(local).write_bytes(existing + self._files[remote][len(existing):])
+
+    files = ResumingFiles()
+    remote = "/arf/scratch/user/new.bin"
+    files._files[remote] = b"abcdef"
+    local = tmp_path / "result.bin"
+    part = Path(str(local) + ".part")
+    part.write_bytes(b"abc")
+    item = TransferItem("download", remote, str(local))
+    controller = _start_file_transfers(
+        {"session": {"files": files}, "ftp_transfer_type": "binary"}, None, [item],
+        conflict_resolver=lambda _: "resume",
+    )
+    assert controller.engine.wait(5)
+    assert "partial identity does not match" in controller.engine.failed[0][1]
+    assert part.read_bytes() == b"abc" and not local.exists() and not files.offsets
+    size, mtime = files.stat(remote)
+    key = transfer_record_key("download", str(local))
+    store.save(key, {
+        "direction": "download", "remote_path": remote,
+        "local_path": str(local.resolve()), "size": size, "mtime": mtime,
+        "mode": "binary",
+    }, str(part.resolve()), 3)
+    run(files, TransferItem("download", remote, str(local)), "binary", "resume")
+    assert files.offsets == [3] and local.read_bytes() == b"abcdef"
+    assert not part.exists() and not store.records
+
+
+def test_legacy_sidecar_is_not_deleted_by_native_queue(tmp_path):
+    files = MockFilesBackend()
+    remote = "/arf/scratch/user/new.bin"
+    files._files[remote] = b"payload"
+    local = tmp_path / "result.bin"
+    sidecar = Path(str(local) + ".part.meta")
+    sidecar.write_bytes(b"unrelated")
+    run(files, TransferItem("download", remote, str(local)), "binary")
+    assert sidecar.read_bytes() == b"unrelated"
+
+
+def test_staging_alias_is_rejected_before_any_worker(tmp_path):
+    files = MockFilesBackend()
+    with pytest.raises(ValueError, match="Overlapping|overlaps"):
+        _start_file_transfers(
+            {"session": {"files": files}, "ftp_transfer_type": "binary"}, None,
+            [TransferItem("download", "/a", str(tmp_path / "a")),
+             TransferItem("download", "/b", str(tmp_path / "a.part"))],
+        )
+    assert not list(tmp_path.iterdir())
+
+
+def test_active_transfer_reservation_rejects_cross_queue_alias(tmp_path):
+    from hpc_gui.services.transfer_mode_execution import reserve_transfer_paths
+
+    owner = object()
+    one = TransferItem("download", "/a", str(tmp_path / "a"))
+    two = TransferItem("download", "/b", str(tmp_path / "a.part"))
+    with reserve_transfer_paths(owner, one):
+        with pytest.raises(RuntimeError, match="Another transfer owns"):
+            with reserve_transfer_paths(object(), two):
+                pytest.fail("overlapping reservation accepted")
+    with reserve_transfer_paths(owner, two):
+        pass

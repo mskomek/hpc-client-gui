@@ -168,6 +168,11 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
     generation = session_state.get("generation")
     requested_mode = session_state.get("ftp_transfer_type")
     mode_enabled = requested_mode is not None
+    if mode_enabled:
+        from hpc_gui.services.transfer_mode_execution import validate_staging_paths
+
+        items = list(items)
+        validate_staging_paths(items)
 
     def target_for(item):
         return conflict_target(files, item.op, item.dst, include_partial=mode_enabled)
@@ -202,15 +207,16 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
 
     def execute(backend, item, progress, conflict_decision):
         if mode_enabled and item.op in {"upload", "download"}:
-            from hpc_gui.services.transfer_mode_execution import execute_with_mode
+            from hpc_gui.services.transfer_mode_execution import execute_with_mode, reserve_transfer_paths
 
             def verify_bytes(local, remote):
                 item.verification_state = _verify_transfer_bytes(backend, local, remote)
 
-            item.effective_mode = execute_with_mode(
-                backend, item, progress, requested_mode, conflict_decision, _run_file_view_item,
-                verify_bytes=verify_bytes if controller.checksum_enabled else None,
-            )
+            with reserve_transfer_paths(files, item):
+                item.effective_mode = execute_with_mode(
+                    backend, item, progress, requested_mode, conflict_decision, _run_file_view_item,
+                    verify_bytes=verify_bytes if controller.checksum_enabled else None,
+                )
         else:
             _run_file_view_item(backend, item, progress, conflict_decision=conflict_decision)
 
