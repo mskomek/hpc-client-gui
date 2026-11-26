@@ -43,7 +43,7 @@ FEATURE_EVIDENCE = {
     "GUI-PLUGIN-001": Evidence("COVERED", "plugin_manager_dialog.py", "wx_plugins.py", "test_wx_plugins.py"),
     "GUI-PLUGIN-002": Evidence("COVERED", "ansys_lint_results_dialog.py", "wx_ansys_view.py; wx_ansys.py", "test_wx_ansys_view.py; test_wx_ansys.py", "Wave 54: real wx event -> file_chooser seam -> WxAnsysModel -> engine -> visible ListCtrl with grouped severity, details, copy/docs, EN/TR and close-in-flight safety. 8 view tests + 2 model tests."),
     "GUI-SET-001": Evidence("COVERED", "settings_dialog.py", "wx_settings.py", "test_wx_settings.py"),
-    "GUI-LOG-001": Evidence("COVERED", "logs_widget.py", "wx_logs.py", "test_wx_logs.py"),
+    "GUI-LOG-001": Evidence("COVERED", "wx_logs_view.py", "wx_logs.py", "test_wx_logs.py"),
     "GUI-HELP-001": Evidence("COVERED", "help_dialog.py", "wx_help.py", "test_wx_help.py"),
     "GUI-A11Y-001": Evidence("PARTIAL", "GUI_FEATURE_PARITY_BASELINE.md", "wx_connection.py; wx_connection_dialog.py", "test_wx_a11y.py; test_wx_connection_profiles.py", "Connection controls have visible labels, keyboard equivalents, focus/error handling, textual states, and named primary actions; no human keyboard/screen-reader audit was performed."),
 }

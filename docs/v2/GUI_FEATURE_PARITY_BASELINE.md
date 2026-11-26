@@ -38,7 +38,7 @@ actions, dialogs, and widget context-menu implementations.
 | GUI-PLUGIN-001 | Plugin manager, discovery/install state and template browser | plugin manager/template dialogs | P1 | `plugin_manager_dialog.py`, `template_browser_dialog.py` | Preserve |
 | GUI-PLUGIN-002 | ANSYS Trusted Tool lint/explanation surface | allowlisted linter host and result dialog | P1 | `ansys_lint_results_dialog.py`, `tests/test_fluent_plugin_integration.py` | Preserve; explicit allowlist |
 | GUI-SET-001 | Settings dialog, language, refresh/live tracking and storage controls | `SettingsDialog`, i18n layer | P0 | `settings_dialog.py`, `tests/test_live_tracking_settings.py` | Preserve |
-| GUI-LOG-001 | Application logs, diagnostics, send-logs flow and redaction | `LogsWidget`, diagnostics/send-logs dialogs | P1 | `logs_widget.py`, `send_logs_dialog.py`, `tests/test_log_redaction.py` | Preserve; no secret export |
+| GUI-LOG-001 | Application logs, diagnostics, send-logs flow and redaction | wx logs view and diagnostics/send-logs dialogs | P1 | `wx_logs_view.py`, `wx_logs.py`, `tests/test_wx_logs.py` | Preserve; no secret export |
 | GUI-HELP-001 | Help center, quick tour, welcome and contextual help affordances | help/quick-tour/welcome dialogs | P1 | `help_dialog.py`, `quick_tour.py`, `tests/test_docs_references.py` | Preserve |
 | GUI-I18N-001 | Turkish/English language menu, flags and runtime label refresh | `i18n` translations and main-window refresh | P0 | `main_window.py`, `tests/test_branding_check.py` | Preserve; new strings require i18n keys |
 | GUI-A11Y-001 | Keyboard focus/tab order, visible labels and non-color state cues | Qt widget defaults plus explicit labels/tooltips | P1 | widget tree review | Review during wx port |

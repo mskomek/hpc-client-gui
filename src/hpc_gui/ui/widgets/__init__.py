@@ -1,3 +1,1 @@
-from .logs_widget import LogsWidget
-
-__all__ = ["LogsWidget"]
+"""Legacy Qt widget package; wx views live in the application shell."""

@@ -34,7 +34,6 @@ from .widgets.jobs_outputs_widget import JobsOutputsWidget
 from .widgets.directories_widget import DirectoriesWidget
 from .widgets.ftp_widget import FtpWidget
 from .widgets.editor_widget import EditorWidget
-from .widgets.logs_widget import LogsWidget
 from ._main_window_menubar import _MainWindowMenubarMixin
 from ._main_window_workspace import _MainWindowWorkspaceMixin
 
@@ -102,7 +101,6 @@ __all__ = [
     'FtpWidget',
     'JobsOutputsWidget',
     'LoginWidget',
-    'LogsWidget',
     'MainWindow',
     'Path',
     'QAction',
@@ -193,16 +191,12 @@ class MainWindow(
         self.ftp = FtpWidget()
         self.editor = EditorWidget()
         self._editor_windows: list[QMainWindow] = []
-        self.logs = LogsWidget()
 
         self.tabs.addTab(self.login, t("tabs.login"))
         self.tabs.addTab(self.jobs_outputs, t("tabs.jobs_outputs"))
         self.tabs.addTab(self.directories, t("tabs.directories"))
         self.tabs.addTab(self.ftp, t("tabs.ftp") if t("tabs.ftp") != "[tabs.ftp]" else "FTP")
         self.tabs.addTab(self.editor, t("tabs.editor"))
-        self.tabs.addTab(
-            self.logs, t("tabs.logs") if t("tabs.logs") != "[tabs.logs]" else "Logs"
-        )
         self.tabs.currentChanged.connect(self._sync_command_polling)
         self.jobs_outputs.polling_visibility_changed.connect(
             self._sync_command_polling

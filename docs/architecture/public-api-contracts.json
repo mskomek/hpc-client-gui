@@ -331,7 +331,6 @@
       "FtpWidget",
       "JobsOutputsWidget",
       "LoginWidget",
-      "LogsWidget",
       "MainWindow",
       "Path",
       "QAction",
