@@ -217,7 +217,7 @@ def test_shell_upload_plans_on_worker_and_serial_backend_keeps_folder_order(tmp_
     assert controllers[0].configured_parallel_limit == 5
     assert files.max_active == 1
     assert [(op, path) for op, path, _thread in calls] == [
-        ("mkdir", "/remote/first"), ("upload", "/remote/first/input.txt"),
-        ("mkdir", "/remote/second"), ("upload", "/remote/second/input.txt"),
+        ("mkdir", "/remote/first"), ("mkdir", "/remote/second"),
+        ("upload", "/remote/first/input.txt"), ("upload", "/remote/second/input.txt"),
     ]
     assert all(thread != main_thread for _, _, thread in calls)

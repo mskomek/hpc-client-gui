@@ -130,59 +130,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
         finally:
             dialog.deleteLater()
 
-    @pytest.mark.integration
-    @pytest.mark.concurrency
-    def test_recursive_plan_prepares_all_mkdirs_before_parallel_upload_phase(self) -> None:
-        prepared: list[str] = []
-        started: list[str] = []
-        release = threading.Event()
-        lock = threading.Lock()
-        items = [
-            TransferItem("mkdir_remote", "", "/remote/root"),
-            TransferItem("mkdir_remote", "", "/remote/root/one"),
-            TransferItem("upload", "one.bin", "/remote/root/one/one.bin"),
-            TransferItem("mkdir_remote", "", "/remote/root/two"),
-            TransferItem("upload", "two.bin", "/remote/root/two/two.bin"),
-            TransferItem("upload", "root.bin", "/remote/root/root.bin"),
-        ]
-
-        def run_item(item, _progress=None):
-            if item.op == "mkdir_remote":
-                prepared.append(item.dst)
-                return
-            self.assertEqual(len(prepared), 3)
-            with lock:
-                started.append(item.src)
-            release.wait(3)
-
-        dialog = TransferDialog(
-            title="Upload",
-            items=items,
-            run_item=run_item,
-            parallel_limit=3,
-        )
-        try:
-            dialog.start()
-            deadline = time.monotonic() + 3
-            while time.monotonic() < deadline:
-                with lock:
-                    if len(started) >= 2:
-                        break
-                QApplication.processEvents()
-                time.sleep(0.01)
-            self.assertEqual(prepared, ["/remote/root", "/remote/root/one", "/remote/root/two"])
-            with lock:
-                self.assertGreaterEqual(len(started), 2)
-            release.set()
-            deadline = time.monotonic() + 3
-            while time.monotonic() < deadline and not dialog.finished_cleanly():
-                QApplication.processEvents()
-                time.sleep(0.01)
-            self.assertTrue(dialog.finished_cleanly())
-        finally:
-            release.set()
-            dialog.cancel_all()
-            dialog.deleteLater()
 
     @pytest.mark.gui
     @pytest.mark.qt

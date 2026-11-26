@@ -166,3 +166,44 @@ def test_forgotten_directory_failure_does_not_unlock_descendants():
     assert controller.wait(5)
     assert called == [parent]
     assert "prerequisite failed" in controller.failed[0][1]
+
+
+@pytest.mark.unit
+@pytest.mark.concurrency
+def test_recursive_plan_prepares_all_mkdirs_before_parallel_upload_phase():
+    prepared = []
+    started = []
+    release = threading.Event()
+    all_started = threading.Event()
+    lock = threading.Lock()
+    items = [
+        TransferItem("mkdir_remote", "", "/remote/root"),
+        TransferItem("mkdir_remote", "", "/remote/root/one"),
+        TransferItem("upload", "one.bin", "/remote/root/one/one.bin"),
+        TransferItem("mkdir_remote", "", "/remote/root/two"),
+        TransferItem("upload", "two.bin", "/remote/root/two/two.bin"),
+        TransferItem("upload", "root.bin", "/remote/root/root.bin"),
+    ]
+
+    def run(item, progress):
+        if item.op == "mkdir_remote":
+            prepared.append(item.dst)
+        else:
+            with lock:
+                assert prepared == ["/remote/root", "/remote/root/one", "/remote/root/two"]
+                started.append(item.src)
+                if len(started) == 3:
+                    all_started.set()
+            assert release.wait(5)
+        progress(1, 1)
+
+    controller = TransferController(items, run, parallel_limit=3)
+    try:
+        controller.start()
+        assert all_started.wait(5), started
+    finally:
+        release.set()
+        assert controller.wait(5)
+    assert not controller.failed
+    assert len(controller.completed) == len(items)
+    assert set(started) == {"one.bin", "two.bin", "root.bin"}
