@@ -274,3 +274,17 @@ def test_rename_rejects_invalid_or_unchanged_target(candidate):
     assert controller.engine.wait(5)
     assert not observed and item.dst == "/work/old"
     assert "Rename must select" in controller.engine.failed[0][1]
+
+
+def test_bare_rename_without_target_is_not_a_transfer_decision():
+    item = TransferItem("upload", "source", "/work/old")
+    observed = []
+    controller = TransferSessionController(
+        [item], lambda *args: observed.append(args),
+        conflict_check=lambda _: True,
+        conflict_resolver=lambda _: "rename",
+    )
+    controller.start()
+    assert controller.engine.wait(5)
+    assert not observed and item.dst == "/work/old"
+    assert "Rename requires an explicit destination" in controller.engine.failed[0][1]

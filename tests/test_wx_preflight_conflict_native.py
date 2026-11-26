@@ -20,12 +20,14 @@ import traceback
 from pathlib import Path
 from threading import Thread
 from types import SimpleNamespace
+from unittest.mock import patch
 import wx
 from hpc_gui.core.i18n import load_language
 from hpc_gui.config.storage import get_upload_preflight_confirmation_enabled, set_upload_preflight_confirmation_enabled
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.services.transfer_conflict_policy import ConflictFileInfo
 from hpc_gui.wx_shell_upload import prepare_upload
+from hpc_gui.wx_upload_preflight import create_upload_preflight
 from hpc_gui.wx_conflict_bridge import request_conflict_decision
 
 faulthandler.dump_traceback_later(15, repeat=True)
@@ -50,6 +52,27 @@ def capture_error(*args, **kwargs):
     print("unexpected message box", args, flush=True)
     return wx.ID_OK
 wx.MessageBox = capture_error
+
+# Exact three-row native dialog parity, without starting a worker.
+small_plan = [
+    TransferItem("mkdir_remote", "", "/remote/folder"),
+    TransferItem("upload", str(source / "file-000.txt"), "/remote/folder/a.txt"),
+    TransferItem("upload", str(source / "file-001.txt"), "/remote/folder/b.txt"),
+]
+small = create_upload_preflight(parent, small_plan, 2)
+try:
+    c = small._wx_upload_preflight_controls
+    assert c["listing"].GetItemCount() == 3
+    for value in ("2 files", "1 folder", "3 total steps", "2 transfers"):
+        assert value in c["summary"].GetLabel()
+    assert c["listing"].GetItemText(1, 1) == small_plan[1].src
+    assert c["listing"].GetItemText(1, 2) == small_plan[1].dst
+    assert c["start"].GetLabel() == "Start transfer"
+    assert c["dont_ask"].GetLabel() == "Don't ask again"
+    assert not c["dont_ask"].GetValue()
+finally:
+    small.Destroy()
+    app.ProcessPendingEvents()
 
 def pump(predicate, timeout=5):
     if predicate():
@@ -101,6 +124,10 @@ def run_preflight(action):
             assert not started
             assert controls["listing"].GetItemCount() == 201
             assert "250 files" in controls["summary"].GetLabel()
+            assert "252 total steps" in controls["summary"].GetLabel()
+            assert controls["listing"].GetItemText(2, 1) == str(source / "file-000.txt")
+            assert controls["listing"].GetItemText(2, 2) == "/remote/case/file-000.txt"
+            assert not controls["dont_ask"].GetValue()
             assert "2 folder" in controls["summary"].GetLabel()
             assert "1 transfers" in controls["summary"].GetLabel()
             assert "Remaining: 52" in controls["listing"].GetItemText(200)
@@ -138,9 +165,10 @@ assert not started and get_upload_preflight_confirmation_enabled()
 run_preflight("accept")
 assert len(started[0]) == 252
 assert not get_upload_preflight_confirmation_enabled()
-prepare_upload(state, lifecycle, parent, session, files, [source], "/remote",
-               lambda *args, **kwargs: started.append(args[2]), generation=state["generation"])
-assert len(started) == 2
+with patch("hpc_gui.wx_upload_preflight.create_upload_preflight", side_effect=AssertionError("disabled preflight created a dialog")):
+    prepare_upload(state, lifecycle, parent, session, files, [source], "/remote",
+                   lambda *args, **kwargs: started.append(args[2]), generation=state["generation"])
+assert len(started) == 2 and not errors
 set_upload_preflight_confirmation_enabled(True)
 
 print("preflight complete; conflict start", flush=True)

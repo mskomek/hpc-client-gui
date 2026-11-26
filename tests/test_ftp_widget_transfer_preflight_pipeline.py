@@ -4,11 +4,9 @@ from support.ftp_widget_test_support import (
     FtpWidgetTestCase,
     Path,
     QApplication,
-    QDialog,
     SimpleNamespace,
     TransferDialog,
     TransferItem,
-    TransferPreflightDialog,
     _Files,
     _PlannedOp,
     patch,
@@ -20,18 +18,6 @@ from support.ftp_widget_test_support import (
 
 
 class FtpWidgetTests(FtpWidgetTestCase):
-    @pytest.mark.unit
-    def test_disabled_upload_preflight_skips_dialog(self) -> None:
-        panel = self.widget.panel_scratch
-        item = TransferItem("mkdir_remote", "", "/remote/empty")
-        with patch(
-            "hpc_gui.ui.widgets.remote_dir_panel.get_upload_preflight_confirmation_enabled",
-            return_value=False,
-        ), patch(
-            "hpc_gui.ui.widgets.remote_dir_panel.TransferPreflightDialog"
-        ) as dialog:
-            self.assertTrue(panel._confirm_transfer_plan([item], "Upload", 1))
-        dialog.assert_not_called()
 
     @pytest.mark.integration
     def test_disabled_upload_preflight_still_executes_local_upload(self) -> None:
@@ -290,33 +276,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
                 time.sleep(0.01)
             self.assertTrue(run_plan.called)
 
-    @pytest.mark.gui
-    @pytest.mark.qt
-    def test_upload_preflight_bounds_plan_rows_without_truncating_items(self) -> None:
-        items = [
-            TransferItem(
-                "upload",
-                f"C:/local/file-{index}.bin",
-                f"/remote/folder/file-{index}.bin",
-            )
-            for index in range(250)
-        ]
-        dialog = TransferPreflightDialog(
-            title="Upload",
-            items=items,
-            parallel_limit=2,
-        )
-        try:
-            self.assertEqual(len(dialog._items), 250)
-            self.assertEqual(dialog.plan_list.topLevelItemCount(), 201)
-            remaining_row = dialog.plan_list.topLevelItem(200)
-            self.assertEqual(remaining_row.text(0), "Remaining: 50")
-            self.assertEqual(dialog.plan_list.topLevelItem(0).text(1), "C:/local/file-0.bin")
-            self.assertIn("250 files", dialog.lbl_summary.text())
-            self.assertIn("250 total steps", dialog.lbl_summary.text())
-            self.assertEqual(dialog.btn_start.text(), "Start transfer")
-        finally:
-            dialog.deleteLater()
 
     @pytest.mark.integration
     @pytest.mark.concurrency
@@ -350,77 +309,3 @@ class FtpWidgetTests(FtpWidgetTestCase):
             ("upload", source, destination),
             panel._active_transfer_keys,
         )
-
-    @pytest.mark.unit
-    def test_upload_preflight_dont_ask_persists_only_when_accepted(self) -> None:
-        panel = self.widget.panel_scratch
-        item = TransferItem("upload", "C:/local/a.txt", "/remote/a.txt")
-
-        class FakeCheckBox:
-            def isChecked(self) -> bool:
-                return True
-
-        class FakePreflightDialog:
-            result = QDialog.DialogCode.Accepted
-
-            def __init__(self, *_args, **_kwargs) -> None:
-                self.cb_dont_ask_again = FakeCheckBox()
-
-            def exec(self):
-                return self.result
-
-            def deleteLater(self) -> None:
-                pass
-
-        with patch(
-            "hpc_gui.ui.widgets.remote_dir_panel.get_upload_preflight_confirmation_enabled",
-            return_value=True,
-        ), patch(
-            "hpc_gui.ui.widgets.remote_dir_panel.TransferPreflightDialog",
-            FakePreflightDialog,
-        ), patch(
-            "hpc_gui.ui.widgets.remote_dir_panel.set_upload_preflight_confirmation_enabled"
-        ) as persist:
-            self.assertTrue(panel._confirm_transfer_plan([item], "Upload", 1))
-        persist.assert_called_once_with(False)
-
-        FakePreflightDialog.result = QDialog.DialogCode.Rejected
-        with patch(
-            "hpc_gui.ui.widgets.remote_dir_panel.get_upload_preflight_confirmation_enabled",
-            return_value=True,
-        ), patch(
-            "hpc_gui.ui.widgets.remote_dir_panel.TransferPreflightDialog",
-            FakePreflightDialog,
-        ), patch(
-            "hpc_gui.ui.widgets.remote_dir_panel.set_upload_preflight_confirmation_enabled"
-        ) as persist:
-            self.assertFalse(panel._confirm_transfer_plan([item], "Upload", 1))
-        persist.assert_not_called()
-
-    @pytest.mark.gui
-    @pytest.mark.qt
-    def test_upload_preflight_shows_counts_and_source_destination_rows(self) -> None:
-        items = [
-            TransferItem("mkdir_remote", "", "/remote/folder"),
-            TransferItem("upload", "C:/local/a.txt", "/remote/folder/a.txt"),
-            TransferItem("upload", "C:/local/b.txt", "/remote/folder/b.txt"),
-        ]
-        dialog = TransferPreflightDialog(
-            title="Upload",
-            items=items,
-            parallel_limit=2,
-        )
-        try:
-            self.assertIn("2 files", dialog.lbl_summary.text())
-            self.assertIn("1 folder", dialog.lbl_summary.text())
-            self.assertIn("3 total steps", dialog.lbl_summary.text())
-            self.assertIn("2 transfers", dialog.lbl_summary.text())
-            self.assertEqual(dialog.plan_list.topLevelItemCount(), 3)
-            upload_row = dialog.plan_list.topLevelItem(1)
-            self.assertEqual(upload_row.text(1), "C:/local/a.txt")
-            self.assertEqual(upload_row.text(2), "/remote/folder/a.txt")
-            self.assertEqual(dialog.btn_start.text(), "Start transfer")
-            self.assertEqual(dialog.cb_dont_ask_again.text(), "Don't ask again")
-            self.assertFalse(dialog.cb_dont_ask_again.isChecked())
-        finally:
-            dialog.deleteLater()

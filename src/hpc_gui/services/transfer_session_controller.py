@@ -138,6 +138,8 @@ class TransferSessionController:
                         raise ValueError("Rename must select a new name in the destination directory")
                     item.dst = str(candidate)
                     decision = "rename"
+                elif decision == "rename":
+                    raise ValueError("Rename requires an explicit destination")
                 if decision == "skip":
                     progress(1, 1)
                     return
