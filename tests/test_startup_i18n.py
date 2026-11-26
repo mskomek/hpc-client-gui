@@ -1,14 +1,20 @@
-from pathlib import Path
+"""Startup text is available before any saved preferences are loaded."""
+from __future__ import annotations
 
 import pytest
 
-@pytest.mark.audit
-def test_retained_legacy_splash_text_never_depends_on_translation_catalog():
-    root = Path(__file__).resolve().parents[1]
-    source = (root / "src" / "hpc_gui" / "ui" / "legacy_app.py").read_text(encoding="utf-8")
-    splash = (root / "src" / "hpc_gui" / "ui" / "splash_screen.py").read_text(encoding="utf-8")
+from hpc_gui.core import i18n
 
-    assert 't("splash.' not in source
-    assert 't("splash.' not in splash
-    assert "HPC WORKSPACE" in splash
-    assert "APPLICATION UPDATE" in splash
+
+@pytest.mark.unit
+@pytest.mark.parametrize("language", ["en", "tr"])
+def test_wx_startup_labels_resolve_in_both_languages(language):
+    previous = i18n.current_language()
+    try:
+        i18n.load_language(language)
+        for key in ("splash.starting", "splash.checking_updates", "splash.loading_preferences",
+                    "splash.checking_helpers", "updates.skip_updates"):
+            value = i18n.t(key)
+            assert value and value != f"[{key}]", (language, key)
+    finally:
+        i18n.load_language(previous)
