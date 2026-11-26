@@ -182,6 +182,7 @@ jobs:
         run: >-
           python -m pytest
           tests/test_wx_debug_telemetry_native.py
+          tests/test_debug_telemetry.py
           tests/test_w15_fresh_user_startup.py::test_closed_port_connect_fails_visibly_without_connected_state
           -q --tb=short
       - name: Native wx startup flow and callback lifetime (Windows)
