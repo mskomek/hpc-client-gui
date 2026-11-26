@@ -185,8 +185,8 @@ class RemoteTransferUploadMixin:
             confirm_before_start=True,
         )
 
-    def _build_local_upload_plan_background(self, worker, files, local_paths, dest_dir):
-        session = self.session
+    def _build_local_upload_plan_background(self, worker, files, local_paths, dest_dir, *, session=None):
+        session = self.session if session is None else session
 
         def current():
             return (not worker.cancelled and self.session is session
@@ -224,11 +224,12 @@ class RemoteTransferUploadMixin:
         clean_paths = [path for path in local_paths if path]
         if not clean_paths:
             return True
-        files = self.session["files"]
+        session = self.session
+        files = session["files"]
         return self._start_transfer_planning(
             "upload",
             lambda worker: self._build_local_upload_plan_background(
-                worker, files, clean_paths, normalized_dest),
+                worker, files, clean_paths, normalized_dest, session=session),
         )
 
 

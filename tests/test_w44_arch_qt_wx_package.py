@@ -5,8 +5,7 @@ Owned requirements:
 - HPC-W10-TODO-ARCH-QT-WX-002: wx runtime must not import Qt UI modules
   (``hpc_gui.ui.*``); shared values live in framework-neutral modules.
 - HPC-W10-TODO-ARCH-PACKAGE-001: PyInstaller hidden imports re-audited;
-  Qt/WebEngine stack ships intentionally (dual-runtime until the W56
-  runtime-cutover decision), not from stale imports.
+  V2 ships wx and excludes the retired Qt runtime.
 
 These tests pin the W44 correction; they do not weaken any other suite.
 """
@@ -75,12 +74,12 @@ def test_w44_plugin_request_url_single_sourced():
     assert PLUGIN_REQUEST_URL == EXPECTED_PLUGIN_REQUEST_URL
     assert is_allowed_plugin_request_url(EXPECTED_PLUGIN_REQUEST_URL) is True
     assert is_allowed_plugin_request_url("https://evil.example.com/x") is False
-    # The Qt dialog must re-export the neutral constant, not define its own copy.
-    dialog_src = (
-        SRC / "hpc_gui" / "ui" / "dialogs" / "plugin_manager_dialog.py"
-    ).read_text(encoding="utf-8")
-    assert "from hpc_gui.services.plugin_request import PLUGIN_REQUEST_URL" in dialog_src
-    assert "PLUGIN_REQUEST_URL = (" not in dialog_src
+    # The active wx request button must use the canonical URL and validator.
+    view_src = (SRC / "hpc_gui" / "_wx_plugins_management.py").read_text(encoding="utf-8")
+    assert "from hpc_gui.services.plugin_request import PLUGIN_REQUEST_URL, is_allowed_plugin_request_url" in view_src
+    assert "is_allowed_plugin_request_url(PLUGIN_REQUEST_URL)" in view_src
+    assert "wx.LaunchDefaultBrowser(PLUGIN_REQUEST_URL)" in view_src
+    assert "PLUGIN_REQUEST_URL = (" not in view_src
 
 
 def test_w44_entry_format_consumers_share_neutral_service():
