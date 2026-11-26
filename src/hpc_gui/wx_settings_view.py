@@ -7,15 +7,18 @@ from threading import Thread
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.wx_host import make_host
 from hpc_gui.wx_settings import WxSettingsModel
+from hpc_gui.services.transfer_speed_test import run_transfer_speed_test
+from hpc_gui.wx_settings_speed import resolve_transfer_speed_target, transfer_speed_target_is_current
 
 
-def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=None, apply=None, embedded: bool):
+def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=None, apply=None, embedded: bool, session_state=None):
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
 
     model = model or WxSettingsModel(settings, apply=apply)
+    state = {"closed": False, "speed_test_running": False}
     if apply is not None and getattr(model, "apply_callback", None) is None:
         # SETTINGS-PERSIST-001: a caller-supplied persistence callback must
         # not be silently dropped when a prebuilt model is injected.
@@ -36,6 +39,17 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     cb_preflight = wx.CheckBox(panel, label=t("settings.upload_preflight_confirmation_label"))
     cb_preflight.SetValue(bool(model.global_settings.get("upload_preflight_confirmation", True)))
     btn_reset_smart_open = wx.Button(panel, label=t("settings.smart_open_reset"))
+    speed_label = wx.StaticText(panel, label=t("settings.transfer_speed_test_size_label"))
+    speed_size = wx.Choice(panel, choices=["8 MiB", "32 MiB", "100 MiB"])
+    speed_size.SetSelection(0)
+    speed_button = wx.Button(panel, label=t("settings.transfer_speed_test"))
+    speed_state = {"running": False}
+    state["speed_test_running"] = False
+    try:
+        resolve_transfer_speed_target(session_state)
+        speed_button.Enable(True)
+    except RuntimeError:
+        speed_button.Enable(False)
 
     # Profile settings
     lbl_parallel = wx.StaticText(panel, label=t("connection.transfer_parallelism"))
@@ -58,6 +72,11 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     root.Add(cb_checksum, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     root.Add(cb_preflight, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     root.Add(btn_reset_smart_open, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    speed_row = wx.BoxSizer(wx.HORIZONTAL)
+    speed_row.Add(speed_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+    speed_row.Add(speed_size, 0, wx.RIGHT, 8)
+    speed_row.Add(speed_button, 0)
+    root.Add(speed_row, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     row1 = wx.BoxSizer(wx.HORIZONTAL)
     row1.Add(lbl_parallel, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
     row1.Add(sp_parallel, 0)
@@ -73,8 +92,6 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     root.Add(btn_sizer, 0, wx.EXPAND | wx.ALL, 16)
 
     panel.SetSizer(root)
-
-    state = {"closed": False}
 
     def apply_settings(_event=None):
         # W02 error governance (HPC-W01-TODO-018 / HPC-W01-TODO-020): staging
@@ -142,6 +159,53 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
 
         Thread(target=worker, daemon=True).start()
 
+    def start_speed_test(_event=None):
+        if speed_state["running"] or state["closed"]:
+            return
+        try:
+            target = resolve_transfer_speed_target(session_state)
+        except Exception as exc:
+            from hpc_gui.core.wx_errors import report_wx_action_error
+            report_wx_action_error(host, area="SETTINGS", message_key="settings.apply_failed", exc=exc)
+            return
+        selected = speed_size.GetStringSelection().split()[0]
+        try:
+            size_mib = int(selected)
+        except ValueError:
+            size_mib = 8
+        speed_state["running"] = True
+        state["speed_test_running"] = True
+        speed_button.Enable(False)
+
+        def worker():
+            result = None
+            error = None
+            try:
+                result = run_transfer_speed_test(target.files, remote_dir=target.remote_dir, size_mib=size_mib)
+            except Exception as exc:
+                error = exc
+
+            def finish_speed_test():
+                speed_state["running"] = False
+                state["speed_test_running"] = False
+                if state["closed"] or not transfer_speed_target_is_current(session_state, target):
+                    return
+                speed_button.Enable(True)
+                if error is not None:
+                    from hpc_gui.core.wx_errors import report_wx_action_error
+                    report_wx_action_error(host, area="SETTINGS", message_key="settings.apply_failed", exc=error)
+                    return
+                wx.MessageBox(
+                    t("settings.transfer_speed_test_result").format(
+                        size=result["size_mib"], upload=result["upload_mib_s"], download=result["download_mib_s"]
+                    ),
+                    t("settings.dialog_title"), wx.OK | wx.ICON_INFORMATION, host,
+                )
+
+            wx.CallAfter(finish_speed_test)
+
+        Thread(target=worker, daemon=True).start()
+
     def reset_smart_open(_event=None):
         answer = wx.MessageBox(
             t("settings.smart_open_reset_confirm"), t("settings.dialog_title"),
@@ -184,6 +248,8 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             cb_checksum.SetLabel(t("settings.transfer_checksum_verification_label"))
             cb_preflight.SetLabel(t("settings.upload_preflight_confirmation_label"))
             btn_reset_smart_open.SetLabel(t("settings.smart_open_reset"))
+            speed_label.SetLabel(t("settings.transfer_speed_test_size_label"))
+            speed_button.SetLabel(t("settings.transfer_speed_test"))
             lbl_parallel.SetLabel(t("connection.transfer_parallelism"))
             lbl_timeout.SetLabel(t("connection.ssh_timeout"))
             btn_apply.SetLabel(t("settings.apply"))
@@ -193,6 +259,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
 
     btn_apply.Bind(wx.EVT_BUTTON, apply_settings)
     btn_reset_smart_open.Bind(wx.EVT_BUTTON, reset_smart_open)
+    speed_button.Bind(wx.EVT_BUTTON, start_speed_test)
     btn_close.Bind(wx.EVT_BUTTON, lambda e: host.Close())
     subscribe_language_change(refresh_labels)
     host.bind_host_close(on_close)
@@ -203,6 +270,8 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
         "checksum": cb_checksum,
         "upload_preflight": cb_preflight,
         "reset_smart_open": btn_reset_smart_open,
+        "speed_test_size": speed_size,
+        "speed_test": speed_button,
         "parallelism": sp_parallel,
         "timeout": sp_timeout,
         "apply": btn_apply,
@@ -215,17 +284,17 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     return host
 
 
-def build_settings_panel(parent, model: WxSettingsModel | None = None, *, settings=None, apply=None):
+def build_settings_panel(parent, model: WxSettingsModel | None = None, *, settings=None, apply=None, session_state=None):
     """Embedded panel factory. Returns the wx.Panel host."""
-    return _build_settings(parent, model, settings=settings, apply=apply, embedded=True)
+    return _build_settings(parent, model, settings=settings, apply=apply, embedded=True, session_state=session_state)
 
 
-def show_settings(parent=None, model: WxSettingsModel | None = None, *, settings=None, apply=None) -> int:
+def show_settings(parent=None, model: WxSettingsModel | None = None, *, settings=None, apply=None, session_state=None) -> int:
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    _build_settings(parent, model, settings=settings, apply=apply, embedded=False)
+    _build_settings(parent, model, settings=settings, apply=apply, embedded=False, session_state=session_state)
     return wx.ID_OK
 
 

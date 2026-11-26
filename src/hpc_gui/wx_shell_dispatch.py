@@ -31,7 +31,7 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
             _model = build_model_from_storage(
                 apply=lambda snapshot: persist_model_snapshot(snapshot),
             )
-            show_settings(parent=parent, model=_model)
+            show_settings(parent=parent, model=_model, session_state=session_state)
         except Exception as exc:
             # W02 ERROR-GOV: a settings failure must be visible, never silent.
             report_wx_action_error(parent, area="SETTINGS", message_key="settings.open_failed", exc=exc)
