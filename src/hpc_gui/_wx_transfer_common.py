@@ -5,6 +5,20 @@ from __future__ import annotations
 from hpc_gui.core.i18n import t
 
 
+def gauge_range_value(done: int, total: int) -> tuple[int, int]:
+    """Map byte progress to a safe native signed-int gauge range.
+
+    Keep exact byte values for small files; scale larger transfers without
+    floating-point precision loss or reporting completion prematurely.
+    """
+    total = max(0, int(total))
+    done = min(total, max(0, int(done)))
+    if total <= 2**31 - 1:
+        return max(1, total), done
+    maximum = 10000
+    return maximum, done * maximum // total
+
+
 def post_to(state, callback, *args) -> None:
     if state.get("closed"):
         return

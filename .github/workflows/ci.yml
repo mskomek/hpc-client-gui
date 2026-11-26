@@ -119,6 +119,7 @@ jobs:
           tests/test_wx_shortcut_preferences.py
           tests/test_wx_shell_sizing.py
           tests/test_wx_shell_layout_migration.py
+          tests/test_transfer_gauge_range.py
           tests/test_wx_clipboard.py
           tests/test_ssh_files_error_contracts.py
           tests/test_ssh_files_text_mixin.py

@@ -24,7 +24,7 @@ from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.services.transfer_session_controller import TransferSessionController
 from hpc_gui import _wx_transfer_embedded
 from hpc_gui.wx_shell_file_transfer import _start_file_transfers
-from hpc_gui.wx_transfer_workspace import build_transfers_panel
+from hpc_gui.wx_transfer_workspace import build_transfers_panel, create_transfer_progress
 from hpc_gui._wx_transfer_common import find_row
 from hpc_gui._wx_transfer_queue_menu import build_transfer_menu
 
@@ -190,6 +190,18 @@ try:
     menu_action('completed', 'transfer.clear_completed')
     pump(lambda: not view['completed_map'] and not view['row_token'])
     assert not history_owner.engine.completed
+    # Native wx gauge accepts large files without integer overflow.
+    detached = create_transfer_progress(frame)
+    try:
+        gauge = detached._wx_transfer_controls['gauge']
+        big = TransferItem('download', '/large', 'large')
+        detached._wx_transfer_progress(big, 5 * 1024**3, 8 * 1024**3)
+        pump(lambda: gauge.GetRange() == 10000 and gauge.GetValue() == 6250)
+        detached._wx_transfer_progress(big, 8 * 1024**3, 8 * 1024**3)
+        pump(lambda: gauge.GetValue() == gauge.GetRange())
+    finally:
+        detached._wx_transfer_close(None)
+        app.ProcessPendingEvents()
     assert not any(m.split('.')[0] in {'PySide6','PyQt5','PyQt6','shiboken6'} for m in sys.modules)
 finally:
     release.set()

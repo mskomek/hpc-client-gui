@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from hpc_gui._wx_transfer_common import is_safe, update_button_state
+from hpc_gui._wx_transfer_common import gauge_range_value, is_safe, update_button_state
 from hpc_gui.core.i18n import t
 
 
@@ -33,8 +33,9 @@ def bind_detached(host, state: dict[str, Any], controls: dict[str, Any]):
         if not is_safe(host, state, controls.get("detail")):
             return
         try:
-            controls["gauge"].SetRange(max(1, int(total)))
-            controls["gauge"].SetValue(min(max(0, int(done)), controls["gauge"].GetRange()))
+            maximum, value = gauge_range_value(done, total)
+            controls["gauge"].SetRange(maximum)
+            controls["gauge"].SetValue(value)
             controls["detail"].SetLabel(t("transfer.progress_detail").format(item=item.label(), done=done, total=total, speed="", eta=""))
         except RuntimeError:
             return
