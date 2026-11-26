@@ -10,7 +10,6 @@ from support.ftp_widget_test_support import (
     patch,
     pytest,
     tempfile,
-    time,
 )
 
 
