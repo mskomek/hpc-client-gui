@@ -48,7 +48,6 @@ class EditorWidget(
         self.btn_save_submit = QPushButton(t("editor.save_submit"))
         self.btn_save_run = QPushButton(t("editor.save_run"))
         self.btn_lint = QPushButton(t("editor.lint"))
-        self.btn_array = QPushButton(t("editor.array"))
 
         self.btn_load.clicked.connect(self.load_path)
         self.btn_save.clicked.connect(self.save_path)
@@ -56,7 +55,6 @@ class EditorWidget(
         self.btn_save_submit.clicked.connect(lambda: self.save_path(force_submit=True))
         self.btn_save_run.clicked.connect(lambda: self.save_path(run_in_terminal=True))
         self.btn_lint.clicked.connect(self.run_lint)
-        self.btn_array.clicked.connect(self.edit_array)
 
         top = QHBoxLayout()
         self.lbl_remote = QLabel(t("editor.remote"))
@@ -65,7 +63,6 @@ class EditorWidget(
         top.addWidget(self.btn_load)
         top.addWidget(self.btn_new_template)
         top.addWidget(self.btn_lint)
-        top.addWidget(self.btn_array)
         top.addWidget(self.btn_save)
         top.addWidget(self.btn_save_submit)
         top.addWidget(self.btn_save_run)
@@ -199,7 +196,6 @@ class EditorWidget(
             t("editor.new_from_template")
         )
         self.btn_lint.setText(t("editor.lint"))
-        self.btn_array.setText(t("editor.array"))
         self.btn_save.setText(t("editor.save"))
         self.btn_save_submit.setText(t("editor.save_submit"))
         self.btn_save_run.setText(t("editor.save_run"))

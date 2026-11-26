@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
 
 from hpc_gui.core.i18n import t
 from hpc_gui.services.editor_controller import EditorCommandService
-from hpc_gui.ui.dialogs.slurm_array_dialog import edit_slurm_array
 from hpc_gui.ui.widgets.editor_document_view import _EditorDocument
 
 
@@ -170,8 +169,3 @@ class EditorDocumentActionsMixin:
         lower = path.lower()
         self.btn_save_run.setVisible(lower.endswith(".sh"))
         self.btn_save_submit.setVisible(lower.endswith((".slurm", ".sbatch")))
-        self.btn_array.setVisible(lower.endswith((".slurm", ".sbatch")))
-    def edit_array(self) -> None:
-        edited = edit_slurm_array(self, self.text.toPlainText())
-        if edited is not None:
-            self.text.setPlainText(edited)

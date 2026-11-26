@@ -9,13 +9,18 @@ from pathlib import Path, PureWindowsPath
 from hpc_gui.services.transfer_controller import TransferCancelled, TransferItem
 
 
+def _windows_reserved(name):
+    checker = getattr(os.path, "isreserved", None)
+    return checker(name) if checker is not None else PureWindowsPath(name).is_reserved()
+
+
 def _local_name(name):
     name = str(name)
     if not name or name in {".", ".."} or any(c in name for c in ("/", "\\", "\x00")):
         raise ValueError(f"Unsafe remote filename: {name!r}")
     if os.name == "nt" and (
         PureWindowsPath(name).drive or any(c in name for c in '<>:"|?*')
-        or name.endswith((".", " ")) or PureWindowsPath(name).is_reserved()
+        or name.endswith((".", " ")) or _windows_reserved(name)
         or any(ord(c) < 32 for c in name)
     ):
         raise ValueError(f"Unsafe Windows filename: {name!r}")

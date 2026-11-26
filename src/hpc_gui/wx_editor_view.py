@@ -60,12 +60,14 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     btn_open = wx.Button(panel, label=t("editor.open"))
     btn_template = wx.Button(panel, label=t("editor.new_from_template"))
     btn_lint = wx.Button(panel, label=t("editor.lint"))
+    btn_array = wx.Button(panel, label=t("editor.array"))
     save = wx.Button(panel, label=t("editor.save"))
     header.Add(remote_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     header.Add(remote_path, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     header.Add(btn_open, 0, wx.ALL, 3)
     header.Add(btn_template, 0, wx.ALL, 3)
     header.Add(btn_lint, 0, wx.ALL, 3)
+    header.Add(btn_array, 0, wx.ALL, 3)
     header.Add(save, 0, wx.ALL, 3)
     root.Add(header, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
     find_bar = wx.WrapSizer(wx.HORIZONTAL)
@@ -168,6 +170,10 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
 
     def _update_header_enabled():
         _update_header_enabled_leaf(ctx)
+        doc = model.controller.active
+        name = (doc.path or doc.suggested_filename or "") if doc else ""
+        btn_array.Enable(bool(doc and name.lower().endswith((".slurm", ".sbatch"))
+                              and not state["in_flight"] and not state["binary_refused"]))
 
     ctx["update_header_enabled"] = _update_header_enabled
 
@@ -195,6 +201,20 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     def _on_lint(_event):
         on_lint_action(ctx)
 
+    def _on_array(_event):
+        from hpc_gui.wx_slurm_array import edit_array_native
+
+        doc = model.controller.active
+        if not btn_array.IsEnabled() or doc is None or state["closed"]:
+            return
+        original = editor.GetValue()
+        edited = edit_array_native(host, original)
+        if (edited is not None and not state["closed"] and model.controller.active is doc
+                and editor.GetValue() == original and edited != original):
+            editor.SetValue(edited)
+            model.controller.update_content(edited)
+            _update_dirty_marker()
+
     def _on_remote_path_enter(_event):
         _on_open(_event)
 
@@ -204,6 +224,7 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     btn_open.Bind(wx.EVT_BUTTON, _on_open)
     btn_template.Bind(wx.EVT_BUTTON, _on_template)
     btn_lint.Bind(wx.EVT_BUTTON, _on_lint)
+    btn_array.Bind(wx.EVT_BUTTON, _on_array)
     btn_find_next.Bind(wx.EVT_BUTTON, lambda _event: _wx_find_next())
     btn_find_prev.Bind(wx.EVT_BUTTON, lambda _event: _wx_find_previous())
     btn_replace.Bind(wx.EVT_BUTTON, lambda _event: _wx_replace_current())
@@ -218,6 +239,7 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
 
     def _on_tab_changed(event):
         _on_tab_changed_leaf(event, model, editor, remote_path, doc_tabs, host)
+        _update_header_enabled()
 
     def content_changed(event):
         if not state["in_flight"]:
@@ -281,6 +303,7 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
             btn_open.SetLabel(t("editor.open"))
             btn_template.SetLabel(t("editor.new_from_template"))
             btn_lint.SetLabel(t("editor.lint"))
+            btn_array.SetLabel(t("editor.array"))
             save.SetLabel(t("editor.save"))
         except Exception:
             pass
@@ -306,7 +329,7 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
 
     def load_document(new_path, new_content, *, is_local=False, provider="", profile="", session_key="", encoding="utf-8", newline=None, version="", request_seq=None):
         result = _load_document_leaf(model, editor, remote_path, doc_tabs, host, status, state, _label_fallback(), new_path, new_content, is_local=is_local, provider=provider, profile=profile, session_key=session_key, encoding=encoding, newline=newline, version=version, request_seq=request_seq)
-        if result == "opened":
+        if result in {"opened", "activated"}:
             _update_header_enabled()
         return result
 
@@ -314,7 +337,9 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
         save_document(on_done=callback)
 
     def close_tab(index=None, *, force=False) -> bool:
-        return _close_tab_leaf(model, editor, remote_path, doc_tabs, host, _label_fallback(), index, force=force)
+        result = _close_tab_leaf(model, editor, remote_path, doc_tabs, host, _label_fallback(), index, force=force)
+        _update_header_enabled()
+        return result
 
     subscribe_language_change(refresh_labels)
     host.bind_host_close(close)
@@ -326,7 +351,7 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
 
         host.Bind(wx.EVT_WINDOW_DESTROY, destroyed)
     host._wx_editor_controls = {"editor": editor, "save": save, "submit": submit, "run": run, "status": status, "doc_tabs": doc_tabs, "find_in": find_in, "replace_in": replace_in, "find_next": btn_find_next, "find_prev": btn_find_prev, "match_case": chk_match_case, "replace": btn_replace, "replace_all": btn_replace_all, "find_label": find_label, "replace_label": replace_label}
-    host._wx_editor_header = {"path": remote_path, "path_label": remote_label, "open": btn_open, "new_template": btn_template, "lint": btn_lint, "header": header, "doc_tabs": doc_tabs, "remote_label": remote_label}
+    host._wx_editor_header = {"path": remote_path, "path_label": remote_label, "open": btn_open, "new_template": btn_template, "lint": btn_lint, "array": btn_array, "header": header, "doc_tabs": doc_tabs, "remote_label": remote_label}
     host._wx_editor_state = state
     host._wx_editor_model = model
     host._wx_editor_load_document = load_document
