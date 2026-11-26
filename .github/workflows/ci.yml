@@ -132,6 +132,8 @@ jobs:
           tests/test_startup_i18n.py
           tests/test_startup_changelog.py
           tests/test_retired_startup_boundary.py
+          tests/test_startup_checks.py
+          tests/test_startup_update_state.py
           tests/test_wx_startup_notices.py::test_startup_notices_persist_version_and_welcome_choice
           tests/test_wx_startup_notices.py::test_failed_changelog_does_not_mark_version_seen
           tests/test_performance_probe.py::PerformanceProbeTests::test_slow_event_loop_tick_is_recorded
