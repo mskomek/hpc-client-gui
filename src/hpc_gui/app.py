@@ -26,7 +26,8 @@ from hpc_gui.core.i18n import load_saved_language, system_default_language
 from hpc_gui.core.i18n import t, validate_language_files
 from hpc_gui.core.logging_setup import setup_logging, install_crash_logging, install_excepthook
 from hpc_gui.core.debug_support import log_startup_snapshot
-from hpc_gui.core.debug_telemetry import DebugTelemetry, is_source_run
+from hpc_gui.core.debug_telemetry import is_source_run
+from hpc_gui.ui.debug_telemetry import DebugTelemetry
 from hpc_gui.core.crash_reporter import read_crash_flag, clear_crash_flag
 from hpc_gui.ui.main_window import MainWindow
 from hpc_gui.ui.directory_list_appearance import install_directory_list_appearance

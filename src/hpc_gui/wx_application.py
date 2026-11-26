@@ -157,6 +157,11 @@ def run_wx_application(create_shell_frame, run_packaged_smoke) -> int:
                 pass
         app.SetTopWindow(frame)
         install_main_frame_exit_policy(wx, app, frame)
+        from hpc_gui.wx_debug_telemetry import install_wx_debug_telemetry
+
+        notebook = (getattr(frame, "_wx_shell_controls", {}) or {}).get("notebook")
+        if notebook is not None:
+            install_wx_debug_telemetry(frame, notebook)
         frame.Show()
         report_previous_crash(frame)
         try:

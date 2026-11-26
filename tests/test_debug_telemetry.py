@@ -5,7 +5,7 @@ from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication, QWidget
 
-from hpc_gui.core.debug_telemetry import DebugTelemetry
+from hpc_gui.ui.debug_telemetry import DebugTelemetry
 
 
 @pytest.mark.gui

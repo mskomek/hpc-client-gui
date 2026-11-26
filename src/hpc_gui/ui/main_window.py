@@ -26,7 +26,8 @@ from hpc_gui.ui._main_window_contracts import (
     set_last_seen_changelog_version as set_last_seen_changelog_version,
     show_exception as show_exception,
 )
-from hpc_gui.core.debug_telemetry import DebugTelemetry, is_source_run
+from hpc_gui.core.debug_telemetry import is_source_run
+from hpc_gui.ui.debug_telemetry import DebugTelemetry
 from hpc_gui.core.i18n import t
 from .async_call import AsyncCall
 from .splash_screen import UpdateSplash
