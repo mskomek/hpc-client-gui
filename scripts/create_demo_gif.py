@@ -7,6 +7,7 @@ A visible desktop is required for image capture, never for a remote server.
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 import tempfile
 from threading import Event
@@ -61,7 +62,7 @@ def _assemble_existing() -> int:
         ("uploaded", "Files", "Transfer completed in the real transfer area"),
         ("edited", "Edit Slurm job", "Change demo_case to demo_case_v2"),
         ("jobs", "Jobs / Outputs", "Job 12347 is visible in the real job panel"),
-        ("outputs", "Outputs", "Live stdout and stderr for job 12347"),
+        ("outputs", "Outputs", "Mock stdout and stderr for job 12347"),
     )
     frames = []
     for name, title, subtitle in scenes:
@@ -369,7 +370,7 @@ def _capture_run(*, connection_only=False, verify_only=False):
             FRAME_DIR.mkdir(parents=True, exist_ok=True)
             prefix = "validation-" if connection_only else "real-"
             for name in seen:
-                (staging / (name + ".png")).replace(FRAME_DIR / (prefix + name + ".png"))
+                shutil.copyfile(staging / (name + ".png"), FRAME_DIR / (prefix + name + ".png"))
         print("wx-demo-flow=PASS " + ",".join(seen), flush=True)
     return 0 if connection_only or verify_only else _assemble_existing()
 
