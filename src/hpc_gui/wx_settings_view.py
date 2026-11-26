@@ -39,12 +39,63 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     cb_preflight = wx.CheckBox(panel, label=t("settings.upload_preflight_confirmation_label"))
     cb_preflight.SetValue(bool(model.global_settings.get("upload_preflight_confirmation", True)))
     btn_reset_smart_open = wx.Button(panel, label=t("settings.smart_open_reset"))
+    association_title = wx.StaticText(panel, label=t("settings.file_associations_section"))
+    association_list = wx.ListBox(panel)
+    association_change = wx.Button(panel, label=t("settings.file_association_change"))
+    association_clear = wx.Button(panel, label=t("settings.file_association_clear"))
     speed_label = wx.StaticText(panel, label=t("settings.transfer_speed_test_size_label"))
     speed_size = wx.Choice(panel, choices=["8 MiB", "32 MiB", "100 MiB"])
     speed_size.SetSelection(0)
     speed_button = wx.Button(panel, label=t("settings.transfer_speed_test"))
     speed_state = {"running": False}
     state["speed_test_running"] = False
+
+    from hpc_gui.config.storage import clear_file_association, get_file_associations, set_file_association
+    file_associations = get_file_associations()
+
+    def refresh_associations():
+        association_list.Clear()
+        for extension, program in sorted(file_associations.items()):
+            association_list.Append(f"{extension} -> {program}", clientData=extension)
+        selected = association_list.GetSelection() != wx.NOT_FOUND
+        has_items = association_list.GetCount() > 0
+        association_change.Enable(has_items)
+        association_clear.Enable(selected)
+
+    def change_association(_event=None):
+        index = association_list.GetSelection()
+        if index == wx.NOT_FOUND:
+            wx.MessageBox(t("settings.file_association_none_selected"), t("common.info"), wx.OK | wx.ICON_INFORMATION, host)
+            return
+        extension = association_list.GetClientData(index)
+        dialog = wx.FileDialog(
+            host, t("files.open_with_select_program"),
+            defaultFile=file_associations.get(extension, ""),
+            wildcard=t("files.open_with_program_filter"),
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        )
+        try:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+            file_associations.update(set_file_association(extension, dialog.GetPath()))
+            refresh_associations()
+        finally:
+            dialog.Destroy()
+
+    def clear_association(_event=None):
+        index = association_list.GetSelection()
+        if index == wx.NOT_FOUND:
+            wx.MessageBox(t("settings.file_association_none_selected"), t("common.info"), wx.OK | wx.ICON_INFORMATION, host)
+            return
+        extension = association_list.GetClientData(index)
+        file_associations.clear()
+        file_associations.update(clear_file_association(extension))
+        refresh_associations()
+
+    association_list.Bind(wx.EVT_LISTBOX, lambda _event: association_clear.Enable(association_list.GetSelection() != wx.NOT_FOUND))
+    association_change.Bind(wx.EVT_BUTTON, change_association)
+    association_clear.Bind(wx.EVT_BUTTON, clear_association)
+    refresh_associations()
     try:
         resolve_transfer_speed_target(session_state)
         speed_button.Enable(True)
@@ -72,6 +123,12 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     root.Add(cb_checksum, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     root.Add(cb_preflight, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     root.Add(btn_reset_smart_open, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    root.Add(association_title, 0, wx.LEFT | wx.RIGHT | wx.TOP, 12)
+    root.Add(association_list, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 12)
+    association_buttons = wx.BoxSizer(wx.HORIZONTAL)
+    association_buttons.Add(association_change, 0, wx.RIGHT, 6)
+    association_buttons.Add(association_clear, 0)
+    root.Add(association_buttons, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     speed_row = wx.BoxSizer(wx.HORIZONTAL)
     speed_row.Add(speed_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
     speed_row.Add(speed_size, 0, wx.RIGHT, 8)
@@ -248,6 +305,9 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             cb_checksum.SetLabel(t("settings.transfer_checksum_verification_label"))
             cb_preflight.SetLabel(t("settings.upload_preflight_confirmation_label"))
             btn_reset_smart_open.SetLabel(t("settings.smart_open_reset"))
+            association_title.SetLabel(t("settings.file_associations_section"))
+            association_change.SetLabel(t("settings.file_association_change"))
+            association_clear.SetLabel(t("settings.file_association_clear"))
             speed_label.SetLabel(t("settings.transfer_speed_test_size_label"))
             speed_button.SetLabel(t("settings.transfer_speed_test"))
             lbl_parallel.SetLabel(t("connection.transfer_parallelism"))
@@ -270,6 +330,9 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
         "checksum": cb_checksum,
         "upload_preflight": cb_preflight,
         "reset_smart_open": btn_reset_smart_open,
+        "file_associations": association_list,
+        "file_association_change": association_change,
+        "file_association_clear": association_clear,
         "speed_test_size": speed_size,
         "speed_test": speed_button,
         "parallelism": sp_parallel,

@@ -111,3 +111,66 @@ def test_settings_speed_test_result_is_ignored_after_session_change(app, monkeyp
     assert not shown
     host.Close()
     frame.Destroy()
+
+
+def test_settings_file_associations_list_change_cancel_and_clear(app, monkeypatch):
+    import hpc_gui.config.storage as storage
+    import hpc_gui.wx_settings_view as view
+    from hpc_gui.wx_settings import WxSettingsModel
+
+    associations = {".slurm": "C:/old/editor.exe"}
+    writes = []
+    monkeypatch.setattr(storage, "get_file_associations", lambda: dict(associations))
+
+    def set_association(extension, path):
+        writes.append((extension, path))
+        if path:
+            associations[extension] = path
+        else:
+            associations.pop(extension, None)
+        return dict(associations)
+
+    monkeypatch.setattr(storage, "set_file_association", set_association)
+    monkeypatch.setattr(storage, "clear_file_association", lambda extension: set_association(extension, ""))
+    frame = wx.Frame(None)
+    host = view.build_settings_panel(frame, WxSettingsModel())
+    controls = host._wx_settings_controls
+    listing = controls["file_associations"]
+    change = controls["file_association_change"]
+    clear = controls["file_association_clear"]
+    assert listing.GetCount() == 1
+    assert change.IsEnabled()
+    assert not clear.IsEnabled()
+    listing.SetSelection(0)
+    listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_LISTBOX, listing.GetId()))
+    assert clear.IsEnabled()
+
+    class FileDialog:
+        answer = wx.ID_CANCEL
+
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def ShowModal(self):
+            return self.answer
+
+        def GetPath(self):
+            return "C:/new/editor.exe"
+
+        def Destroy(self):
+            pass
+
+    monkeypatch.setattr(wx, "FileDialog", FileDialog)
+    change.Command(wx.CommandEvent(wx.wxEVT_BUTTON, change.GetId()))
+    assert writes == []
+    FileDialog.answer = wx.ID_OK
+    change.Command(wx.CommandEvent(wx.wxEVT_BUTTON, change.GetId()))
+    assert writes == [(".slurm", "C:/new/editor.exe")]
+    assert "new/editor.exe" in listing.GetString(0)
+    listing.SetSelection(0)
+    clear.Command(wx.CommandEvent(wx.wxEVT_BUTTON, clear.GetId()))
+    assert listing.GetCount() == 0
+    assert not change.IsEnabled()
+    assert not clear.IsEnabled()
+    host.Close()
+    frame.Destroy()
