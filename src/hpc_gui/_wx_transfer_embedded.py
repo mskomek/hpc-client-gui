@@ -42,12 +42,18 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                             except Exception:
                                 pass
                 try:
-                    status.SetLabel(t("transfer.active_item").format(item=item.label()))
+                    if event == "started":
+                        status.SetLabel(t("transfer.active_item").format(item=item.label()))
                 except Exception:
                     status.SetLabel(t("transfer.no_active_transfer"))
                 if iid not in state["queue_map"]:
                     state["queue_map"][iid] = item
                     add_row(state, queue_list, item, "Queued", "")
+            elif event == "removed":
+                state["queue_map"].pop(iid, None)
+                row = find_row(state, queue_list, iid)
+                if row != -1:
+                    queue_list.DeleteItem(row)
             elif event == "completed":
                 try:
                     status.SetLabel(t("transfer.completed_tab"))
@@ -99,7 +105,7 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                 label = f"{done}/{total}"
             if row != -1:
                 try:
-                    queue_list.SetItem(row, 3, label)
+                    queue_list.SetItem(row, 4, label)
                 except RuntimeError:
                     pass
             try:
@@ -123,6 +129,8 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                     status.SetLabel(t("transfer.cancelled"))
                 else:
                     status.SetLabel(t("transfer.errors_tab"))
+            elif ctrl and ctrl.engine.stop_requested and ctrl.engine.pending:
+                status.SetLabel(t("transfer.stopped_after_current"))
             elif ctrl:
                 status.SetLabel(t("transfer.completed_tab"))
             try:
@@ -174,25 +182,24 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
             except RuntimeError:
                 pass
 
-    def do_clear_pending(_event=None):
+    def do_stop(_event=None):
+        engine = getattr(state.get("controller"), "engine", None)
+        if engine is not None and engine.running:
+            engine.stop_after_current()
+            update_button_state(host, state, controls, True)
+
+    def do_process_queue(_event=None):
         ctrl = state.get("controller")
-        for target in (ctrl, getattr(ctrl, "engine", None)):
-            if target is None:
-                continue
-            m = getattr(target, "clear_pending", None)
-            if callable(m):
-                try:
-                    m()
-                except Exception:
-                    pass
-                break
-        if is_safe(host, state, status):
-            try:
-                queue_list.DeleteAllItems()
-                state["queue_map"].clear()
-                update_button_state(host, state, controls, True)
-            except RuntimeError:
-                pass
+        engine = getattr(ctrl, "engine", None)
+        if engine is not None and not engine.running and engine.pending:
+            ctrl.start()
+            update_button_state(host, state, controls, True)
+
+    def do_clear_pending(_event=None):
+        engine = getattr(state.get("controller"), "engine", None)
+        if engine is not None:
+            engine.clear_pending()
+            update_button_state(host, state, controls, True)
 
     def do_retry_failed(_event=None):
         ctrl = state.get("controller")
@@ -291,6 +298,7 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                         except Exception:
                             pass
             controls["stop"].SetLabel(t("transfer.stop"))
+            controls["process_queue"].SetLabel(t("transfer.process_queue"))
             controls["cancel"].SetLabel(t("transfer.cancel"))
             controls["clear_pending"].SetLabel(t("transfer.clear_pending"))
             controls["retry_failed"].SetLabel(t("transfer.retry_failed"))
@@ -299,7 +307,8 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
             return
 
     if wx is not None:
-        controls["stop"].Bind(wx.EVT_BUTTON, do_cancel)
+        controls["stop"].Bind(wx.EVT_BUTTON, do_stop)
+        controls["process_queue"].Bind(wx.EVT_BUTTON, do_process_queue)
         controls["cancel"].Bind(wx.EVT_BUTTON, do_cancel)
         controls["clear_pending"].Bind(wx.EVT_BUTTON, do_clear_pending)
         controls["retry_failed"].Bind(wx.EVT_BUTTON, do_retry_failed)

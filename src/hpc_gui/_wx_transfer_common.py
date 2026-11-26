@@ -92,21 +92,19 @@ def update_button_state(host, state, controls, embedded: bool) -> None:
                         configured=configured, effective=effective,
                     )
             hint.SetLabel(label)
+        engine = getattr(ctrl, "engine", None)
+        running = bool(getattr(engine, "running", False))
+        pending = bool(getattr(engine, "pending", ()))
+        stopping = bool(getattr(engine, "stop_requested", False))
+        cancelling = bool(getattr(engine, "cancel_requested", False))
         if embedded:
-            has_cancel = _has_cancel(ctrl)
-            has_clear = _has_clear(ctrl)
-            controls["stop"].Enable(has_cancel)
-            controls["cancel"].Enable(has_cancel)
-            controls["clear_pending"].Enable(has_clear)
+            controls["stop"].Enable(running and not stopping)
+            controls["cancel"].Enable(running and not cancelling and _has_cancel(ctrl))
+            controls["clear_pending"].Enable(pending and _has_clear(ctrl))
+            controls["process_queue"].Enable(pending and not running)
             controls["retry_failed"].Enable(_has_failed(ctrl))
         else:
-            if ctrl is None:
-                controls["cancel"].Disable()
-            else:
-                if _has_cancel(ctrl):
-                    controls["cancel"].Enable(True)
-                else:
-                    controls["cancel"].Disable()
+            controls["cancel"].Enable(running and not cancelling and _has_cancel(ctrl))
     except RuntimeError:
         pass
 

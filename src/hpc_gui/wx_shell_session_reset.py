@@ -10,6 +10,16 @@ def _clear_transfer_workspace(session_state) -> None:
     if panel is None:
         return
     view = getattr(panel, "_wx_transfer_state", {})
+    owner = view.get("controller") if isinstance(view, dict) else None
+    engine = getattr(owner, "engine", None)
+    if engine is not None:
+        engine.cancel_all()
+        engine.clear_pending()
+    setter = getattr(panel, "_wx_transfer_set_controller", None)
+    if callable(setter):
+        setter(None)
+    elif isinstance(view, dict):
+        view["controller"] = None
     for key in ("queue_map", "failed_map", "completed_map", "row_token"):
         mapping = view.get(key) if isinstance(view, dict) else None
         if isinstance(mapping, dict):
@@ -22,6 +32,11 @@ def _clear_transfer_workspace(session_state) -> None:
                 listing.DeleteAllItems()
             except (AttributeError, RuntimeError):
                 pass
+    notebook = controls.get("notebook")
+    if notebook is not None:
+        from hpc_gui._wx_transfer_common import update_tab_counts
+
+        update_tab_counts(notebook, view)
     status = controls.get("status")
     if status is not None:
         try:
@@ -68,7 +83,9 @@ def reset_connection_views(session_state) -> None:
                 except Exception:
                     pass
         def clear_if_current():
-            if state.get("generation") == generation:
+            panel = state.get("embedded_transfers_panel")
+            view = getattr(panel, "_wx_transfer_state", {}) or {}
+            if state.get("generation") == generation and view.get("controller") is None:
                 _clear_transfer_workspace(state)
 
         try:

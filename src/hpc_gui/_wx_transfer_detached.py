@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from hpc_gui._wx_transfer_common import is_safe
+from hpc_gui._wx_transfer_common import is_safe, update_button_state
 from hpc_gui.core.i18n import t
 
 
@@ -25,6 +25,7 @@ def bind_detached(host, state: dict[str, Any], controls: dict[str, Any]):
                 controls["detail"].SetLabel(t("transfer.completed_tab"))
             elif event == "failed":
                 controls["detail"].SetLabel(t("transfer.errors_tab"))
+            update_button_state(host, state, controls, False)
         except RuntimeError:
             return
 

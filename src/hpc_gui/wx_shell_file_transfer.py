@@ -305,6 +305,16 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
             return False
 
     if embedded and _embedded_alive(embedded):
+        previous = getattr(embedded, "_wx_transfer_state", {}).get("controller")
+        previous_engine = getattr(previous, "engine", None)
+        if previous_engine is not None and (previous_engine.running or previous_engine.pending or previous_engine.failed):
+            # A second batch must not replace a live or resumable queue owner.
+            if parent is None:
+                import wx
+
+                parent = wx.GetTopLevelParent(embedded)
+            embedded = None
+    if embedded and _embedded_alive(embedded):
         # Route shell's own file transfers to the embedded panel; keep detached path for external parents
         if parent is not None and hasattr(parent, "_wx_shell_controls"):
             transfer_window = embedded
@@ -339,11 +349,11 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
                     "Transfer failed without a backend error message.",
                 )
                 item.error_message = str(error)
-            transfer_window._wx_transfer_queue(event, item)
+            transfer_window._wx_transfer_queue(event, item, owner=controller)
 
     def progress_event(item, done, total):
         if transfer_window:
-            transfer_window._wx_transfer_progress(item, done, total)
+            transfer_window._wx_transfer_progress(item, done, total, owner=controller)
         if on_progress:
             on_progress(item, done, total)
 
@@ -367,7 +377,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
     def finish_run():
         sessions.discard(controller)
         if transfer_window:
-            transfer_window._wx_transfer_finish()
+            transfer_window._wx_transfer_finish(owner=controller)
 
     controller = TransferSessionController(
         items,

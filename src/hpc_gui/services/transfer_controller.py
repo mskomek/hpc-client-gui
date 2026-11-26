@@ -67,6 +67,18 @@ class TransferController:
             return mkdirs + transfers if mkdirs and transfers else items
         return items
     @property
+    def running(self) -> bool:
+        return self._thread is not None and not self._done.is_set()
+
+    @property
+    def stop_requested(self) -> bool:
+        return self._stop_after_current.is_set()
+
+    @property
+    def cancel_requested(self) -> bool:
+        return self._cancel.is_set()
+
+    @property
     def pending(self) -> list[TransferItem]:
         with self._lock:
             return list(self._pending)
@@ -147,14 +159,19 @@ class TransferController:
     def clear_pending(self) -> None:
         with self._lock:
             self._stop_after_current.set()
+            removed = list(self._pending)
             self._pending.clear()
+        for item in removed:
+            self._emit_queue("removed", item)
 
     def remove_pending_items(self, items: Iterable[TransferItem]) -> int:
         selected = {id(item) for item in items}
         with self._lock:
-            before = len(self._pending)
+            removed = [item for item in self._pending if id(item) in selected]
             self._pending = [item for item in self._pending if id(item) not in selected]
-            return before - len(self._pending)
+        for item in removed:
+            self._emit_queue("removed", item)
+        return len(removed)
 
     def set_pending_priorities(self, items: Iterable[TransferItem], priority: str) -> None:
         selected = {id(item) for item in items}
@@ -236,10 +253,6 @@ class TransferController:
         finally:
             with self._lock:
                 self._accepting = False
-            try:
-                for item in self.pending:
-                    self._emit_queue("queued", item)
-            finally:
-                self._done.set()
-                if self._on_done:
-                    self._on_done()
+            self._done.set()
+            if self._on_done:
+                self._on_done()
