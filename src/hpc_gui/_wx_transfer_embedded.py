@@ -6,6 +6,7 @@ from typing import Any
 
 from hpc_gui._wx_transfer_common import (
     add_row,
+    priority_label,
     find_row,
     is_safe,
     update_button_state,
@@ -48,7 +49,34 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                     status.SetLabel(t("transfer.no_active_transfer"))
                 if iid not in state["queue_map"]:
                     state["queue_map"][iid] = item
-                    add_row(state, queue_list, item, "Queued", "")
+                    add_row(state, queue_list, item, t("transfer.queue_tab"), "")
+                if event == "started":
+                    row = find_row(state, queue_list, iid)
+                    if row != -1:
+                        queue_list.SetItem(row, 6, t("transfer.active_item").format(item=item.label()))
+            elif event == "priority":
+                row = find_row(state, queue_list, iid)
+                if row != -1:
+                    queue_list.SetItem(row, 5, priority_label(item))
+                engine = getattr(state.get("controller"), "engine", None)
+                pending = getattr(engine, "pending", ())
+                tokens = [state["row_token"].get(id(it)) for it in pending]
+                ranks = {token: i for i, token in enumerate(tokens) if token is not None}
+
+                def rank(token):
+                    return (1, ranks[token]) if token in ranks else (0, token)
+
+                queue_list.SortItems(lambda a, b: (rank(a) > rank(b)) - (rank(a) < rank(b)))
+            elif event in ("forgotten_failed", "forgotten_completed"):
+                mapping, listing = (
+                    ("failed_map", failed_list) if event == "forgotten_failed"
+                    else ("completed_map", completed_list)
+                )
+                state[mapping].pop(iid, None)
+                row = find_row(state, listing, iid)
+                if row != -1:
+                    listing.DeleteItem(row)
+                state["row_token"].pop(iid, None)
             elif event == "removed":
                 state["queue_map"].pop(iid, None)
                 row = find_row(state, queue_list, iid)
@@ -68,7 +96,7 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                         pass
                 if iid not in state["completed_map"]:
                     state["completed_map"][iid] = item
-                    add_row(state, completed_list, item, "Successful", "")
+                    add_row(state, completed_list, item, t("transfer.completed_tab"), "")
             elif event == "failed":
                 try:
                     status.SetLabel(t("transfer.errors_tab"))
@@ -307,6 +335,9 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
             return
 
     if wx is not None:
+        from hpc_gui._wx_transfer_queue_menu import bind_transfer_menus
+
+        bind_transfer_menus(wx, host, state, controls)
         controls["stop"].Bind(wx.EVT_BUTTON, do_stop)
         controls["process_queue"].Bind(wx.EVT_BUTTON, do_process_queue)
         controls["cancel"].Bind(wx.EVT_BUTTON, do_cancel)

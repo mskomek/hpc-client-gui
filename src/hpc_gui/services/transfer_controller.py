@@ -21,6 +21,9 @@ class TransferItem:
         return f"{self.op}: {name or (self.dst or self.src)}"
 
 
+TRANSFER_PRIORITIES = ("Highest", "High", "Normal", "Low", "Lowest")
+
+
 class TransferCancelled(Exception):
     pass
 
@@ -140,11 +143,20 @@ class TransferController:
             self._stop_after_current.set()
 
     def retry_failed(self) -> int:
+        return self.retry_failed_items(None)
+
+    def retry_failed_items(self, items: Iterable[TransferItem] | None) -> int:
+        selected = None if items is None else {id(item) for item in items}
         with self._lock:
             if self._thread is not None and not self._done.is_set():
                 return 0
-            restored = [item for item, _error in self._failed]
-            self._failed.clear()
+            restored = [item for item, _error in self._failed
+                        if selected is None or id(item) in selected]
+            if not restored:
+                return 0
+            restored_ids = {id(item) for item in restored}
+            self._failed = [(item, error) for item, error in self._failed
+                            if id(item) not in restored_ids]
             self._pending = restored + self._pending
             self.items = list(self._pending)
             self._cancel.clear()
@@ -173,12 +185,60 @@ class TransferController:
             self._emit_queue("removed", item)
         return len(removed)
 
-    def set_pending_priorities(self, items: Iterable[TransferItem], priority: str) -> None:
+    def set_pending_priorities(self, items: Iterable[TransferItem], priority: str) -> int:
+        """Stable ordering inside transfer runs; never cross a filesystem barrier."""
+        if priority not in TRANSFER_PRIORITIES:
+            return 0
         selected = {id(item) for item in items}
+        ranks = {name: index for index, name in enumerate(TRANSFER_PRIORITIES)}
         with self._lock:
-            for item in self._pending:
-                if id(item) in selected:
-                    item.priority = priority
+            changed = [item for item in self._pending if id(item) in selected
+                       and item.op in {"upload", "download"}]
+            for item in changed:
+                item.priority = priority
+            if changed:
+                start = 0
+                while start < len(self._pending):
+                    if self._pending[start].op not in {"upload", "download"}:
+                        start += 1
+                        continue
+                    end = start + 1
+                    while end < len(self._pending) and self._pending[end].op in {"upload", "download"}:
+                        end += 1
+                    self._pending[start:end] = sorted(
+                        self._pending[start:end], key=lambda item: ranks.get(item.priority, 2),
+                    )
+                    start = end
+        for item in changed:
+            self._emit_queue("priority", item)
+        return len(changed)
+
+    def remove_failed_items(self, items: Iterable[TransferItem] | None = None) -> int:
+        selected = None if items is None else {id(item) for item in items}
+        with self._lock:
+            removed = [item for item, _ in self._failed
+                       if selected is None or id(item) in selected]
+            removed_ids = {id(item) for item in removed}
+            self._failed = [(item, error) for item, error in self._failed
+                            if id(item) not in removed_ids]
+        for item in removed:
+            self._emit_queue("forgotten_failed", item)
+        return len(removed)
+
+    def remove_completed_items(self, items: Iterable[TransferItem] | None = None) -> int:
+        selected = None if items is None else {id(item) for item in items}
+        with self._lock:
+            removed = [item for item in self._completed
+                       if selected is None or id(item) in selected]
+            removed_ids = {id(item) for item in removed}
+            self._completed = deque(
+                (item for item in self._completed if id(item) not in removed_ids),
+                maxlen=self._completed.maxlen,
+            )
+        for item in removed:
+            self._emit_queue("forgotten_completed", item)
+        return len(removed)
+
     def _take_batch(self, previous_op: str | None) -> list[TransferItem]:
         """Claim pending items atomically; stop/clear/remove cannot race selection."""
         with self._lock:

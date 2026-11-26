@@ -131,6 +131,13 @@ def find_row(state, lst, iid: int) -> int:
     return -1
 
 
+def priority_label(item) -> str:
+    from hpc_gui.services.transfer_controller import TRANSFER_PRIORITIES
+
+    value = getattr(item, "priority", "Normal")
+    return t(f"transfer.priority_{value.lower()}") if value in TRANSFER_PRIORITIES else str(value)
+
+
 def add_row(state, lst, item, status_text: str, progress_text: str) -> int:
     op = str(getattr(item, "op", "") or "")
     local, remote = str(getattr(item, "src", "")), str(getattr(item, "dst", ""))
@@ -142,7 +149,7 @@ def add_row(state, lst, item, status_text: str, progress_text: str) -> int:
     lst.SetItem(idx, 2, remote)
     lst.SetItem(idx, 3, str(getattr(item, "size", "") or ""))
     lst.SetItem(idx, 4, progress_text)
-    lst.SetItem(idx, 5, str(getattr(item, "priority", "") or ""))
+    lst.SetItem(idx, 5, priority_label(item))
     lst.SetItem(idx, 6, status_text)
     try:
         lst.SetItemData(idx, row_token(state, item))
