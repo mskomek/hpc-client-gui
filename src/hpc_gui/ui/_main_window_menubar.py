@@ -142,10 +142,6 @@ class _MainWindowMenubarMixin:
         self._act_send_logs = QAction(t("menu.send_logs"), self)
         self._act_send_logs.triggered.connect(self._open_send_logs)
         self._help_menu.addAction(self._act_send_logs)
-        self._help_menu.addSeparator()
-        self._act_about = QAction(t("menu.about"), self)
-        self._act_about.triggered.connect(self._open_about)
-        self._help_menu.addAction(self._act_about)
 
         # --- Compact upper-right utilities: language + plain version text ---
         lang_container = QWidget(self)
@@ -226,8 +222,6 @@ class _MainWindowMenubarMixin:
             self._act_help_center.setText(t("menu.help_center"))
         if hasattr(self, "_act_send_logs"):
             self._act_send_logs.setText(t("menu.send_logs"))
-        if hasattr(self, "_act_about"):
-            self._act_about.setText(t("menu.about"))
         # Language menu labels / selected language display
         if hasattr(self, "_act_tr"):
             self._act_tr.setText(t("language.turkish"))

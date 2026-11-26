@@ -12,6 +12,7 @@ def test_retired_startup_has_no_tracked_executable_references():
     retired = re.compile(
         r"\blegacy_app\b|\bwelcome_dialog\b|\bWelcomeDialog\b|hpc_gui\.ui\.debug_telemetry|\bStartupSplash\b"
         r"|\bQuickTourOverlay\b|hpc_gui\.ui\.dialogs\.quick_tour|\bstart_quick_tour\b|\b_act_quick_tour\b"
+        r"|\bAboutDialog\b|hpc_gui\.ui\.dialogs\.about_dialog|\b_open_about\b|\b_act_about\b"
     )
     candidates = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "src", "tests", "scripts", "devtools", "build", ".github"],

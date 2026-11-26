@@ -81,7 +81,7 @@ def test_menu_ownership():
     assert 'self._act_send_logs' in src
     # Verify Help contains Help Center, Send Logs, About
     assert 'self._act_help_center' in src
-    assert 'self._act_about' in src
+    assert 'help_items["about"] = act_about' in pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
     # Ensure old duplicate standalone top-right buttons gone (already checked)
 
 
@@ -90,7 +90,7 @@ def test_version_not_only_in_about():
     src = read_main_window()
     # Version label must exist outside About
     assert "self._version_label" in src
-    assert pathlib.Path("src/hpc_gui/ui/dialogs/about_dialog.py").exists()
+    assert pathlib.Path("src/hpc_gui/wx_about.py").exists()
 
 
 @pytest.mark.audit
@@ -173,7 +173,7 @@ def test_i18n_keys_exist():
 
 @pytest.mark.audit
 def test_about_dialog_properties():
-    src = pathlib.Path("src/hpc_gui/ui/dialogs/about_dialog.py").read_text(encoding="utf-8")
+    src = pathlib.Path("src/hpc_gui/wx_about.py").read_text(encoding="utf-8")
     assert "__version__" in src
     assert "v{__version__}" in src or "Version {version}" in src or "version_label" in src
     assert "is_frozen_exe" in src or "frozen" in src

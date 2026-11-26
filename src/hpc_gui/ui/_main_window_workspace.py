@@ -68,14 +68,6 @@ class _MainWindowWorkspaceMixin:
         except Exception:
             pass
 
-    def _open_about(self):
-        try:
-            from hpc_gui.ui.dialogs.about_dialog import AboutDialog
-            dlg = AboutDialog(self)
-            dlg.exec()
-        except Exception:
-            pass
-
     def on_session_changed(self, session):
         self._job_poll_generation += 1
         self._job_poll_worker = None

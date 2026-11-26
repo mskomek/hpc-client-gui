@@ -11,41 +11,46 @@ from hpc_gui.core.i18n import t
 from hpc_gui.core.paths import is_frozen_exe
 
 
-def _get_license_text_path() -> Path | None:
-    candidates: list[Path] = []
-    candidates.append(Path(__file__).resolve().parent.parent / "LICENSE")
-    candidates.append(Path(__file__).resolve().parent / "LICENSE")
+def _find_legal_file(name: str) -> Path | None:
+    package = Path(__file__).resolve().parent
+    candidates = [package / name, package.parent.parent / name]
     if is_frozen_exe():
+        base = Path(sys.executable).resolve().parent
+        candidates = [
+            Path(getattr(sys, "_MEIPASS", base)) / name,
+            base / name,
+            base / "_internal" / name,
+            base.parent / "Resources" / name,
+            *candidates,
+        ]
+    for candidate in candidates:
         try:
-            base = Path(sys.executable).resolve().parent
-            candidates.append(base / "LICENSE")
-            candidates.append(base / "_internal" / "LICENSE")
-        except Exception:
-            pass
-    for p in candidates:
-        try:
-            if p.is_file():
-                return p
-        except Exception:
+            if candidate.is_file():
+                return candidate
+        except OSError:
             continue
     return None
+
+
+def _get_license_text_path() -> Path | None:
+    return _find_legal_file("LICENSE")
 
 
 def _get_notices_path() -> Path | None:
-    candidates = [
-        Path(__file__).resolve().parent.parent / "THIRD_PARTY_NOTICES.md",
-        Path(__file__).resolve().parent / "THIRD_PARTY_NOTICES.md",
-    ]
-    for p in candidates:
+    return _find_legal_file("THIRD_PARTY_NOTICES.md")
+
+
+def _open_legal_file(wx, path, url):
+    if path is not None and path.is_file():
         try:
-            if p.is_file():
-                return p
+            if wx.LaunchDefaultApplication(str(path)):
+                return
         except Exception:
-            continue
-    return None
+            pass
+    webbrowser.open(url)
 
 
-def show_about(parent=None) -> int:
+def _create_about_dialog(parent=None):
     try:
         import wx
     except ImportError as exc:
@@ -89,19 +94,7 @@ def show_about(parent=None) -> int:
     license_btn = wx.Button(panel, label=t("about.license"))
 
     def open_license(_event):
-        if license_path and license_path.is_file():
-            try:
-                if sys.platform == "win32":
-                    import os
-                    os.startfile(str(license_path))
-                    return
-                elif sys.platform == "darwin":
-                    import subprocess
-                    subprocess.run(["open", str(license_path)], check=False)
-                    return
-            except Exception:
-                pass
-        webbrowser.open(license_url)
+        _open_legal_file(wx, license_path, license_url)
 
     license_btn.Bind(wx.EVT_BUTTON, open_license)
     root.Add(license_btn, 0, wx.LEFT | wx.TOP, 10)
@@ -111,19 +104,7 @@ def show_about(parent=None) -> int:
     notices_btn = wx.Button(panel, label=t("about.notices"))
 
     def open_notices(_event):
-        if notices_path and notices_path.is_file():
-            try:
-                if sys.platform == "win32":
-                    import os
-                    os.startfile(str(notices_path))
-                    return
-                elif sys.platform == "darwin":
-                    import subprocess
-                    subprocess.run(["open", str(notices_path)], check=False)
-                    return
-            except Exception:
-                pass
-        webbrowser.open(notices_url)
+        _open_legal_file(wx, notices_path, notices_url)
 
     notices_btn.Bind(wx.EVT_BUTTON, open_notices)
     root.Add(notices_btn, 0, wx.LEFT | wx.TOP, 10)
@@ -139,10 +120,20 @@ def show_about(parent=None) -> int:
     root.Add(close_btn, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
 
     panel.SetSizer(root)
+    dlg._wx_about_controls = {
+        "version": ver_label, "repo": repo_btn, "license": license_btn,
+        "notices": notices_btn, "close": close_btn,
+    }
     dlg.Centre()
-    dlg.ShowModal()
-    dlg.Destroy()
-    return wx.ID_OK
+    return dlg
+
+
+def show_about(parent=None) -> int:
+    dlg = _create_about_dialog(parent)
+    try:
+        return dlg.ShowModal()
+    finally:
+        dlg.Destroy()
 
 
 __all__ = ["show_about"]
