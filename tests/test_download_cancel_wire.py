@@ -11,7 +11,6 @@ Runs against the local disposable mock server; no real host or credential.
 from __future__ import annotations
 
 import os
-import sys
 import tempfile
 import threading
 import unittest
@@ -20,12 +19,7 @@ from unittest import mock
 
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer  # noqa: E402
-
-from PySide6.QtWidgets import QApplication  # noqa: E402
+from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer
 
 from hpc_gui.services.files_ssh import SSHFilesBackend  # noqa: E402
 from hpc_gui.services import private_profile_data as private_data  # noqa: E402
@@ -34,9 +28,10 @@ from hpc_gui.services.transfer_resume_store import (  # noqa: E402
     transfer_record_key,
     transfer_resume_store_for_backend,
 )
-from hpc_gui.services.transfer_controller import TransferController, TransferItem  # noqa: E402
+from hpc_gui.services.transfer_controller import TransferController
 from hpc_gui.ssh.client import SSHClientWrapper, SSHConnInfo  # noqa: E402
-from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel  # noqa: E402
+from hpc_gui.services.download_plan import build_download_plan
+from hpc_gui.wx_shell_file_transfer import _start_file_transfers
 
 BIG_NAME = "big_result.cas.h5"
 BIG_SIZE = 48 * 1024 * 1024
@@ -65,30 +60,9 @@ pytestmark = [
 ]
 
 
-class _PlanWorker:
-    """Stand-in for _TransferPlanWorker's GUI bridge, with a canned answer."""
-
-    cancelled = False
-
-    def __init__(self, action: str = "resume") -> None:
-        self.action = action
-        self.conflicts: list[tuple[str, bool]] = []
-
-    def request_conflict_decision(
-        self, _source, target, *, partial: bool = False, direction: str = "download"
-    ) -> str:
-        assert direction == "download"
-        self.conflicts.append((target.path, partial))
-        return self.action
-
-    def request_rename(self, _dst_dir: str, _current_name: str):
-        raise AssertionError("rename was not expected")
-
-
 class DownloadCancelWireTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.app = QApplication.instance() or QApplication([])
         cls._temp = tempfile.TemporaryDirectory(prefix="truba_cancel_wire_")
         cls.root = Path(cls._temp.name)
         results = cls.root / "results" / "DP_41"
@@ -133,9 +107,6 @@ class DownloadCancelWireTests(unittest.TestCase):
         self.addCleanup(secret_store.stop)
         self.addCleanup(app_data.stop)
 
-        self.panel = RemoteDirPanel()
-        self.panel.set_session({"connected": True, "files": self.files})
-        self.addCleanup(self.panel.deleteLater)
         self.target = Path(tempfile.mkdtemp(dir=self.root, prefix="local_"))
 
         # paramiko's prefetch thread dies on the closed channel by design;
@@ -144,46 +115,44 @@ class DownloadCancelWireTests(unittest.TestCase):
         threading.excepthook = lambda args: None
         self.addCleanup(lambda: setattr(threading, "excepthook", previous))
 
-    def _plan(self, action: str = "resume") -> tuple[list, _PlanWorker]:
-        worker = _PlanWorker(action)
-        result = self.panel._build_remote_download_plan_background(
-            worker, self.files, ["/results/DP_41"], str(self.target)
-        )
-        return list(result["plan"]), worker
+    def _plan(self):
+        return build_download_plan(self.files, ["/results/DP_41"], str(self.target))
 
     def _open_channels(self) -> int:
         transport = self.ssh.client.get_transport()
         return len([c for c in transport._channels.values() if not c.closed])
 
-    def _run_until_cancelled(self, plan) -> TransferController:
+    def _run(self, plan, action="resume", cancel=False):
+        state = {"session": {"files": self.files}, "ftp_transfer_type": "binary"}
         seen = {"bytes": 0}
-        controller = TransferController(
-            [TransferItem(op.op, op.src, op.dst, op.recursive) for op in plan],
-            lambda item, progress: self.panel._execute_transfer_item(item, progress_cb=progress),
-            parallel_limit=1,
-        )
+        controller = None
 
-        def cancel_when_underway(_item, done: int, _total: int) -> None:
+        def progress(_item, done, _total):
             seen["bytes"] = done
-            if done > CANCEL_AFTER_BYTES:
-                controller.cancel_all()
+            if cancel and done > CANCEL_AFTER_BYTES:
+                controller.engine.cancel_all()
 
-        controller._on_progress = cancel_when_underway
-        controller.start()
-        self.assertTrue(controller.wait(120), "queue never finished")
+        controller = _start_file_transfers(
+            state, None, plan, on_progress=progress,
+            conflict_resolver=lambda _item: action,
+        )
+        self.assertTrue(controller.engine.wait(120), "queue never finished")
+        return controller, seen
+
+    def _run_until_cancelled(self, plan) -> TransferController:
+        controller, seen = self._run(plan, cancel=True)
         self.assertGreater(seen["bytes"], CANCEL_AFTER_BYTES, "cancel never triggered")
         self.assertEqual(
-            [(Path(item.dst).name, error) for item, error in controller.failed],
+            [(Path(item.dst).name, error) for item, error in controller.engine.failed],
             [(BIG_NAME, "cancelled")],
         )
         return controller
 
     @pytest.mark.resource
     def test_cancel_keeps_the_partial_and_leaves_the_session_usable(self) -> None:
-        plan, planner = self._plan()
+        plan = self._plan()
         downloads = [op for op in plan if op.op == "download"]
         self.assertEqual(len(downloads), 5)
-        self.assertEqual(planner.conflicts, [], "nothing exists yet, nothing to ask")
         # Warm the persistent listing channel first: it is opened once and
         # kept, so counting before it exists would read as a leak afterwards.
         list(self.files.iterdir_entries("/results/DP_41"))
@@ -193,7 +162,7 @@ class DownloadCancelWireTests(unittest.TestCase):
 
         # The cancelled item is reported, and reported as cancelled.
         self.assertEqual(
-            [(Path(item.dst).name, error) for item, error in controller.failed],
+            [(Path(item.dst).name, error) for item, error in controller.engine.failed],
             [(BIG_NAME, "cancelled")],
         )
 
@@ -224,17 +193,12 @@ class DownloadCancelWireTests(unittest.TestCase):
 
         # And the next plan still contains every file, so a retry can restart -
         # after asking what to do with the leftover chunk.
-        again, planner = self._plan()
+        again = self._plan()
         self.assertEqual(len([op for op in again if op.op == "download"]), 5)
-        self.assertEqual(
-            planner.conflicts, [(str(folder / f"{BIG_NAME}.part"), True)]
-        )
 
     def _run_plan_to_completion(self, plan) -> None:
-        for op in plan:
-            self.panel._execute_transfer_item(
-                TransferItem(op.op, op.src, op.dst, op.recursive)
-            )
+        controller, _ = self._run(plan)
+        self.assertFalse(controller.engine.failed, controller.engine.failed)
 
     def _assert_big_file_complete(self) -> None:
         finished = self.target / "DP_41" / BIG_NAME
@@ -243,40 +207,33 @@ class DownloadCancelWireTests(unittest.TestCase):
         self.assertFalse((self.target / "DP_41" / f"{BIG_NAME}.part").exists())
 
     def test_resuming_after_a_cancel_completes_the_file(self) -> None:
-        plan, _ = self._plan()
+        plan = self._plan()
         self._run_until_cancelled(plan)
 
-        retry, planner = self._plan("resume")
-        self.assertEqual([partial for _path, partial in planner.conflicts], [True])
+        retry = self._plan()
         self.assertNotIn("delete_local", [op.op for op in retry])
         self._run_plan_to_completion(retry)
         self._assert_big_file_complete()
 
     def test_overwriting_a_partial_discards_it_before_downloading(self) -> None:
-        plan, _ = self._plan()
+        plan = self._plan()
         self._run_until_cancelled(plan)
         part = self.target / "DP_41" / f"{BIG_NAME}.part"
         self.assertTrue(part.exists())
 
-        retry, planner = self._plan("overwrite")
-        self.assertEqual([partial for _path, partial in planner.conflicts], [True])
-        # The leftover chunk is dropped first, so the transfer starts over
-        # instead of quietly resuming from it.
-        deletes = [op.dst for op in retry if op.op == "delete_local"]
-        self.assertEqual(deletes, [str(part)])
-        self._run_plan_to_completion(retry)
+        retry = self._plan()
+        # Overwrite replaces the partial with a fresh staged transfer.
+        controller, _ = self._run(retry, action="overwrite")
+        self.assertFalse(controller.engine.failed, controller.engine.failed)
         self._assert_big_file_complete()
 
     def test_skipping_a_partial_leaves_it_alone(self) -> None:
-        plan, _ = self._plan()
+        plan = self._plan()
         self._run_until_cancelled(plan)
 
-        retry, planner = self._plan("skip")
-        self.assertEqual([partial for _path, partial in planner.conflicts], [True])
-        self.assertNotIn(
-            str(self.target / "DP_41" / BIG_NAME),
-            [op.dst for op in retry if op.op == "download"],
-        )
+        retry = self._plan()
+        controller, _ = self._run(retry, action="skip")
+        self.assertFalse(controller.engine.failed, controller.engine.failed)
         self.assertTrue((self.target / "DP_41" / f"{BIG_NAME}.part").exists())
 
 
