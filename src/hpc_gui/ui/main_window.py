@@ -2,7 +2,7 @@
 
 Composition root for the main window: tab/workspace assembly, timers and
 signal wiring live here, with graceful shutdown and close handling.
-Menubar/language, plugin-menu, update/changelog and workspace/session
+Menubar/language, plugin-menu and workspace/session
 behaviors live in the ``_main_window_*`` mixins composed below.
 
 The re-exported storage/changelog/error helpers are the patch surface
@@ -29,7 +29,6 @@ from hpc_gui.ui._main_window_contracts import (
 from hpc_gui.core.debug_telemetry import is_source_run
 from hpc_gui.core.i18n import t
 from .async_call import AsyncCall
-from .splash_screen import UpdateSplash
 from .widgets.login_widget import LoginWidget
 from .widgets.jobs_outputs_widget import JobsOutputsWidget
 from .widgets.directories_widget import DirectoriesWidget
@@ -38,7 +37,6 @@ from .widgets.editor_widget import EditorWidget
 from .widgets.logs_widget import LogsWidget
 from ._main_window_menubar import _MainWindowMenubarMixin
 from ._main_window_plugins import _MainWindowPluginsMixin
-from ._main_window_updates import _BackgroundCall, _MainWindowUpdatesMixin
 from ._main_window_workspace import _MainWindowWorkspaceMixin
 
 
@@ -145,8 +143,6 @@ __all__ = [
     'SettingsDialog',
     'Signal',
     'Slot',
-    'UpdateSplash',
-    '_BackgroundCall',
     'app_updater',
     'chronological_changelog',
     'current_os',
@@ -175,7 +171,6 @@ __all__ = [
 class MainWindow(
     _MainWindowMenubarMixin,
     _MainWindowPluginsMixin,
-    _MainWindowUpdatesMixin,
     _MainWindowWorkspaceMixin,
     QMainWindow,
 ):
@@ -190,13 +185,6 @@ class MainWindow(
     def __init__(self):
         super().__init__()
         self._shutdown_done = False
-        self._update_jobs: set[QThread] = set()
-        self._update_workers: dict[QThread, _BackgroundCall] = {}
-        self._update_busy_count = 0
-        self._update_progress: UpdateSplash | None = None
-        self._update_manual = False
-        self._update_interactive = False
-        self._update_cancelled = False
         self._job_poll_worker: AsyncCall | None = None
         self._job_poll_generation = 0
         self._init_language_menu()
@@ -259,18 +247,6 @@ class MainWindow(
         self.ftp.runShellRequested.connect(self.directories.run_shell_script)
         self.editor.script_submitted.connect(self.on_script_submitted)
         self.editor.run_in_terminal_requested.connect(self.run_shell_in_terminal)
-        self._startup_changelog_timer = QTimer(self)
-        self._startup_changelog_timer.setSingleShot(True)
-        self._startup_changelog_timer.timeout.connect(
-            self._show_startup_changelog_if_needed
-        )
-        self._startup_changelog_timer.start(700)
-        self._startup_update_timer = QTimer(self)
-        self._startup_update_timer.setSingleShot(True)
-        self._startup_update_timer.timeout.connect(
-            lambda: self._check_for_updates(manual=False)
-        )
-        self._startup_update_timer.start(1500)
 
     def graceful_shutdown(self) -> None:
         """Graceful, idempotent shutdown sequence.
@@ -286,11 +262,6 @@ class MainWindow(
             try:
                 if hasattr(self, "job_timer") and self.job_timer:
                     self.job_timer.stop()
-                if hasattr(self, "_startup_changelog_timer"):
-                    self._startup_changelog_timer.stop()
-                if hasattr(self, "_startup_update_timer"):
-                    self._startup_update_timer.stop()
-                self._cancel_update_jobs()
                 self._job_poll_generation += 1
                 self._job_poll_worker = None
                 if getattr(self, "_job_tray", None):

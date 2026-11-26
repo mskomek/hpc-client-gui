@@ -40,7 +40,7 @@ def test_qt_shell_has_menu_plugins_help():
 def test_old_top_right_button_farm_removed():
     src = read_main_window()
     # Old farm buttons must be gone
-    assert "self._update_btn" not in src or src.count("self._update_btn") == 0 or "self._act_check_updates" in src
+    assert "self._update_btn" not in src
     # The new corner widget should only have language + version
     # Check that corner widget layout only adds version + lang, not extra buttons
     # Count corner widget addWidget calls: should be exactly 2 (version + lang)
@@ -69,7 +69,8 @@ def test_menu_ownership():
     src = read_main_window()
     # Settings + Check for Updates + Exit in Menu
     assert 'self._act_settings' in src and 't("menu.settings")' in src
-    assert 'self._act_check_updates' in src and 't("menu.check_updates")' in src
+    wx_src = pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
+    assert 'APP-UPDATE-CHECK' in wx_src and 't("menu.check_updates")' in wx_src
     assert 'self._act_exit' in src and 't("menu.exit")' in src
     # Plugin manager actions in Plugins
     assert 'self._act_plugins_discover' in src

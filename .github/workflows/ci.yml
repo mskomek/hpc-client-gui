@@ -172,6 +172,7 @@ jobs:
         run: >-
           python -m pytest
           tests/test_updater_helper.py
+          tests/test_app_updater.py
           tests/test_linux_update_handoff.py
           tests/test_debug_support_runtime.py
           tests/test_crash_logging_filter.py

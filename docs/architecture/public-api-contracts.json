@@ -372,7 +372,6 @@
       "SettingsDialog",
       "Signal",
       "Slot",
-      "UpdateSplash",
       "app_updater",
       "chronological_changelog",
       "current_os",

@@ -1,12 +1,4 @@
-"""Shared pytest fixtures.
-
-The autouse fixture below neuters the two MainWindow startup side effects
-(the changelog modal after 700 ms and the background update check after
-1500 ms). Tests never run a Qt event loop of their own, so those single-shot
-timers otherwise detonate inside the next unrelated test that pumps events,
-opening modal dialogs that block the suite forever. Only these two methods
-are stubbed; every other QTimer.singleShot user keeps working.
-"""
+"""Shared pytest fixtures for offline and native tests."""
 
 from __future__ import annotations
 
@@ -14,7 +6,6 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMP_ROOT = ROOT / ".tmp"
@@ -61,35 +52,6 @@ else:
         wx.Log.SetActiveTarget(wx.LogStderr())
 
     wx.App.__init__ = _wx_app_init_without_modal_logging
-
-@pytest.fixture(autouse=True)
-def _no_main_window_startup_popups(request):
-    # Preserve the legacy guard for tests that explicitly use Qt or have
-    # already imported MainWindow during collection. Never import Qt merely
-    # because it happens to be installed on a wx/portable test runner.
-    main_window_module = sys.modules.get("hpc_gui.ui.main_window")
-    if main_window_module is None and request.node.get_closest_marker("qt"):
-        try:
-            from hpc_gui.ui import main_window as main_window_module
-        except ImportError:
-            main_window_module = None
-    if main_window_module is None:
-        yield
-        return
-    with (
-        patch.object(
-            main_window_module.MainWindow,
-            "_show_changelog_dialog",
-            lambda self, text: None,
-        ),
-        patch.object(
-            main_window_module.MainWindow,
-            "_check_for_updates",
-            lambda self, manual=True: None,
-        ),
-        ):
-            yield
-
 
 @pytest.fixture(autouse=True)
 def _isolate_plugin_data(tmp_path, monkeypatch):

@@ -87,9 +87,6 @@ class _MainWindowMenubarMixin:
         self._act_settings = QAction(t("menu.settings"), self)
         self._act_settings.triggered.connect(self._open_settings)
         self._menu_menu.addAction(self._act_settings)
-        self._act_check_updates = QAction(t("menu.check_updates"), self)
-        self._act_check_updates.triggered.connect(lambda: self._check_for_updates(manual=True))
-        self._menu_menu.addAction(self._act_check_updates)
         # Command Palette only if a REAL implementation exists – omit the fake Help wiring
         # No visible Command Palette entry when none exists; Help stays on F1.
         self._menu_menu.addSeparator()
@@ -202,8 +199,6 @@ class _MainWindowMenubarMixin:
             self._menu_menu.setTitle(t("menu.menu"))
         if hasattr(self, "_act_settings"):
             self._act_settings.setText(t("menu.settings"))
-        if hasattr(self, "_act_check_updates"):
-            self._act_check_updates.setText(t("menu.check_updates"))
         if hasattr(self, "_act_exit"):
             self._act_exit.setText(t("menu.exit"))
         if hasattr(self, "_plugins_menu"):
