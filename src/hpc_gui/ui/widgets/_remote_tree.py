@@ -5,7 +5,7 @@ from __future__ import annotations
 from PySide6.QtCore import QMimeData, QTimer, Qt
 from PySide6.QtGui import QDrag
 from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QWidget
-from hpc_gui.ui.models.remote_entry_helpers import natural_sort_key as _natural_sort_key
+from hpc_gui.services.remote_entry_format import natural_sort_key as _natural_sort_key
 from hpc_gui.ui.widgets._fm_dnd_contract import MIME_REMOTE_PATHS, _DragPayload, _decode_payload, _encode_payload
 from typing import Optional
 

@@ -30,7 +30,7 @@ from hpc_gui.ui.widgets._remote_tree import (
 )
 from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.services.files_base import RemoteEntry
-from hpc_gui.ui.models.remote_entry_helpers import (
+from hpc_gui.services.remote_entry_format import (
     category as _category,
     file_type as _file_type,
     fmt_mtime as _fmt_mtime,

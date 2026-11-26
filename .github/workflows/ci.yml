@@ -130,6 +130,7 @@ jobs:
           tests/test_terminal_bridge.py
           tests/test_ui_errors.py
           tests/test_shared_ui_contracts.py
+          tests/test_remote_entry_format.py
           tests/test_startup_i18n.py
           tests/test_wx_help.py
           tests/test_cluster_self_test.py

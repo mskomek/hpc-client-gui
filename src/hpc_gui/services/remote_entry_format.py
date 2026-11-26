@@ -3,9 +3,7 @@
 Pure formatting/categorization shared by the Qt and wx remote directory
 surfaces. This module must stay free of Qt (``PySide6``) and of
 ``hpc_gui.ui.*`` imports so the wx runtime can consume it without pulling
-the Qt UI stack (ARCH-QT-WX-002). The Qt-surface module
-``hpc_gui.ui.models.remote_entry_helpers`` re-exports these names for
-backward compatibility.
+the Qt UI stack (ARCH-QT-WX-002). Both surfaces import this module directly.
 """
 
 from __future__ import annotations
