@@ -203,3 +203,45 @@ def test_metadata_preserves_unknown_and_uses_correct_namespace(tmp_path):
     assert format_conflict_metadata(target)[0] == "1,000 B"
     source, target = read_conflict_metadata(Remote(), TransferItem("download", "/remote/a", str(tmp_path / "missing")))
     assert source.size == 1000 and format_conflict_metadata(target) == ("-", "-")
+
+
+def test_download_only_always_skip_does_not_apply_to_uploads():
+    """Preserve the retired dialog's direction-scoped skip contract."""
+    clear_session_conflict_action()
+    prompts = []
+    executed = []
+
+    def resolve(item):
+        prompts.append(item.op)
+        if len(prompts) == 1:
+            return {"value": "skip", "always_use": True, "downloads_only": True}
+        return "overwrite"
+
+    def run(item, _progress, *, conflict_decision=None):
+        executed.append((item.op, conflict_decision))
+
+    try:
+        for items in (
+            [TransferItem("upload", "a", "/a")],
+            [TransferItem("upload", "b", "/b"), TransferItem("download", "/c", "c")],
+        ):
+            controller = TransferSessionController(
+                items, run, conflict_check=lambda _: True, conflict_resolver=resolve,
+            )
+            controller.start()
+            assert controller.engine.wait(5)
+            assert not controller.engine.failed
+        assert prompts == ["upload", "upload"]
+        assert executed == [("upload", "overwrite")]
+    finally:
+        clear_session_conflict_action()
+
+
+@pytest.mark.parametrize("source_mtime,target_mtime", [(0, 0), (None, 2), (2, None)])
+def test_overwrite_if_newer_skips_when_mtime_metadata_is_unknown(source_mtime, target_mtime):
+    from hpc_gui.services.transfer_conflict_policy import resolve_conflict_action
+
+    assert resolve_conflict_action(
+        "overwrite_if_newer", source_size=5, target_size=5,
+        source_mtime=source_mtime, target_mtime=target_mtime,
+    ) == "skip"

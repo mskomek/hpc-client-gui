@@ -133,6 +133,34 @@ try:
     pump(lambda: not view['completed_map'])
     assert not engine.completed
     assert calls == ['first', 'last', 'bad1', 'bad2', 'bad2']
+    # Retired toolkit tab-selection contract: each queue update must leave
+    # the user's currently selected tab alone, including background errors.
+    notebook = controls['notebook']
+    assert notebook.GetPageCount() == 3
+    for index in range(3):
+        notebook.SetSelection(index)
+        failed_item = TransferItem('upload', 'failure', '/failure')
+        completed_item = TransferItem('upload', 'success', '/success')
+        panel._wx_transfer_queue('queued', failed_item)
+        pump(lambda: id(failed_item) in view['queue_map'])
+        assert notebook.GetSelection() == index
+        panel._wx_transfer_queue('failed', failed_item)
+        pump(lambda: id(failed_item) in view['failed_map'])
+        assert notebook.GetSelection() == index
+        panel._wx_transfer_queue('queued', completed_item)
+        pump(lambda: id(completed_item) in view['queue_map'])
+        assert notebook.GetSelection() == index
+        panel._wx_transfer_queue('completed', completed_item)
+        pump(lambda: id(completed_item) in view['completed_map'])
+        assert notebook.GetSelection() == index
+        assert [notebook.GetPageText(i) for i in range(3)] == [
+            f"{t('transfer.queue_tab')} (0)",
+            f"{t('transfer.failed_tab')} (1)",
+            f"{t('transfer.completed_tab')} (1)",
+        ]
+        panel._wx_transfer_queue('forgotten_failed', failed_item)
+        panel._wx_transfer_queue('forgotten_completed', completed_item)
+        pump(lambda: not view['failed_map'] and not view['completed_map'])
     assert not any(m.split('.')[0] in {'PySide6','PyQt5','PyQt6','shiboken6'} for m in sys.modules)
 finally:
     release.set()
