@@ -28,7 +28,7 @@ def create_editor_lint_dialog(parent, issues, diagnostics, *, navigate=None):
     detail = wx.TextCtrl(dialog, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2)
     root.Add(detail, 1, wx.ALL | wx.EXPAND, 8)
     buttons = wx.BoxSizer(wx.HORIZONTAL)
-    copy = wx.Button(dialog, label=t("common.copy"))
+    copy = wx.Button(dialog, label=t("dirs.copy"))
     docs = wx.Button(dialog, label=t("ansyslint.open_documentation"))
     close = wx.Button(dialog, wx.ID_CLOSE, label=t("common.close"))
     for button in (copy, docs, close):

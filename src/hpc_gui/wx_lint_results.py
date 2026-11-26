@@ -77,7 +77,7 @@ def create_lint_results(parent, title, run_result, *, open_in_tool=None):
     if open_in_tool is not None:
         add("fix", _tr("ansyslint.fix_open_tool", "Fix (open in tool)"),
             lambda _event: dialog.EndModal(wx.ID_APPLY))
-    add("copy", _tr("common.copy", "Copy"), copy_all)
+    add("copy", _tr("dirs.copy", "Copy"), copy_all)
     add("diagnostic", _tr("ansyslint.copy_diagnostic", "Copy diagnostic"), copy_diagnostic)
     add("suggestion", _tr("ansyslint.copy_suggestion", "Copy suggestion"), copy_suggestion)
     add("documentation", _tr("ansyslint.open_documentation", "Open documentation"), open_docs)

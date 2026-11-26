@@ -113,7 +113,7 @@ def build_ansys_lint_results_dialog(parent, title: str, run_result, open_in_tool
         btn_fix.clicked.connect(open_tool)
         buttons.addWidget(btn_fix)
 
-    btn_copy = QPushButton(_tr("common.copy", "Copy"))
+    btn_copy = QPushButton(_tr("dirs.copy", "Copy"))
     btn_copy.clicked.connect(copy_all)
     buttons.addWidget(btn_copy)
     for key, callback in (
