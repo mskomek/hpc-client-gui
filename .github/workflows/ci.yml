@@ -169,6 +169,7 @@ jobs:
           tests/test_lint_engine.py
           tests/test_job_context.py
           tests/test_ansys_tool_presentation.py
+          tests/test_file_lint.py
           tests/test_download_plan.py
           tests/test_wx_transfer_mode_execution.py
           tests/test_transfer_wave17.py
