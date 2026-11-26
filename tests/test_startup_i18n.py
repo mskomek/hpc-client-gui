@@ -3,9 +3,9 @@ from pathlib import Path
 import pytest
 
 @pytest.mark.audit
-def test_splash_text_never_depends_on_translation_catalog():
+def test_retained_legacy_splash_text_never_depends_on_translation_catalog():
     root = Path(__file__).resolve().parents[1]
-    source = (root / "src" / "hpc_gui" / "app.py").read_text(encoding="utf-8")
+    source = (root / "src" / "hpc_gui" / "ui" / "legacy_app.py").read_text(encoding="utf-8")
     splash = (root / "src" / "hpc_gui" / "ui" / "splash_screen.py").read_text(encoding="utf-8")
 
     assert 't("splash.' not in source

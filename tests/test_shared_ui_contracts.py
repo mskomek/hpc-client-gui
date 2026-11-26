@@ -93,3 +93,31 @@ def test_no_production_imports_of_retired_shared_gui_symbols():
                 if any(alias.name == retired[node.module] for alias in node.names):
                     errors.append(f"{path.relative_to(root)}:{node.lineno}")
     assert not errors, errors
+
+
+@pytest.mark.contract
+@pytest.mark.subprocess
+def test_direct_app_entrypoint_is_wx_only():
+    root = Path(__file__).resolve().parents[1]
+    script = """
+import importlib.abc
+import sys
+attempts = []
+class Guard(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if (fullname.split('.')[0] in {'PySide6','PyQt5','PyQt6','shiboken6'}
+                or fullname == 'hpc_gui.ui' or fullname.startswith('hpc_gui.ui.')):
+            attempts.append(fullname)
+            raise ImportError(fullname)
+sys.meta_path.insert(0, Guard())
+from hpc_gui.app import main
+assert main.__module__ == 'hpc_gui.wx_shell'
+assert not attempts, attempts
+"""
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join([str(root / "src"), env.get("PYTHONPATH", "")])
+    result = subprocess.run(
+        [sys.executable, "-c", script], cwd=root, env=env,
+        capture_output=True, text=True, timeout=30,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr

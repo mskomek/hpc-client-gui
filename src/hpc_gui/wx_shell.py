@@ -1,4 +1,4 @@
-"""Optional wxPython migration shell; Qt remains the default runtime."""
+"""V2 wxPython desktop shell and production GUI entrypoint."""
 
 from __future__ import annotations
 
