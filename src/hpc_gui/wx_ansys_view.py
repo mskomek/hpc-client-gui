@@ -121,6 +121,8 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
     state = {"results": (), "rows": (), "selected_diag": None, "closed": False, "generation": 0}
 
     def refresh_labels(_lang=None):
+        if state["closed"]:
+            return
         frame.SetTitle(f"{t('ansyslint.title')} — {presentation.tool.title}")
         copy_diag_btn.SetLabel(t("ansyslint.copy_diagnostic"))
         copy_fix_btn.SetLabel(t("ansyslint.copy_suggestion"))
@@ -194,20 +196,17 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
             return
         state["generation"] += 1
         generation = state["generation"]
-        valid = []
-        for p in paths:
-            pp = Path(p)
-            if not pp.is_file():
-                show_error(_tr("ansyslint.invalid_file", "Invalid file: {path}").format(path=p))
-                return
-            try:
-                text = pp.read_text(encoding="utf-8", errors="replace")
-            except Exception as exc:
-                show_error(f"Cannot read {p}: {exc}")
-                return
-            valid.append((str(pp), text))
+        paths = tuple(paths)
+
         def worker():
             try:
+                valid = []
+                for p in paths:
+                    pp = Path(p)
+                    if not pp.is_file():
+                        raise ValueError(_tr("ansyslint.invalid_file", "Invalid file: {path}").format(path=p))
+                    text = pp.read_text(encoding="utf-8")
+                    valid.append((str(pp), text))
                 results = model.lint_files(valid)
                 import wx as _wx
                 def _cb():
@@ -233,7 +232,7 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
             return
         def worker():
             try:
-                results = model.lint_folder(str(pp), lambda p: Path(p).read_text(encoding="utf-8", errors="replace"))
+                results = model.lint_folder(str(pp), lambda p: Path(p).read_text(encoding="utf-8"))
                 import wx as _wx
                 def _cb():
                     if state["closed"] or generation != state["generation"]:

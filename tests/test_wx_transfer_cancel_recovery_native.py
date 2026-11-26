@@ -72,7 +72,8 @@ engine = controller.engine
 controls = panel._wx_transfer_controls
 rows = panel._wx_transfer_state
 try:
-    pump_until(lambda: first_entered.is_set() and id(items[0]) in rows['queue_map'])
+    pump_until(lambda: first_entered.is_set() and id(items[0]) in rows['queue_map']
+               and controls['cancel'].IsEnabled())
     click(controls['cancel'])
     first_release.set()
     pump_until(lambda: engine.wait(0) and controls['retry_failed'].IsEnabled()

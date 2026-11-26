@@ -344,7 +344,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     from hpc_gui.wx_shell_plugins import bind_plugin_menu
     bind_plugin_menu(
         wx, frame, session_state, notebook, page_controls, plugins_menu,
-        sep_plugins_bottom, act_plugin_updates, editor_panel, refresh_labels,
+        sep_plugins_bottom, act_plugin_updates, editor_panel, refresh_labels, lifecycle=lifecycle,
     )
 
     from hpc_gui.wx_shell_window_events import create_window_event_state

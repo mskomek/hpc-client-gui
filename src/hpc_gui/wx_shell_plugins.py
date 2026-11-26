@@ -5,7 +5,7 @@ from hpc_gui.core.i18n import subscribe_language_change
 from hpc_gui.core.wx_errors import report_wx_action_error
 
 
-def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_menu, sep_plugins_bottom, act_plugin_updates, editor_panel, refresh_labels):
+def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_menu, sep_plugins_bottom, act_plugin_updates, editor_panel, refresh_labels, *, lifecycle=None):
     sep_plugins_top = None
     # --- Plugin menu dynamic handling (framework-neutral contribution model) ---
     _wx_plugin_dynamic_items: list = []
@@ -248,7 +248,7 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
                 editor_page = page_controls.get("NAV-EDITOR", {}).get("page")
             except Exception:
                 pass
-            host = WxPluginMenuHost(editor_page=editor_page, parent=frame)
+            host = WxPluginMenuHost(editor_page=editor_page, parent=frame, lifecycle=lifecycle)
             if not dispatch_plugin_menu_action(action, plugin, host) and action == "plugin.open_trusted_tool":
                 report_wx_action_error(frame, area="PLUGIN", message_key="plugins.action_failed",
                                        technical_detail=f"{plugin_id}:{action}")

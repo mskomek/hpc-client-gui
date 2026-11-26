@@ -218,7 +218,7 @@ jobs:
       - name: Native wx quick tour and product icon (Windows)
         if: runner.os == 'Windows'
         run: >-
-          python -m pytest tests/test_wx_tour_icon_native.py tests/test_about_dialog.py tests/test_wx_help_send_logs_native.py tests/test_wx_cluster_self_test_result_native.py tests/test_wx_slurm_array_native.py tests/test_wx_template_browser_native.py tests/test_wx_lint_native.py -q --tb=short
+          python -m pytest tests/test_wx_tour_icon_native.py tests/test_about_dialog.py tests/test_wx_help_send_logs_native.py tests/test_wx_cluster_self_test_result_native.py tests/test_wx_slurm_array_native.py tests/test_wx_template_browser_native.py tests/test_wx_lint_native.py tests/test_wx_ansys_native.py -q --tb=short
       - name: Native wx performance recorder (Windows)
         if: runner.os == 'Windows'
         run: >-
