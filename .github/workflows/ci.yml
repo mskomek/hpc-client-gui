@@ -156,6 +156,7 @@ jobs:
           python -m pytest
           tests/test_transfer_concurrency.py
           tests/test_transfer_controller.py
+          tests/test_transfer_conflict_session_scope.py
           tests/test_transfer_cancel_recovery.py
           tests/test_transfer_queue_priority.py
           -q --tb=short

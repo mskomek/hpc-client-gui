@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import PurePosixPath
+from hpc_gui.services.transfer_conflict_policy import (
+    destination_exists, destination_path, rename_destination,
+)
 
 from hpc_gui.core.i18n import t
 
@@ -87,9 +89,7 @@ def create_transfer_conflict_dialog(parent, files, item):
         dlg.EndModal(wx.ID_OK)
 
     def on_rename(_event):
-        target_path = PurePosixPath(item.dst)
-        parent_dir = str(target_path.parent) if str(target_path.parent) not in ("", ".") else "/"
-        current_name = target_path.name
+        current_name = destination_path(item.op, item.dst).name
         while True:
             name_dlg = wx.TextEntryDialog(
                 dlg, t("dirs.rename_label"), t("dirs.rename_title"), current_name
@@ -100,19 +100,22 @@ def create_transfer_conflict_dialog(parent, files, item):
                     dlg.EndModal(wx.ID_CANCEL)
                     return
                 new_name = name_dlg.GetValue().strip()
-                if not new_name or new_name in {".", ".."} or "/" in new_name or "\\" in new_name or PurePosixPath(new_name).name != new_name:
+                try:
+                    candidate = rename_destination(item.op, item.dst, new_name)
+                except ValueError:
                     wx.MessageBox(
                         t("dirs.rename_invalid"),
                         t("login.err_title"),
                         wx.OK | wx.ICON_ERROR,
                     )
                     continue
-                candidate = str(PurePosixPath(parent_dir) / new_name)
-                exists = False
                 try:
-                    exists = bool(getattr(files, "exists", lambda _p: False)(candidate))
+                    exists = destination_exists(files, item.op, candidate)
                 except Exception:
-                    exists = False
+                    # A failed probe must not be interpreted as a free destination.
+                    result["value"] = "cancel"
+                    dlg.EndModal(wx.ID_CANCEL)
+                    return
                 if exists:
                     wx.MessageBox(
                         t("dirs.new_item_exists").format(path=candidate),

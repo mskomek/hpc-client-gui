@@ -2,27 +2,19 @@
 from __future__ import annotations
 
 from threading import Event
-from pathlib import PurePosixPath
 from hpc_gui.services.transfer_session_controller import TransferSessionController
 from hpc_gui.services.transfer_controller import TransferCancelled
-from hpc_gui.services.transfer_conflict_policy import resolve_conflict_action
+from hpc_gui.services.transfer_conflict_policy import (
+    available_rename_destination, destination_exists, resolve_conflict_action,
+)
 import inspect
 import os
 from hpc_gui.core.i18n import t
 
 
 def _destination_exists(files, op: str, destination: str) -> bool:
-    """Does the transfer destination already exist?
-
-    A download writes to the local filesystem, so asking the remote backend
-    whether the destination exists would both miss real conflicts and report
-    phantom ones.
-    """
-    if op == "download":
-        return os.path.exists(destination)
-    probe = getattr(files, "exists", None)
-    return bool(probe) and bool(probe(destination))
-
+    """Probe the destination namespace, not the source namespace."""
+    return destination_exists(files, op, destination)
 
 def _run_file_view_item(files, item, progress, *, conflict_decision=None):
     """Execute one wx file-view transfer item against a files backend.
@@ -195,14 +187,8 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
             or rename_for_all["enabled"]
             or get_session_conflict_action(item.op) == "rename"
         ):
-            target = PurePosixPath(item.dst)
-            suffix = target.suffix
-            stem = target.name[: -len(suffix)] if suffix else target.name
-            for index in range(1, 10000):
-                candidate = target.with_name(f"{stem} ({index}){suffix}")
-                if not _destination_exists(files, item.op, str(candidate)):
-                    return ("rename", str(candidate))
-            return "cancel"
+            candidate = available_rename_destination(files, item.op, item.dst)
+            return ("rename", candidate) if candidate is not None else "cancel"
 
         from hpc_gui.wx_transfer_conflict_dialog import create_wx_transfer_conflict_dialog
 

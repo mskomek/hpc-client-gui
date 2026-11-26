@@ -2,10 +2,56 @@
 
 from __future__ import annotations
 
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from threading import RLock
+import os
 
 _LOCK = RLock()
 _SESSION_ACTION: tuple[str, bool] | None = None
+
+
+def destination_path(direction: str, destination: str):
+    """Interpret local downloads with host path rules, uploads with POSIX rules."""
+    if direction == "download":
+        return Path(destination)
+    if direction == "upload":
+        return PurePosixPath(destination)
+    raise ValueError(f"Unsupported transfer direction: {direction}")
+
+
+def rename_destination(direction: str, destination: str, name: str) -> str:
+    """A rename must stay within the original destination directory."""
+    if (
+        not name or name in {".", ".."} or "/" in name or "\\" in name
+        or "\x00" in name
+        or (direction == "download" and os.name == "nt"
+            and (PureWindowsPath(name).drive or ":" in name or name.endswith((".", " "))))
+    ):
+        raise ValueError("Invalid destination filename")
+    return str(destination_path(direction, destination).with_name(name))
+
+
+def destination_exists(files, direction: str, destination: str) -> bool:
+    if direction == "download":
+        try:
+            os.lstat(destination)
+        except FileNotFoundError:
+            return False
+        return True
+    if direction == "upload":
+        return bool(files.exists(destination))
+    raise ValueError(f"Unsupported transfer direction: {direction}")
+
+
+def available_rename_destination(files, direction: str, destination: str) -> str | None:
+    target = destination_path(direction, destination)
+    for index in range(1, 10000):
+        candidate = rename_destination(
+            direction, destination, f"{target.stem} ({index}){target.suffix}"
+        )
+        if not destination_exists(files, direction, candidate):
+            return candidate
+    return None
 
 
 def resolve_conflict_action(
@@ -70,6 +116,10 @@ def clear_session_conflict_action() -> None:
 
 
 __all__ = [
+    "available_rename_destination",
+    "destination_exists",
+    "destination_path",
+    "rename_destination",
     "clear_session_conflict_action",
     "get_session_conflict_action",
     "resolve_conflict_action",
