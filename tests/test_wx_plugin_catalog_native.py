@@ -102,6 +102,6 @@ app.ProcessPendingEvents()
 """
     env = dict(os.environ, HPC_GUI_CONFIG_ROOT=str(tmp_path))
     env["PYTHONPATH"] = os.pathsep.join([str(root / "src"), str(root / "tests"), env.get("PYTHONPATH", "")])
-    result = subprocess.run([sys.executable, "-u", "-X", "faulthandler", "-c", script],
+    result = subprocess.run([sys.executable, "-u", "-X", "faulthandler", "-c", script, str(tmp_path)],
                             cwd=root, env=env, capture_output=True, text=True, timeout=35)
     assert result.returncode == 0, result.stdout + result.stderr
