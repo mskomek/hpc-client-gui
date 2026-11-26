@@ -73,6 +73,20 @@ assert calls == [("/remote/job.jou", "first\nsecond\nthird\n", "org.test")]
 editor = host._wx_editor_controls["editor"]
 assert editor.GetStringSelection() == "second"
 assert not host._wx_editor_model.controller.active.dirty
+
+# Native keyboard dispatch is also exercised without writing/submitting a file.
+with patch("hpc_gui.services.editor_lint.EditorLintPipeline.collect", collect):
+    wx.CallLater(30, answer)
+    key = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    key.m_keyCode = wx.WXK_F8
+    key.SetEventObject(editor)
+    editor.GetEventHandler().ProcessEvent(key)
+    deadline = __import__("time").monotonic() + 8
+    while host._wx_editor_state.get("lint_running") and __import__("time").monotonic() < deadline:
+        wx.Yield()
+        __import__("time").sleep(.01)
+assert not errors, errors
+assert calls[-1] == ("/remote/job.jou", "first\\nsecond\\nthird\\n", None)
 d = NS(code="C1", severity=NS(value="warning"), line=2, column=3, message="finding",
        explanation="reason", suggested_fix="fix it", source_url="https://example.test/doc", is_heuristic=True)
 f = NS(file_path="job.jou", detection=NS(product="fluent", detected_version="25.2"),

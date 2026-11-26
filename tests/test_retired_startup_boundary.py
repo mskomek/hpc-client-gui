@@ -18,6 +18,7 @@ def test_retired_startup_has_no_tracked_executable_references():
         r"|\bClusterSelfTestDialog\b|hpc_gui\.ui\.dialogs\.cluster_self_test_dialog"
         r"|hpc_gui\.ui\.dialogs\.slurm_array_dialog"
         r"|\bTemplateBrowserDialog\b|\bEditorTemplatesMixin\b|hpc_gui\.ui\.(?:dialogs\.template_browser_dialog|widgets\.editor_templates)"
+        r"|\bEditorLintingMixin\b|hpc_gui\.ui\.widgets\.editor_linting"
     )
     candidates = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "src", "tests", "scripts", "devtools", "build", ".github"],

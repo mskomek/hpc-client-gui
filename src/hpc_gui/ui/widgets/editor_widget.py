@@ -13,7 +13,7 @@ from hpc_gui.core.i18n import t
 from hpc_gui.core.platform import current_os
 from hpc_gui.services.shortcut_preferences import active_binding
 from hpc_gui.ui.widgets.editor_document_actions import EditorDocumentActionsMixin
-from hpc_gui.ui.widgets.editor_linting import EditorLintingMixin
+from hpc_gui.services.editor_lint import EditorLintPipeline
 from hpc_gui.ui.widgets.editor_remote_io import EditorRemoteIoMixin
 from hpc_gui.ui.widgets.editor_document_view import _EditorDocument
 
@@ -22,7 +22,7 @@ from hpc_gui.ui.widgets.editor_document_view import _EditorDocument
 
 class EditorWidget(
     EditorDocumentActionsMixin,
-    EditorLintingMixin,
+    EditorLintPipeline,
     EditorRemoteIoMixin,
     QWidget,
 ):
@@ -42,20 +42,17 @@ class EditorWidget(
         self.btn_save = QPushButton(t("editor.save"))
         self.btn_save_submit = QPushButton(t("editor.save_submit"))
         self.btn_save_run = QPushButton(t("editor.save_run"))
-        self.btn_lint = QPushButton(t("editor.lint"))
 
         self.btn_load.clicked.connect(self.load_path)
         self.btn_save.clicked.connect(self.save_path)
         self.btn_save_submit.clicked.connect(lambda: self.save_path(force_submit=True))
         self.btn_save_run.clicked.connect(lambda: self.save_path(run_in_terminal=True))
-        self.btn_lint.clicked.connect(self.run_lint)
 
         top = QHBoxLayout()
         self.lbl_remote = QLabel(t("editor.remote"))
         top.addWidget(self.lbl_remote)
         top.addWidget(self.path_in, 1)
         top.addWidget(self.btn_load)
-        top.addWidget(self.btn_lint)
         top.addWidget(self.btn_save)
         top.addWidget(self.btn_save_submit)
         top.addWidget(self.btn_save_run)
@@ -120,8 +117,6 @@ class EditorWidget(
         self._add_shortcut("Ctrl+F", self.find_text)
         self._add_shortcut("Ctrl+H", self.find_text)
         self._add_shortcut("F3", self.find_next)
-        self._add_shortcut("F8", self.run_lint)
-        self._add_shortcut("Shift+F8", self.run_lint)
         self._add_shortcut("Ctrl+O", self.focus_open_path)
         self._add_shortcut("Ctrl+W", self.close_active_tab)
         self._add_shortcut("Ctrl+Tab", lambda: self.switch_document(1))
@@ -185,7 +180,6 @@ class EditorWidget(
     def retranslate_ui(self):
         self.lbl_remote.setText(t("editor.remote"))
         self.btn_load.setText(t("editor.open"))
-        self.btn_lint.setText(t("editor.lint"))
         self.btn_save.setText(t("editor.save"))
         self.btn_save_submit.setText(t("editor.save_submit"))
         self.btn_save_run.setText(t("editor.save_run"))

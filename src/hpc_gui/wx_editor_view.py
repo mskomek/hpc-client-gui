@@ -224,6 +224,15 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     btn_open.Bind(wx.EVT_BUTTON, _on_open)
     btn_template.Bind(wx.EVT_BUTTON, _on_template)
     btn_lint.Bind(wx.EVT_BUTTON, _on_lint)
+
+    def _editor_key(event):
+        if event.GetKeyCode() == wx.WXK_F8 and not event.ControlDown() and not event.AltDown():
+            if btn_lint.IsEnabled():
+                _on_lint(event)
+            return
+        event.Skip()
+
+    editor.Bind(wx.EVT_KEY_DOWN, _editor_key)
     btn_array.Bind(wx.EVT_BUTTON, _on_array)
     btn_find_next.Bind(wx.EVT_BUTTON, lambda _event: _wx_find_next())
     btn_find_prev.Bind(wx.EVT_BUTTON, lambda _event: _wx_find_previous())
