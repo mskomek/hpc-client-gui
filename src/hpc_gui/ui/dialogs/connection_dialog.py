@@ -51,9 +51,6 @@ from hpc_gui.plugins.models import (
     validate_storage_policy as validate_storage_policy,
 )
 from hpc_gui.services.quota_monitor import quota_gate as quota_gate
-from hpc_gui.ui.dialogs.cluster_self_test_dialog import (
-    ClusterSelfTestDialog as ClusterSelfTestDialog,
-)
 from hpc_gui.ssh.client import coerce_keepalive_interval as coerce_keepalive_interval
 from hpc_gui.config.storage import (
     coerce_profile_ssh_timeout as coerce_profile_ssh_timeout,
