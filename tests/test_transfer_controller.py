@@ -304,3 +304,26 @@ def test_transfer_parallel_limit_bounds_inflight_work():
     assert not controller.failed
     assert {id(item) for item in started} == {id(item) for item in items}
     assert {id(item) for item in finished} == {id(item) for item in items}
+
+
+def test_completed_history_eviction_notifies_subscribers_without_losing_failures():
+    items = [TransferItem("upload", str(i), f"/remote/{i}") for i in range(5)]
+    events = []
+
+    def run(item, progress):
+        if item is items[1]:
+            raise OSError("retryable")
+        progress(1, 1)
+
+    controller = TransferController(items, run, history_limit=2,
+                                    on_queue=lambda event, item: events.append((event, item)))
+    controller.start()
+    assert controller.wait(5)
+    assert controller.completed == items[3:]
+    assert controller.failed == [(items[1], "retryable")]
+    assert [item for event, item in events if event == "forgotten_completed"] == [items[0], items[2]]
+    assert [item for event, item in events if event == "completed"] == [items[0], *items[2:]]
+    assert controller.remove_completed_items() == 2
+    assert not controller.completed
+    assert [item for event, item in events if event == "forgotten_completed"] == [items[0], *items[2:]]
+    assert controller.failed == [(items[1], "retryable")]

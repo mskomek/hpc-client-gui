@@ -13,6 +13,7 @@ from hpc_gui._wx_transfer_common import (
     update_tab_counts,
 )
 from hpc_gui.core.i18n import t
+from hpc_gui.services.transfer_controller import COMPLETED_HISTORY_LIMIT
 
 
 def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
@@ -82,6 +83,7 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                 row = find_row(state, queue_list, iid)
                 if row != -1:
                     queue_list.DeleteItem(row)
+                state["row_token"].pop(iid, None)
             elif event == "completed":
                 try:
                     status.SetLabel(t("transfer.completed_tab"))
@@ -97,6 +99,15 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                 if iid not in state["completed_map"]:
                     state["completed_map"][iid] = item
                     add_row(state, completed_list, item, t("transfer.completed_tab"), "")
+                    # Keep completed display history bounded across queue owners.
+                    # Failed and pending items remain available for retry/action.
+                    while len(state["completed_map"]) > COMPLETED_HISTORY_LIMIT:
+                        oldest = next(iter(state["completed_map"]))
+                        row = find_row(state, completed_list, oldest)
+                        if row != -1:
+                            completed_list.DeleteItem(row)
+                        state["completed_map"].pop(oldest)
+                        state["row_token"].pop(oldest, None)
             elif event == "failed":
                 try:
                     status.SetLabel(t("transfer.errors_tab"))

@@ -24,6 +24,7 @@ class TransferItem:
 
 
 TRANSFER_PRIORITIES = ("Highest", "High", "Normal", "Low", "Lowest")
+COMPLETED_HISTORY_LIMIT = 1000
 
 
 class TransferCancelled(Exception):
@@ -39,7 +40,7 @@ class TransferController:
         run_item: Callable[[TransferItem, Callable[[int, int], None]], None],
         *,
         parallel_limit: int = 1,
-        history_limit: int = 1000,
+        history_limit: int = COMPLETED_HISTORY_LIMIT,
         on_queue: Callable[[str, TransferItem], None] | None = None,
         on_progress: Callable[[TransferItem, int, int], None] | None = None,
         on_start: Callable[[], None] | None = None,
@@ -302,7 +303,10 @@ class TransferController:
                     self._failed_directories.add(key)
         if error is None:
             with self._lock:
+                evicted = self._completed[0] if len(self._completed) == self._completed.maxlen else None
                 self._completed.append(item)
+            if evicted is not None:
+                self._emit_queue("forgotten_completed", evicted)
             self._emit_queue("completed", item)
         else:
             with self._lock:

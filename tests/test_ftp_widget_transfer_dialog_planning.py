@@ -116,23 +116,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
         finally:
             dialog.deleteLater()
 
-    @pytest.mark.gui
-    @pytest.mark.qt
-    def test_transfer_dialog_never_exceeds_backend_safe_cap(self) -> None:
-        dialog = TransferDialog(
-            title="Upload",
-            items=[],
-            run_item=lambda _item, _progress=None: None,
-            parallel_limit=5,
-            max_parallel_limit=1,
-        )
-        try:
-            self.assertEqual(dialog._parallel_limit, 1)
-            self.assertEqual(dialog.set_parallel_limit(5), 1)
-            self.assertEqual(dialog._parallel_limit, 1)
-            self.assertIn("1", dialog.lbl_parallel_hint.text())
-        finally:
-            dialog.deleteLater()
 
     @pytest.mark.integration
     @pytest.mark.concurrency

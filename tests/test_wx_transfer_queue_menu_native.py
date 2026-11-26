@@ -21,6 +21,8 @@ import sys
 import wx
 from hpc_gui.core.i18n import t
 from hpc_gui.services.transfer_controller import TransferItem
+from hpc_gui.services.transfer_session_controller import TransferSessionController
+from hpc_gui import _wx_transfer_embedded
 from hpc_gui.wx_shell_file_transfer import _start_file_transfers
 from hpc_gui.wx_transfer_workspace import build_transfers_panel
 from hpc_gui._wx_transfer_common import find_row
@@ -165,6 +167,29 @@ try:
         panel._wx_transfer_queue('forgotten_failed', failed_item)
         panel._wx_transfer_queue('forgotten_completed', completed_item)
         pump(lambda: not view['failed_map'] and not view['completed_map'])
+    # Actual service eviction and global display cap across queue owners.
+    _wx_transfer_embedded.COMPLETED_HISTORY_LIMIT = 3
+    for batch in range(2):
+        history_items = [TransferItem('upload', f'{batch}-{i}', f'/{batch}-{i}') for i in range(3)]
+        history_owner = TransferSessionController(
+            history_items, lambda item, progress: progress(1, 1),
+            history_limit=2,
+            on_queue=lambda event, item: panel._wx_transfer_queue(event, item, owner=history_owner),
+        )
+        panel._wx_transfer_set_controller(history_owner)
+        history_owner.start()
+        pump(lambda: history_owner.engine.wait(0)
+             and id(history_items[-1]) in view['completed_map'])
+        assert history_owner.engine.completed == history_items[-2:]
+        assert id(history_items[0]) not in view['completed_map']
+        assert id(history_items[0]) not in view['row_token']
+        assert len(view['completed_map']) == (2 if batch == 0 else 3)
+        assert controls['completed'].GetItemCount() == len(view['completed_map'])
+        assert not view['queue_map']
+    assert len(view['row_token']) == 3
+    menu_action('completed', 'transfer.clear_completed')
+    pump(lambda: not view['completed_map'] and not view['row_token'])
+    assert not history_owner.engine.completed
     assert not any(m.split('.')[0] in {'PySide6','PyQt5','PyQt6','shiboken6'} for m in sys.modules)
 finally:
     release.set()
