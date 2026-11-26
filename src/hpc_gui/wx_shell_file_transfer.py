@@ -146,7 +146,7 @@ def _transfer_checksum_requested() -> bool:
 def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, conflict_resolver=None, files_backend=None, parent=None):
     """Queue file-view transfers through the shared transfer lifecycle."""
     from hpc_gui.wx_transfer_workspace import create_transfer_progress
-    from hpc_gui.config.storage import coerce_profile_transfer_parallelism
+    from hpc_gui.services.upload_plan import transfer_limits
     from hpc_gui.services.transfer_conflict_policy import get_session_conflict_action
 
     session = session_state.get("session") or {}
@@ -344,17 +344,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
             on_progress(item, done, total)
 
     profile = session.get("profile") if isinstance(session.get("profile"), dict) else {}
-    configured_parallel_limit = coerce_profile_transfer_parallelism(
-        profile.get("transfer_parallelism", 1)
-    )
-    # A profile cannot override the backend's channel-safety contract. FTP
-    # adapters share a control/data session and advertise serial-only; SSH
-    # adapters may opt in after isolating each transfer channel.
-    parallel_limit = (
-        configured_parallel_limit
-        if bool(getattr(files, "supports_parallel_transfers", False))
-        else 1
-    )
+    configured_parallel_limit, parallel_limit = transfer_limits(files, profile)
     sessions = session_state.setdefault("transfer_sessions", set())
 
     def register_run():

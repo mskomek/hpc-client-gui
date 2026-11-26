@@ -33,6 +33,8 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     cb_remote_cache.SetValue(bool(model.global_settings.get("remote_directory_cache", True)))
     cb_checksum = wx.CheckBox(panel, label=t("settings.transfer_checksum_verification_label"))
     cb_checksum.SetValue(bool(model.global_settings.get("transfer_checksum", False)))
+    cb_preflight = wx.CheckBox(panel, label=t("settings.upload_preflight_confirmation_label"))
+    cb_preflight.SetValue(bool(model.global_settings.get("upload_preflight_confirmation", True)))
     btn_reset_smart_open = wx.Button(panel, label=t("settings.smart_open_reset"))
 
     # Profile settings
@@ -54,6 +56,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     root.Add(title, 0, wx.ALL, 16)
     root.Add(cb_remote_cache, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     root.Add(cb_checksum, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    root.Add(cb_preflight, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     root.Add(btn_reset_smart_open, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     row1 = wx.BoxSizer(wx.HORIZONTAL)
     row1.Add(lbl_parallel, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
@@ -85,6 +88,10 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             model.set_global("transfer_checksum", bool(cb_checksum.GetValue()))
         except Exception as exc:
             set_errors.append(("transfer_checksum", exc))
+        try:
+            model.set_global("upload_preflight_confirmation", bool(cb_preflight.GetValue()))
+        except Exception as exc:
+            set_errors.append(("upload_preflight_confirmation", exc))
         try:
             model.set_profile("transfer_parallelism", int(sp_parallel.GetValue()))
         except Exception as exc:
@@ -175,6 +182,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             title.SetLabel(t("settings.dialog_title"))
             cb_remote_cache.SetLabel(t("settings.remote_directory_cache_label"))
             cb_checksum.SetLabel(t("settings.transfer_checksum_verification_label"))
+            cb_preflight.SetLabel(t("settings.upload_preflight_confirmation_label"))
             btn_reset_smart_open.SetLabel(t("settings.smart_open_reset"))
             lbl_parallel.SetLabel(t("connection.transfer_parallelism"))
             lbl_timeout.SetLabel(t("connection.ssh_timeout"))
@@ -193,6 +201,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
         "title": title,
         "remote_cache": cb_remote_cache,
         "checksum": cb_checksum,
+        "upload_preflight": cb_preflight,
         "reset_smart_open": btn_reset_smart_open,
         "parallelism": sp_parallel,
         "timeout": sp_timeout,

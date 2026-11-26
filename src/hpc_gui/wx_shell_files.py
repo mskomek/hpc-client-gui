@@ -4,12 +4,12 @@ from __future__ import annotations
 from pathlib import Path
 from pathlib import PurePosixPath
 from threading import Thread
-import os
 from hpc_gui.services.transfer_controller import TransferItem
 import shlex
 from hpc_gui.core.i18n import t
 from hpc_gui.wx_shell_terminal import _run_shell_in_terminal
 from hpc_gui.wx_shell_file_transfer import _start_file_transfers
+from hpc_gui.wx_shell_upload import prepare_upload
 
 
 def _editor_session_key(session_state):
@@ -231,47 +231,13 @@ def _local_files_callbacks(session_state, parent, lifecycle):
             wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             return
 
+        generation = session_state.get("generation")
+        paths = tuple(paths)
+
         def worker():
             try:
-                items = []
-                seen = set()
-                for local_path in paths:
-                    source = os.path.abspath(str(local_path))
-                    if source in seen:
-                        continue
-                    seen.add(source)
-                    name = os.path.basename(source.rstrip(os.sep))
-                    remote_base = str(PurePosixPath(remote_dir) / name)
-                    if not os.path.isdir(source):
-                        items.append(TransferItem("upload", source, remote_base))
-                        continue
-                    items.append(TransferItem("mkdir_remote", "", remote_base))
-
-                    def raise_walk_error(error):
-                        raise error
-
-                    for root, directories, filenames in os.walk(source, onerror=raise_walk_error):
-                        directories.sort()
-                        filenames.sort()
-                        relative = os.path.relpath(root, source)
-                        remote_root = (
-                            str(PurePosixPath(remote_base) / relative.replace(os.sep, "/"))
-                            if relative != "."
-                            else remote_base
-                        )
-                        for directory in directories:
-                            items.append(TransferItem(
-                                "mkdir_remote", "", str(PurePosixPath(remote_root) / directory)
-                            ))
-                        for filename in filenames:
-                            items.append(TransferItem(
-                                "upload",
-                                os.path.join(root, filename),
-                                str(PurePosixPath(remote_root) / filename),
-                            ))
-                if not items:
-                    return
-                _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
+                prepare_upload(session_state, lifecycle, parent, session, files, paths,
+                               remote_dir, _start_file_transfers, generation=generation)
             except Exception as error:
                 import wx
 
@@ -336,8 +302,10 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
             _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
             return
         if action == "upload" and files and destination:
-            items = [TransferItem("upload", local_path, str(PurePosixPath(destination) / Path(local_path).name)) for local_path in paths]
-            _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
+            session = _resolve_session()
+            prepare_upload(session_state, lifecycle, parent, session, files, paths,
+                           destination, _start_file_transfers,
+                           generation=session_state.get("generation"))
             return
         if action == "new_folder" and files and destination:
             files.mkdir(destination)

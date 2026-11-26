@@ -276,10 +276,29 @@ def _run_demo(workspace, emit, *, connection_only=False):
         assert local._wx_local_tabs[local._wx_local_notebook.GetSelection()]["path"] == workspace.resolve()
         _select_rows(listing, ("case", "mesh", "run.slurm"))
         emit(wx, app, frame, "selected")
+        # Accept the real native preflight dialog from its nested event loop.
+        preflight = {"accepted": False}
+        deadline = time.monotonic() + 8
+
+        def accept_preflight():
+            for window in wx.GetTopLevelWindows():
+                controls = getattr(window, "_wx_upload_preflight_controls", None)
+                if controls and window.IsModal():
+                    if entered.is_set():
+                        raise RuntimeError("upload started before preflight confirmation")
+                    preflight["accepted"] = True
+                    _click(wx, controls["start"])
+                    return
+            if time.monotonic() < deadline:
+                wx.CallLater(25, accept_preflight)
+
+        wx.CallLater(25, accept_preflight)
         _click(wx, pages["NAV-FILES"]["upload_selected"])
         transfers = pages["NAV-FILES"]["transfers"]
         _pump(wx, app, lambda: entered.is_set() and bool(transfers._wx_transfer_state["queue_map"]),
               "upload queue")
+        if not preflight["accepted"]:
+            raise RuntimeError("demo upload bypassed preflight")
         emit(wx, app, frame, "uploading")
         release.set()
         _pump(wx, app, lambda: all(files.exists(WORKDIR + "/" + item)
