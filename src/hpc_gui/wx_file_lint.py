@@ -82,8 +82,12 @@ def start_file_lint(owner, selection, *, files=None, tool_only=False, current=la
         from hpc_gui.services.ansys_tool_presentation import AnsysToolPresentation
         from hpc_gui.wx_ansys_view import show_ansys_lint
 
-        show_ansys_lint(owner, AnsysToolPresentation(tool), lifecycle=lifecycle,
-                        initial_documents=tuple((doc.path, doc.text) for doc in documents))
+        try:
+            show_ansys_lint(owner, AnsysToolPresentation(tool), lifecycle=lifecycle,
+                            initial_documents=tuple((doc.path, doc.text) for doc in documents))
+        except Exception as exc:
+            if gui_valid():
+                wx.MessageBox(str(exc), t("ansyslint.title"), wx.OK | wx.ICON_ERROR, owner)
 
     def finish(documents, tools, results, error):
         try:
@@ -99,13 +103,16 @@ def start_file_lint(owner, selection, *, files=None, tool_only=False, current=la
 
             fix = (lambda: open_tool(documents, tools)) if tools else None
             show_lint_results(owner, t("ansyslint.title"), results, open_in_tool=fix)
+        except Exception as exc:
+            if gui_valid():
+                wx.MessageBox(str(exc), t("ansyslint.title"), wx.OK | wx.ICON_ERROR, owner)
         finally:
             try:
                 owner.Unbind(wx.EVT_WINDOW_DESTROY, handler=destroyed)
+                if getattr(owner, "_wx_file_lint_request", None) is request:
+                    owner._wx_file_lint_request = None
             except RuntimeError:
                 pass
-            if getattr(owner, "_wx_file_lint_request", None) is request:
-                owner._wx_file_lint_request = None
 
     def worker():
         try:
@@ -115,6 +122,7 @@ def start_file_lint(owner, selection, *, files=None, tool_only=False, current=la
             results = None if tool_only else lint_documents(docs, catalog, current=valid)
             wx.CallAfter(finish, docs, tools, results, None)
         except FileLintCancelled:
+            request["cancelled"] = True
             wx.CallAfter(finish, (), (), None, None)
         except Exception as exc:
             wx.CallAfter(finish, (), (), None, exc)

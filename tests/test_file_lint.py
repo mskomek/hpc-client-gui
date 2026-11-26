@@ -85,3 +85,14 @@ def test_grouped_findings_and_engine_failure(monkeypatch):
     assert run.files[1].diagnostics[0].severity == Severity.ERROR
     assert "engine broken" in run.files[1].diagnostics[0].message
     assert len(catalog().common_tools(docs)) == 1
+
+
+
+def test_scan_limit_counts_skipped_remote_entries(monkeypatch):
+    files = Remote()
+    files.entries = [RemoteEntry(f"link{i}", f"/job/link{i}", False, 1, mode=stat.S_IFLNK)
+                     for i in range(10)]
+    monkeypatch.setattr(file_lint, "MAX_SCAN_ENTRIES", 4)
+    with pytest.raises(ValueError, match="discovery exceeds 4"):
+        file_lint.collect_documents([("/job", True)], catalog(), files=files)
+    assert files.reads == []

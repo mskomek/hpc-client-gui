@@ -23,6 +23,7 @@ import wx
 from hpc_gui.core.i18n import load_language
 from hpc_gui.services.file_context_actions import context_selection
 from hpc_gui.services.file_lint import LintCatalog
+from hpc_gui.plugins.linter_tools import LinterTool
 from hpc_gui.wx_file_lint import append_file_lint_actions
 from hpc_gui.wx_shell_files import _file_lint_callback
 
@@ -33,7 +34,7 @@ frame = wx.Frame(None)
 frame.Show()
 local = Path(sys.argv[1]) / "a.jou"
 local.write_text("local journal", encoding="utf-8")
-tool = NS(plugin_id="org.test", title="Test", version="1")
+tool = LinterTool("org.test", "1", "Test", "Fixture", lambda **kwargs: None, "_fixture")
 catalog = LintCatalog((), ((tool, frozenset({".jou"})),))
 state = {"session": None, "generation": 1}
 calls = []

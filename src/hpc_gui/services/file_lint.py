@@ -132,10 +132,11 @@ def _remote_root(files, path, expected_dir):
     return path
 
 
-def _children(path, files):
+def _children(path, files, count_entry):
     if files is None:
         with os.scandir(path) as entries:
             for entry in entries:
+                count_entry()
                 info = entry.stat(follow_symlinks=False)
                 if stat.S_ISLNK(info.st_mode):
                     continue
@@ -145,6 +146,7 @@ def _children(path, files):
                 yield entry.path, directory
         return
     for entry in files.iterdir_entries(path):
+        count_entry()
         name = str(entry.name)
         if name in {".", ".."}:
             continue
@@ -195,17 +197,23 @@ def collect_documents(selection, catalog, *, files=None, current=lambda: True, t
     total = 0
     scanned = 0
 
-    def visit(path, directory, explicit):
-        nonlocal total, scanned
+    def count_entry():
+        nonlocal scanned
         _check(current)
         scanned += 1
         if scanned > MAX_SCAN_ENTRIES:
             raise ValueError(f"Lint discovery exceeds {MAX_SCAN_ENTRIES} entries.")
+
+    def visit(path, directory, explicit):
+        nonlocal total
+        _check(current)
+        if explicit:
+            count_entry()
         if path in seen:
             return
         seen.add(path)
         if directory:
-            for child, child_dir in _children(path, files):
+            for child, child_dir in _children(path, files, count_entry):
                 visit(child, child_dir, False)
             return
         packs, tools = catalog.matching(path)
@@ -229,7 +237,7 @@ def collect_documents(selection, catalog, *, files=None, current=lambda: True, t
     return tuple(documents)
 
 
-def _finding(diag, *, plugin_id=""):
+def _finding(diag):
     severity = getattr(diag.severity, "value", diag.severity)
     return Finding(str(getattr(diag, "code", getattr(diag, "rule_id", "LINT"))),
                    Severity(severity), str(diag.message),
