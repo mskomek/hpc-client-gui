@@ -29,9 +29,12 @@ class WxEditorModel:
         active = self.controller.active
         return EditorCommandService.execute_mode(active.path if active else "", force_submit=submit, run_in_terminal=run)
 
-    def render_template(self, template: JobTemplate, values: dict[str, object]) -> int:
+    def render_template(self, template: JobTemplate, values: dict[str, object], *, provider="", profile="", session_key="") -> int:
         content = render_template(template, values)
-        return self.controller.open(DocumentModel(template.file_name, content, "", False, suggested_filename=template.file_name))
+        return self.controller.open(DocumentModel("", content, "", False,
+                                    suggested_filename=EditorCommandService.suggested_filename(template.file_name or f"{template.id}.txt"),
+                                    provider=provider, profile=profile, session_key=session_key,
+                                    newline=detect_newline(content)))
 
     def aggregate_lint(self, results: Iterable[tuple[str, LintResult]]) -> tuple[Diagnostic, ...]:
         seen = set()

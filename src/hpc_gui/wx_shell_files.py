@@ -143,7 +143,15 @@ def _editor_action_factory(session_state):
                 else:
                     ssh.send_shell_text(f"bash -- {shlex.quote(current.path)}\n")
 
+        profile_data = session.get("profile") or {}
+        provider_data = profile_data.get("provider_template")
+        provider_data = dict(provider_data) if isinstance(provider_data, dict) else {}
+        provider_data["account"] = profile_data.get("account") or provider_data.get("account", "")
         return {
+            "template_context": {"provider_template": provider_data,
+                                 "provider": str(provider_data.get("id") or provider_data.get("name") or ""),
+                                 "profile": str(session.get("profile_name") or profile_data.get("name") or ""),
+                                 "session_key": _editor_session_key(session_state)},
             "save_remote": save_remote if files else None,
             "target_exists": (lambda path: files.exists(path)) if files and callable(getattr(files, "exists", None)) else None,
             "on_submit": submit,

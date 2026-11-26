@@ -14,7 +14,7 @@ from hpc_gui.wx_editor_guards import _disk_baseline, editor_binary_guard_reason
 
 
 def tab_label(doc, fallback_title: str):
-    base = doc.path.rsplit("/", 1)[-1] if doc.path else fallback_title
+    base = doc.path.rsplit("/", 1)[-1] if doc.path else (doc.suggested_filename or fallback_title)
     return f"{base} *" if getattr(doc, "dirty", False) else base
 
 

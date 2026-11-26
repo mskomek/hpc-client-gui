@@ -237,6 +237,13 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     def _refresh_tabs():
         _refresh_tabs_leaf(doc_tabs, model, _label_fallback())
 
+    ctx["refresh_tabs"] = _refresh_tabs
+
+    def open_plugin_templates(plugin_id):
+        from hpc_gui._wx_editor_templates import open_template
+
+        return open_template(ctx, plugin_id=plugin_id)
+
     def _on_tab_changed(event):
         _on_tab_changed_leaf(event, model, editor, remote_path, doc_tabs, host)
         _update_header_enabled()
@@ -354,6 +361,7 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     host._wx_editor_header = {"path": remote_path, "path_label": remote_label, "open": btn_open, "new_template": btn_template, "lint": btn_lint, "array": btn_array, "header": header, "doc_tabs": doc_tabs, "remote_label": remote_label}
     host._wx_editor_state = state
     host._wx_editor_model = model
+    host.new_from_template_for_plugin = open_plugin_templates
     host._wx_editor_load_document = load_document
     host._wx_editor_save_for_replacement = save_for_replacement
     host._wx_editor_close_tab = close_tab
