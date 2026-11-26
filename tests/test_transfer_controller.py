@@ -96,3 +96,73 @@ def test_controller_enqueue_adds_work_while_running() -> None:
     release.set()
     assert controller.wait(2)
     assert completed == ["first", "second"]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("direction", ["upload", "download"])
+def test_failed_directory_blocks_descendants_until_successful_retry(tmp_path, direction):
+    mkdir_op = "mkdir_remote" if direction == "upload" else "mkdir_local"
+    root = "/work" if direction == "upload" else str(tmp_path)
+    bad = root + "/bad"
+    parent = TransferItem(mkdir_op, "", bad)
+    child = TransferItem(mkdir_op, "", bad + "/nested")
+    nested = TransferItem(direction, "source", bad + "/nested/file")
+    direct = TransferItem(direction, "source", bad + "/file")
+    sibling = TransferItem(direction, "source", root + "/bad-sibling/file")
+    called = []
+    fail = True
+
+    def run(item, progress):
+        called.append(item)
+        if item is parent and fail:
+            raise PermissionError("mkdir denied")
+        progress(1, 1)
+
+    controller = TransferController([parent, child, nested, direct, sibling], run, parallel_limit=3)
+    controller.start()
+    assert controller.wait(5)
+    assert called == [parent, sibling]
+    assert controller.completed == [sibling]
+    errors = {item.dst: error for item, error in controller.failed}
+    assert errors[bad] == "mkdir denied"
+    for item in (child, nested, direct):
+        assert "Destination directory prerequisite failed:" in errors[item.dst]
+
+    # Retrying only a child must not bypass the failed directory.
+    assert controller.retry_failed_items([nested]) == 1
+    controller.start()
+    assert controller.wait(5)
+    assert called == [parent, sibling]
+    assert len(controller.failed) == 4
+
+    # Retrying the prerequisites and descendants recovers the queue without
+    # repeating the independent transfer that already completed.
+    fail = False
+    assert controller.retry_failed() == 4
+    controller.start()
+    assert controller.wait(5)
+    assert not controller.failed and not controller.pending
+    assert called[:4] == [parent, sibling, parent, child]
+    assert set(id(item) for item in called[4:]) == {id(nested), id(direct)}
+    assert len(controller.completed) == 5
+
+
+@pytest.mark.unit
+def test_forgotten_directory_failure_does_not_unlock_descendants():
+    parent = TransferItem("mkdir_remote", "", "/work/fail")
+    child = TransferItem("upload", "source", "/work/fail/data")
+    called = []
+
+    def run(item, progress):
+        called.append(item)
+        raise OSError("denied")
+
+    controller = TransferController([parent, child], run)
+    controller.start()
+    assert controller.wait(5)
+    assert controller.remove_failed_items([parent]) == 1
+    assert controller.retry_failed() == 1
+    controller.start()
+    assert controller.wait(5)
+    assert called == [parent]
+    assert "prerequisite failed" in controller.failed[0][1]

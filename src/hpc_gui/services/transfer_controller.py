@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from threading import Event, Lock, Thread
 from typing import Callable, Iterable
 from collections import deque
+import os.path
+import posixpath
 
 
 @dataclass
@@ -48,6 +50,9 @@ class TransferController:
         self.parallel_limit = max(1, min(10, int(parallel_limit or 1)))
         self._pending = list(self.items)
         self._failed: list[tuple[TransferItem, str]] = []
+        # Failed directory prerequisites remain blocked across retries, even if
+        # their failure rows have been removed from the visible history.
+        self._failed_directories: set[tuple[str, str]] = set()
         self._completed: deque[TransferItem] = deque(maxlen=max(1, history_limit))
         self._on_queue = on_queue
         self._on_progress = on_progress
@@ -257,7 +262,44 @@ class TransferController:
             del self._pending[:count]
             return batch
 
+    @staticmethod
+    def _directory_key(item: TransferItem) -> tuple[str, str] | None:
+        if item.op in {"upload", "mkdir_remote"}:
+            return "remote", posixpath.normpath(item.dst)
+        if item.op in {"download", "mkdir_local"}:
+            return "local", os.path.normcase(os.path.abspath(item.dst))
+        return None
+
+    def _failed_parent(self, item: TransferItem) -> str | None:
+        key = self._directory_key(item)
+        if key is None:
+            return None
+        namespace, target = key
+        path_module = posixpath if namespace == "remote" else os.path
+        with self._lock:
+            failed = sorted(self._failed_directories)
+        for kind, directory in failed:
+            if kind != namespace:
+                continue
+            # Retrying the mkdir itself must be allowed to clear its failure.
+            if directory == target and item.op in {"mkdir_remote", "mkdir_local"}:
+                continue
+            try:
+                if path_module.commonpath((directory, target)) == directory:
+                    return directory
+            except ValueError:
+                # Different drives or mixed absolute/relative remote paths.
+                continue
+        return None
+
     def _finish_item(self, item: TransferItem, error: str | None) -> None:
+        if item.op in {"mkdir_remote", "mkdir_local"}:
+            key = self._directory_key(item)
+            with self._lock:
+                if error is None:
+                    self._failed_directories.discard(key)
+                else:
+                    self._failed_directories.add(key)
         if error is None:
             with self._lock:
                 self._completed.append(item)
@@ -272,6 +314,10 @@ class TransferController:
 
     def _one(self, item: TransferItem) -> tuple[TransferItem, str | None]:
         try:
+            blocked = self._failed_parent(item)
+            if blocked is not None:
+                raise RuntimeError(f"Destination directory prerequisite failed: {blocked}")
+
             def progress(done: int, total: int) -> None:
                 if self._cancel.is_set():
                     raise TransferCancelled()
@@ -284,7 +330,7 @@ class TransferController:
         except TransferCancelled:
             return item, "cancelled"
         except Exception as exc:
-            return item, str(exc)
+            return item, str(exc) or type(exc).__name__
 
     def _run(self) -> None:
         previous_op = None
