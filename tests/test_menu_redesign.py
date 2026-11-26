@@ -1,4 +1,4 @@
-"""Tests for coordinated menu/plugin-UI redesign."""
+"""Contracts for coordinated menu/plugin UI in the active wx shell."""
 
 from __future__ import annotations
 
@@ -8,99 +8,62 @@ import pathlib
 import pytest
 
 
-def read_main_window() -> str:
-    modules = (
-        "src/hpc_gui/ui/main_window.py",
-        "src/hpc_gui/ui/_main_window_menubar.py",
-        "src/hpc_gui/ui/_main_window_plugins.py",
-    )
-    return "\n".join(pathlib.Path(path).read_text(encoding="utf-8") for path in modules)
-
-
-def read_plugin_manager_dialog() -> str:
-    modules = (
-        "src/hpc_gui/ui/dialogs/plugin_manager_dialog.py",
-        "src/hpc_gui/ui/dialogs/plugin_manager_cards.py",
-        "src/hpc_gui/services/plugin_manager_state.py",
-    )
-    return "\n".join(pathlib.Path(path).read_text(encoding="utf-8") for path in modules)
+def read_source(*modules):
+    return "\n".join(pathlib.Path("src/hpc_gui", module).read_text(encoding="utf-8") for module in modules)
 
 
 @pytest.mark.audit
-def test_qt_shell_has_menu_plugins_help():
-    src = read_main_window()
-    assert 'self._menu_menu = menubar.addMenu(t("menu.menu"))' in src
-    assert 'self._plugins_menu = menubar.addMenu(t("menu.plugins"))' in src
-    wx_src = pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
-    assert 'menubar.Append(help_menu, t("menu.help"))' in wx_src
-    # Old code dumped all shell commands under Help – must be gone
+def test_wx_shell_has_menu_plugins_help():
+    src = read_source("wx_shell_frame.py")
+    for name in ("menu", "plugins", "help"):
+        assert f'menubar.Append({name}_menu, t("menu.{name}"))' in src
     assert 'COMMAND_REGISTRY.by_context("shell")' not in src
 
 
 @pytest.mark.audit
 def test_old_top_right_button_farm_removed():
-    src = read_main_window()
-    # Old farm buttons must be gone
-    assert "self._update_btn" not in src
-    # The new corner widget should only have language + version
-    # Check that corner widget layout only adds version + lang, not extra buttons
-    # Count corner widget addWidget calls: should be exactly 2 (version + lang)
-    # Simple check: no _plugins_btn, _send_logs_btn, _settings_btn, _help_btn in corner
-    assert "self._plugins_btn" not in src
-    assert "self._send_logs_btn" not in src
-    assert "self._settings_btn" not in src
-    assert "self._help_btn" not in src
+    src = read_source("wx_shell_frame.py")
+    for name in ("_update_btn", "_plugins_btn", "_send_logs_btn", "_settings_btn", "_help_btn"):
+        assert name not in src
+    assert "frame.SetMenuBar(menubar)" in src
 
 
 @pytest.mark.audit
 def test_language_and_version_remain():
-    src = read_main_window()
-    assert "self._lang_btn" in src
-    assert "self._version_label = QLabel(f\"v{__version__}\"" in src
-    # Version plain text must be visible upper right, not exclusively in About
-    assert "setCornerWidget" in src
-    # Language must retranslate menus immediately
-    assert "self._switch_language" in src
-    # Wide minimum width removed
-    assert 'setMinimumWidth(220)' not in src
+    src = read_source("wx_shell_frame.py")
+    assert 'menubar.Append(language_menu, t("help.language"))' in src
+    assert 'menubar.Append(version_menu, f"v{__version__}")' in src
+    assert "set_language(language)" in src
+    assert 'menubar.SetMenuLabel(0, t("menu.menu"))' in src
+    assert 'menubar.SetMenuLabel(1, t("menu.plugins"))' in src
+    assert 'menubar.SetMenuLabel(2, t("menu.help"))' in src
 
 
 @pytest.mark.audit
 def test_menu_ownership():
-    src = read_main_window()
-    # Settings + Check for Updates + Exit in Menu
-    assert 'self._act_settings' in src and 't("menu.settings")' in src
-    wx_src = pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
-    assert 'APP-UPDATE-CHECK' in wx_src and 't("menu.check_updates")' in wx_src
-    assert 'self._act_exit' in src and 't("menu.exit")' in src
-    # Plugin manager actions in Plugins
-    assert 'self._act_plugins_discover' in src
-    assert 'self._act_plugins_installed' in src
-    assert 'self._act_plugins_updates' in src
-    assert 'self._act_request_plugin' in src
-    # Ensure Send Logs not in Menu, plugin management not in Help
-    # Check that Send Logs action is under Help menu
-    assert 'act_logs = help_menu.Append(wx.ID_ANY, t("menu.send_logs"))' in wx_src
-    # Verify Help contains Help Center, Send Logs, About
-    assert 'act_help = help_menu.Append(wx.ID_HELP, t("menu.help_center"))' in wx_src
-    assert 'help_items["about"] = act_about' in pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
-    # Ensure old duplicate standalone top-right buttons gone (already checked)
+    src = read_source("wx_shell_frame.py")
+    for key in ("settings", "check_updates", "exit"):
+        assert f't("menu.{key}")' in src
+    assert "APP-UPDATE-CHECK" in src
+    for key in ("browse_install", "manage_installed", "check_plugin_updates", "request_plugin"):
+        assert f'plugins_menu.Append(wx.ID_ANY, t("menu.{key}"))' in src
+    assert 'act_logs = help_menu.Append(wx.ID_ANY, t("menu.send_logs"))' in src
+    assert 'act_help = help_menu.Append(wx.ID_HELP, t("menu.help_center"))' in src
+    assert 'help_items["about"] = act_about' in src
 
 
 @pytest.mark.audit
 def test_version_not_only_in_about():
-    src = read_main_window()
-    # Version label must exist outside About
-    assert "self._version_label" in src
+    assert 'menubar.Append(version_menu, f"v{__version__}")' in read_source("wx_shell_frame.py")
     assert pathlib.Path("src/hpc_gui/wx_about.py").exists()
 
 
 @pytest.mark.audit
 def test_command_palette_not_miswired():
-    wx_src = pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
-    dispatch = pathlib.Path("src/hpc_gui/wx_shell_dispatch.py").read_text(encoding="utf-8")
-    assert 'wx.EVT_MENU, lambda _e: _dispatch("APP-HELP"' in wx_src
-    for line in wx_src.splitlines():
+    src = read_source("wx_shell_frame.py")
+    dispatch = read_source("wx_shell_dispatch.py")
+    assert 'wx.EVT_MENU, lambda _e: _dispatch("APP-HELP"' in src
+    for line in src.splitlines():
         if "PALETTE" in line.upper() and "Bind(" in line:
             assert "APP-HELP" not in line
     assert 'from hpc_gui.wx_help import show_help' in dispatch
@@ -108,50 +71,40 @@ def test_command_palette_not_miswired():
 
 @pytest.mark.audit
 def test_no_hardcoded_ansys_truba_ids():
-    src = read_main_window()
-    assert 'if plugin.id == "org.hpcclient.fluent"' not in src
-    assert "if plugin.id == 'org.hpcclient.fluent'" not in src
-    assert 'if plugin.id == "org.hpcclient.truba"' not in src
-    # Also check services/plugin_menu_actions.py
-    action_src = pathlib.Path("src/hpc_gui/services/plugin_menu_actions.py").read_text(encoding="utf-8")
-    assert "org.hpcclient.fluent" not in action_src
-    assert "org.hpcclient.truba" not in action_src
-    # Check ui_contributions
-    contrib_src = pathlib.Path("src/hpc_gui/plugins/ui_contributions.py").read_text(encoding="utf-8")
-    assert "org.hpcclient.fluent" not in contrib_src
+    src = read_source("wx_shell_plugins.py", "services/plugin_menu_actions.py", "plugins/ui_contributions.py")
+    assert "org.hpcclient.fluent" not in src
+    assert "org.hpcclient.truba" not in src
 
 
 @pytest.mark.audit
 def test_plugin_manager_semantic_tabs():
-    src = read_plugin_manager_dialog()
-    assert "_INITIAL_TAB_MAP" in src
-    assert '"discover": 0' in src
-    assert '"installed": 1' in src
-    assert '"updates": 2' in src
-    assert "initial_tab" in src
-    assert "def _open_plugins" in read_main_window() and "initial_tab" in read_main_window()
-    assert "discover" in src and "installed" in src and "updates" in src
-    # Invalid fallback to discover
-    assert "fallback" in src.lower() or "0" in src
+    shared = read_source("_wx_plugins_view_shared.py")
+    builder = read_source("_wx_plugins_view_builder.py")
+    dispatch = read_source("wx_shell_dispatch.py")
+    assert '_VIEW_IDS = ("discover", "installed", "updates")' in shared
+    assert 'if normalized_tab not in _VIEW_IDS:' in builder
+    assert 'normalized_tab = "discover"' in builder
+    for command, tab in (("BROWSE", "discover"), ("MANAGE", "installed"), ("UPDATES", "updates")):
+        assert f'"PLUGIN-{command}": "{tab}"' in dispatch
+    assert "show_plugins(parent=parent, initial_tab=initial)" in dispatch
 
 
 @pytest.mark.audit
 def test_plugins_changed_emitted_all_paths():
-    src = read_plugin_manager_dialog()
-    # install, remove, toggle, activate version should emit
-    assert src.count("plugins_changed.emit()") >= 4
-    assert "def toggle_plugin_disabled" in src and "plugins_changed.emit()" in src.split("def toggle_plugin_disabled")[1][:500]
-    assert "def remove_plugin" in src and "plugins_changed.emit()" in src
-    assert "def change_plugin_version" in src or "activate_version" in src
+    builder = read_source("_wx_plugins_view_builder.py")
+    management = read_source("_wx_plugins_management.py")
+    for handler in ("do_install", "do_remove", "do_toggle"):
+        body = builder.split(f"def {handler}(", 1)[1].split("\n    def ", 1)[0]
+        assert "notify_plugin_change(parent)" in body
+    assert "notify_changed()" in management.split("def change_version(", 1)[1]
+    assert "_wx_rebuild_plugins_menu" in management
 
 
 @pytest.mark.audit
 def test_dynamic_plugin_menu_uses_contributions():
-    src = read_main_window()
-    assert "collect_plugin_menu_contributions" in src
-    assert "MenuContext" in src
-    assert "aboutToShow" in src
-    assert "evaluate_when" in src
+    src = read_source("wx_shell_plugins.py")
+    for marker in ("collect_plugin_menu_contributions", "MenuContext", "wx.EVT_MENU_OPEN", "evaluate_when"):
+        assert marker in src
 
 
 @pytest.mark.contract

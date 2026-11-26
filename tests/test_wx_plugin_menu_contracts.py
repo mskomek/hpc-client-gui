@@ -19,22 +19,8 @@ def test_wx_submenu_disable_hide():
 
 @pytest.mark.audit
 @pytest.mark.wx
-@pytest.mark.qt
-def test_dynamic_separators_qt_and_wx():
-    import pathlib
-    qt_modules = (
-        "src/hpc_gui/ui/main_window.py",
-        "src/hpc_gui/ui/_main_window_menubar.py",
-        "src/hpc_gui/ui/_main_window_plugins.py",
-    )
-    qt_src = "\n".join(
-        pathlib.Path(path).read_text(encoding="utf-8") for path in qt_modules
-    )
+def test_dynamic_separators_wx():
     wx_src = pathlib.Path("src/hpc_gui/wx_shell_plugins.py").read_text(encoding="utf-8")
-    # Qt must have has_any logic and setVisible
-    assert "has_any = len(self._plugins_dynamic_actions) > 0" in qt_src
-    assert "setVisible(has_any)" in qt_src
-    # Wx must use InsertSeparator/Remove, not Enable(False) for separator visibility
     assert "has_any = len(_wx_plugin_dynamic_items) > 0" in wx_src
     assert "InsertSeparator" in wx_src
     assert "Remove(sep_plugins_top" in wx_src

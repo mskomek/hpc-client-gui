@@ -232,3 +232,44 @@ assert not any(m.split(".")[0] in {"PySide6", "PyQt5", "PyQt6", "shiboken6"} for
     result = subprocess.run([sys.executable, "-u", "-X", "faulthandler", "-c", script, str(tmp_path)],
                             cwd=root, env=env, capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.subprocess
+def test_native_connection_template_opens_plugin_manager(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    script = r"""
+import wx
+from unittest.mock import patch
+from hpc_gui.core.i18n import load_language, t
+from hpc_gui.wx_connection_dialog import WxConnectionDialog
+
+load_language("en")
+app = wx.App(False)
+app.SetExitOnFrameDelete(False)
+dialog = WxConnectionDialog(None)
+opened = []
+def popup(menu, position):
+    action = next(item for item in menu.GetMenuItems()
+                  if item.GetItemLabelText() == t("connection.get_more_plugins"))
+    event = wx.CommandEvent(wx.EVT_MENU.typeId, action.GetId())
+    event.SetEventObject(dialog.dlg)
+    dialog.dlg.GetEventHandler().ProcessEvent(event)
+    return True
+
+try:
+    with patch.object(dialog.dlg, "PopupMenu", side_effect=popup), patch(
+        "hpc_gui.wx_plugins_view.show_plugins", lambda **kwargs: opened.append(kwargs)
+    ):
+        dialog._on_show_templates_menu(None)
+    assert opened == [{"parent": dialog.dlg}]
+finally:
+    dialog.Destroy()
+    app.ProcessPendingEvents()
+"""
+    env = dict(os.environ, HPC_GUI_CONFIG_ROOT=str(tmp_path))
+    env["PYTHONPATH"] = os.pathsep.join([str(root / "src"), str(root / "tests"), env.get("PYTHONPATH", "")])
+    result = subprocess.run([sys.executable, "-u", "-X", "faulthandler", "-c", script],
+                            cwd=root, env=env, capture_output=True, text=True, timeout=35)
+    assert result.returncode == 0, result.stdout + result.stderr
