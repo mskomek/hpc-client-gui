@@ -2,7 +2,7 @@
 
 Composition root for the main window: tab/workspace assembly, timers and
 signal wiring live here, with graceful shutdown and close handling.
-Menubar/language, plugin-menu and workspace/session
+Menubar/language and workspace/session
 behaviors live in the ``_main_window_*`` mixins composed below.
 
 The re-exported storage/changelog/error helpers are the patch surface
@@ -36,7 +36,6 @@ from .widgets.ftp_widget import FtpWidget
 from .widgets.editor_widget import EditorWidget
 from .widgets.logs_widget import LogsWidget
 from ._main_window_menubar import _MainWindowMenubarMixin
-from ._main_window_plugins import _MainWindowPluginsMixin
 from ._main_window_workspace import _MainWindowWorkspaceMixin
 
 
@@ -166,7 +165,6 @@ __all__ = [
 
 class MainWindow(
     _MainWindowMenubarMixin,
-    _MainWindowPluginsMixin,
     _MainWindowWorkspaceMixin,
     QMainWindow,
 ):

@@ -39,14 +39,3 @@ class _ConnectionDialogLifecycleMixin:
         )
         if visible:
             self._clamp_dialog_to_screen()
-
-    def _open_plugin_manager(self) -> None:
-        try:
-            from hpc_gui.ui.dialogs.plugin_manager_dialog import PluginManagerDialog
-
-            dialog = PluginManagerDialog(self)
-            dialog.plugins_changed.connect(self._rebuild_system_template_menu)
-            dialog.exec()
-            self._rebuild_system_template_menu()
-        except Exception:
-            pass

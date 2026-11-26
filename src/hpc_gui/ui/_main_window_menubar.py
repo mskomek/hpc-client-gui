@@ -1,9 +1,8 @@
 """Main-window menubar and language ownership (Wave M01).
 
-Mixin owning flag/version icons, the Menu/Plugins/Help construction, the
-language switch and full UI retranslations. Dynamic plugin-menu refreshes
-are invoked polymorphically through ``self`` so this module never imports
-the sibling mixins.
+Mixin owning legacy flag/version icons, the Menu construction, the
+language switch and full UI retranslations. Plugin management is owned
+exclusively by the active native wx shell.
 """
 
 from PySide6.QtCore import QSize, Qt
@@ -51,7 +50,7 @@ class _MainWindowMenubarMixin:
         return QIcon(pm)
 
     def _init_language_menu(self):
-        """Semantic header: Menu / Plugins / Help with compact language + version."""
+        """Legacy menu with compact language + version."""
         menubar = self.menuBar()
         # --- Language menu (compact, directly accessible) ---
         self._lang_menu = QMenu(self)
@@ -94,37 +93,6 @@ class _MainWindowMenubarMixin:
         self._act_exit.triggered.connect(self.close)
         self._menu_menu.addAction(self._act_exit)
 
-        # --- Plugins ---
-        self._plugins_menu = menubar.addMenu(t("menu.plugins"))
-        self._act_plugins_discover = QAction(t("menu.browse_install"), self)
-        self._act_plugins_discover.triggered.connect(lambda: self._open_plugins(initial_tab="discover"))
-        self._plugins_menu.addAction(self._act_plugins_discover)
-        self._act_plugins_installed = QAction(t("menu.manage_installed"), self)
-        self._act_plugins_installed.triggered.connect(lambda: self._open_plugins(initial_tab="installed"))
-        self._plugins_menu.addAction(self._act_plugins_installed)
-        self._act_plugins_updates = QAction(t("menu.check_plugin_updates"), self)
-        self._act_plugins_updates.triggered.connect(lambda: self._open_plugins(initial_tab="updates"))
-        self._plugins_menu.addAction(self._act_plugins_updates)
-        self._plugins_menu.addSeparator()
-        # Dynamic plugin roots will be inserted here
-        self._plugins_dynamic_separator_top = None
-        # Keep a reference to the bottom separator/action for insertion point
-        self._plugins_dynamic_before = None
-        self._plugins_menu.addSeparator()
-        self._act_request_plugin = QAction(t("menu.request_plugin"), self)
-        self._act_request_plugin.triggered.connect(self._open_plugin_requests)
-        self._plugins_menu.addAction(self._act_request_plugin)
-        # Capture insertion point: dynamic roots go before the last separator + Request
-        # The separator added above is the bottom separator
-        all_actions = self._plugins_menu.actions()
-        # bottom separator is second-to-last before Request; we want to insert before it
-        if len(all_actions) >= 2:
-            # actions: [discover, installed, updates, sep1, sep2(dynamic-top? actually we added sep then sep?), request]
-            # We added: discover, installed, updates, sep(static), sep(bottom), request
-            # Dynamic should be between those two seps: so before bottom sep
-            self._plugins_dynamic_before = all_actions[-2]  # bottom sep
-        self._plugins_dynamic_separator_top = all_actions[3] if len(all_actions) > 3 else None
-
         # --- Compact upper-right utilities: language + plain version text ---
         lang_container = QWidget(self)
         lang_container.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
@@ -133,15 +101,6 @@ class _MainWindowMenubarMixin:
         layout.addWidget(self._lang_btn)
         layout.addWidget(self._version_label)
         menubar.setCornerWidget(lang_container, Qt.TopRightCorner)
-
-        # Plugin menu dynamic handling
-        self._plugin_contributions: list = []
-        self._plugins_dynamic_actions: list = []
-        self._refresh_plugin_contributions_cache()
-        try:
-            self._plugins_menu.aboutToShow.connect(self._rebuild_plugins_menu_dynamic)
-        except Exception:
-            pass
 
     def _asset_svg_icon(self, rel_path: str, w: int = 18, h: int = 18) -> QIcon:
         """Render an SVG asset into a QIcon (stable across platforms)."""
@@ -186,16 +145,6 @@ class _MainWindowMenubarMixin:
             self._act_settings.setText(t("menu.settings"))
         if hasattr(self, "_act_exit"):
             self._act_exit.setText(t("menu.exit"))
-        if hasattr(self, "_plugins_menu"):
-            self._plugins_menu.setTitle(t("menu.plugins"))
-        if hasattr(self, "_act_plugins_discover"):
-            self._act_plugins_discover.setText(t("menu.browse_install"))
-        if hasattr(self, "_act_plugins_installed"):
-            self._act_plugins_installed.setText(t("menu.manage_installed"))
-        if hasattr(self, "_act_plugins_updates"):
-            self._act_plugins_updates.setText(t("menu.check_plugin_updates"))
-        if hasattr(self, "_act_request_plugin"):
-            self._act_request_plugin.setText(t("menu.request_plugin"))
         # Language menu labels / selected language display
         if hasattr(self, "_act_tr"):
             self._act_tr.setText(t("language.turkish"))
@@ -222,13 +171,6 @@ class _MainWindowMenubarMixin:
                 if hasattr(self, "_act_en"):
                     self._act_en.setChecked(True)
             self._lang_btn.setToolTip(t("language.menu_title"))
-        # Rebuild plugin menu to retranslate dynamic labels without restart
-        try:
-            self._refresh_plugin_contributions_cache()
-            self._rebuild_plugins_menu_dynamic()
-        except Exception:
-            pass
-
         # Ask children to retranslate if they support it
         for w in (
             getattr(self, "login", None),
