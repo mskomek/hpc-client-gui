@@ -147,7 +147,10 @@ def add_row(state, lst, item, status_text: str, progress_text: str) -> int:
     lst.InsertItem(idx, local)
     lst.SetItem(idx, 1, op)
     lst.SetItem(idx, 2, remote)
-    lst.SetItem(idx, 3, str(getattr(item, "size", "") or ""))
+    size = getattr(item, "cached_size", None)
+    if size is None:
+        size = getattr(item, "size", None)
+    lst.SetItem(idx, 3, "" if size is None else str(size))
     lst.SetItem(idx, 4, progress_text)
     lst.SetItem(idx, 5, priority_label(item))
     lst.SetItem(idx, 6, status_text)

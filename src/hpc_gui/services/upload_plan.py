@@ -59,7 +59,7 @@ def build_upload_plan(paths, destination: str) -> list[TransferItem]:
         if not source.is_dir():
             if not source.is_file():
                 raise FileNotFoundError(str(source))
-            items.append(TransferItem("upload", str(source), str(remote_base)))
+            items.append(TransferItem("upload", str(source), str(remote_base), cached_size=source.stat().st_size))
             continue
         items.append(TransferItem("mkdir_remote", "", str(remote_base)))
         for root, directories, filenames in os.walk(source, onerror=raise_walk_error):
@@ -72,5 +72,6 @@ def build_upload_plan(paths, destination: str) -> list[TransferItem]:
                 local_file = Path(root) / filename
                 if not local_file.is_file():
                     raise FileNotFoundError(str(local_file))
-                items.append(TransferItem("upload", str(local_file), str(remote_root / filename)))
+                items.append(TransferItem("upload", str(local_file), str(remote_root / filename),
+                                          cached_size=local_file.stat().st_size))
     return items

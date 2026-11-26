@@ -55,8 +55,8 @@ def pump(predicate):
         time.sleep(.01)
     raise AssertionError('native menu condition timed out')
 
-items = [TransferItem('upload', name, '/'+name)
-         for name in ('first', 'bad1', 'bad2', 'remove', 'last')]
+items = [TransferItem('upload', name, '/'+name, cached_size=size)
+         for name, size in zip(('first', 'bad1', 'bad2', 'remove', 'last'), (128, 0, None, 4096, 777))]
 state = {'session': {'files': Backend(), 'profile': {}}, 'embedded_transfers_panel': panel}
 controller = _start_file_transfers(state, None, items)
 engine = controller.engine
@@ -91,6 +91,8 @@ def menu_action(kind, key):
 
 try:
     pump(lambda: entered.is_set() and len(view['queue_map']) == 5)
+    for item, expected in zip(items, ('128', '0', '', '4096', '777')):
+        assert controls['queue'].GetItemText(find_row(view, controls['queue'], id(item)), 3) == expected
     select('queue', items[0])
     menu = build_transfer_menu(wx, panel, view, controls, 'queue')
     try:
@@ -115,6 +117,8 @@ try:
     pump(lambda: engine.wait(0) and len(view['failed_map']) == 2
          and len(view['completed_map']) == 2)
     assert calls == ['first', 'last', 'bad1', 'bad2']
+    for kind, item, expected in (('completed', items[0], '128'), ('failed', items[1], '0')):
+        assert controls[kind].GetItemText(find_row(view, controls[kind], id(item)), 3) == expected
     select('failed', items[2])
     menu_action('failed', 'transfer.retry_selected')
     pump(lambda: engine.wait(0) and len(view['failed_map']) == 1

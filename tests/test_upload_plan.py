@@ -221,3 +221,19 @@ def test_shell_upload_plans_on_worker_and_serial_backend_keeps_folder_order(tmp_
         ("upload", "/remote/first/input.txt"), ("upload", "/remote/second/input.txt"),
     ]
     assert all(thread != main_thread for _, _, thread in calls)
+
+
+def test_upload_plan_caches_file_sizes_including_empty_files(tmp_path):
+    folder = tmp_path / "folder"
+    folder.mkdir()
+    (folder / "zero.bin").write_bytes(b"")
+    (folder / "data.bin").write_bytes(b"x" * 128)
+    single = tmp_path / "single.bin"
+    single.write_bytes(b"x" * 333)
+    items = build_upload_plan([folder, single], "/remote")
+    assert {item.dst: item.cached_size for item in items} == {
+        "/remote/folder": None,
+        "/remote/folder/data.bin": 128,
+        "/remote/folder/zero.bin": 0,
+        "/remote/single.bin": 333,
+    }

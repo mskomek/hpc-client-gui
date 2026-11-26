@@ -84,3 +84,25 @@ def test_directory_conflict_rejects_without_deleting_existing_file(tmp_path):
     with pytest.raises(NotADirectoryError):
         build_download_plan(files, ["/remote/case"], tmp_path)
     assert target.read_bytes() == b"keep"
+
+
+def test_download_plan_preserves_listing_sizes_without_per_file_stat(tmp_path):
+    files = MockFilesBackend()
+    files.mkdir("/remote/child")
+    files.write_text("/remote/root.txt", "abcd")
+    files.write_text("/remote/child/nested.txt", "123456")
+    files.write_text("/remote/child/zero", "")
+
+    # Directory roots expose metadata through lstat; nested file sizes must
+    # come from the listing, not a separate per-file stat.
+    def unexpected_stat(path):
+        raise AssertionError(f"unexpected stat: {path}")
+
+    files.stat = unexpected_stat
+    items = build_download_plan(files, ["/remote"], tmp_path)
+    assert {it.src: it.cached_size for it in items if it.op == "download"} == {
+        "/remote/root.txt": 4,
+        "/remote/child/nested.txt": 6,
+        "/remote/child/zero": 0,
+    }
+    assert all(it.cached_size is None for it in items if it.op == "mkdir_local")

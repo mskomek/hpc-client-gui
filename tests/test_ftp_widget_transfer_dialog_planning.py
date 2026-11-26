@@ -5,10 +5,8 @@ from support.ftp_widget_test_support import (
     Path,
     QApplication,
     RemoteDirPanel,
-    SimpleNamespace,
     TransferDialog,
     TransferItem,
-    _CountingFiles,
     _PlannedOp,
     patch,
     pytest,
@@ -19,24 +17,6 @@ from support.ftp_widget_test_support import (
 
 
 class FtpWidgetTests(FtpWidgetTestCase):
-    @pytest.mark.integration
-    def test_download_plan_carries_listed_remote_size(self) -> None:
-        files = _CountingFiles()
-        panel = self.widget.panel_scratch
-        panel.session = {"connected": True, "files": files}
-        with tempfile.TemporaryDirectory() as tmp:
-            result = panel._build_remote_download_plan_background(
-                SimpleNamespace(cancelled=False),
-                files,
-                ["/remote"],
-                tmp,
-            )
-        plan = result.get("plan") or []
-        transfers = [op for op in plan if op.op == "download"]
-        sizes = {op.src: op.size for op in transfers}
-        self.assertEqual(sizes.get("/remote/root.txt"), 4)
-        self.assertEqual(sizes.get("/remote/child/nested.txt"), 6)
-        self.assertNotIn("/remote/child", sizes)
 
     @pytest.mark.unit
     def test_mixed_mutation_plan_keeps_original_order(self) -> None:
@@ -357,19 +337,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
                     128,
                 )
 
-    @pytest.mark.unit
-    def test_transfer_item_trailing_cached_size_keeps_positional_construction(self) -> None:
-        plain = TransferItem("download", "/remote/a.txt", "a.txt")
-        self.assertIsNone(plain.cached_size)
-        self.assertFalse(plain.recursive)
-        self.assertEqual(plain.priority, "Normal")
-
-        sized = TransferItem("upload", "local.bin", "/remote/local.bin", False, "High", 2048)
-        self.assertEqual(sized.cached_size, 2048)
-        self.assertEqual(sized.priority, "High")
-
-        keyword = TransferItem("download", "/remote/b.bin", "b.bin", cached_size=777)
-        self.assertEqual(keyword.cached_size, 777)
 
     @pytest.mark.unit
     def test_transfer_items_from_plan_preserve_known_size_and_leave_unknown_none(self) -> None:

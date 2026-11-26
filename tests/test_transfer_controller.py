@@ -207,3 +207,11 @@ def test_recursive_plan_prepares_all_mkdirs_before_parallel_upload_phase():
     assert not controller.failed
     assert len(controller.completed) == len(items)
     assert set(started) == {"one.bin", "two.bin", "root.bin"}
+
+
+def test_transfer_item_trailing_cached_size_keeps_positional_construction():
+    plain = TransferItem("download", "/remote/a.txt", "a.txt")
+    assert plain.cached_size is None and not plain.recursive and plain.priority == "Normal"
+    sized = TransferItem("upload", "local.bin", "/remote/local.bin", False, "High", 2048)
+    assert sized.cached_size == 2048 and sized.priority == "High"
+    assert TransferItem("download", "/remote/b.bin", "b.bin", cached_size=777).cached_size == 777
