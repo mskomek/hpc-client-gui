@@ -83,13 +83,14 @@ def test_w44_plugin_request_url_single_sourced():
     assert "PLUGIN_REQUEST_URL = (" not in dialog_src
 
 
-def test_w44_entry_format_parity_with_qt_surface():
-    """ARCH-QT-WX-002: Qt-surface shim re-exports the neutral implementation."""
+def test_w44_entry_format_consumers_share_neutral_service():
+    """ARCH-QT-WX-002: all remaining directory consumers use the neutral implementation."""
     from hpc_gui.services import remote_entry_format as neutral
-    from hpc_gui.ui.models import remote_entry_helpers as shim
 
-    for name in ("fmt_size", "fmt_mtime", "file_type", "category", "natural_sort_key"):
-        assert getattr(shim, name) is getattr(neutral, name), f"{name} diverged"
+    for relative in ("ui/widgets/_remote_tree.py", "ui/widgets/_remote_tree_view.py",
+                     "wx_remote_files_listing.py"):
+        consumer = SRC / "hpc_gui" / relative
+        assert "hpc_gui.services.remote_entry_format" in consumer.read_text(encoding="utf-8")
     assert neutral.fmt_size(1536) == "1.5 KB"
     assert neutral.natural_sort_key("file10") > neutral.natural_sort_key("file2")
 
