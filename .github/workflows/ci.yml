@@ -153,6 +153,7 @@ jobs:
           tests/test_transfer_concurrency.py
           tests/test_transfer_controller.py
           tests/test_transfer_cancel_recovery.py
+          tests/test_transfer_queue_priority.py
           -q --tb=short
       - name: Native wx transfer limit parity (Windows)
         if: runner.os == 'Windows'
@@ -162,7 +163,7 @@ jobs:
       - name: Native wx cancel and retry recovery (Windows)
         if: runner.os == 'Windows'
         run: >-
-          python -m pytest tests/test_wx_transfer_cancel_recovery_native.py -q --tb=short
+          python -m pytest tests/test_wx_transfer_cancel_recovery_native.py tests/test_wx_transfer_queue_menu_native.py -q --tb=short
       - name: Headless updater and diagnostic regressions
         run: >-
           python -m pytest
