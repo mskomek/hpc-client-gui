@@ -118,7 +118,7 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
 
     panel.SetSizer(root)
 
-    state = {"results": (), "selected_diag": None, "closed": False}
+    state = {"results": (), "rows": (), "selected_diag": None, "closed": False, "generation": 0}
 
     def refresh_labels(_lang=None):
         frame.SetTitle(f"{t('ansyslint.title')} — {presentation.tool.title}")
@@ -141,26 +141,28 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
 
     def render_results(results: tuple[FileDiagnostics, ...]):
         state["results"] = results
+        state["selected_diag"] = None
         results_ctrl.DeleteAllItems()
         totals = {"error": 0, "warning": 0, "info": 0}
         # Grouped display: one row per diagnostic, sorted by file then severity
         rows = []
         for fd in results:
             if fd.state.status == "failed":
-                rows.append((fd.path, "error", "?", "ENGINE", fd.state.error or "engine failed"))
+                rows.append((fd.path, "error", "?", "ENGINE", fd.state.error or "engine failed", None))
                 totals["error"] += 1
                 continue
             diags = fd.state.diagnostics or ()
             if not diags:
-                rows.append((fd.path, "info", "-", "-", t("ansyslint.no_findings")))
+                rows.append((fd.path, "info", "-", "-", t("ansyslint.no_findings"), None))
                 continue
             for d in diags:
                 sev = _severity_of(d)
                 if sev not in totals:
                     sev = "info"
                 totals[sev] += 1
-                rows.append((fd.path, sev, _format_location(d), getattr(d, "code", ""), getattr(d, "message", str(d))))
-        for r in sorted(rows, key=lambda x: (x[0], {"error": 0, "warning": 1, "info": 2}.get(x[1], 9))):
+                rows.append((fd.path, sev, _format_location(d), getattr(d, "code", ""), getattr(d, "message", str(d)), d))
+        state["rows"] = tuple(sorted(rows, key=lambda x: (x[0], {"error": 0, "warning": 1, "info": 2}.get(x[1], 9))))
+        for r in state["rows"]:
             idx = results_ctrl.InsertItem(results_ctrl.GetItemCount(), r[0])
             results_ctrl.SetItem(idx, 1, r[1])
             results_ctrl.SetItem(idx, 2, r[2])
@@ -185,9 +187,13 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
         _wx.MessageBox(msg, t("ansyslint.title"), _wx.OK | _wx.ICON_ERROR)
 
     def do_lint_files(paths: list[str]):
+        if state["closed"]:
+            return
         if not paths:
             show_error(_tr("ansyslint.no_file_selected", "No file selected"))
             return
+        state["generation"] += 1
+        generation = state["generation"]
         valid = []
         for p in paths:
             pp = Path(p)
@@ -205,7 +211,7 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
                 results = model.lint_files(valid)
                 import wx as _wx
                 def _cb():
-                    if state["closed"]:
+                    if state["closed"] or generation != state["generation"]:
                         return
                     render_results(results)
                     if not results:
@@ -213,10 +219,14 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
                 _wx.CallAfter(_cb)
             except Exception as exc:
                 import wx as _wx
-                _wx.CallAfter(lambda e=exc: show_error(f"{type(e).__name__}: {e}") if not state["closed"] else None)
+                _wx.CallAfter(lambda e=exc: show_error(f"{type(e).__name__}: {e}") if not state["closed"] and generation == state["generation"] else None)
         Thread(target=worker, daemon=True).start()
 
     def do_lint_folder(folder: str):
+        if state["closed"]:
+            return
+        state["generation"] += 1
+        generation = state["generation"]
         pp = Path(folder)
         if not pp.is_dir():
             show_error(_tr("ansyslint.invalid_folder", "Invalid folder: {path}").format(path=folder))
@@ -226,7 +236,7 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
                 results = model.lint_folder(str(pp), lambda p: Path(p).read_text(encoding="utf-8", errors="replace"))
                 import wx as _wx
                 def _cb():
-                    if state["closed"]:
+                    if state["closed"] or generation != state["generation"]:
                         return
                     render_results(results)
                     if not results:
@@ -234,7 +244,7 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
                 _wx.CallAfter(_cb)
             except Exception as exc:
                 import wx as _wx
-                _wx.CallAfter(lambda e=exc: show_error(f"{type(e).__name__}: {e}") if not state["closed"] else None)
+                _wx.CallAfter(lambda e=exc: show_error(f"{type(e).__name__}: {e}") if not state["closed"] and generation == state["generation"] else None)
         Thread(target=worker, daemon=True).start()
 
     def on_pick_files(_evt):
@@ -278,6 +288,7 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
         on_pick_files(_evt)
 
     def on_clear(_evt):
+        state["generation"] += 1
         render_results(())
 
     def on_select(evt):
@@ -286,45 +297,17 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
         # iterate rows as rendered
         if idx < 0 or idx >= results_ctrl.GetItemCount():
             return
-        # retrieve file diagnostics mapping: use state results
-        # find nth diagnostic across files
-        count = 0
-        for fd in state["results"]:
-            diags = fd.state.diagnostics or ()
-            if fd.state.status == "failed":
-                if count == idx:
-                    detail.SetValue(f"Engine error: {fd.state.error}\nFile: {fd.path}")
-                    state["selected_diag"] = None
-                    return
-                count += 1
-                continue
-            if not diags:
-                if count == idx:
-                    detail.SetValue(f"{fd.path}: {_tr('ansyslint.no_findings', 'no findings')}")
-                    state["selected_diag"] = None
-                    return
-                count += 1
-                continue
-            for d in diags:
-                if count == idx:
-                    expl = getattr(d, "explanation", "") or getattr(d, "message", "")
-                    conf = "heuristic" if getattr(d, "is_heuristic", False) else "structural"
-                    lines = [
-                        f"{_tr('ansyslint.why_flagged', 'why flagged')}: {expl}",
-                        f"{_tr('ansyslint.confidence', 'confidence')}: {conf}",
-                    ]
-                    fix = getattr(d, "suggested_fix", "")
-                    if fix:
-                        lines.append(f"fix: {fix}")
-                        lines.append(f"{_tr('ansyslint.suggested_action', 'suggested action')}: {fix}")
-                    url = getattr(d, "source_url", "")
-                    if url:
-                        lines.append(f"src: {url}")
-                        lines.append(f"{_tr('ansyslint.documentation', 'documentation')}: {url}")
-                    detail.SetValue("\n".join(lines))
-                    state["selected_diag"] = d
-                    return
-                count += 1
+        if idx >= len(state["rows"]):
+            return
+        row = state["rows"][idx]
+        diag = row[5]
+        state["selected_diag"] = diag
+        if diag is None:
+            detail.SetValue(f"{row[0]}: {row[4]}")
+            return
+        from hpc_gui.services.lint_result_format import format_diagnostic_explanation
+
+        detail.SetValue("\n".join(format_diagnostic_explanation(diag)))
 
     def on_copy_diag(_evt):
         import wx as _wx
@@ -386,6 +369,14 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
         evt.Skip()
 
     frame.Bind(wx.EVT_CLOSE, on_close)
+
+    def on_destroy(evt):
+        if evt.GetEventObject() is frame:
+            state["closed"] = True
+            unsubscribe_language_change(refresh_labels)
+        evt.Skip()
+
+    frame.Bind(wx.EVT_WINDOW_DESTROY, on_destroy)
     subscribe_language_change(refresh_labels)
     if lifecycle is not None:
         lifecycle.register_cleanup(lambda: frame.Close() if not state["closed"] else None)

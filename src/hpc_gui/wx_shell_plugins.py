@@ -69,6 +69,7 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
             from hpc_gui.plugins.loader import load_installed_plugins
             from hpc_gui.plugins.ui_contributions import collect_plugin_menu_contributions, evaluate_when, get_display_label
             from hpc_gui.services.plugin_menu_actions import can_execute_action
+            from hpc_gui.plugins.trusted_tools import is_approved_trusted_tool
             # Clear previous dynamic
             for item_id, handler in _wx_plugin_action_bindings:
                 frame.Unbind(wx.EVT_MENU, handler=handler, id=item_id)
@@ -119,7 +120,7 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
                                 allowed = False
                                 if owning is not None:
                                     allowed, _ = can_execute_action(child.action, owning)
-                                if not allowed or child.action == "plugin.open_trusted_tool":
+                                if not allowed or (child.action == "plugin.open_trusted_tool" and not is_approved_trusted_tool(owning.manifest)):
                                     act.Enable(False)
                                 else:
                                     # Bind with host-owned identity
@@ -160,8 +161,7 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
                         allowed = False
                         if owning is not None:
                             allowed, _ = can_execute_action(item.action, owning)
-                        # Disable unsupported wx tool actions
-                        if not allowed or item.action == "plugin.open_trusted_tool":
+                        if not allowed or (item.action == "plugin.open_trusted_tool" and not is_approved_trusted_tool(owning.manifest)):
                             act.Enable(False)
                         else:
                             def make_handler(action=item.action, pid=contrib.plugin_id):
@@ -248,8 +248,10 @@ def bind_plugin_menu(wx, frame, session_state, notebook, page_controls, plugins_
                 editor_page = page_controls.get("NAV-EDITOR", {}).get("page")
             except Exception:
                 pass
-            host = WxPluginMenuHost(editor_page=editor_page)
-            dispatch_plugin_menu_action(action, plugin, host)
+            host = WxPluginMenuHost(editor_page=editor_page, parent=frame)
+            if not dispatch_plugin_menu_action(action, plugin, host) and action == "plugin.open_trusted_tool":
+                report_wx_action_error(frame, area="PLUGIN", message_key="plugins.action_failed",
+                                       technical_detail=f"{plugin_id}:{action}")
         except Exception as exc:
             # W04 FIX-W04-A (DEF-W04-001): a log-only failure left the UI in
             # a success-looking state; report a visible coded error instead.

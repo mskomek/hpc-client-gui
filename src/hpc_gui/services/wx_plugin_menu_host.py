@@ -12,8 +12,10 @@ logger = logging.getLogger(__name__)
 class WxPluginMenuHost:
     """wx implementation – routes only where a real wx path exists."""
 
-    def __init__(self, editor_page=None):
+    def __init__(self, editor_page=None, *, parent=None, lifecycle=None):
         self._editor = editor_page
+        self._parent = parent
+        self._lifecycle = lifecycle
 
     def run_editor_lint(self, plugin_id: str) -> bool:
         scoped = getattr(self._editor, "run_lint_for_plugin", None)
@@ -52,6 +54,21 @@ class WxPluginMenuHost:
         return False
 
     def open_trusted_tool(self, plugin: InstalledPlugin) -> bool:
-        # wx has no Qt dialog – explicitly unsupported, do not fabricate
-        logger.info("wx open_trusted_tool not supported for %s", plugin.manifest.id)
-        return False
+        from hpc_gui.plugins.trusted_tools import is_approved_trusted_tool
+        from hpc_gui.plugins.linter_tools import load_tool_for_plugin
+        from hpc_gui.services.ansys_tool_presentation import AnsysToolPresentation
+
+        if not is_approved_trusted_tool(plugin.manifest):
+            return False
+        if getattr(self._lifecycle, "shutdown_started", False):
+            return False
+        try:
+            from hpc_gui.wx_ansys_view import show_ansys_lint
+
+            tool = load_tool_for_plugin(plugin)
+            show_ansys_lint(self._parent or self._editor, AnsysToolPresentation(tool),
+                            lifecycle=self._lifecycle)
+            return True
+        except Exception as exc:
+            logger.warning("wx open_trusted_tool failed: %s", exc, exc_info=exc)
+            return False
