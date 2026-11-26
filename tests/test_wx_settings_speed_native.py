@@ -81,7 +81,8 @@ def test_settings_speed_test_button_runs_in_worker_and_prevents_duplicate(app, m
     frame.Destroy()
 
 
-def test_settings_speed_test_result_is_ignored_after_session_change(app, monkeypatch):
+@pytest.mark.parametrize("invalidation", ["session-change", "disconnect"])
+def test_settings_speed_test_result_is_ignored_after_session_change(app, monkeypatch, invalidation):
     import hpc_gui.wx_settings_view as view
     from hpc_gui.wx_settings import WxSettingsModel
 
@@ -102,7 +103,12 @@ def test_settings_speed_test_result_is_ignored_after_session_change(app, monkeyp
     button = host._wx_settings_controls["speed_test"]
     button.Command(wx.CommandEvent(wx.wxEVT_BUTTON, button.GetId()))
     assert started.wait(2)
-    state["generation"] += 1
+    if invalidation == "session-change":
+        state["generation"] += 1
+        state["session"] = _connection()["session"]
+    else:
+        state["connection_status"] = "disconnected"
+        state["session"]["connected"] = False
     release.set()
     _pump(app, lambda: not host._wx_settings_state["speed_test_running"] if "speed_test_running" in host._wx_settings_state else True)
     for _ in range(20):
@@ -110,6 +116,57 @@ def test_settings_speed_test_result_is_ignored_after_session_change(app, monkeyp
         time.sleep(0.01)
     assert not shown
     host.Close()
+    frame.Destroy()
+
+
+def test_settings_close_while_speed_test_runs_ignores_late_result(app, monkeypatch):
+    import hpc_gui.wx_settings_view as view
+    from hpc_gui.wx_settings import WxSettingsModel
+
+    started = threading.Event()
+    release = threading.Event()
+    shown = []
+
+    def run(*_args, **_kwargs):
+        started.set()
+        assert release.wait(3)
+        return {"size_mib": 8, "upload_mib_s": 1.0, "download_mib_s": 1.0}
+
+    monkeypatch.setattr(view, "run_transfer_speed_test", run)
+    monkeypatch.setattr(wx, "MessageBox", lambda *args, **kwargs: shown.append(args[0]) or wx.OK)
+    frame = wx.Frame(None)
+    host = view.build_settings_panel(frame, WxSettingsModel(), session_state=_connection())
+    state = host._wx_settings_state
+    button = host._wx_settings_controls["speed_test"]
+    button.Command(wx.CommandEvent(wx.wxEVT_BUTTON, button.GetId()))
+    assert started.wait(2)
+    host.Destroy()
+    release.set()
+    _pump(app, lambda: not state["speed_test_running"])
+    assert not shown
+    frame.Destroy()
+
+
+def test_settings_speed_test_failure_is_visible_and_reenables_button(app, monkeypatch, caplog):
+    import hpc_gui.wx_settings_view as view
+    from hpc_gui.wx_settings import WxSettingsModel
+
+    shown = []
+
+    def fail(*_args, **_kwargs):
+        raise OSError("disposable download failure")
+
+    monkeypatch.setattr(view, "run_transfer_speed_test", fail)
+    monkeypatch.setattr(wx, "MessageBox", lambda *args, **kwargs: shown.append(args[0]) or wx.OK)
+    frame = wx.Frame(None)
+    host = view.build_settings_panel(frame, WxSettingsModel(), session_state=_connection())
+    button = host._wx_settings_controls["speed_test"]
+    button.Command(wx.CommandEvent(wx.wxEVT_BUTTON, button.GetId()))
+    _pump(app, lambda: bool(shown))
+    assert button.IsEnabled()
+    assert "Diagnostic code" in shown[0]
+    assert "disposable download failure" in caplog.text
+    host.Destroy()
     frame.Destroy()
 
 

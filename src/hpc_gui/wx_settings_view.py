@@ -295,6 +295,12 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
         unsubscribe_language_change(refresh_labels)
         evt.Skip()
 
+    def on_destroy(evt):
+        if evt.GetEventObject() is host:
+            state["closed"] = True
+            unsubscribe_language_change(refresh_labels)
+        evt.Skip()
+
     def refresh_labels(_language=None):
         if state["closed"]:
             return
@@ -323,6 +329,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     btn_close.Bind(wx.EVT_BUTTON, lambda e: host.Close())
     subscribe_language_change(refresh_labels)
     host.bind_host_close(on_close)
+    host.Bind(wx.EVT_WINDOW_DESTROY, on_destroy)
 
     host._wx_settings_controls = {
         "title": title,
