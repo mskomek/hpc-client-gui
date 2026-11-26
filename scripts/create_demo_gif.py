@@ -215,7 +215,7 @@ def _run_demo(workspace, emit, *, connection_only=False):
     for name in ("case", "mesh"):
         (workspace / name).mkdir()
         (workspace / name / "input.txt").write_text(name, encoding="utf-8")
-    (workspace / "run.slurm").write_text(SCRIPT, encoding="utf-8")
+    (workspace / "run.slurm").write_bytes(SCRIPT.encode("utf-8"))
     release, entered = Event(), Event()
     files, slurm = _make_backends(release, entered)
     splash = create_startup_splash(pure_splash=True)
@@ -302,8 +302,10 @@ def _run_demo(workspace, emit, *, connection_only=False):
         editor_controls["editor"].SetValue(SCRIPT.replace("demo_case", "demo_case_v2"))
         emit(wx, app, editor, "edited")
         _click(wx, editor_controls["submit"])
-        _pump(wx, app, lambda: slurm.submitted and not editor._wx_editor_state["in_flight"],
+        _pump(wx, app, lambda: not editor._wx_editor_state["in_flight"],
               "save and submit")
+        if not slurm.submitted or editor_controls["status"].GetLabel():
+            raise RuntimeError(f'demo submit failed: {editor_controls["status"].GetLabel()}')
         assert files.read_text(WORKDIR + "/run.slurm") == SCRIPT.replace("demo_case", "demo_case_v2")
         assert _editor_session_key(state)
         editor.Close()
