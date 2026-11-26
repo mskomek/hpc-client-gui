@@ -86,7 +86,8 @@ with patch("hpc_gui.services.editor_lint.EditorLintPipeline.collect", collect):
         wx.Yield()
         __import__("time").sleep(.01)
 assert not errors, errors
-assert calls[-1] == ("/remote/job.jou", "first\\nsecond\\nthird\\n", None)
+assert calls == [("/remote/job.jou", "first\nsecond\nthird\n", "org.test"),
+                 ("/remote/job.jou", "first\nsecond\nthird\n", None)]
 d = NS(code="C1", severity=NS(value="warning"), line=2, column=3, message="finding",
        explanation="reason", suggested_fix="fix it", source_url="https://example.test/doc", is_heuristic=True)
 f = NS(file_path="job.jou", detection=NS(product="fluent", detected_version="25.2"),
