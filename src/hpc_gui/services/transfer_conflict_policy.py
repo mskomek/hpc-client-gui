@@ -45,13 +45,21 @@ def destination_exists(files, direction: str, destination: str) -> bool:
     raise ValueError(f"Unsupported transfer direction: {direction}")
 
 
-def available_rename_destination(files, direction: str, destination: str) -> str | None:
+def conflict_target(files, direction: str, destination: str, *, include_partial: bool = False) -> str | None:
+    if destination_exists(files, direction, destination):
+        return destination
+    if include_partial and destination_exists(files, direction, destination + ".part"):
+        return destination + ".part"
+    return None
+
+
+def available_rename_destination(files, direction: str, destination: str, *, include_partial: bool = False) -> str | None:
     target = destination_path(direction, destination)
     for index in range(1, 10000):
         candidate = rename_destination(
             direction, destination, f"{target.stem} ({index}){target.suffix}"
         )
-        if not destination_exists(files, direction, candidate):
+        if conflict_target(files, direction, candidate, include_partial=include_partial) is None:
             return candidate
     return None
 
@@ -63,7 +71,7 @@ class ConflictFileInfo:
     mtime: int | None = None
 
 
-def read_conflict_metadata(files, item) -> tuple[ConflictFileInfo, ConflictFileInfo]:
+def read_conflict_metadata(files, item, *, target_path=None) -> tuple[ConflictFileInfo, ConflictFileInfo]:
     """Read metadata on the transfer worker, never on the GUI thread."""
     def read(path, local):
         try:
@@ -76,7 +84,7 @@ def read_conflict_metadata(files, item) -> tuple[ConflictFileInfo, ConflictFileI
         except Exception:
             return ConflictFileInfo(path)
 
-    return read(item.src, item.op == "upload"), read(item.dst, item.op == "download")
+    return read(item.src, item.op == "upload"), read(target_path or item.dst, item.op == "download")
 
 
 def format_conflict_metadata(info: ConflictFileInfo) -> tuple[str, str]:
@@ -155,6 +163,7 @@ __all__ = [
     "format_conflict_metadata",
     "available_rename_destination",
     "destination_exists",
+    "conflict_target",
     "destination_path",
     "rename_destination",
     "clear_session_conflict_action",

@@ -32,6 +32,7 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
         transfer_choice.SetSelection(sel_idx)
     except Exception:
         transfer_choice.SetSelection(0)
+    session_state["ftp_transfer_type"] = ("auto", "binary", "ascii")[transfer_choice.GetSelection()]
     # effective label
     def _current_effective_mode():
         try:

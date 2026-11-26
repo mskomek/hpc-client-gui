@@ -45,6 +45,7 @@ def _upload_remote(
     progress_cb=None,
     resume_identity=None,
     resume_registry=None,
+    *, allow_resume: bool = True, stage_remote: bool = True,
 ) -> None:
     """Upload to a server-side ``<remote>.part`` and rename once when the
     backend can rename; otherwise upload directly to the final name.
@@ -54,7 +55,7 @@ def _upload_remote(
     same server-side partial on a retry.
     """
     rename = getattr(files, "rename", None)
-    if not callable(rename):
+    if not stage_remote or not callable(rename):
         _upload_file(files, local_path, remote_path, progress_cb=progress_cb)
         return
     temp_remote = remote_path + PARTIAL_SUFFIX
@@ -82,7 +83,8 @@ def _upload_remote(
             pass
         if files.exists(temp_remote):
             resume = bool(
-                registry
+                allow_resume
+                and registry
                 and record
                 and record.get("identity") == identity
                 and record.get("partial_path") == temp_remote
@@ -135,12 +137,12 @@ def _upload_file(files, local_path: str, remote_path: str, progress_cb=None, *, 
         method = files.upload
     try:
         signature = inspect.signature(method)
-        if "progress_cb" in signature.parameters:
-            method(local_path, remote_path, progress_cb=progress_cb)
-            return
     except (TypeError, ValueError):
-        pass
-    method(local_path, remote_path)
+        signature = None
+    if signature is not None and "progress_cb" in signature.parameters:
+        method(local_path, remote_path, progress_cb=progress_cb)
+    else:
+        method(local_path, remote_path)
 
 
 def upload_with_mode(
@@ -149,6 +151,7 @@ def upload_with_mode(
     remote_path: str,
     requested: str,
     progress_cb=None,
+    *, allow_resume: bool = True, stage_remote: bool = True,
 ) -> str:
     with open(local_path, "rb") as source:
         sample = source.read(CHUNK_SIZE)
@@ -173,6 +176,7 @@ def upload_with_mode(
             progress_cb=progress_cb,
             resume_identity=resume_identity,
             resume_registry=resume_registry,
+            allow_resume=allow_resume, stage_remote=stage_remote,
         )
         return effective
     # ASCII conversion streams the source so its line endings can be
@@ -190,6 +194,7 @@ def upload_with_mode(
             progress_cb=progress_cb,
             resume_identity=resume_identity,
             resume_registry=resume_registry,
+            allow_resume=allow_resume, stage_remote=stage_remote,
         )
     finally:
         if temp_path:
@@ -206,12 +211,12 @@ def _download_file(files, remote_path: str, local_path: str, progress_cb=None, *
         method = files.download
     try:
         signature = inspect.signature(method)
-        if "progress_cb" in signature.parameters:
-            method(remote_path, local_path, progress_cb=progress_cb)
-            return
     except (TypeError, ValueError):
-        pass
-    method(remote_path, local_path)
+        signature = None
+    if signature is not None and "progress_cb" in signature.parameters:
+        method(remote_path, local_path, progress_cb=progress_cb)
+    else:
+        method(remote_path, local_path)
 
 
 def download_with_mode(
@@ -220,10 +225,13 @@ def download_with_mode(
     local_path: str,
     requested: str,
     progress_cb=None,
+    *, allow_resume: bool = True,
 ) -> str:
     destination = Path(local_path).expanduser()
     destination.parent.mkdir(parents=True, exist_ok=True)
     part_path = Path(str(destination) + PARTIAL_SUFFIX)
+    if part_path.is_symlink():
+        raise ValueError(f"Refusing symlink as transfer partial: {part_path}")
     meta_path = Path(str(part_path) + ".meta")
     # Persist only identity and byte offset in encrypted per-profile app data.
     # The adjacent .part contains transfer bytes; no metadata sidecar is used.
@@ -251,7 +259,8 @@ def download_with_mode(
             pass
         if part_path.exists():
             resume = bool(
-                registry
+                allow_resume
+                and registry
                 and record
                 and record.get("identity") == identity
                 and record.get("partial_path") == part_identity
@@ -312,7 +321,8 @@ def download_with_mode(
         sample = b""
     effective = resolve_transfer_mode(remote_path, requested, sample)
     if effective == ASCII:
-        converted_path = Path(str(destination) + ".tmp")
+        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=".hpc-convert-", delete=False) as temp:
+            converted_path = Path(temp.name)
         try:
             _stream_utf8_lines(str(part_path), str(converted_path), os.linesep)
             os.replace(converted_path, destination)

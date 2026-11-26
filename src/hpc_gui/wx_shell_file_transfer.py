@@ -5,7 +5,7 @@ from threading import Event
 from hpc_gui.services.transfer_session_controller import TransferSessionController
 from hpc_gui.services.transfer_controller import TransferCancelled
 from hpc_gui.services.transfer_conflict_policy import (
-    available_rename_destination, destination_exists, read_conflict_metadata, resolve_conflict_action,
+    available_rename_destination, conflict_target, destination_exists, read_conflict_metadata, resolve_conflict_action,
 )
 import inspect
 from hpc_gui.core.i18n import t
@@ -153,6 +153,11 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         raise RuntimeError(t("common.no_connection"))
 
     generation = session_state.get("generation")
+    requested_mode = session_state.get("ftp_transfer_type")
+    mode_enabled = requested_mode is not None
+
+    def target_for(item):
+        return conflict_target(files, item.op, item.dst, include_partial=mode_enabled)
 
     def current():
         return (
@@ -163,7 +168,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         )
 
     def conflict_evaluator(item, action):
-        source, target = read_conflict_metadata(files, item)
+        source, target = read_conflict_metadata(files, item, target_path=target_for(item))
         return resolve_conflict_action(
             action, source_size=source.size, target_size=target.size,
             source_mtime=source.mtime, target_mtime=target.mtime,
@@ -172,15 +177,25 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
     def automatic_rename(item):
         if not current():
             return "cancel"
-        candidate = available_rename_destination(files, item.op, item.dst)
+        candidate = available_rename_destination(files, item.op, item.dst, include_partial=mode_enabled)
         return ("rename", candidate) if candidate is not None and current() else "cancel"
 
     def wx_conflict_resolver(item):
         from hpc_gui.wx_conflict_bridge import request_conflict_decision
 
         return request_conflict_decision(
-            parent, files, item, current, read_conflict_metadata(files, item),
+            parent, files, item, current, read_conflict_metadata(files, item, target_path=target_for(item)),
         )
+
+    def execute(backend, item, progress, conflict_decision):
+        if mode_enabled and item.op in {"upload", "download"}:
+            from hpc_gui.services.transfer_mode_execution import execute_with_mode
+
+            item.effective_mode = execute_with_mode(
+                backend, item, progress, requested_mode, conflict_decision, _run_file_view_item,
+            )
+        else:
+            _run_file_view_item(backend, item, progress, conflict_decision=conflict_decision)
 
     def run_item(item, progress, *, conflict_decision=None):
         # FTP advertises serial queueing, but the browser/control connection
@@ -188,13 +203,13 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         # isolation internally, so it does not need a second backend wrapper.
         opener = getattr(files, "open_transfer_backend", None)
         if item.op not in {"upload", "download"} or not callable(opener):
-            _run_file_view_item(files, item, progress, conflict_decision=conflict_decision)
+            execute(files, item, progress, conflict_decision)
             return
         backend = opener()
         if backend is None or backend is files:
             raise RuntimeError("Transfer backend factory did not return an isolated backend")
         try:
-            _run_file_view_item(backend, item, progress, conflict_decision=conflict_decision)
+            execute(backend, item, progress, conflict_decision)
         finally:
             backend.close()
 
@@ -292,7 +307,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         parallel_limit=parallel_limit,
         conflict_check=lambda item: (
             item.op in {"upload", "download"}
-            and _destination_exists(files, item.op, item.dst)
+            and target_for(item) is not None
         ),
         conflict_resolver=custom_resolver or (wx_conflict_resolver if parent else None),
         conflict_rename=automatic_rename if parent and custom_resolver is None else None,
