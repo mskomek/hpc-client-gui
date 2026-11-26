@@ -48,7 +48,6 @@ from hpc_gui.ui.dialogs.transfer_dialog import (
     TransferItem,
     TransferPreflightDialog,
 )
-from hpc_gui.ui.main_window import MainWindow
 from hpc_gui.ui.widgets.directories_widget import (
     DirectoriesWidget,
     _BatchSubmitWorker,
@@ -271,7 +270,6 @@ __all__ = [
     'LOCAL_CONTEXT_MENU_LABELS',
     'LoginWidget',
     'MIME_REMOTE_PATHS',
-    'MainWindow',
     'MockFilesBackend',
     'Path',
     'QApplication',
