@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 import wx
 from unittest.mock import patch
+from threading import get_ident
 from hpc_gui.core.i18n import load_language, t
 from hpc_gui.plugins.storage import read_active_versions, plugin_package_dir
 from test_plugin_integrity import install
@@ -33,18 +34,18 @@ changed = []
 frame._wx_rebuild_plugins_menu = lambda: changed.append(True)
 root = sys.argv[1]
 pid = "org.hpcclient.truba"
-install(Path(root), version="2.0.0")
-install(Path(root), version="1.0.0")
-install(Path(root), version="3.0.0")
+install(Path(root), version="1.10.0")
+install(Path(root), version="1.9.0")
+install(Path(root), version="1.11.0")
 from hpc_gui.plugins.state import activate_version
-activate_version(pid, "1.0.0", root=root)
-corrupt = plugin_package_dir(pid, "3.0.0", root) / "cluster-profile.json"
+activate_version(pid, "1.9.0", root=root)
+corrupt = plugin_package_dir(pid, "1.11.0", root) / "cluster-profile.json"
 corrupt.write_text("tampered", encoding="utf-8")
 model = WxPluginManagerModel(root=root, app_version="2.0.0")
 model.build_cards_from_registry({"plugins":[
     {"id":pid,"name":"Example","version":v,"requires_app":">=1.0.0",
      "type":"cluster-profile","publisher":"Example","description":"Test"}
-    for v in ("1.0.0","2.0.0","3.0.0")]}, "cache")
+    for v in ("1.9.0","1.10.0","1.11.0")]}, "cache")
 panel = build_plugins_panel(frame, model, initial_tab="installed")
 frame.Show()
 app.ProcessPendingEvents()
@@ -80,6 +81,13 @@ def choose(v):
     c["versions"].GetEventHandler().ProcessEvent(event)
 
 messages = []
+worker_threads = []
+main_thread = get_ident()
+original_rollback = model.rollback
+def tracked_rollback(*args):
+    worker_threads.append(get_ident())
+    return original_rollback(*args)
+model.rollback = tracked_rollback
 answer = [wx.NO]
 def message(text, title, style, parent):
     messages.append((text, title))
@@ -87,33 +95,39 @@ def message(text, title, style, parent):
 
 with patch.object(wx, "MessageBox", message):
     select()
-    assert c["versions"].GetItems() == ["3.0.0","2.0.0","1.0.0"]
+    assert c["versions"].GetItems() == ["1.11.0","1.10.0","1.9.0"]
+    choose("1.9.0")
+    assert not c["switch_version"].IsEnabled()
     click("details")
     assert "Example" in messages[-1][0] and t("plugins.cluster_commands_warning") in messages[-1][0]
-    choose("2.0.0")
+    choose("1.10.0")
     assert c["switch_version"].IsEnabled()
     assert c["switch_version"].GetLabel() == t("plugins.activate")
     click("switch_version")
-    assert read_active_versions(root)[pid] == "1.0.0" and not state["in_flight"]
+    assert read_active_versions(root)[pid] == "1.9.0" and not state["in_flight"]
     answer[0] = wx.YES
     click("switch_version")
     pump()
-    assert read_active_versions(root)[pid] == "2.0.0"
-    assert model.cards[0].active_version == "2.0.0"
+    assert read_active_versions(root)[pid] == "1.10.0"
+    assert model.cards[0].active_version == "1.10.0"
     select()
-    choose("3.0.0")
+    choose("1.11.0")
     click("switch_version")
     pump()
-    assert model.cards[0].active_version == "2.0.0"
-    assert t("plugins.version_switch_failed").format(name="Example", version="3.0.0") in messages[-1][0]
+    assert model.cards[0].active_version == "1.10.0"
+    assert t("plugins.version_switch_failed").format(name="Example", version="1.11.0") in messages[-1][0]
     assert corrupt.exists()
     select()
-    choose("1.0.0")
+    choose("1.9.0")
     assert c["switch_version"].GetLabel() == t("plugins.rollback")
+    answer[0] = wx.NO
+    click("switch_version")
+    assert model.cards[0].active_version == "1.10.0" and not state["in_flight"]
+    answer[0] = wx.YES
     click("switch_version")
     pump()
-    assert model.cards[0].active_version == "1.0.0"
-    payload = plugin_package_dir(pid, "1.0.0", root) / "cluster-profile.json"
+    assert model.cards[0].active_version == "1.9.0"
+    payload = plugin_package_dir(pid, "1.9.0", root) / "cluster-profile.json"
     original = payload.read_bytes()
     payload.write_text("corrupt", encoding="utf-8")
     model.reload_installed()
@@ -122,6 +136,7 @@ with patch.object(wx, "MessageBox", message):
     event.SetEventObject(view)
     view.GetEventHandler().ProcessEvent(event)
     assert c["problems"].IsShown() and "integrity check failed" in c["problems"].GetValue()
+    assert t("plugins.corrupt_plugin").format(name=pid) in c["problems"].GetValue()
     assert model.cards[0].problem
     payload.write_bytes(original)
     model.reload_installed()
@@ -139,6 +154,7 @@ with patch.object(wx, "MessageBox", message):
     answer[0] = wx.NO
     click("remove")
     assert model.cards[0].installed and not state["in_flight"]
+    assert "Example" in messages[-1][0]
     answer[0] = wx.YES
     click("remove")
     pump()
@@ -148,6 +164,7 @@ with patch.object(wx, "MessageBox", message):
     with patch.object(wx, "LaunchDefaultBrowser", lambda url: opened.append(url) or True):
         click("request")
     assert opened == [PLUGIN_REQUEST_URL]
+    assert len(worker_threads) == 3 and all(tid != main_thread for tid in worker_threads)
     assert changed == [True] * 5  # activate, rollback, disable, enable, remove; no failed/cancelled action
 assert not any(m.split(".")[0] in {"PySide6","PyQt5","PyQt6","shiboken6"} for m in sys.modules)
 frame.Destroy()

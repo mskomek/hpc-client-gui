@@ -87,16 +87,30 @@ def click_install():
         time.sleep(.01)
     assert not panel._wx_plugins_state["in_flight"]
 with patch.object(wx, "MessageBox", lambda msg, *a: messages.append(msg) or wx.OK):
-    model.fetcher = make_fetcher({})
+    broken = {url: (payload + b" " if url.endswith("/manifest.json") else payload)
+              for url, payload in responses.items()}
+    model.fetcher = make_fetcher(broken)
     click_install()
     assert not next(c for c in model.cards if c.plugin_id == TRUBA).installed
     assert not changed and len(messages) == 1
+    assert messages[-1] == t("plugins.verification_failed").format(name="")
     select("TRUBA")
+    assert c["install"].IsEnabled() and c["refresh"].IsEnabled()
     model.fetcher = make_fetcher(responses)
     click_install()
     assert next(c for c in model.cards if c.plugin_id == TRUBA).installed
     assert changed == [True] and len(messages) == 2
     assert "TRUBA" in messages[-1] and "1" in messages[-1]
+    update_responses, update_manifest, update_bytes = full_install_responses(version="1.1.0")
+    registry["plugins"].append(make_registry_entry(update_manifest, update_bytes))
+    model.build_cards_from_registry(registry, "network")
+    c["view"].GetEventHandler().ProcessEvent(event)
+    select("TRUBA")
+    assert c["install"].GetLabel() == t("plugins.update") and c["install"].IsEnabled()
+    model.fetcher = make_fetcher(update_responses)
+    click_install()
+    assert next(c for c in model.cards if c.plugin_id == TRUBA).active_version == "1.1.0"
+    assert changed == [True, True] and len(messages) == 3
 frame.Destroy()
 app.ProcessPendingEvents()
 """
