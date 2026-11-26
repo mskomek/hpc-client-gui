@@ -127,6 +127,8 @@ jobs:
           tests/test_x11_server_startup.py
           tests/test_x11_runner_subprocess.py
           tests/test_terminal_bridge.py
+          tests/test_ui_errors.py
+          tests/test_shared_ui_contracts.py
           tests/test_linux_x11.py
           tests/test_macos_x11.py
           tests/test_wx_webview_native_retry.py
@@ -163,6 +165,13 @@ jobs:
           tests/test_debug_support_runtime.py
           tests/test_crash_logging_filter.py
           tests/test_wx_crash_reporting_runtime.py::test_headless_exception_hook_persists_without_gui_imports
+          -q --tb=short
+      - name: Native wx structural telemetry and connection diagnostics (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest
+          tests/test_wx_debug_telemetry_native.py
+          tests/test_w15_fresh_user_startup.py::test_closed_port_connect_fails_visibly_without_connected_state
           -q --tb=short
       - name: Native wx crash diagnostics (Windows)
         if: runner.os == 'Windows'
