@@ -299,11 +299,11 @@ def _build_plugins(
                 # Fail-closed: no backend action (None) is never success.
                 if not outcome or (model.install is None and not outcome.activated):
                     raise RuntimeError("plugin installer produced no activated result")
-                wx.CallAfter(on_done, gen, None, plugin_id, outcome)
+                wx.CallAfter(on_done, gen, None, outcome)
             except Exception as exc:
-                wx.CallAfter(on_done, gen, exc, plugin_id, None)
+                wx.CallAfter(on_done, gen, exc, None)
 
-        def on_done(expected_gen, error, expected_plugin_id, outcome):
+        def on_done(expected_gen, error, outcome):
             state["in_flight"] = False
             if state["closed"] or expected_gen != state["gen"]:
                 return
@@ -396,6 +396,9 @@ def _build_plugins(
         Thread(target=worker, daemon=True).start()
 
     def on_close(evt):
+        if state["closed"]:
+            evt.Skip()
+            return
         state["closed"] = True
         state["gen"] += 1
         state["in_flight"] = False
@@ -423,7 +426,7 @@ def _build_plugins(
     btn_install.Bind(wx.EVT_BUTTON, do_install)
     btn_disable.Bind(wx.EVT_BUTTON, do_toggle)
     btn_remove.Bind(wx.EVT_BUTTON, do_remove)
-    btn_close.Bind(wx.EVT_BUTTON, lambda e: host.Close())
+    btn_close.Bind(wx.EVT_BUTTON, lambda e: host.Close() if not embedded else (on_close(e), host.Hide()))
     try:
         list_ctrl.Bind(wx.EVT_LIST_ITEM_SELECTED, lambda _e: (_refresh_list() if False else _update_buttons()) or _e.Skip())
         list_ctrl.Bind(wx.EVT_LIST_ITEM_DESELECTED, lambda _e: _update_buttons() or _e.Skip())

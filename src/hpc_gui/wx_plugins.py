@@ -174,6 +174,8 @@ class WxPluginManagerModel:
         from hpc_gui.plugins.storage import read_active_versions, read_disabled_ids
 
         self._registry_snapshot = registry
+        if root is not None:
+            self.root = root
         effective_root = root if root is not None else self.root
         effective_app = app_version or self.app_version
         self.registry_source = source if source in {"network", "cache", "offline"} else "offline"

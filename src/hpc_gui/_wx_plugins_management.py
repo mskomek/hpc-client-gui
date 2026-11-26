@@ -38,8 +38,8 @@ def install_management_controls(wx, panel, host, root_sizer, model, state, selec
         version = selected_version()
         active = card.active_version if card else None
         valid = bool(card and card.installed and card.enabled and active and version and version != active)
-        switch.SetLabel(t("plugins.version_activate") if active and version and is_newer_version(version, active)
-                        else t("plugins.version_rollback"))
+        switch.SetLabel(t("plugins.activate") if active and version and is_newer_version(version, active)
+                        else t("plugins.rollback"))
         switch.Enable(valid and not state["closed"] and not state["in_flight"])
 
     def refresh(card):
