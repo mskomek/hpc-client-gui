@@ -138,15 +138,6 @@ class _MainWindowMenubarMixin:
             pass
         self._act_help_center.triggered.connect(self._open_help)
         self._help_menu.addAction(self._act_help_center)
-        # Quick Tour if existing path is real/usable
-        self._act_quick_tour = None
-        try:
-            from hpc_gui.ui.dialogs.quick_tour import QuickTourOverlay  # noqa: F401
-            self._act_quick_tour = QAction(t("menu.quick_tour"), self)
-            self._act_quick_tour.triggered.connect(self.start_quick_tour)
-            self._help_menu.addAction(self._act_quick_tour)
-        except Exception:
-            self._act_quick_tour = None
         self._help_menu.addSeparator()
         self._act_send_logs = QAction(t("menu.send_logs"), self)
         self._act_send_logs.triggered.connect(self._open_send_logs)
@@ -233,8 +224,6 @@ class _MainWindowMenubarMixin:
             self._help_menu.setTitle(t("menu.help"))
         if hasattr(self, "_act_help_center"):
             self._act_help_center.setText(t("menu.help_center"))
-        if hasattr(self, "_act_quick_tour") and self._act_quick_tour is not None:
-            self._act_quick_tour.setText(t("menu.quick_tour"))
         if hasattr(self, "_act_send_logs"):
             self._act_send_logs.setText(t("menu.send_logs"))
         if hasattr(self, "_act_about"):

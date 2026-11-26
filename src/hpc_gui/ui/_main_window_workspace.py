@@ -25,7 +25,6 @@ from .async_call import AsyncCall
 from .dialogs.help_dialog import HelpDialog
 from .dialogs.send_logs_dialog import SendLogsDialog
 from .dialogs.settings_dialog import SettingsDialog
-from .dialogs.quick_tour import QuickTourOverlay
 from .widgets.editor_widget import EditorWidget
 
 
@@ -74,13 +73,6 @@ class _MainWindowWorkspaceMixin:
             from hpc_gui.ui.dialogs.about_dialog import AboutDialog
             dlg = AboutDialog(self)
             dlg.exec()
-        except Exception:
-            pass
-
-    def start_quick_tour(self):
-        try:
-            overlay = QuickTourOverlay(self)
-            overlay.show()
         except Exception:
             pass
 

@@ -366,7 +366,6 @@
       "QVBoxLayout",
       "QWidget",
       "Qt",
-      "QuickTourOverlay",
       "SBATCH_FOLLOW_MODE_NEW_TABS_SPLIT",
       "SBATCH_FOLLOW_MODE_OUTPUTS_TAB",
       "SendLogsDialog",

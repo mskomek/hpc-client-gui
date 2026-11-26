@@ -96,7 +96,6 @@ from hpc_gui.services.app_updater import (
 from .dialogs.help_dialog import HelpDialog as HelpDialog
 from .dialogs.settings_dialog import SettingsDialog as SettingsDialog
 from .dialogs.send_logs_dialog import SendLogsDialog as SendLogsDialog
-from .dialogs.quick_tour import QuickTourOverlay as QuickTourOverlay
 
 from hpc_gui import __version__ as __version__
 
@@ -140,7 +139,6 @@ __all__ = [
     'QVBoxLayout',
     'QWidget',
     'Qt',
-    'QuickTourOverlay',
     'SBATCH_FOLLOW_MODE_NEW_TABS_SPLIT',
     'SBATCH_FOLLOW_MODE_OUTPUTS_TAB',
     'SendLogsDialog',

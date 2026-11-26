@@ -1,4 +1,4 @@
-"""Prevent reintroducing references to retired Qt startup modules."""
+"""Prevent reintroducing references to retired Qt startup and tour modules."""
 from pathlib import Path
 import re
 import subprocess
@@ -11,6 +11,7 @@ def test_retired_startup_has_no_tracked_executable_references():
     root = Path(__file__).resolve().parents[1]
     retired = re.compile(
         r"\blegacy_app\b|\bwelcome_dialog\b|\bWelcomeDialog\b|hpc_gui\.ui\.debug_telemetry|\bStartupSplash\b"
+        r"|\bQuickTourOverlay\b|hpc_gui\.ui\.dialogs\.quick_tour|\bstart_quick_tour\b|\b_act_quick_tour\b"
     )
     candidates = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "src", "tests", "scripts", "devtools", "build", ".github"],
