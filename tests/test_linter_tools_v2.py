@@ -9,13 +9,10 @@ panel context-menu actions could never enable.
 
 from __future__ import annotations
 
-import os
 import sys
 import types
 
 import pytest
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from hpc_gui.plugins.linter_tools import (
     LinterTool,
@@ -174,130 +171,6 @@ def test_temp_copy_without_suffix_uses_txt():
 
 
 # ---------------------------------------------------------------------------
-# Results dialog "Fix" redirect button.
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def qapp():
-    from PySide6.QtWidgets import QApplication
-
-    app = QApplication.instance() or QApplication([])
-    from hpc_gui.core.i18n import load_language
-
-    load_language("en")
-    yield app
-
-
-def _fake_run():
-    class _Run:
-        files = [_FileResult([])]
-
-    return _Run()
-
-
-def _fix_buttons(dialog):
-    from PySide6.QtWidgets import QPushButton
-
-    return [
-        b
-        for b in dialog.findChildren(QPushButton)
-        if "open in tool" in b.text()
-    ]
-
-
-@pytest.mark.gui
-@pytest.mark.qt
-def test_results_dialog_hides_fix_button_without_callback(qapp):
-    from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
-        build_ansys_lint_results_dialog,
-    )
-
-    dialog = build_ansys_lint_results_dialog(None, "Lint", _fake_run())
-    assert _fix_buttons(dialog) == []
-
-
-@pytest.mark.gui
-@pytest.mark.qt
-def test_results_dialog_fix_button_invokes_callback(qapp):
-    from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
-        build_ansys_lint_results_dialog,
-    )
-
-    fired = []
-    dialog = build_ansys_lint_results_dialog(
-        None, "Lint", _fake_run(), open_in_tool=lambda: fired.append(True)
-    )
-    buttons = _fix_buttons(dialog)
-    assert len(buttons) == 1
-    buttons[0].click()
-    assert fired == [True]
-
-
-# ---------------------------------------------------------------------------
-# Remote panel open_in_tool: temp copy lifecycle (Wave 72).
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.integration
-@pytest.mark.resource
-@pytest.mark.qt
-def test_remote_open_in_tool_temp_copy_lifecycle(qapp, monkeypatch):
-    from pathlib import Path
-
-    from hpc_gui.services.files_mock import MockFilesBackend
-    from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
-
-    panel = RemoteDirPanel()
-    panel.set_session({"connected": True, "files": MockFilesBackend()})
-
-    hosted = {}
-
-    def fake_host(parent, tool, *, initial_paths=None, title=None):
-        paths = list(initial_paths or [])
-        hosted["title"] = title
-        hosted["paths"] = paths
-        hosted["existed_during_host"] = [Path(p).exists() for p in paths]
-        return True
-
-    monkeypatch.setattr(
-        "hpc_gui.ui.dialogs.linter_tool_host.host_tool_page", fake_host
-    )
-    tool = _fake_tool("fake_lint_engine", "org.fake")
-    panel.open_in_tool(tool, "/arf/scratch/user/example.txt")
-
-    assert len(hosted["paths"]) == 1
-    temp_path = Path(hosted["paths"][0])
-    assert hosted["existed_during_host"] == [True]
-    assert temp_path.suffix == ".txt"
-    assert "example.txt" in (hosted["title"] or "")
-    # Removed once the hosted page closed.
-    assert not temp_path.exists()
-
-
-@pytest.mark.integration
-@pytest.mark.qt
-def test_remote_folder_lint_worker_recurses_only_supported_files(monkeypatch):
-    from types import SimpleNamespace
-
-    from hpc_gui.services.files_mock import MockFilesBackend
-    from hpc_gui.ui.widgets.remote_dir_panel import _RemoteLintWorker
-
-    _install_stub_engine(monkeypatch, api_suffixes=(".slurm",))
-    sys.modules["fake_lint_engine"].lint_text = lambda text, **kwargs: SimpleNamespace(
-        summary={"error": 0, "warning": 0, "info": 0}
-    )
-    received = []
-    worker = _RemoteLintWorker(MockFilesBackend(), "/arf/scratch/user")
-    worker.signals.finished.connect(received.append)
-    worker.run()
-
-    paths, results = received[0]
-    assert paths == ["/arf/scratch/user/job.slurm"]
-    assert len(results) == 1
-
-
-# ---------------------------------------------------------------------------
 # first_linter_tool() against an empty (isolated) plugins root
 # ---------------------------------------------------------------------------
 
@@ -399,52 +272,62 @@ def test_format_run_entries_groups_by_file_and_reports_totals():
     assert any("no findings" in ln for ln in lines)
 
 
-@pytest.mark.gui
-@pytest.mark.qt
-def test_results_dialog_explains_fields_and_actions(qapp, monkeypatch):
-    from PySide6.QtCore import Qt
-    from PySide6.QtTest import QTest
-    from PySide6.QtWidgets import QListWidget, QPushButton
+@pytest.mark.unit
+def test_diagnostic_explanation_omits_missing_fields():
+    from hpc_gui.services.lint_result_format import format_diagnostic_explanation
 
-    from hpc_gui.ui.dialogs import ansys_lint_results_dialog as results
-
-    diagnostic = _Diag(fix="/file/set-tui-version \"25.2\"", url="https://example.test/doc")
+    diagnostic = _Diag(fix="fix command", url="https://example.test/doc")
     diagnostic.explanation = "The journal uses a version-sensitive command."
     diagnostic.is_heuristic = True
-    second = _Diag(code="C2", fix=None, url=None)
-
-    class _SecondFile(_FileResult):
-        file_path = "other.jou"
-
-    class _Run:
-        files = [_FileResult([diagnostic]), _SecondFile([second])]
-
-    dialog = results.build_ansys_lint_results_dialog(None, "Lint", _Run())
-    items = dialog.findChild(QListWidget)
-    rendered = [items.item(index).text() for index in range(items.count())]
-    assert any("Why flagged: The journal uses" in line for line in rendered)
-    assert any("Confidence: heuristic" in line for line in rendered)
-    assert any("Suggested action:" in line for line in rendered)
-    assert any("Documentation:" in line for line in rendered)
-    assert sum("fluent" in line for line in rendered) == 2
-    missing = results.format_diagnostic_explanation(second)
+    lines = format_diagnostic_explanation(diagnostic)
+    assert any("Why flagged: The journal uses" in line for line in lines)
+    assert any("Confidence: heuristic" in line for line in lines)
+    assert any("Suggested action:" in line for line in lines)
+    assert any("Documentation:" in line for line in lines)
+    missing = format_diagnostic_explanation(_Diag(code="C2", fix=None, url=None))
     assert not any("Suggested action:" in line for line in missing)
     assert not any("Documentation:" in line for line in missing)
 
-    items.setCurrentRow(1)
-    buttons = {button.text(): button for button in dialog.findChildren(QPushButton)}
-    buttons["Copy diagnostic"].click()
-    assert "Why flagged" in qapp.clipboard().text()
-    buttons["Copy suggestion"].click()
-    assert qapp.clipboard().text() == diagnostic.suggested_fix
 
-    opened = []
-    monkeypatch.setattr(results.QDesktopServices, "openUrl", lambda url: opened.append(url.toString()))
-    buttons["Open documentation"].click()
-    assert opened == [diagnostic.source_url]
-    assert items.item(1).data(Qt.ItemDataRole.UserRole) is diagnostic
-    assert items.focusPolicy() != Qt.FocusPolicy.NoFocus
-    dialog.show()
-    items.setFocus()
-    QTest.keyClick(items, Qt.Key.Key_Tab)
-    assert isinstance(dialog.focusWidget(), QPushButton)
+@pytest.mark.integration
+def test_remote_folder_lint_recurses_only_supported_files(monkeypatch):
+    from types import SimpleNamespace
+    from hpc_gui.services.file_lint import collect_documents, lint_documents, LintCatalog
+    from hpc_gui.services.files_mock import MockFilesBackend
+
+    tool = _install_stub_engine(monkeypatch, api_suffixes=(".slurm",))
+    calls = []
+
+    def lint(text, **kwargs):
+        calls.append((text, kwargs["file_name"]))
+        return SimpleNamespace(diagnostics=[])
+
+    sys.modules[tool.module_name].lint_text = lint
+    backend = MockFilesBackend()
+    catalog = LintCatalog((), ((tool, frozenset({".slurm"})),))
+    documents = collect_documents([("/arf/scratch/user", True)], catalog, files=backend)
+    result = lint_documents(documents, catalog)
+    assert [d.path for d in documents] == ["/arf/scratch/user/job.slurm"]
+    assert len(result.files) == 1 and result.files[0].diagnostics == ()
+    assert calls == [(backend.read_text("/arf/scratch/user/job.slurm"), "/arf/scratch/user/job.slurm")]
+
+
+@pytest.mark.integration
+@pytest.mark.resource
+def test_remote_tool_snapshot_does_not_materialize_temp_copy(monkeypatch):
+    from hpc_gui.services.file_lint import collect_documents, LintCatalog
+    from hpc_gui.services.files_mock import MockFilesBackend
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("snapshot must not materialize a temporary file")
+
+    monkeypatch.setattr("hpc_gui.plugins.linter_tools.temp_copy_for_tool", forbidden)
+    tool = _install_stub_engine(monkeypatch, api_suffixes=(".txt",))
+    backend = MockFilesBackend()
+    catalog = LintCatalog((), ((tool, frozenset({".txt"})),))
+    path = "/arf/scratch/user/example.txt"
+    documents = collect_documents([(path, False)], catalog, files=backend, tool_only=True)
+    assert len(documents) == 1
+    assert documents[0].path == path
+    assert documents[0].text == backend.read_text(path)
+    assert catalog.common_tools(documents) == (tool,)

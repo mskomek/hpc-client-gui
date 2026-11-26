@@ -44,11 +44,9 @@ def create_lint_results(parent, title, run_result, *, open_in_tool=None):
         return owners[index] if 0 <= index < len(owners) else None
 
     def clipboard(value):
-        if wx.TheClipboard.Open():
-            try:
-                wx.TheClipboard.SetData(wx.TextDataObject(value))
-            finally:
-                wx.TheClipboard.Close()
+        from hpc_gui.wx_clipboard import write_text
+
+        write_text(wx, value)
 
     def copy_all(_event):
         clipboard("\n".join(line for _, lines in format_run_entries(run_result) for line in lines))

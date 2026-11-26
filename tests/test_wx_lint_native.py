@@ -96,7 +96,11 @@ d = NS(code="C1", severity=NS(value="warning"), line=2, column=3, message="findi
        explanation="reason", suggested_fix="fix it", source_url="https://example.test/doc", is_heuristic=True)
 f = NS(file_path="job.jou", detection=NS(product="fluent", detected_version="25.2"),
        summary={"warning":1}, diagnostics=[d], sorted_diagnostics=lambda:[d])
-run = NS(files=[f])
+second = NS(code="C2", severity=NS(value="info"), line=1, column=1, message="no fix",
+            explanation="", suggested_fix="", source_url="", is_heuristic=False)
+other = NS(file_path="other.jou", detection=f.detection, summary={"info":1},
+           diagnostics=[second], sorted_diagnostics=lambda:[second])
+run = NS(files=[f, other])
 dialog = create_lint_results(host, "Lint", run)
 try:
     controls = dialog._wx_lint_result_controls
@@ -110,6 +114,26 @@ try:
         click(controls["documentation"])
     assert opened == [d.source_url]
     assert controls["suggestion"].IsEnabled()
+    rendered = list(controls["listing"].GetItems())
+    assert sum("fluent" in line for line in rendered) == 2
+    assert any("Confidence: heuristic" in line for line in rendered)
+    assert any("Suggested action:" in line for line in rendered)
+    assert any("Documentation:" in line for line in rendered)
+    copied = []
+    with patch("hpc_gui.wx_clipboard.write_text", lambda wx, value: copied.append(value) or True):
+        click(controls["diagnostic"])
+        click(controls["suggestion"])
+        click(controls["copy"])
+    assert "Why flagged" in copied[0] and "reason" in copied[0]
+    assert copied[1] == d.suggested_fix
+    assert "job.jou" in copied[2] and "other.jou" in copied[2]
+    second_index = controls["owners"].index(second)
+    controls["listing"].SetSelection(second_index)
+    click(controls["listing"], wx.EVT_LISTBOX)
+    assert not controls["suggestion"].IsEnabled() and not controls["documentation"].IsEnabled()
+    assert controls["diagnostic"].IsEnabled()
+    assert controls["listing"].AcceptsFocus()
+    assert controls["close"].AcceptsFocus()
 finally:
     dialog.Destroy()
 fired = []

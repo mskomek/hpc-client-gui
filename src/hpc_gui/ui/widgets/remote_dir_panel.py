@@ -56,11 +56,6 @@ from hpc_gui.ui.widgets._remote_context_menu import (
     REMOTE_CONTEXT_MENU_LABELS as REMOTE_CONTEXT_MENU_LABELS,  # noqa: F401 — legacy re-export
     RemoteContextMenuMixin,
 )
-from hpc_gui.ui.widgets._remote_lint_tools import (
-    RemoteLintToolsMixin,
-    _RemoteLintSignals as _RemoteLintSignals,  # noqa: F401 — legacy re-export
-    _RemoteLintWorker as _RemoteLintWorker,  # noqa: F401 — legacy re-export
-)
 from hpc_gui.ui.widgets._remote_listing import (
     DIRECTORY_CACHE_TTL_SECONDS as DIRECTORY_CACHE_TTL_SECONDS,  # noqa: F401 — legacy re-export
     LISTING_BATCH_INTERVAL_SECONDS as LISTING_BATCH_INTERVAL_SECONDS,  # noqa: F401 — legacy re-export
@@ -121,7 +116,6 @@ class RemoteDirPanel(
     RemoteTransferUploadMixin,
     RemoteTransferCopyMoveMixin,
     RemoteNavigationMixin,
-    RemoteLintToolsMixin,
     RemoteTransferUiMixin,
     RemoteMetadataMixin,
     QWidget,
@@ -194,7 +188,6 @@ class RemoteDirPanel(
         self._directory_cache: Dict[str, Tuple[float, List[RemoteEntry]]] = {}
         self._listing_generation = 0
         self._listing_worker: Optional[_DirectoryListingWorker] = None
-        self._remote_lint_worker: Optional[_RemoteLintWorker] = None
         self._pending_listing: Optional[Tuple[object, str]] = None
         self._dirty_views: set[str] = set()
         self._navigation_store = None
@@ -450,7 +443,6 @@ _enable_legacy_patch_targets(
         ),
         "QMessageBox": (
             ("hpc_gui.ui.widgets._remote_context_menu", "QMessageBox"),
-            ("hpc_gui.ui.widgets._remote_lint_tools", "QMessageBox"),
             ("hpc_gui.ui.widgets._remote_metadata", "QMessageBox"),
             ("hpc_gui.ui.widgets._remote_mutations", "QMessageBox"),
             ("hpc_gui.ui.widgets._remote_permissions_dialog", "QMessageBox"),

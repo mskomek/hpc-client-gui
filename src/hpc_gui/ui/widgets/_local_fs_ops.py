@@ -225,6 +225,15 @@ class LocalFsOpsMixin:
         self.refresh()
         return True
 
+    def _edit_selected(self, new_window: bool) -> None:
+        selected = self._selected_items()  # type: ignore[attr-defined]
+        if len(selected) != 1:
+            return
+        path = str(selected[0].data(0, Qt.ItemDataRole.UserRole))
+        if not path or Path(path).is_dir():
+            return
+        self.editRequested.emit(path, new_window)  # type: ignore[attr-defined]
+
     def open_selected_with_program(self) -> bool:
         selected = self._selected_items()  # type: ignore[attr-defined]
         if len(selected) != 1:

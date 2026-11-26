@@ -74,64 +74,6 @@ class LocalContextMenuMixin:
         act_create_dir_enter.setEnabled(bool(self.current_dir))
         act_delete.setEnabled(bool(paths))
         act_rename.setEnabled(one_selected)
-        # Batch-aware lint: 1-10 files with a common tool, or a single folder
-        # containing at least one supported file.
-        lint_batch_ok = False
-        folder_lint_path: str | None = None
-        if paths:
-            if one_selected and one_is_dir:
-                try:
-                    if self._folder_contains_supported_file(str(paths[0])):
-                        lint_batch_ok = True
-                        folder_lint_path = str(paths[0])
-                except Exception:
-                    lint_batch_ok = False
-            else:
-                all_files = all(not Path(str(p)).is_dir() for p in paths)
-                if all_files and paths:
-                    suffixes = [Path(str(p)).suffix.lower() for p in paths]
-                    lint_batch_ok = self._local_lint_supports_suffixes(suffixes)
-        plugin_menu = menu.addMenu(t("files.plugins")) if lint_batch_ok else None
-        act_ansys_lint = (
-            plugin_menu.addAction(t("files.ansys_lint"))
-            if plugin_menu is not None
-            else None
-        )
-        if act_ansys_lint is not None:
-            act_ansys_lint.setEnabled(lint_batch_ok)
-        if one_selected and one_is_dir and folder_lint_path:
-            tools = self._tools_for_folder(folder_lint_path)
-            if tools:
-                send_menu = plugin_menu.addMenu(t("files.send_to_plugin")) if plugin_menu else None
-                if send_menu is None:
-                    tools = []
-                for tool in tools:
-                    action = send_menu.addAction(tool.title)
-                    action.triggered.connect(
-                        lambda _=False, tl=tool, p=folder_lint_path: self.open_in_tool(tl, p)
-                    )
-        elif len(paths) == 1 and not one_is_dir:
-            self._build_send_to_plugin_menu(
-                plugin_menu, str(paths[0]) if one_selected and not one_is_dir else None
-            )
-        elif lint_batch_ok:
-            # Batch submenu: tools supporting every selected file.
-            try:
-                from hpc_gui.plugins.linter_tools import tools_supporting_all_suffixes
-
-                suffixes = [Path(str(p)).suffix.lower() for p in paths]
-                batch_tools = tools_supporting_all_suffixes(suffixes)
-            except Exception:
-                batch_tools = []
-            if batch_tools:
-                send_menu = plugin_menu.addMenu(t("files.send_to_plugin")) if plugin_menu else None
-                if send_menu is None:
-                    batch_tools = []
-                for tool in batch_tools:
-                    action = send_menu.addAction(tool.title)
-                    action.triggered.connect(
-                        lambda _=False, tl=tool, ps=list(paths): self.open_in_tool_batch(tl, ps)
-                    )
         if one_selected and item is not None and bool(item.data(0, Qt.ItemDataRole.UserRole + 2)):
             act_upload.setEnabled(False)
             act_open.setEnabled(True)
@@ -175,10 +117,4 @@ class LocalContextMenuMixin:
             return
         if chosen == act_rename:
             self.rename_selected()
-            return
-        if act_ansys_lint is not None and chosen == act_ansys_lint:
-            if len(paths) == 1:
-                self.run_ansys_lint(Path(str(paths[0])))
-            else:
-                self.run_ansys_lint_batch([Path(str(p)) for p in paths])
             return
