@@ -103,7 +103,6 @@ from hpc_gui import __version__ as __version__
 __all__ = [
     'AUTOMATIC_INSTALL_STRATEGIES',
     'AsyncCall',
-    'DebugTelemetry',
     'DirectoriesWidget',
     'EditorWidget',
     'FtpWidget',
