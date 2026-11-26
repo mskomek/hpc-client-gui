@@ -197,7 +197,6 @@
     "src/hpc_gui/ui/dialogs/connection_dialog.py": [
       "Any",
       "Callable",
-      "ClusterSelfTestDialog",
       "ConnectionDialog",
       "ProfileData",
       "QCheckBox",
