@@ -59,6 +59,7 @@ assert t("plugins.capability_cluster_profile") in select("TRUBA")
 assert c["install"].GetLabel() == t("plugins.install") and c["install"].IsEnabled()
 detail = select("Fluent Tools")
 assert t("plugins.update_available") in detail and "0.1.0" in detail and "0.2.0" in detail
+assert t("plugins.capability_lint_rules") in detail and "lint-rules" not in detail
 assert c["install"].GetLabel() == t("plugins.update") and c["install"].IsEnabled()
 c["search"].SetValue("0.1.0")
 assert listing.GetItemCount() == 1 and listing.GetItemText(0) == "Fluent Tools"
