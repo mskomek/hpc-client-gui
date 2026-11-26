@@ -98,3 +98,44 @@ def shell_accelerators(wx: Any, bindings: Iterable[tuple[str, str]]) -> list[tup
         seen.add(accel)
         result.append((command_id, accel[0], accel[1]))
     return result
+
+
+def refresh_shell_accelerators(wx, frame, accelerator_ids, accelerator_spec, make_handler):
+    """Rebuild preference-backed shell shortcuts after Settings Apply."""
+    from hpc_gui.core.platform import current_os
+
+    command_actions = {"APP-HELP": "help", "APP-SETTINGS": "settings"}
+    command_ids = {
+        action: command_id
+        for command_id, action in accelerator_ids.items()
+        if action in command_actions.values()
+    }
+    retained = [
+        entry for entry in accelerator_spec
+        if accelerator_ids.get(entry[2]) not in command_actions.values()
+    ]
+    used = {(flags, key) for flags, key, _command_id in retained}
+    requested = shell_accelerators(wx, shell_bindings(current_os()))
+    if not any(
+        command == "APP-HELP" and (flags, key) not in used
+        for command, flags, key in requested
+    ):
+        requested.insert(0, ("APP-HELP", int(wx.ACCEL_NORMAL), int(wx.WXK_F1)))
+    for command, flags, key in requested:
+        pair = (int(flags), int(key))
+        if pair in used:
+            continue
+        used.add(pair)
+        action = command_actions.get(command, command)
+        command_id = command_ids.get(action)
+        if command_id is None:
+            command_id = int(wx.NewIdRef())
+            accelerator_ids[command_id] = action
+            frame.Bind(wx.EVT_MENU, make_handler(command), id=command_id)
+            command_ids[action] = command_id
+        retained.append((pair[0], pair[1], command_id))
+    frame.SetAcceleratorTable(wx.AcceleratorTable([
+        wx.AcceleratorEntry(flags, key, command_id)
+        for flags, key, command_id in retained
+    ]))
+    accelerator_spec[:] = retained

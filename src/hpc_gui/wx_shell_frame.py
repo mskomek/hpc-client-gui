@@ -454,6 +454,11 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     frame._wx_shell_accel_ids = _wx_shell_accel_ids
     frame._wx_shell_accel_spec = _wx_shell_accel_spec
 
+    from hpc_gui.wx_shortcuts import refresh_shell_accelerators
+    frame._wx_shell_refresh_shortcuts = lambda: refresh_shell_accelerators(
+        wx, frame, _wx_shell_accel_ids, _wx_shell_accel_spec, _make_command_handler,
+    )
+
     frame.Bind(wx.EVT_CLOSE, close)
     frame._wx_shell_close = close
     _restore_main_window_state(wx, frame, notebook)

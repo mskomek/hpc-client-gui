@@ -179,3 +179,112 @@ def test_settings_cancel_does_not_persist_staged_preferences(app, monkeypatch):
     app.Yield(True)
     assert writes == []
     frame.Destroy()
+
+
+def test_settings_shortcut_editor_changes_resets_and_persists_bindings(app, monkeypatch):
+    import hpc_gui.config.storage as storage
+    import hpc_gui.wx_settings as settings_model
+    import hpc_gui.wx_settings_view as view
+
+    monkeypatch.setattr(storage, "load_settings", lambda: {"shortcut_preferences": {}})
+    monkeypatch.setattr(storage, "load_profiles", lambda: [])
+    monkeypatch.setattr(storage, "get_file_associations", lambda: {})
+    monkeypatch.setattr(storage, "set_transfer_checksum_verification_enabled", lambda _value: False)
+    snapshots = []
+    updates = []
+    original_persist = settings_model.persist_model_snapshot
+    def capture_persist(snapshot):
+        snapshots.append(snapshot)
+        return original_persist(snapshot)
+    monkeypatch.setattr(settings_model, "persist_model_snapshot", capture_persist)
+    monkeypatch.setattr(storage, "set_remote_directory_cache_enabled", lambda value: value)
+    monkeypatch.setattr(storage, "set_upload_preflight_confirmation_enabled", lambda value: value)
+    monkeypatch.setattr(storage, "set_jobs_outputs_refresh_interval_seconds", lambda value: value)
+    monkeypatch.setattr(storage, "set_ssh_connection_attempts", lambda value: value)
+    monkeypatch.setattr(storage, "load_profiles", lambda: [{"name": "lab", "system": {}}])
+    monkeypatch.setattr(storage, "get_last_profile_name", lambda: "lab")
+    monkeypatch.setattr(storage, "upsert_profile", lambda value: updates.append(dict(value)))
+    monkeypatch.setattr(storage, "update_settings", lambda patch: updates.append(dict(patch)) or dict(patch))
+    monkeypatch.setattr(wx, "MessageBox", lambda *args, **kwargs: wx.OK)
+    errors = []
+    import hpc_gui.core.wx_errors as wx_errors
+    monkeypatch.setattr(wx_errors, "report_wx_action_error", lambda *args, **kwargs: errors.append(kwargs.get("exc")))
+    refreshed = []
+
+    class TextEntry:
+        def __init__(self, *_args, **_kwargs):
+            self.value = "Ctrl+F3"
+
+        def ShowModal(self):
+            return wx.ID_OK
+
+        def GetValue(self):
+            return self.value
+
+        def Destroy(self):
+            pass
+
+    monkeypatch.setattr(wx, "TextEntryDialog", TextEntry)
+    frame = wx.Frame(None)
+    frame._wx_shell_refresh_shortcuts = lambda: refreshed.append(True)
+    model = settings_model.WxSettingsModel({"shortcut_preferences": {}})
+    host = view.build_settings_panel(
+        frame, model,
+        session_state={"session": {"profile_name": "lab", "profile": {"name": "lab"}}},
+    )
+    controls = host._wx_settings_shortcut_controls
+    assert controls["change"].IsEnabled() is False
+    index = next(
+        i for i in range(controls["list"].GetCount())
+        if controls["list"].GetClientData(i) == "APP-HELP"
+    )
+    controls["list"].SetSelection(index)
+    assert controls["list"].GetClientData(controls["list"].GetSelection()) == "APP-HELP"
+    controls["list"].GetEventHandler().ProcessEvent(wx.CommandEvent(wx.wxEVT_LISTBOX, controls["list"].GetId()))
+    assert controls["change"].IsEnabled()
+    controls["change"].GetEventHandler().ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, controls["change"].GetId()))
+    assert not errors, errors
+    assert next(item.binding for item in model.shortcuts.bindings() if item.command_id == "APP-HELP") == "Ctrl+F3"
+    controls["reset_all"].Command(wx.CommandEvent(wx.wxEVT_BUTTON, controls["reset_all"].GetId()))
+    assert next(item.binding for item in model.shortcuts.bindings() if item.command_id == "APP-HELP") == "F1"
+    controls["change"].Command(wx.CommandEvent(wx.wxEVT_BUTTON, controls["change"].GetId()))
+    button = host._wx_settings_controls["apply"]
+    button.Command(wx.CommandEvent(wx.wxEVT_BUTTON, button.GetId()))
+    _pump(app, lambda: len(updates) >= 2 or bool(errors))
+    app.Yield(True)
+    assert not errors, errors
+    assert refreshed
+
+    stored = snapshots[0].global_settings["shortcut_preferences"]
+    assert stored["bindings"]["APP-HELP"] == ["Ctrl+F3"]
+    assert next(patch["shortcut_preferences"] for patch in updates if "shortcut_preferences" in patch) == stored
+    host.Destroy()
+    frame.Destroy()
+
+
+def test_shell_shortcut_refresh_rebuilds_native_accelerator_table(app, monkeypatch):
+    import hpc_gui.wx_shortcuts as shortcuts
+
+    frame = wx.Frame(None)
+    accelerator_ids = {101: 0, 102: "help", 103: "settings"}
+    accelerator_spec = [
+        (int(wx.ACCEL_CTRL), ord("1"), 101),
+        (int(wx.ACCEL_NORMAL), int(wx.WXK_F1), 102),
+        (int(wx.ACCEL_NORMAL), int(wx.WXK_F2), 103),
+    ]
+    monkeypatch.setattr(
+        shortcuts, "shell_bindings",
+        lambda _platform: [("APP-HELP", "Ctrl+F3"), ("APP-SETTINGS", "F2")],
+    )
+
+    shortcuts.refresh_shell_accelerators(
+        wx, frame, accelerator_ids, accelerator_spec,
+        lambda _command: (lambda _event: None),
+    )
+
+    assert accelerator_spec == [
+        (int(wx.ACCEL_CTRL), ord("1"), 101),
+        (int(wx.ACCEL_CTRL), int(wx.WXK_F3), 102),
+        (int(wx.ACCEL_NORMAL), int(wx.WXK_F2), 103),
+    ]
+    frame.Destroy()

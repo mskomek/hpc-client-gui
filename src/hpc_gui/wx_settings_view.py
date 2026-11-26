@@ -35,6 +35,10 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
         preference_groups, preference_controls, reset_graphics_button,
         reset_remote_defaults_button, refresh_preferences,
     ) = build_settings_preferences(wx, panel, raw_preferences, load_profiles(), session_state)
+    from hpc_gui.wx_shortcut_editor import build_shortcut_editor
+    shortcut_group, shortcut_controls, refresh_shortcut_labels = build_shortcut_editor(
+        wx, panel, model.shortcuts, host,
+    )
     from hpc_gui.core.terminal_graphics import normalize_settings
     _graphics_mode, graphics_auto_compatibility = normalize_settings(raw_preferences)
     preference_controls["terminal_graphics_auto_compatibility"] = graphics_auto_compatibility
@@ -153,6 +157,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     association_buttons.Add(association_change, 0, wx.RIGHT, 6)
     association_buttons.Add(association_clear, 0)
     root.Add(association_buttons, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    root.Add(shortcut_group, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     speed_row = wx.BoxSizer(wx.HORIZONTAL)
     speed_row.Add(speed_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
     speed_row.Add(speed_size, 0, wx.RIGHT, 8)
@@ -205,6 +210,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
         try:
             preferences = collect_settings_preferences(preference_controls)
             model.set_global("jobs_outputs_refresh_interval", preferences["jobs_outputs_refresh_interval_seconds"])
+            model.set_global("shortcut_preferences", model.shortcuts.serialize())
         except Exception as exc:
             set_errors.append(("settings_preferences", exc))
             preferences = {}
@@ -247,6 +253,9 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
                 }
                 if additional_preferences:
                     update_settings(additional_preferences)
+                refresh_shortcuts = getattr(parent, "_wx_shell_refresh_shortcuts", None)
+                if callable(refresh_shortcuts):
+                    wx.CallAfter(refresh_shortcuts)
                 current_remote_paths = (
                     preferences.get("profile_scratch_dir", ""),
                     preferences.get("profile_home_dir", ""),
@@ -397,6 +406,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             association_title.SetLabel(t("settings.file_associations_section"))
             association_change.SetLabel(t("settings.file_association_change"))
             association_clear.SetLabel(t("settings.file_association_clear"))
+            refresh_shortcut_labels()
             speed_label.SetLabel(t("settings.transfer_speed_test_size_label"))
             speed_button.SetLabel(t("settings.transfer_speed_test"))
             lbl_parallel.SetLabel(t("connection.transfer_parallelism"))
@@ -442,6 +452,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     host._wx_settings_model = model
     host._wx_settings_state = state
     host._wx_settings_preference_controls = preference_controls
+    host._wx_settings_shortcut_controls = shortcut_controls
 
     finish()
     return host
