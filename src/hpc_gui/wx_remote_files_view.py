@@ -427,7 +427,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
                 pass
     subscribe_language_change(refresh_labels)
     host.bind_host_close(lambda event: (unsubscribe_language_change(refresh_labels), close(event)))
-    host._wx_remote_controls = {"listing": initial["listing"], "path": path, "notebook": notebook, "toolbar": toolbar, "btn_back": btn_back, "btn_forward": btn_forward, "btn_up": btn_up, "btn_new_folder": btn_new_folder, "btn_new_file": btn_new_file, "btn_upload": btn_upload, "btn_download": btn_download, "btn_delete": btn_delete, "btn_undo": btn_undo, "btn_favorites": btn_favorites, "btn_history": btn_history, "btn_refresh": btn_refresh, "path_label": path_label, "load": load, "refresh_provider_filters": refresh_provider_filters, "navigate": navigate}
+    host._wx_remote_controls = {"listing": initial["listing"], "path": path, "notebook": notebook, "toolbar": toolbar, "btn_back": btn_back, "btn_forward": btn_forward, "btn_up": btn_up, "btn_new_folder": btn_new_folder, "btn_new_file": btn_new_file, "btn_upload": btn_upload, "btn_download": btn_download, "btn_delete": btn_delete, "btn_undo": btn_undo, "btn_favorites": btn_favorites, "btn_history": btn_history, "btn_refresh": btn_refresh, "path_label": path_label, "load": load, "invalidate_cache": model.invalidate, "refresh_provider_filters": refresh_provider_filters, "navigate": navigate}
     host._wx_remote_model = model
     host._wx_remote_state = state
     host._wx_remote_run_action = run_action

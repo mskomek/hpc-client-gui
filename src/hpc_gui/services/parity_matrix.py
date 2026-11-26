@@ -47,7 +47,7 @@ FEATURE_EVIDENCE = {
         "settings_dialog.py",
         "wx_settings.py; wx_settings_view.py",
         "test_wx_settings.py; test_wx_settings_speed_native.py; test_transfer_speed_test.py",
-        "wx covers persistence, transfer controls, asynchronous speed testing and application-level file associations; language, refresh/live tracking, terminal graphics, cache clearing, reset defaults, shortcuts UI, and full profile preservation parity remain incomplete.",
+        "wx now covers global/profile preference controls, runtime language changes, refresh/live tracking, transfer mode and checksum, terminal graphics reset, remote cache clearing, remote path defaults, asynchronous speed testing, file associations, Smart Open reset, Apply/Cancel, and profile/plugin field preservation. GUI-SET-001 remains PARTIAL because the Settings surface has no shortcut editor; shortcut preferences remain stored through the settings model/service but are not user-editable here.",
     ),
     "GUI-LOG-001": Evidence("COVERED", "wx_logs_view.py", "wx_logs.py", "test_wx_logs.py"),
     "GUI-HELP-001": Evidence("COVERED", "help_dialog.py", "wx_help.py", "test_wx_help.py"),

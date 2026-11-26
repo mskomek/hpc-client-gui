@@ -15,6 +15,14 @@ def app():
     yield instance
 
 
+@pytest.fixture(autouse=True)
+def _english_ui():
+    from hpc_gui.core.i18n import load_language
+    load_language("en")
+    yield
+    load_language("en")
+
+
 def _pump(app, predicate, timeout=5):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline and not predicate():

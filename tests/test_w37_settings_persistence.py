@@ -81,8 +81,8 @@ def test_w37_default_settings_are_documented_and_live(isolated_config):
 def test_w37_model_key_sets_are_frozen(isolated_config):
     assert set(GLOBAL_KEYS) == {
         "jobs_outputs_refresh_interval", "remote_directory_cache",
-        "transfer_checksum", "ssh_connection_attempts", "shortcut_preferences",
-        "ssh_connection_attempts",
+        "transfer_checksum", "upload_preflight_confirmation",
+        "ssh_connection_attempts", "shortcut_preferences",
     }
     assert set(PROFILE_KEYS) == {
         "transfer_parallelism", "ssh_timeout",

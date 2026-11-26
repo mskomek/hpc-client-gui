@@ -25,8 +25,28 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
         model.apply_callback = apply
     # Spec §96: Settings 840×620 resizable, §4 dialog body 16px, §98 label width 180-240px
     host, finish = make_host(parent, title=t("settings.dialog_title"), size=(840, 620), embedded=embedded)
-    panel = wx.Panel(host)
+    panel = wx.ScrolledWindow(host)
+    panel.SetScrollRate(0, 12)
     root = wx.BoxSizer(wx.VERTICAL)
+    from hpc_gui.config.storage import load_settings, load_profiles, update_settings
+    from hpc_gui.wx_settings_preferences import build_settings_preferences, collect_settings_preferences
+    raw_preferences = load_settings()
+    (
+        preference_groups, preference_controls, reset_graphics_button,
+        reset_remote_defaults_button, refresh_preferences,
+    ) = build_settings_preferences(wx, panel, raw_preferences, load_profiles(), session_state)
+    from hpc_gui.core.terminal_graphics import normalize_settings
+    _graphics_mode, graphics_auto_compatibility = normalize_settings(raw_preferences)
+    preference_controls["terminal_graphics_auto_compatibility"] = graphics_auto_compatibility
+    if wx.GetOsDescription().lower().find("mac") >= 0:
+        preference_controls["close_vcxsrv_on_exit"].Hide()
+    session_for_paths = (session_state or {}).get("session") or {}
+    path_profile = session_for_paths.get("profile") or {}
+    active_profile_name = str(session_for_paths.get("profile_name") or path_profile.get("name") or "").strip()
+    initial_remote_paths = (
+        preference_controls["profile_scratch_dir"].GetValue(),
+        preference_controls["profile_home_dir"].GetValue(),
+    )
 
     title = wx.StaticText(panel, label=t("settings.dialog_title"))
     title.SetFont(title.GetFont().Bold())
@@ -34,6 +54,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     # Global settings
     cb_remote_cache = wx.CheckBox(panel, label=t("settings.remote_directory_cache_label"))
     cb_remote_cache.SetValue(bool(model.global_settings.get("remote_directory_cache", True)))
+    btn_clear_remote_cache = wx.Button(panel, label=t("settings.remote_directory_cache_clear"))
     cb_checksum = wx.CheckBox(panel, label=t("settings.transfer_checksum_verification_label"))
     cb_checksum.SetValue(bool(model.global_settings.get("transfer_checksum", False)))
     cb_preflight = wx.CheckBox(panel, label=t("settings.upload_preflight_confirmation_label"))
@@ -120,8 +141,11 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     # layout — §4 spacing scale 4/8/12/16, §16 dialog body 16px, footer 12-16px
     root.Add(title, 0, wx.ALL, 16)
     root.Add(cb_remote_cache, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    root.Add(btn_clear_remote_cache, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     root.Add(cb_checksum, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     root.Add(cb_preflight, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    for preference_group in preference_groups:
+        root.Add(preference_group, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     root.Add(btn_reset_smart_open, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     root.Add(association_title, 0, wx.LEFT | wx.RIGHT | wx.TOP, 12)
     root.Add(association_list, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 12)
@@ -178,6 +202,12 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             model.set_global("ssh_connection_attempts", int(sp_attempts.GetValue()))
         except Exception as exc:
             set_errors.append(("ssh_connection_attempts", exc))
+        try:
+            preferences = collect_settings_preferences(preference_controls)
+            model.set_global("jobs_outputs_refresh_interval", preferences["jobs_outputs_refresh_interval_seconds"])
+        except Exception as exc:
+            set_errors.append(("settings_preferences", exc))
+            preferences = {}
 
         def worker(pending=set_errors):
             try:
@@ -207,6 +237,34 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
                             _persist(snapshot)
                 except Exception as exc:
                     raise RuntimeError(f"settings persist rejected: {exc}") from exc
+                additional_preferences = {
+                    key: value for key, value in preferences.items()
+                    if key not in {
+                        "jobs_outputs_refresh_interval_seconds",
+                        "profile_scratch_dir",
+                        "profile_home_dir",
+                    }
+                }
+                if additional_preferences:
+                    update_settings(additional_preferences)
+                current_remote_paths = (
+                    preferences.get("profile_scratch_dir", ""),
+                    preferences.get("profile_home_dir", ""),
+                )
+                if active_profile_name and current_remote_paths != initial_remote_paths:
+                    from hpc_gui.config.storage import load_profiles, upsert_profile
+                    stored_profile = next(
+                        (item for item in load_profiles() if item.get("name") == active_profile_name),
+                        None,
+                    )
+                    if stored_profile is None:
+                        raise RuntimeError(f"active profile {active_profile_name!r} is no longer available")
+                    updated_profile = dict(stored_profile)
+                    settings_key = "system" if isinstance(updated_profile.get("system"), dict) else "system_settings"
+                    system_settings = dict(updated_profile.get(settings_key) or {})
+                    system_settings["scratch_dir"], system_settings["home_dir"] = current_remote_paths
+                    updated_profile[settings_key] = system_settings
+                    upsert_profile(updated_profile)
                 wx.CallAfter(lambda: wx.MessageBox(t("common.ok"), t("settings.dialog_title"), wx.OK | wx.ICON_INFORMATION, host) if not state["closed"] else None)
             except Exception as exc:
                 # Visible, diagnosable error with a stable code; "OK" is only
@@ -278,6 +336,29 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             from hpc_gui.core.wx_errors import report_wx_action_error
             report_wx_action_error(host, area="SETTINGS", message_key="settings.apply_failed", exc=exc)
 
+    def clear_remote_directory_cache(_event=None):
+        remote_panel = (session_state or {}).get("_embedded_remote_files_panel")
+        remote_controls = getattr(remote_panel, "_wx_remote_controls", {})
+        invalidate = remote_controls.get("invalidate_cache") if isinstance(remote_controls, dict) else None
+        if not callable(invalidate):
+            from hpc_gui.core.wx_errors import report_wx_action_error
+            report_wx_action_error(
+                host, area="SETTINGS", message_key="settings.apply_failed",
+                exc=RuntimeError("remote directory cache is unavailable"),
+            )
+            return
+        try:
+            invalidate()
+            wx.MessageBox(t("common.ok"), t("settings.dialog_title"), wx.OK | wx.ICON_INFORMATION, host)
+        except Exception as exc:
+            from hpc_gui.core.wx_errors import report_wx_action_error
+            report_wx_action_error(host, area="SETTINGS", message_key="settings.apply_failed", exc=exc)
+
+    def reset_terminal_graphics(_event=None):
+        choice, _values = preference_controls["terminal_graphics_mode"]
+        choice.SetSelection(0)
+        preference_controls["terminal_graphics_auto_compatibility"] = False
+
     def close_host(_event=None):
         if state["closed"]:
             return
@@ -308,9 +389,11 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             host.set_host_title(t("settings.dialog_title"))
             title.SetLabel(t("settings.dialog_title"))
             cb_remote_cache.SetLabel(t("settings.remote_directory_cache_label"))
+            btn_clear_remote_cache.SetLabel(t("settings.remote_directory_cache_clear"))
             cb_checksum.SetLabel(t("settings.transfer_checksum_verification_label"))
             cb_preflight.SetLabel(t("settings.upload_preflight_confirmation_label"))
             btn_reset_smart_open.SetLabel(t("settings.smart_open_reset"))
+            refresh_preferences()
             association_title.SetLabel(t("settings.file_associations_section"))
             association_change.SetLabel(t("settings.file_association_change"))
             association_clear.SetLabel(t("settings.file_association_clear"))
@@ -325,6 +408,12 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
 
     btn_apply.Bind(wx.EVT_BUTTON, apply_settings)
     btn_reset_smart_open.Bind(wx.EVT_BUTTON, reset_smart_open)
+    btn_clear_remote_cache.Bind(wx.EVT_BUTTON, clear_remote_directory_cache)
+    reset_graphics_button.Bind(wx.EVT_BUTTON, reset_terminal_graphics)
+    reset_remote_defaults_button.Bind(wx.EVT_BUTTON, lambda _event: (
+        preference_controls["profile_scratch_dir"].SetValue(""),
+        preference_controls["profile_home_dir"].SetValue(""),
+    ))
     speed_button.Bind(wx.EVT_BUTTON, start_speed_test)
     btn_close.Bind(wx.EVT_BUTTON, lambda e: host.Close())
     subscribe_language_change(refresh_labels)
@@ -334,9 +423,12 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     host._wx_settings_controls = {
         "title": title,
         "remote_cache": cb_remote_cache,
+        "clear_remote_cache": btn_clear_remote_cache,
         "checksum": cb_checksum,
         "upload_preflight": cb_preflight,
         "reset_smart_open": btn_reset_smart_open,
+        "reset_terminal_graphics": reset_graphics_button,
+        "reset_remote_defaults": reset_remote_defaults_button,
         "file_associations": association_list,
         "file_association_change": association_change,
         "file_association_clear": association_clear,
@@ -349,6 +441,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     }
     host._wx_settings_model = model
     host._wx_settings_state = state
+    host._wx_settings_preference_controls = preference_controls
 
     finish()
     return host
