@@ -25,7 +25,6 @@ PUBLIC_FACADES = (
     "src/hpc_gui/plugins/ui_contributions.py",
     "src/hpc_gui/ui/widgets/jobs_outputs_widget.py",
     "src/hpc_gui/wx_jobs.py",
-    "src/hpc_gui/ui/main_window.py",
     "src/hpc_gui/wx_connection.py",
     "src/hpc_gui/wx_editor_view.py",
     "src/hpc_gui/wx_transfer_workspace.py",

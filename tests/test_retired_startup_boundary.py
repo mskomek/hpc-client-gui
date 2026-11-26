@@ -1,7 +1,6 @@
 """Prevent reintroducing references to retired Qt startup and tour modules."""
 from pathlib import Path
 import re
-import subprocess
 
 import pytest
 
@@ -34,15 +33,20 @@ def test_retired_startup_has_no_tracked_executable_references():
         r"|\b(?:_LocalUploadPlanJob|_local_upload_plan_jobs|_next_local_upload_plan_id|_apply_local_upload_incremental_gui|_advance_local_upload_plan|_iter_local_upload_plan|RemoteTransferUploadPlanMixin|_remote_transfer_upload_plan)\b"
         r"|hpc_gui[./]ui[./]dialogs[./](?:settings_dialog|_settings_dialog_(?:file_associations|transfer_actions))"
         r"|\b(?:SettingsDialog|_SettingsDialogFileAssociationsMixin|_SettingsDialogTransferActionsMixin|_open_settings|_act_settings)\b"
+        r"|hpc_gui[./]ui[./](?:main_window|_main_window_(?:menubar|workspace|contracts))"
+        r"|\b(?:_MainWindowMenubarMixin|_MainWindowWorkspaceMixin)\b"
     )
-    candidates = subprocess.check_output(
-        ["git", "ls-files", "-z", "--", "src", "tests", "scripts", "devtools", "build", ".github"],
-        cwd=root,
-    ).decode("utf-8").split("\0")
+    scan_roots = ("src", "tests", "scripts", "devtools", "build", ".github")
+    candidates = sorted(
+        path.relative_to(root).as_posix()
+        for scan_root in scan_roots
+        for path in (root / scan_root).rglob("*")
+        if path.is_file()
+    )
     hits = []
     for name in candidates:
         path = root / name
-        if not name or not path.is_file() or path.resolve() == Path(__file__).resolve():
+        if path.resolve() == Path(__file__).resolve():
             continue
         if path.suffix not in {".py", ".spec", ".ps1", ".sh", ".yml", ".yaml", ".toml", ".bat", ".cmd"}:
             continue
@@ -50,3 +54,15 @@ def test_retired_startup_has_no_tracked_executable_references():
             if retired.search(line):
                 hits.append(f"{name}:{number}: {line.strip()}")
     assert not hits, "\n".join(hits)
+
+
+@pytest.mark.audit
+def test_retired_main_window_production_modules_are_absent():
+    root = Path(__file__).resolve().parents[1]
+    retired = (
+        "src/hpc_gui/ui/main_window.py",
+        "src/hpc_gui/ui/_main_window_menubar.py",
+        "src/hpc_gui/ui/_main_window_workspace.py",
+        "src/hpc_gui/ui/_main_window_contracts.py",
+    )
+    assert all(not (root / path).exists() for path in retired)
