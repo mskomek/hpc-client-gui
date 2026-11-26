@@ -172,6 +172,31 @@ def _get_editor_manager(session_state, parent, lifecycle, *, save_remote=None, o
     return manager
 
 
+def _file_lint_callback(session_state, lifecycle, *, remote):
+    from hpc_gui.wx_file_lint import start_file_lint
+
+    def lint_selection(owner, selection, *, tool_only=False, current=lambda: True):
+        session = session_state.get("session")
+        files = session.get("files") if session and remote else None
+        generation = session_state.get("generation")
+        if remote and files is None:
+            import wx
+
+            wx.MessageBox(t("common.no_connection"), t("ansyslint.title"), wx.OK | wx.ICON_WARNING, owner)
+            return False
+
+        def still_current():
+            if getattr(lifecycle, "shutdown_started", False) or not current():
+                return False
+            return (not remote or (session_state.get("session") is session
+                    and session.get("files") is files and session_state.get("generation") == generation))
+
+        return start_file_lint(owner, selection, files=files, tool_only=tool_only,
+                               current=still_current, lifecycle=lifecycle)
+
+    return lint_selection
+
+
 def _local_files_callbacks(session_state, parent, lifecycle):
     _snapshot_session = (session_state or {}).get("session") or {}
     _snapshot_files = _snapshot_session.get("files")
@@ -257,6 +282,7 @@ def _local_files_callbacks(session_state, parent, lifecycle):
         "open_editor": lambda path: open_local(path),
         "open_editor_new_window": lambda path: open_local(path, True),
         "upload": upload_local,
+        "lint_selection": _file_lint_callback(session_state, lifecycle, remote=False),
         "run_shell": lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
     }
 
@@ -431,6 +457,7 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
 
     return {
         "loader": loader,
+        "lint_selection": _file_lint_callback(session_state, lifecycle, remote=True),
         "read_text": read_text,
         "operation": remote_operation,
         "open_editor": _editor,

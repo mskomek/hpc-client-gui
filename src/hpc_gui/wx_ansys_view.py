@@ -36,7 +36,7 @@ def _format_location(diag) -> str:
     return f"{line}:{col or 1}"
 
 
-def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = None, *, lifecycle=None, file_chooser=None, folder_chooser=None, browser_launcher=None):
+def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = None, *, lifecycle=None, file_chooser=None, folder_chooser=None, browser_launcher=None, initial_documents=None):
     try:
         import wx
     except ImportError as exc:
@@ -221,6 +221,26 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
                 _wx.CallAfter(lambda e=exc: show_error(f"{type(e).__name__}: {e}") if not state["closed"] and generation == state["generation"] else None)
         Thread(target=worker, daemon=True).start()
 
+    def lint_snapshots(documents):
+        if state["closed"]:
+            return
+        state["generation"] += 1
+        generation = state["generation"]
+        snapshots = tuple(documents)
+
+        def worker():
+            try:
+                results = model.lint_files(snapshots)
+                def done():
+                    if not state["closed"] and generation == state["generation"]:
+                        render_results(results)
+                wx.CallAfter(done)
+            except Exception as exc:
+                wx.CallAfter(lambda e=exc: show_error(str(e))
+                             if not state["closed"] and generation == state["generation"] else None)
+
+        Thread(target=worker, daemon=True).start()
+
     def do_lint_folder(folder: str):
         if state["closed"]:
             return
@@ -395,13 +415,16 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
     frame._wx_ansys_render = render_results
     frame._wx_ansys_do_lint_files = do_lint_files
     frame._wx_ansys_do_lint_folder = do_lint_folder
+    frame._wx_ansys_lint_snapshots = lint_snapshots
     refresh_labels()
     frame.Show()
+    if initial_documents is not None:
+        lint_snapshots(initial_documents)
     return frame
 
 
-def show_ansys_lint(parent=None, presentation: AnsysToolPresentation | None = None, *, lifecycle=None, file_chooser=None, folder_chooser=None, browser_launcher=None):
-    return build_ansys_frame(parent, presentation, lifecycle=lifecycle, file_chooser=file_chooser, folder_chooser=folder_chooser, browser_launcher=browser_launcher)
+def show_ansys_lint(parent=None, presentation: AnsysToolPresentation | None = None, *, lifecycle=None, file_chooser=None, folder_chooser=None, browser_launcher=None, initial_documents=None):
+    return build_ansys_frame(parent, presentation, lifecycle=lifecycle, file_chooser=file_chooser, folder_chooser=folder_chooser, browser_launcher=browser_launcher, initial_documents=initial_documents)
 
 
 __all__ = ["build_ansys_frame", "show_ansys_lint"]

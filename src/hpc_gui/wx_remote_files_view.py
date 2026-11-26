@@ -28,7 +28,7 @@ from hpc_gui.wx_remote_files_actions import install_actions
 from hpc_gui.wx_remote_files_operations import install_operations
 
 
-def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, read_text_document=None, open_editor=None, open_editor_new_window=None, open_external=None, run_shell=None, chmod=None, submit_slurm=None, operation_supported=None, chmod_supported=None, submit_slurm_supported=None, embedded, navigation_store=None, provider_filters=None, plugin_filters=None):
+def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, read_text_document=None, open_editor=None, open_editor_new_window=None, open_external=None, run_shell=None, chmod=None, submit_slurm=None, operation_supported=None, chmod_supported=None, submit_slurm_supported=None, lint_selection=None, embedded, navigation_store=None, provider_filters=None, plugin_filters=None):
     try:
         import wx
     except ImportError as exc:
@@ -443,17 +443,17 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     return host
 
 
-def build_remote_files_panel(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, read_text_document=None, open_editor=None, open_editor_new_window=None, open_external=None, run_shell=None, chmod=None, submit_slurm=None, operation_supported=None, chmod_supported=None, submit_slurm_supported=None, navigation_store=None, provider_filters=None, plugin_filters=None):
+def build_remote_files_panel(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, read_text_document=None, open_editor=None, open_editor_new_window=None, open_external=None, run_shell=None, chmod=None, submit_slurm=None, operation_supported=None, chmod_supported=None, submit_slurm_supported=None, lint_selection=None, navigation_store=None, provider_filters=None, plugin_filters=None):
     """Embedded panel factory. Returns the wx.Panel host."""
-    return _build_remote_files(parent, model, loader=loader, operation=operation, read_text=read_text, read_text_document=read_text_document, open_editor=open_editor, open_editor_new_window=open_editor_new_window, open_external=open_external, run_shell=run_shell, chmod=chmod, submit_slurm=submit_slurm, operation_supported=operation_supported, chmod_supported=chmod_supported, submit_slurm_supported=submit_slurm_supported, embedded=True, navigation_store=navigation_store, provider_filters=provider_filters, plugin_filters=plugin_filters)
+    return _build_remote_files(parent, model, loader=loader, operation=operation, read_text=read_text, read_text_document=read_text_document, open_editor=open_editor, open_editor_new_window=open_editor_new_window, open_external=open_external, run_shell=run_shell, chmod=chmod, submit_slurm=submit_slurm, operation_supported=operation_supported, chmod_supported=chmod_supported, submit_slurm_supported=submit_slurm_supported, lint_selection=lint_selection, embedded=True, navigation_store=navigation_store, provider_filters=provider_filters, plugin_filters=plugin_filters)
 
 
-def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, read_text_document=None, open_editor=None, open_editor_new_window=None, open_external=None, run_shell=None, chmod=None, submit_slurm=None, operation_supported=None, chmod_supported=None, submit_slurm_supported=None, navigation_store=None, provider_filters=None, plugin_filters=None) -> int:
+def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, read_text_document=None, open_editor=None, open_editor_new_window=None, open_external=None, run_shell=None, chmod=None, submit_slurm=None, operation_supported=None, chmod_supported=None, submit_slurm_supported=None, lint_selection=None, navigation_store=None, provider_filters=None, plugin_filters=None) -> int:
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    _build_remote_files(parent, model, loader=loader, operation=operation, read_text=read_text, read_text_document=read_text_document, open_editor=open_editor, open_editor_new_window=open_editor_new_window, open_external=open_external, run_shell=run_shell, chmod=chmod, submit_slurm=submit_slurm, operation_supported=operation_supported, chmod_supported=chmod_supported, submit_slurm_supported=submit_slurm_supported, embedded=False, navigation_store=navigation_store, provider_filters=provider_filters, plugin_filters=plugin_filters)
+    _build_remote_files(parent, model, loader=loader, operation=operation, read_text=read_text, read_text_document=read_text_document, open_editor=open_editor, open_editor_new_window=open_editor_new_window, open_external=open_external, run_shell=run_shell, chmod=chmod, submit_slurm=submit_slurm, operation_supported=operation_supported, chmod_supported=chmod_supported, submit_slurm_supported=submit_slurm_supported, lint_selection=lint_selection, embedded=False, navigation_store=navigation_store, provider_filters=provider_filters, plugin_filters=plugin_filters)
     return wx.ID_OK
 
 __all__ = ["show_remote_files", "build_remote_files_panel"]

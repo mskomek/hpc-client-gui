@@ -37,7 +37,7 @@ from hpc_gui.wx_local_files_mutations import install_mutations
 from hpc_gui.wx_local_files_lifecycle import install_lifecycle
 
 
-def _build_local_files(parent, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None, embedded):
+def _build_local_files(parent, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None, lint_selection=None, embedded):
     try:
         import wx
     except ImportError as exc:
@@ -238,17 +238,17 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
 
 
 
-def build_local_files_panel(parent, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None):
+def build_local_files_panel(parent, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None, lint_selection=None):
     """Embedded panel factory. Returns the wx.Panel host."""
-    return _build_local_files(parent, path, open_editor=open_editor, open_editor_new_window=open_editor_new_window, upload=upload, run_shell=run_shell, embedded=True)
+    return _build_local_files(parent, path, open_editor=open_editor, open_editor_new_window=open_editor_new_window, upload=upload, run_shell=run_shell, lint_selection=lint_selection, embedded=True)
 
 
-def show_local_files(parent=None, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None) -> int:
+def show_local_files(parent=None, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None, lint_selection=None) -> int:
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    _build_local_files(parent, path, open_editor=open_editor, open_editor_new_window=open_editor_new_window, upload=upload, run_shell=run_shell, embedded=False)
+    _build_local_files(parent, path, open_editor=open_editor, open_editor_new_window=open_editor_new_window, upload=upload, run_shell=run_shell, lint_selection=lint_selection, embedded=False)
     return wx.ID_OK
 
 __all__ = ["LocalBrowserModel", "LocalEntry", "file_url_payload", "open_with_system", "reveal_in_file_manager", "show_local_files", "build_local_files_panel"]

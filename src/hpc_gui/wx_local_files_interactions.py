@@ -105,8 +105,14 @@ def install_interactions(view):
         for action in actions:
             item = menu.Append(wx.ID_ANY, t(labels.get(action, "help.help_title")))
             listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action), item)
-        listing.PopupMenu(menu)
-        menu.Destroy()
+        from hpc_gui.wx_file_lint import append_file_lint_actions
+
+        append_file_lint_actions(menu, selection, view.lint_selection, host,
+                                 current=lambda: not view.state["closed"] and not tstate.get("closed"))
+        try:
+            listing.PopupMenu(menu)
+        finally:
+            menu.Destroy()
 
     def selected_entries() -> list[LocalEntry]:
         tstate = active_tab_state()
