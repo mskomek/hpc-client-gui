@@ -93,6 +93,8 @@ def run_editor_lint(ctx, *, plugin_id=None):
     if not path:
         wx.MessageBox(t("editor.lint_need_path"), t("editor.lint_results_title"), wx.OK | wx.ICON_INFORMATION, host)
         return False
+    if active is None:
+        return False
     content = editor.GetValue()
     state["lint_running"] = True
     ctx["update_header_enabled"]()
@@ -103,17 +105,25 @@ def run_editor_lint(ctx, *, plugin_id=None):
                 and (ctx["remote_path"].GetValue().strip() or active.suggested_filename) == path)
 
     def done(issues, diagnostics, error):
-        state["lint_running"] = False
         if state["closed"]:
+            state["lint_running"] = False
             return
-        ctx["update_header_enabled"]()
         if not current():
+            state["lint_running"] = False
+            ctx["update_header_enabled"]()
             return
         if error is not None:
+            state["lint_running"] = False
+            ctx["update_header_enabled"]()
             ctx["status"].SetLabel(str(error))
             return
         if not issues and not diagnostics:
-            wx.MessageBox(t("editor.lint_ok"), t("editor.lint_results_title"), wx.OK | wx.ICON_INFORMATION, host)
+            try:
+                wx.MessageBox(t("editor.lint_ok"), t("editor.lint_results_title"), wx.OK | wx.ICON_INFORMATION, host)
+            finally:
+                state["lint_running"] = False
+                if not state["closed"]:
+                    ctx["update_header_enabled"]()
             return
 
         def navigate(line):
@@ -130,6 +140,9 @@ def run_editor_lint(ctx, *, plugin_id=None):
             dialog.ShowModal()
         finally:
             dialog.Destroy()
+            state["lint_running"] = False
+            if not state["closed"]:
+                ctx["update_header_enabled"]()
 
     def worker():
         try:

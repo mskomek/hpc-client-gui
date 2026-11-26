@@ -373,7 +373,7 @@ class _FileResult:
 
 @pytest.mark.unit
 def test_format_file_entries_lists_location_fix_and_source():
-    from hpc_gui.ui.dialogs.ansys_lint_results_dialog import format_file_entries
+    from hpc_gui.services.lint_result_format import format_file_entries
 
     diag = _Diag(fix="/file/set-tui-version \"25.2\"", url="https://example.test/doc")
     lines = format_file_entries(_FileResult([diag]))
@@ -387,7 +387,7 @@ def test_format_file_entries_lists_location_fix_and_source():
 
 @pytest.mark.unit
 def test_format_run_entries_groups_by_file_and_reports_totals():
-    from hpc_gui.ui.dialogs.ansys_lint_results_dialog import format_run_entries
+    from hpc_gui.services.lint_result_format import format_run_entries
 
     class _Run:
         files = [_FileResult([])]
