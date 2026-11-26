@@ -80,8 +80,9 @@ def _reject_remote_partial_symlink(files, path):
 def execute_with_mode(files, item, progress, requested, decision, raw_transfer, *, verify_bytes=None):
     """Stage new files; preserve explicitly approved raw final-file resume.
 
-    Standard SFTP rename cannot replace a destination. An approved overwrite
-    uses the existing direct backend contract rather than delete+rename.
+    An approved overwrite uses atomic replacement when the backend exposes it.
+    Other backends keep their existing direct overwrite contract; never emulate
+    replacement by deleting the final file first.
     """
     requested = normalize_transfer_mode(requested)
     final_exists = destination_exists(files, item.op, item.dst)
@@ -118,6 +119,7 @@ def execute_with_mode(files, item, progress, requested, decision, raw_transfer, 
             files, item.src, item.dst, requested, progress_cb=progress,
             allow_resume=allow_resume, stage_remote=not final_exists, verify_bytes=verify_bytes,
             require_valid_resume=allow_resume, cleanup_legacy_metadata=False,
+            atomic_overwrite=final_exists and decision == "overwrite",
         )
     if item.op == "download":
         return download_with_mode(

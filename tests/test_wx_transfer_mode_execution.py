@@ -218,3 +218,71 @@ def test_active_transfer_reservation_rejects_cross_queue_alias(tmp_path):
                 pytest.fail("overlapping reservation accepted")
     with reserve_transfer_paths(owner, two):
         pass
+
+
+@pytest.mark.parametrize("mode", ["binary", "ascii"])
+@pytest.mark.parametrize("outcome", ["success", "verify_failure", "cancel", "unsupported"])
+def test_ssh_overwrite_stages_before_atomic_publish(tmp_path, monkeypatch, mode, outcome):
+    from hpc_gui.services.transfer_controller import TransferCancelled
+    from hpc_gui.services.transfer_mode_execution import execute_with_mode
+    from test_transfer_resume_semantics import ssh_backend
+
+    source = tmp_path / "source.txt"
+    source.write_bytes(b"a\r\nb\r\n")
+    destination = "/remote/existing.txt"
+    files, sftp = ssh_backend({destination: b"original", destination + ".part": b"unrelated"})
+    events = []
+    expected = b"a\nb\n" if mode == "ascii" else source.read_bytes()
+
+    def remove(path):
+        events.append(("remove", path))
+        del sftp.store[path]
+
+    def publish(path, target):
+        assert target == destination
+        assert bytes(sftp.store[target]) == b"original"
+        assert bytes(sftp.store[path]) == expected
+        events.append(("publish", path))
+        if outcome == "unsupported":
+            raise OSError("POSIX rename unsupported")
+        sftp.store[target] = sftp.store.pop(path)
+
+    monkeypatch.setattr(sftp, "remove", remove, raising=False)
+    monkeypatch.setattr(sftp, "posix_rename", publish, raising=False)
+
+    def verify(local, remote):
+        assert remote != destination
+        assert bytes(sftp.store[destination]) == b"original"
+        assert Path(local).read_bytes() == bytes(sftp.store[remote]) == expected
+        events.append(("verify", remote))
+        if outcome == "verify_failure":
+            raise RuntimeError("checksum mismatch")
+
+    def progress(done, total):
+        assert bytes(sftp.store[destination]) == b"original"
+        if outcome == "cancel":
+            raise TransferCancelled()
+
+    def execute():
+        return execute_with_mode(
+            files, TransferItem("upload", str(source), destination), progress,
+            mode, "overwrite", lambda *a, **k: pytest.fail("raw overwrite invoked"),
+            verify_bytes=verify,
+        )
+
+    if outcome == "success":
+        assert execute() == mode
+        assert bytes(sftp.store[destination]) == expected
+        assert [event for event, _ in events] == ["verify", "publish"]
+    else:
+        error = {"verify_failure": RuntimeError, "cancel": TransferCancelled, "unsupported": OSError}[outcome]
+        with pytest.raises(error):
+            execute()
+        assert bytes(sftp.store[destination]) == b"original"
+        assert events[-1][0] == "remove"
+    assert bytes(sftp.store[destination + ".part"]) == b"unrelated"
+    assert set(sftp.store) == {destination, destination + ".part"}
+    assert sftp.modes(destination) == []
+    opens = [(path, flags) for kind, path, flags in sftp.events if kind == "open"]
+    assert len(opens) == 1 and opens[0][0].startswith("/remote/.hpc-upload-")
+    assert opens[0][1] == "wx"

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import os
+import posixpath
 import shlex
 import stat as pystat
 from typing import Iterator, List, Tuple
+from uuid import uuid4
 
 from hpc_gui.services.files_base import RESUME_DEST_LARGER, FilesBackend, RemoteEntry
 from hpc_gui.services.files_ssh_support import _raise_on_failed_run, _translate_remote_errors
@@ -292,6 +294,51 @@ class SSHFilesBackend(SSHTextMixin, FilesBackend):
                             if progress_cb is not None:
                                 progress_cb(sent, local_size)
         finally:
+            try:
+                sftp.close()
+            except Exception:
+                pass
+
+    def atomic_replace_upload(self, local_path: str, remote_path: str, *, progress_cb=None, verify_bytes=None) -> None:
+        """Stage an approved overwrite, verify it, then publish via POSIX rename.
+
+        Never truncate the existing destination or delete it to emulate a
+        replacement. A server without the OpenSSH POSIX rename extension fails
+        safely. The exclusive, per-attempt temporary name is not a resume file.
+        """
+        temporary = posixpath.join(posixpath.dirname(remote_path), f".hpc-upload-{uuid4().hex}")
+        sftp = self.ssh.open_transfer_sftp()
+        owned = False
+        try:
+            replace = getattr(sftp, "posix_rename", None)
+            if not callable(replace):
+                raise RuntimeError("SFTP server does not support atomic replacement")
+            total = os.path.getsize(local_path)
+            sent = 0
+            with open(local_path, "rb") as source:
+                with _translate_remote_errors(temporary):
+                    target = sftp.open(temporary, "wx")
+                    owned = True
+                    with target:
+                        _enable_sftp_pipelining(target)
+                        while chunk := source.read(_SFTP_CHUNK_SIZE):
+                            target.write(chunk)
+                            sent += len(chunk)
+                            if progress_cb is not None:
+                                progress_cb(sent, total)
+            if verify_bytes is not None:
+                verify_bytes(local_path, temporary)
+            if progress_cb is not None:
+                progress_cb(sent, total)
+            with _translate_remote_errors(remote_path):
+                replace(temporary, remote_path)
+            owned = False
+        finally:
+            if owned:
+                try:
+                    sftp.remove(temporary)
+                except Exception:
+                    pass
             try:
                 sftp.close()
             except Exception:

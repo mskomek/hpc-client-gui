@@ -47,6 +47,7 @@ def _upload_remote(
     resume_registry=None,
     *, allow_resume: bool = True, stage_remote: bool = True, verify_bytes=None,
     require_valid_resume: bool = False, cleanup_legacy_metadata: bool = True,
+    atomic_overwrite: bool = False,
 ) -> None:
     """Upload to a server-side ``<remote>.part`` and rename once when the
     backend can rename; otherwise upload directly to the final name.
@@ -55,6 +56,10 @@ def _upload_remote(
     destination and still lets rename-capable backends resume against the
     same server-side partial on a retry.
     """
+    atomic_replace = getattr(files, "atomic_replace_upload", None)
+    if atomic_overwrite and callable(atomic_replace):
+        atomic_replace(local_path, remote_path, progress_cb=progress_cb, verify_bytes=verify_bytes)
+        return
     rename = getattr(files, "rename", None)
     if not stage_remote or not callable(rename):
         if require_valid_resume:
@@ -177,6 +182,7 @@ def upload_with_mode(
     progress_cb=None,
     *, allow_resume: bool = True, stage_remote: bool = True, verify_bytes=None,
     require_valid_resume: bool = False, cleanup_legacy_metadata: bool = True,
+    atomic_overwrite: bool = False,
 ) -> str:
     with open(local_path, "rb") as source:
         sample = source.read(CHUNK_SIZE)
@@ -203,6 +209,7 @@ def upload_with_mode(
             resume_registry=resume_registry,
             allow_resume=allow_resume, stage_remote=stage_remote, verify_bytes=verify_bytes,
             require_valid_resume=require_valid_resume, cleanup_legacy_metadata=cleanup_legacy_metadata,
+            atomic_overwrite=atomic_overwrite,
         )
         return effective
     # ASCII conversion streams the source so its line endings can be
@@ -222,6 +229,7 @@ def upload_with_mode(
             resume_registry=resume_registry,
             allow_resume=allow_resume, stage_remote=stage_remote, verify_bytes=verify_bytes,
             require_valid_resume=require_valid_resume, cleanup_legacy_metadata=cleanup_legacy_metadata,
+            atomic_overwrite=atomic_overwrite,
         )
     finally:
         if temp_path:
