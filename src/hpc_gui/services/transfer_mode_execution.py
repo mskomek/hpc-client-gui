@@ -8,7 +8,7 @@ from hpc_gui.services.transfer_mode import (
 )
 
 
-def execute_with_mode(files, item, progress, requested, decision, raw_transfer):
+def execute_with_mode(files, item, progress, requested, decision, raw_transfer, *, verify_bytes=None):
     """Stage new files; preserve explicitly approved raw final-file resume.
 
     Standard SFTP rename cannot replace a destination. An approved overwrite
@@ -27,6 +27,9 @@ def execute_with_mode(files, item, progress, requested, decision, raw_transfer):
         if effective != BINARY:
             raise ValueError("Resume of an existing final file requires Binary mode")
         raw_transfer(files, item, progress, conflict_decision="resume")
+        if verify_bytes is not None:
+            local, remote = (item.src, item.dst) if item.op == "upload" else (item.dst, item.src)
+            verify_bytes(local, remote)
         return BINARY
 
     if final_exists and decision != "overwrite":
@@ -36,11 +39,11 @@ def execute_with_mode(files, item, progress, requested, decision, raw_transfer):
     if item.op == "upload":
         return upload_with_mode(
             files, item.src, item.dst, requested, progress_cb=progress,
-            allow_resume=allow_resume, stage_remote=not final_exists,
+            allow_resume=allow_resume, stage_remote=not final_exists, verify_bytes=verify_bytes,
         )
     if item.op == "download":
         return download_with_mode(
             files, item.src, item.dst, requested, progress_cb=progress,
-            allow_resume=allow_resume,
+            allow_resume=allow_resume, verify_bytes=verify_bytes,
         )
     raise ValueError(f"Unsupported transfer mode operation: {item.op}")

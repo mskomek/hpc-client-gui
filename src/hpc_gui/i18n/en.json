@@ -1013,6 +1013,8 @@
     "conflict_title": "Target file already exists",
     "conflict_intro": "The target file already exists. Please choose an action.",
     "conflict_message": "The target already exists:\n{path}\n\nChoose how to continue.",
+    "conflict_unfinished_title": "Unfinished transfer found",
+    "conflict_unfinished_intro": "An unfinished transfer exists:\n{path}\nChoose how to continue.",
     "conflict_partial_title": "Unfinished download found",
     "conflict_partial_intro": "A partially downloaded file from an earlier attempt is here. Please choose an action.",
     "source_file": "Source file:",

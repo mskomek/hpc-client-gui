@@ -45,7 +45,7 @@ def _upload_remote(
     progress_cb=None,
     resume_identity=None,
     resume_registry=None,
-    *, allow_resume: bool = True, stage_remote: bool = True,
+    *, allow_resume: bool = True, stage_remote: bool = True, verify_bytes=None,
 ) -> None:
     """Upload to a server-side ``<remote>.part`` and rename once when the
     backend can rename; otherwise upload directly to the final name.
@@ -57,6 +57,8 @@ def _upload_remote(
     rename = getattr(files, "rename", None)
     if not stage_remote or not callable(rename):
         _upload_file(files, local_path, remote_path, progress_cb=progress_cb)
+        if verify_bytes is not None:
+            verify_bytes(local_path, remote_path)
         return
     temp_remote = remote_path + PARTIAL_SUFFIX
     meta_remote = temp_remote + ".meta"
@@ -123,6 +125,13 @@ def _upload_remote(
             except Exception:
                 pass
         raise
+    if verify_bytes is not None:
+        try:
+            verify_bytes(local_path, temp_remote)
+        except Exception:
+            if registry:
+                registry.remove(key)
+            raise
     rename(temp_remote, remote_path)
     if registry:
         try:
@@ -151,7 +160,7 @@ def upload_with_mode(
     remote_path: str,
     requested: str,
     progress_cb=None,
-    *, allow_resume: bool = True, stage_remote: bool = True,
+    *, allow_resume: bool = True, stage_remote: bool = True, verify_bytes=None,
 ) -> str:
     with open(local_path, "rb") as source:
         sample = source.read(CHUNK_SIZE)
@@ -176,7 +185,7 @@ def upload_with_mode(
             progress_cb=progress_cb,
             resume_identity=resume_identity,
             resume_registry=resume_registry,
-            allow_resume=allow_resume, stage_remote=stage_remote,
+            allow_resume=allow_resume, stage_remote=stage_remote, verify_bytes=verify_bytes,
         )
         return effective
     # ASCII conversion streams the source so its line endings can be
@@ -194,7 +203,7 @@ def upload_with_mode(
             progress_cb=progress_cb,
             resume_identity=resume_identity,
             resume_registry=resume_registry,
-            allow_resume=allow_resume, stage_remote=stage_remote,
+            allow_resume=allow_resume, stage_remote=stage_remote, verify_bytes=verify_bytes,
         )
     finally:
         if temp_path:
@@ -225,7 +234,7 @@ def download_with_mode(
     local_path: str,
     requested: str,
     progress_cb=None,
-    *, allow_resume: bool = True,
+    *, allow_resume: bool = True, verify_bytes=None,
 ) -> str:
     destination = Path(local_path).expanduser()
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -314,6 +323,13 @@ def download_with_mode(
             except Exception:
                 pass
         raise
+    if verify_bytes is not None:
+        try:
+            verify_bytes(str(part_path), remote_path)
+        except Exception:
+            if registry:
+                registry.remove(key)
+            raise
     try:
         with open(part_path, "rb") as stream:
             sample = stream.read(CHUNK_SIZE)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from hpc_gui.services.transfer_conflict_policy import (
-    ConflictFileInfo, destination_exists, destination_path, format_conflict_metadata, rename_destination,
+    ConflictFileInfo, conflict_target, destination_path, format_conflict_metadata, rename_destination,
 )
 
 from hpc_gui.core.i18n import t
@@ -22,15 +22,19 @@ def create_transfer_conflict_dialog(parent, files, item, *, metadata=None):
     except ImportError:
         return None
     resume_supported = _supports_resume(files, item) if files is not None else False
-    title = t("transfer.conflict_title")
-    message = t("transfer.conflict_message").format(path=item.dst)
+    source, target = metadata or (ConflictFileInfo(item.src), ConflictFileInfo(item.dst))
+    partial = target.path == item.dst + ".part"
+    title = t("transfer.conflict_unfinished_title") if partial else t("transfer.conflict_title")
+    message = (
+        t("transfer.conflict_unfinished_intro").format(path=target.path) if partial
+        else t("transfer.conflict_message").format(path=item.dst)
+    )
     dlg = wx.Dialog(parent, title=title, style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
     panel = wx.Panel(dlg)
     sizer = wx.BoxSizer(wx.VERTICAL)
     msg = wx.StaticText(panel, label=message)
     msg.Wrap(460)
     sizer.Add(msg, 0, wx.ALL | wx.EXPAND, 12)
-    source, target = metadata or (ConflictFileInfo(item.src), ConflictFileInfo(item.dst))
     info_controls = {}
     for key, info in (("source", source), ("target", target)):
         size, mtime = format_conflict_metadata(info)
@@ -125,7 +129,7 @@ def create_transfer_conflict_dialog(parent, files, item, *, metadata=None):
                     )
                     continue
                 try:
-                    exists = destination_exists(files, item.op, candidate)
+                    exists = conflict_target(files, item.op, candidate, include_partial=True) is not None
                 except Exception:
                     # A failed probe must not be interpreted as a free destination.
                     result["value"] = "cancel"

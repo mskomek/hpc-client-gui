@@ -65,3 +65,61 @@ def test_transfer_backend_value_error_is_not_replayed(tmp_path):
     with pytest.raises(ValueError, match="after write"):
         upload_with_mode(files, str(source), "/target", "binary")
     assert calls == ["/target"]
+
+
+
+@pytest.mark.parametrize("direction", ["upload", "download"])
+def test_ascii_checksum_verifies_wire_bytes(tmp_path, monkeypatch, direction):
+    import hashlib
+    import os
+    from hpc_gui.config.storage import set_transfer_checksum_verification_enabled
+    from hpc_gui.services.transfer_integrity import VerificationState
+
+    monkeypatch.setenv("HPC_GUI_CONFIG_ROOT", str(tmp_path / "config"))
+    set_transfer_checksum_verification_enabled(True)
+
+    class HashFiles(MockFilesBackend):
+        def sha256(self, path):
+            return hashlib.sha256(self._files[path]).hexdigest()
+
+    files = HashFiles()
+    remote = "/arf/scratch/user/test.txt"
+    local = tmp_path / "test.txt"
+    if direction == "upload":
+        local.write_bytes(b"a\r\nb\r\n")
+        item = TransferItem("upload", str(local), remote)
+    else:
+        files._files[remote] = b"a\r\nb\n"
+        item = TransferItem("download", remote, str(local))
+    run(files, item, "ascii")
+    assert item.verification_state == VerificationState.VERIFIED
+    if direction == "upload":
+        assert files._files[remote] == b"a\nb\n"
+    else:
+        assert local.read_bytes() == ("a" + os.linesep + "b" + os.linesep).encode()
+
+
+def test_checksum_mismatch_does_not_publish_download(tmp_path, monkeypatch):
+    from hpc_gui.config.storage import set_transfer_checksum_verification_enabled
+
+    monkeypatch.setenv("HPC_GUI_CONFIG_ROOT", str(tmp_path / "config"))
+    set_transfer_checksum_verification_enabled(True)
+
+    class CorruptHash(MockFilesBackend):
+        def sha256(self, path):
+            return "0" * 64
+
+    files = CorruptHash()
+    remote = "/arf/scratch/user/file.bin"
+    files._files[remote] = b"new"
+    local = tmp_path / "file.bin"
+    local.write_bytes(b"old")
+    controller = _start_file_transfers(
+        {"session": {"files": files}, "ftp_transfer_type": "binary"},
+        None, [TransferItem("download", remote, str(local))],
+        conflict_resolver=lambda _: "overwrite",
+    )
+    assert controller.engine.wait(5)
+    assert "SHA-256 verification failed" in controller.engine.failed[0][1]
+    assert local.read_bytes() == b"old"
+    assert Path(str(local) + ".part").read_bytes() == b"new"

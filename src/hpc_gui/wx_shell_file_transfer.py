@@ -107,7 +107,7 @@ def _verify_transfer_item(files, item):
     passthrough; a digest mismatch raises so the engine records ``FAILED``
     instead of success.  Returns the :class:`VerificationState`.
     """
-    from hpc_gui.services.transfer_integrity import VerificationState, verify_transfer
+    from hpc_gui.services.transfer_integrity import VerificationState
 
     try:
         from hpc_gui.config.storage import get_transfer_checksum_verification_enabled
@@ -116,11 +116,18 @@ def _verify_transfer_item(files, item):
         enabled = False
     if not enabled:
         return VerificationState.OFF
+    local_path = item.src if item.op == "upload" else item.dst
+    remote_path = item.dst if item.op == "upload" else item.src
+    return _verify_transfer_bytes(files, local_path, remote_path)
+
+
+def _verify_transfer_bytes(files, local_path, remote_path):
+    """Compare transferred bytes, before ASCII conversion discards raw data."""
+    from hpc_gui.services.transfer_integrity import VerificationState, verify_transfer
+
     remote_hash = getattr(files, "sha256", None)
     if not callable(remote_hash):
         return VerificationState.UNSUPPORTED
-    local_path = item.src if item.op == "upload" else item.dst
-    remote_path = item.dst if item.op == "upload" else item.src
     try:
         remote_digest = remote_hash(remote_path)
     except Exception:
@@ -191,8 +198,12 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         if mode_enabled and item.op in {"upload", "download"}:
             from hpc_gui.services.transfer_mode_execution import execute_with_mode
 
+            def verify_bytes(local, remote):
+                item.verification_state = _verify_transfer_bytes(backend, local, remote)
+
             item.effective_mode = execute_with_mode(
                 backend, item, progress, requested_mode, conflict_decision, _run_file_view_item,
+                verify_bytes=verify_bytes if controller.checksum_enabled else None,
             )
         else:
             _run_file_view_item(backend, item, progress, conflict_decision=conflict_decision)
@@ -312,7 +323,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         conflict_resolver=custom_resolver or (wx_conflict_resolver if parent else None),
         conflict_rename=automatic_rename if parent and custom_resolver is None else None,
         conflict_evaluator=conflict_evaluator,
-        verify=lambda item: _verify_transfer_item(files, item),
+        verify=None if mode_enabled else lambda item: _verify_transfer_item(files, item),
         on_queue=queue_event,
         on_progress=progress_event,
         on_start=register_run,
