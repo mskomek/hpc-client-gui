@@ -329,7 +329,6 @@
     "src/hpc_gui/ui/main_window.py": [
       "AUTOMATIC_INSTALL_STRATEGIES",
       "AsyncCall",
-      "DebugTelemetry",
       "DirectoriesWidget",
       "EditorWidget",
       "FtpWidget",
