@@ -14,7 +14,7 @@ def install_trusted_tool_controls(wx, panel, host, root_sizer, button_row, model
 
     def candidate(card):
         return bool(card and card.plugin_id in APPROVED_TRUSTED_TOOLS
-                    and card.installed and card.enabled and card.active_version)
+                    and card.installed and card.enabled and card.active_version and not card.problem)
 
     def refresh(card):
         if state["closed"]:

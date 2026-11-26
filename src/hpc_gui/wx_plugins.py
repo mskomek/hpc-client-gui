@@ -40,6 +40,7 @@ class PluginCard:
     capabilities: tuple[str, ...] = ()
     update_available: bool = False
     active_version: str | None = None
+    problem: str = ""
 
 
 def _search_text_for_card(card: PluginCard) -> str:
@@ -124,6 +125,7 @@ class WxPluginManagerModel:
         self.registry_entries: dict[str, dict[str, Any]] = {}
         self.other_versions: dict[str, tuple[str, ...]] = {}
         self._registry_snapshot: dict | None = None
+        self.problems: tuple = ()
 
     def set_registry(self, entries: list[dict[str, Any]], source: str = "cache") -> None:
         self.registry_source = source if source in {"network", "cache", "offline"} else "offline"
@@ -156,6 +158,7 @@ class WxPluginManagerModel:
         }
         self.other_versions = {}
         self._registry_snapshot = {"plugins": [dict(item) for item in entries]}
+        self.problems = ()
 
     def build_cards_from_registry(
         self,
@@ -192,6 +195,12 @@ class WxPluginManagerModel:
             disabled = read_disabled_ids(effective_root)
         except Exception:
             disabled = set()
+        from hpc_gui.plugins.loader import load_installed_plugins
+
+        loaded = load_installed_plugins(root=effective_root, app_version=effective_app)
+        self.problems = tuple(loaded.problems)
+        problems = {item.plugin_id: item.reason for item in loaded.problems}
+        verified = {item.manifest.id: item.manifest for item in loaded.plugins}
         grouped = _group_latest_registry_entries(entries, effective_app)
         cards: list[PluginCard] = []
         raw_by_id: dict[str, dict[str, Any]] = {}
@@ -226,6 +235,7 @@ class WxPluginManagerModel:
                     capabilities=tuple(str(c) for c in capabilities if str(c)),
                     update_available=update_available,
                     active_version=active_version,
+                    problem=problems.get(plugin_id, ""),
                 )
             )
             raw_by_id[plugin_id] = dict(best)
@@ -236,18 +246,20 @@ class WxPluginManagerModel:
         for plugin_id in sorted(active):
             if plugin_id in registry_ids:
                 continue
+            manifest = verified.get(plugin_id)
             cards.append(
                 PluginCard(
                     plugin_id=plugin_id,
-                    name=plugin_id,
+                    name=manifest.name if manifest else plugin_id,
                     version=str(active.get(plugin_id) or ""),
                     installed=True,
                     enabled=plugin_id not in disabled,
                     compatible=True,
-                    description="",
-                    capabilities=(),
+                    description=manifest.description if manifest else "",
+                    capabilities=tuple(manifest.capabilities) if manifest else (),
                     update_available=False,
                     active_version=str(active.get(plugin_id) or ""),
+                    problem=problems.get(plugin_id, ""),
                 )
             )
         cards.sort(key=lambda c: (c.name or c.plugin_id).lower())
@@ -283,6 +295,8 @@ class WxPluginManagerModel:
         if self.registry_entry_for(card.plugin_id) is None:
             # No registry provenance for an installed-only record.
             lines = [line for line in lines if not line.startswith(t("plugins.source_label") + ":")]
+        if card.problem:
+            lines.extend(["", t("plugins.invalid_plugin"), card.problem])
         return "\n".join(lines)
 
     def filtered_cards(self, view: str = "discover", needle: str = "") -> tuple[PluginCard, ...]:
@@ -339,7 +353,7 @@ class WxPluginManagerModel:
     def rollback(self, plugin_id: str, version: str) -> None:
         if version not in self.installed_versions(plugin_id):
             raise ValueError("The selected version is not installed.")
-        activate_version(plugin_id, version, root=self.root)
+        activate_version(plugin_id, version, root=self.root, app_version=self.app_version)
 
     def set_enabled(self, plugin_id: str, enabled: bool) -> None:
         set_plugin_disabled(plugin_id, not enabled, root=self.root)

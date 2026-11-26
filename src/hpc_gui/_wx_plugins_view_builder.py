@@ -138,6 +138,8 @@ def _build_plugins(
             state_bits = []
             state_bits.append("installed" if card.installed else "available")
             state_bits.append("enabled" if card.enabled else "disabled")
+            if card.problem:
+                state_bits.append(t("plugins.invalid_plugin"))
             if not card.compatible:
                 state_bits.append("incompatible")
             if card.update_available:
@@ -146,6 +148,7 @@ def _build_plugins(
             if card.active_version and card.active_version != card.version:
                 detail += f" (active {card.active_version})"
             list_ctrl.SetItem(idx, 1, detail)
+        refresh_problems(view)
         _update_buttons()
 
     def _selected_card():
@@ -155,6 +158,8 @@ def _build_plugins(
         return visible[idx]
 
     trusted_controls, refresh_trusted = install_trusted_tool_controls(wx, panel, host, root_sizer, btn_row, model, state, _selected_card)
+    from ._wx_plugins_management import install_problem_control
+    problem_control, refresh_problems = install_problem_control(wx, panel, root_sizer, model)
     management_controls, refresh_management = install_management_controls(
         wx, panel, host, root_sizer, model, state, _selected_card, lambda: _refresh_list())
     def _update_buttons():
@@ -463,7 +468,7 @@ def _build_plugins(
         "install": btn_install,
         "disable": btn_disable,
         "remove": btn_remove,
-        "close": btn_close, **trusted_controls, **management_controls,
+        "close": btn_close, "problems": problem_control, **trusted_controls, **management_controls,
     }
     host._wx_plugins_model = model
     host._wx_plugins_state = state

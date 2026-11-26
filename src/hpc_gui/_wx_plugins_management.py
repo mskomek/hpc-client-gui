@@ -100,3 +100,25 @@ def install_management_controls(wx, panel, host, root_sizer, model, state, selec
     switch.Bind(wx.EVT_BUTTON, change_version)
     versions.Bind(wx.EVT_CHOICE, update_switch)
     return {"details": details, "versions": versions, "switch_version": switch, "request": request}, refresh
+
+
+
+def install_problem_control(wx, panel, root_sizer, model):
+    """Surface loader diagnostics without treating an installed pointer as healthy."""
+    note = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_READONLY, size=(-1, 90))
+    note.Hide()
+    root_sizer.Insert(2, note, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+
+    def refresh(view):
+        messages = []
+        if view == "installed":
+            for item in model.problems:
+                text = (t("plugins.corrupt_plugin").format(name=item.plugin_id)
+                        if "integrity check failed" in item.reason else
+                        f"{item.plugin_id}@{item.version}: {t('plugins.invalid_plugin')}")
+                messages.append(f"{text}\n{item.reason}")
+        note.ChangeValue("\n\n".join(messages))
+        note.Show(bool(messages))
+        panel.Layout()
+
+    return note, refresh

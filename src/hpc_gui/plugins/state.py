@@ -98,7 +98,7 @@ def remove_plugin(plugin_id: str, root: str | Path | None = None) -> list[str]:
     return removed
 
 
-def activate_version(plugin_id: str, version: str, root: str | Path | None = None) -> None:
+def activate_version(plugin_id: str, version: str, root: str | Path | None = None, *, app_version: str | None = None) -> None:
     """Activate an installed plugin version after validating it.
 
     Only versions that are present on disk and load cleanly may become
@@ -117,11 +117,18 @@ def activate_version(plugin_id: str, version: str, root: str | Path | None = Non
         write_active_versions(active, root=root)
 
     _set(version)
-    loaded = load_installed_plugins(root=root)
-    ok = any(
-        installed.manifest.id == plugin_id and installed.manifest.version == version
-        for installed in loaded.plugins
-    )
+    try:
+        kwargs = {"root": root}
+        if app_version is not None:
+            kwargs["app_version"] = app_version
+        loaded = load_installed_plugins(**kwargs)
+        ok = any(
+            installed.manifest.id == plugin_id and installed.manifest.version == version
+            for installed in loaded.plugins
+        )
+    except Exception:
+        _set(previous)
+        raise
     if not ok:
         logger.warning(
             "Activation of %s@%s failed validation; restoring %s",
