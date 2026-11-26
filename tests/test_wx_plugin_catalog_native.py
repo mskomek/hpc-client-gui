@@ -105,3 +105,115 @@ app.ProcessPendingEvents()
     result = subprocess.run([sys.executable, "-u", "-X", "faulthandler", "-c", script, str(tmp_path)],
                             cwd=root, env=env, capture_output=True, text=True, timeout=35)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.subprocess
+def test_native_registry_refresh_lifecycle(tmp_path):
+    """Exercise real wx events and delayed registry workers without network I/O."""
+    root = Path(__file__).resolve().parents[1]
+    script = r"""
+import sys
+import time
+from threading import Event, Thread, get_ident
+from types import SimpleNamespace
+from unittest.mock import patch
+
+import wx
+from hpc_gui.core.i18n import load_language, t
+from hpc_gui.wx_plugins import WxPluginManagerModel
+from hpc_gui.wx_plugins_view import show_plugins
+from test_plugin_manager_ui_catalog_discovery import grouped
+
+load_language("en")
+app = wx.App(False)
+app.SetExitOnFrameDelete(False)
+model = WxPluginManagerModel(root=sys.argv[1], app_version="2.0.0")
+main_thread = get_ident()
+calls = []
+workers = []
+release = Event()
+mode = ["network"]
+
+def worker_thread(*args, **kwargs):
+    thread = Thread(*args, **kwargs)
+    workers.append(thread)
+    return thread
+
+def fetch(**kwargs):
+    calls.append((mode[0], get_ident()))
+    if not release.wait(8):
+        raise RuntimeError("test worker release timed out")
+    if mode[0] == "offline":
+        raise OSError("no network and no cached registry")
+    return SimpleNamespace(registry=grouped(), source=mode[0])
+
+def pump_until(predicate):
+    deadline = time.monotonic() + 8
+    while not predicate() and time.monotonic() < deadline:
+        wx.Yield()
+        time.sleep(.01)
+    assert predicate()
+
+def click(button):
+    event = wx.CommandEvent(wx.EVT_BUTTON.typeId, button.GetId())
+    event.SetEventObject(button)
+    button.GetEventHandler().ProcessEvent(event)
+
+with patch("hpc_gui._wx_plugins_view_builder.Thread", side_effect=worker_thread), patch(
+    "hpc_gui.plugins.registry_client.fetch_registry_with_cache", side_effect=fetch
+):
+    show_plugins(model=model)
+    host = next(w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_plugins_state"))
+    state = host._wx_plugins_state
+    c = host._wx_plugins_controls
+    pump_until(lambda: len(calls) == 1)
+    assert state["in_flight"] and not c["refresh"].IsEnabled()
+    assert c["status"].GetLabel() == t("plugins.status_loading")
+    host.Hide()
+    host.Show()
+    click(c["refresh"])
+    click(c["refresh"])
+    assert len(workers) == 1
+    release.set()
+    pump_until(lambda: not state["in_flight"])
+    assert c["status"].GetLabel() == t("plugins.status_online")
+    assert c["listing"].GetItemCount() == 2 and c["refresh"].IsEnabled()
+
+    for source in ("cache", "offline"):
+        mode[0] = source
+        click(c["refresh"])
+        pump_until(lambda: not state["in_flight"])
+        assert model.registry_source == source
+        key = "plugins.status_cached" if source == "cache" else "plugins.status_offline"
+        assert c["status"].GetLabel() == t(key)
+        assert c["refresh"].IsEnabled()
+        assert c["listing"].GetItemCount() == (2 if source == "cache" else 0)
+    assert c["empty_note"].IsShown()
+
+    mode[0] = "network"
+    release.clear()
+    click(c["refresh"])
+    pump_until(lambda: len(calls) == 4)
+    assert state["in_flight"]
+    host.Close()
+    pump_until(lambda: state["closed"])
+    release.set()
+    for worker in workers:
+        worker.join(8)
+        assert not worker.is_alive()
+    wx.Yield()
+    app.ProcessPendingEvents()
+    assert model.registry_source == "offline" and not model.cards
+    assert not state["in_flight"]
+    assert [source for source, _ in calls] == ["network", "cache", "offline", "network"]
+    assert all(thread_id != main_thread for _, thread_id in calls)
+
+assert not any(m.split(".")[0] in {"PySide6", "PyQt5", "PyQt6", "shiboken6"} for m in sys.modules)
+"""
+    env = dict(os.environ, HPC_GUI_CONFIG_ROOT=str(tmp_path))
+    env["PYTHONPATH"] = os.pathsep.join([str(root / "src"), str(root / "tests"), env.get("PYTHONPATH", "")])
+    result = subprocess.run([sys.executable, "-u", "-X", "faulthandler", "-c", script, str(tmp_path)],
+                            cwd=root, env=env, capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0, result.stdout + result.stderr

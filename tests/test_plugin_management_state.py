@@ -72,3 +72,51 @@ def test_real_packages_activation_failure_and_corruption_readback(tmp_path):
     assert model.cards[0].problem and len(model.problems) == 1
     assert "integrity check failed" in model.details_for(model.cards[0])
     assert model.installed_versions(pid) == ("2.0.0", "1.0.0")
+
+
+def test_install_summary_counts_and_verification_error_without_gui():
+    from types import SimpleNamespace
+
+    from hpc_gui.core.i18n import t
+    from hpc_gui.services.plugin_manager_state import install_error_message, install_summary_text
+
+    entry = {"id": "org.hpcclient.truba", "name": "TRUBA"}
+    result = SimpleNamespace(
+        installed=SimpleNamespace(
+            manifest=SimpleNamespace(id=entry["id"], name="TRUBA"),
+            cluster_profiles=(SimpleNamespace(),),
+            lint_index=None,
+            job_templates_index={"templates": [{}, {}, {}, {}]},
+        ),
+        activated=True,
+    )
+    summary = install_summary_text(entry, result)
+    assert "TRUBA" in summary
+    assert t("plugins.summary_cluster_profiles").format(count=1) in summary
+    assert t("plugins.summary_job_templates").format(count=4) in summary
+    assert install_summary_text(entry, SimpleNamespace(installed=None, activated=True)) == (
+        t("plugins.install_generic").format(name="TRUBA")
+    )
+    assert install_error_message(RuntimeError("Manifest SHA-256 mismatch")) == (
+        t("plugins.verification_failed").format(name="")
+    )
+
+
+def test_details_source_and_pep440_installed_versions(tmp_path):
+    from hpc_gui.core.i18n import t
+
+    pid = "org.example.tool"
+    for version in ("1.2.0", "1.9.0", "1.10.0"):
+        record_installed_version(pid, version, root=tmp_path)
+    model = WxPluginManagerModel(root=tmp_path, app_version="2.0.0")
+    model.build_cards_from_registry({"plugins": [
+        {"id": pid, "name": "Example", "version": version, "requires_app": ">=1.0.0",
+         "type": "cluster-profile", "publisher": "Example"}
+        for version in ("1.9.0", "1.10.0")
+    ]}, "cache")
+    assert model.installed_versions(pid) == ("1.10.0", "1.9.0", "1.2.0")
+    card = model.cards[0]
+    assert card.active_version == "1.10.0"
+    details = model.details_for(card)
+    for expected in (pid, t("plugins.source_official_registry"), t("plugins.installed_active"), "1.9.0"):
+        assert expected in details

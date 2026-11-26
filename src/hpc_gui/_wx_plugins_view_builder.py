@@ -116,6 +116,8 @@ def _build_plugins(
         return state["view"]
 
     def _refresh_list():
+        if state["closed"]:
+            return
         del visible[:]
         needle = ""
         try:
@@ -166,6 +168,8 @@ def _build_plugins(
         wx, panel, host, root_sizer, model, state, _selected_card, lambda: _refresh_list(),
         lambda: notify_plugin_change(parent))
     def _update_buttons():
+        if state["closed"]:
+            return
         card = _selected_card()
         refresh_trusted(card)
         refresh_management(card)
@@ -233,9 +237,9 @@ def _build_plugins(
                 wx.CallAfter(on_done, gen, None, exc)
 
         def on_done(expected_gen, result, error):
-            state["in_flight"] = False
             if state["closed"] or expected_gen != state["gen"]:
                 return
+            state["in_flight"] = False
             btn_refresh.Enable(True)
             if result is not None:
                 try:
@@ -312,9 +316,9 @@ def _build_plugins(
                 wx.CallAfter(on_done, gen, exc, None)
 
         def on_done(expected_gen, error, outcome):
-            state["in_flight"] = False
             if state["closed"] or expected_gen != state["gen"]:
                 return
+            state["in_flight"] = False
             from hpc_gui.services.plugin_manager_state import install_summary_text, install_error_message
             status.SetLabel(_status_label_for_source(model.registry_source))
             try:
@@ -349,9 +353,9 @@ def _build_plugins(
                 wx.CallAfter(on_done, gen, exc)
 
         def on_done(expected_gen, error):
-            state["in_flight"] = False
             if state["closed"] or expected_gen != state["gen"]:
                 return
+            state["in_flight"] = False
             if error is not None:
                 try:
                     wx.MessageBox(
@@ -391,9 +395,9 @@ def _build_plugins(
                 wx.CallAfter(on_done, gen, exc)
 
         def on_done(expected_gen, error):
-            state["in_flight"] = False
             if state["closed"] or expected_gen != state["gen"]:
                 return
+            state["in_flight"] = False
             if error is not None:
                 try:
                     wx.MessageBox(
