@@ -357,15 +357,11 @@ class ConnectionDialog(
         self.btn_save_connect = QPushButton(t("connection.save_and_connect"))
         self.btn_save_connect.clicked.connect(self._save_and_connect_clicked)
 
-        self.btn_test_cluster = QPushButton(t("connection.test_cluster"))
-        self.btn_test_cluster.clicked.connect(self._test_cluster)
-
         self.btn_cancel = QPushButton(t("common.cancel"))
         self.btn_cancel.clicked.connect(self.reject)
 
         button_row = QHBoxLayout()
         button_row.addStretch(1)
-        button_row.addWidget(self.btn_test_cluster)
         button_row.addWidget(self.btn_save)
         button_row.addWidget(self.btn_save_connect)
         button_row.addWidget(self.btn_cancel)

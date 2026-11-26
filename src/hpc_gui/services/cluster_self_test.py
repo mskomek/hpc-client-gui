@@ -47,6 +47,17 @@ class ClusterSelfTestResult:
         return asdict(self)
 
 
+def format_self_test_result(result: ClusterSelfTestResult) -> str:
+    """Format the read-only result without adding connection identity."""
+    lines = [f"status: {result.status}"]
+    for section in result.sections:
+        lines.append(f"[{section.id}]")
+        for item in section.items:
+            detail = f" — {item.detail}" if item.detail else ""
+            lines.append(f"{item.id}: {item.status}{detail}")
+    return "\n".join(lines)
+
+
 def _item(item_id: str, status: str, detail: str = "", required: bool = False) -> SelfTestItem:
     return SelfTestItem(item_id, status, detail, required)
 
