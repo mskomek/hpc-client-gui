@@ -286,3 +286,47 @@ def test_ssh_overwrite_stages_before_atomic_publish(tmp_path, monkeypatch, mode,
     opens = [(path, flags) for kind, path, flags in sftp.events if kind == "open"]
     assert len(opens) == 1 and opens[0][0].startswith("/remote/.hpc-upload-")
     assert opens[0][1] == "wx"
+
+
+@pytest.mark.parametrize("mode", ["binary", "ascii"])
+def test_renamed_download_never_overwrites_file_created_during_transfer(tmp_path, mode):
+    from hpc_gui.services.transfer_mode_execution import execute_with_mode
+
+    target = tmp_path / "new.txt"
+    remote = "/remote/source.txt"
+
+    class RacingFiles(MockFilesBackend):
+        def download(self, src, dst, progress_cb=None):
+            super().download(src, dst, progress_cb=progress_cb)
+            target.write_bytes(b"new owner")
+
+    files = RacingFiles()
+    files._files[remote] = b"a\r\nb\r\n"
+    item = TransferItem("download", remote, str(target))
+    with pytest.raises(FileExistsError):
+        execute_with_mode(files, item, lambda *_: None, mode, "rename", None)
+    assert target.read_bytes() == b"new owner"
+    assert Path(str(target) + ".part").read_bytes() == b"a\r\nb\r\n"
+
+
+@pytest.mark.parametrize("direction", ["upload", "download"])
+@pytest.mark.parametrize("partial", [False, True])
+def test_rename_rechecks_existing_target_and_partial(tmp_path, direction, partial):
+    from hpc_gui.services.transfer_mode_execution import execute_with_mode
+
+    files = MockFilesBackend()
+    local = tmp_path / "source.bin"
+    remote = "/remote/source.bin"
+    destination = (str(tmp_path / "new.bin") if direction == "download" else "/remote/new.bin")
+    occupied = destination + (".part" if partial else "")
+    if direction == "download":
+        files._files[remote] = b"payload"
+        Path(occupied).write_bytes(b"original")
+        item = TransferItem(direction, remote, destination)
+    else:
+        local.write_bytes(b"payload")
+        files._files[occupied] = b"original"
+        item = TransferItem(direction, str(local), destination)
+    with pytest.raises(FileExistsError):
+        execute_with_mode(files, item, lambda *_: None, "binary", "rename", None)
+    assert (Path(occupied).read_bytes() if direction == "download" else files._files[occupied]) == b"original"

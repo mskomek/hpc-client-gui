@@ -245,3 +245,32 @@ def test_overwrite_if_newer_skips_when_mtime_metadata_is_unknown(source_mtime, t
         "overwrite_if_newer", source_size=5, target_size=5,
         source_mtime=source_mtime, target_mtime=target_mtime,
     ) == "skip"
+
+
+def test_rename_is_not_an_overwrite_authorization():
+    item = TransferItem("upload", "source", "/work/old")
+    observed = []
+    controller = TransferSessionController(
+        [item], lambda it, progress, *, conflict_decision=None: observed.append((it.dst, conflict_decision)),
+        conflict_check=lambda _: True,
+        conflict_resolver=lambda _: ("rename", "/work/new"),
+    )
+    controller.start()
+    assert controller.engine.wait(5)
+    assert observed == [("/work/new", "rename")]
+    assert not controller.engine.failed
+
+
+@pytest.mark.parametrize("candidate", ["/outside/new", "/work/old", "/work/../new"])
+def test_rename_rejects_invalid_or_unchanged_target(candidate):
+    item = TransferItem("upload", "source", "/work/old")
+    observed = []
+    controller = TransferSessionController(
+        [item], lambda *args: observed.append(args),
+        conflict_check=lambda _: True,
+        conflict_resolver=lambda _: ("rename", candidate),
+    )
+    controller.start()
+    assert controller.engine.wait(5)
+    assert not observed and item.dst == "/work/old"
+    assert "Rename must select" in controller.engine.failed[0][1]

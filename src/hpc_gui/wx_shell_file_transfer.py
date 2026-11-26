@@ -24,6 +24,9 @@ def _run_file_view_item(files, item, progress, *, conflict_decision=None):
     engine cancellation can interrupt an in-flight transfer instead of only
     taking effect between queued items.
     """
+    if conflict_decision == "rename" and item.op in {"upload", "download"}:
+        if destination_exists(files, item.op, item.dst):
+            raise FileExistsError(item.dst)
     if item.op == "upload":
         method = files.resume_upload if conflict_decision == "resume" else files.upload
         try:

@@ -120,11 +120,13 @@ def execute_with_mode(files, item, progress, requested, decision, raw_transfer, 
             allow_resume=allow_resume, stage_remote=not final_exists, verify_bytes=verify_bytes,
             require_valid_resume=allow_resume, cleanup_legacy_metadata=False,
             atomic_overwrite=final_exists and decision == "overwrite",
+            no_replace=decision == "rename",
         )
     if item.op == "download":
         return download_with_mode(
             files, item.src, item.dst, requested, progress_cb=progress,
             allow_resume=allow_resume, verify_bytes=verify_bytes,
             require_valid_resume=allow_resume, cleanup_legacy_metadata=False,
+            no_replace=decision == "rename",
         )
     raise ValueError(f"Unsupported transfer mode operation: {item.op}")

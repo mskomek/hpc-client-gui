@@ -9,7 +9,9 @@ from typing import Iterable
 
 from hpc_gui.services.transfer_controller import TransferCancelled, TransferController, TransferItem
 from hpc_gui.services.transfer_conflict_policy import (
+    destination_path,
     get_session_conflict_action,
+    rename_destination,
     set_session_conflict_action,
 )
 
@@ -126,14 +128,22 @@ class TransferSessionController:
                 raise TransferCancelled()
             if decision is not None:
                 if isinstance(decision, tuple) and decision and decision[0] == "rename":
-                    item.dst = str(decision[1])
-                    decision = "overwrite"
+                    if len(decision) != 2:
+                        raise ValueError("Invalid rename decision")
+                    candidate = destination_path(item.op, str(decision[1]))
+                    expected = destination_path(
+                        item.op, rename_destination(item.op, item.dst, candidate.name)
+                    )
+                    if candidate != expected or candidate == destination_path(item.op, item.dst):
+                        raise ValueError("Rename must select a new name in the destination directory")
+                    item.dst = str(candidate)
+                    decision = "rename"
                 if decision == "skip":
                     progress(1, 1)
                     return
                 if decision == "cancel":
                     raise TransferCancelled()
-                if decision not in {"overwrite", "resume"}:
+                if decision not in {"overwrite", "resume", "rename"}:
                     raise ValueError(f"unsupported conflict decision: {decision}")
         if self._run_item_accepts_decision:
             self._run_item_backend(item, progress, conflict_decision=decision)
