@@ -14,7 +14,6 @@ from hpc_gui.core.platform import current_os
 from hpc_gui.services.shortcut_preferences import active_binding
 from hpc_gui.ui.widgets.editor_document_actions import EditorDocumentActionsMixin
 from hpc_gui.ui.widgets.editor_linting import EditorLintingMixin
-from hpc_gui.ui.widgets.editor_templates import EditorTemplatesMixin
 from hpc_gui.ui.widgets.editor_remote_io import EditorRemoteIoMixin
 from hpc_gui.ui.widgets.editor_document_view import _EditorDocument
 
@@ -24,7 +23,6 @@ from hpc_gui.ui.widgets.editor_document_view import _EditorDocument
 class EditorWidget(
     EditorDocumentActionsMixin,
     EditorLintingMixin,
-    EditorTemplatesMixin,
     EditorRemoteIoMixin,
     QWidget,
 ):
@@ -42,16 +40,12 @@ class EditorWidget(
 
         self.btn_load = QPushButton(t("editor.open"))
         self.btn_save = QPushButton(t("editor.save"))
-        self.btn_new_template = QPushButton(
-            t("editor.new_from_template")
-        )
         self.btn_save_submit = QPushButton(t("editor.save_submit"))
         self.btn_save_run = QPushButton(t("editor.save_run"))
         self.btn_lint = QPushButton(t("editor.lint"))
 
         self.btn_load.clicked.connect(self.load_path)
         self.btn_save.clicked.connect(self.save_path)
-        self.btn_new_template.clicked.connect(self.new_from_template)
         self.btn_save_submit.clicked.connect(lambda: self.save_path(force_submit=True))
         self.btn_save_run.clicked.connect(lambda: self.save_path(run_in_terminal=True))
         self.btn_lint.clicked.connect(self.run_lint)
@@ -61,7 +55,6 @@ class EditorWidget(
         top.addWidget(self.lbl_remote)
         top.addWidget(self.path_in, 1)
         top.addWidget(self.btn_load)
-        top.addWidget(self.btn_new_template)
         top.addWidget(self.btn_lint)
         top.addWidget(self.btn_save)
         top.addWidget(self.btn_save_submit)
@@ -192,9 +185,6 @@ class EditorWidget(
     def retranslate_ui(self):
         self.lbl_remote.setText(t("editor.remote"))
         self.btn_load.setText(t("editor.open"))
-        self.btn_new_template.setText(
-            t("editor.new_from_template")
-        )
         self.btn_lint.setText(t("editor.lint"))
         self.btn_save.setText(t("editor.save"))
         self.btn_save_submit.setText(t("editor.save_submit"))
