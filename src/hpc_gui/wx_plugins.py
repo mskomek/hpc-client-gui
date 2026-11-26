@@ -123,6 +123,7 @@ class WxPluginManagerModel:
         self.registry_source = "offline"
         self.registry_entries: dict[str, dict[str, Any]] = {}
         self.other_versions: dict[str, tuple[str, ...]] = {}
+        self._registry_snapshot: dict | None = None
 
     def set_registry(self, entries: list[dict[str, Any]], source: str = "cache") -> None:
         self.registry_source = source if source in {"network", "cache", "offline"} else "offline"
@@ -154,6 +155,7 @@ class WxPluginManagerModel:
             str(item.get("id")): dict(item) for item in entries if item.get("id")
         }
         self.other_versions = {}
+        self._registry_snapshot = {"plugins": [dict(item) for item in entries]}
 
     def build_cards_from_registry(
         self,
@@ -171,6 +173,7 @@ class WxPluginManagerModel:
         """
         from hpc_gui.plugins.storage import read_active_versions, read_disabled_ids
 
+        self._registry_snapshot = registry
         effective_root = root if root is not None else self.root
         effective_app = app_version or self.app_version
         self.registry_source = source if source in {"network", "cache", "offline"} else "offline"
@@ -251,6 +254,35 @@ class WxPluginManagerModel:
         self.other_versions = others_by_id
         return self.cards
 
+    def reload_installed(self):
+        return self.build_cards_from_registry(self._registry_snapshot, self.registry_source)
+
+    def installed_versions(self, plugin_id):
+        from hpc_gui.plugins.installed_state import read_installed_state
+        from hpc_gui.services.plugin_manager_state import sort_versions_desc
+
+        record = read_installed_state(self.root).get(plugin_id, {})
+        return tuple(sort_versions_desc(record.get("versions", [])))
+
+    def details_for(self, card):
+        from hpc_gui.core.i18n import t
+        from hpc_gui.services.plugin_manager_state import details_lines
+
+        entry = self.registry_entry_for(card.plugin_id)
+        if entry is None:
+            entry = {"id": card.plugin_id, "name": card.name, "version": card.version,
+                     "description": card.description, "capabilities": list(card.capabilities)}
+        state = t("plugins.installed_not_installed")
+        if card.installed:
+            state = t("plugins.installed_active" if card.enabled else "plugins.installed_disabled")
+            if card.active_version:
+                state += f" ({card.active_version})"
+        lines = details_lines(entry, state, list(self.other_versions.get(card.plugin_id, ())))
+        if self.registry_entry_for(card.plugin_id) is None:
+            # No registry provenance for an installed-only record.
+            lines = [line for line in lines if not line.startswith(t("plugins.source_label") + ":")]
+        return "\n".join(lines)
+
     def filtered_cards(self, view: str = "discover", needle: str = "") -> tuple[PluginCard, ...]:
         """Distinct Browse/Manage/Updates states plus a truthful search filter."""
         normalized = str(view or "discover").strip().lower()
@@ -303,6 +335,8 @@ class WxPluginManagerModel:
         return self.default_installer(entry)
 
     def rollback(self, plugin_id: str, version: str) -> None:
+        if version not in self.installed_versions(plugin_id):
+            raise ValueError("The selected version is not installed.")
         activate_version(plugin_id, version, root=self.root)
 
     def set_enabled(self, plugin_id: str, enabled: bool) -> None:
