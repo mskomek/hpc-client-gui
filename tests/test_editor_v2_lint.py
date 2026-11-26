@@ -1,24 +1,12 @@
-"""Wave 73: EditorWidget hybrid lint (v1 packs + v2 tool)."""
+"""Shared hybrid lint (v1 packs + v2 tool), no GUI toolkit required."""
 
 from __future__ import annotations
 
-import os
 import types
 
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-
-@pytest.fixture
-def qapp():
-    from PySide6.QtWidgets import QApplication
-
-    app = QApplication.instance() or QApplication([])
-    from hpc_gui.core.i18n import load_language
-
-    load_language("en")
-    yield app
 
 
 def _fake_engine_diag(code="FLUENT_X", line=2):
@@ -90,14 +78,13 @@ def _stub_v2_multi(monkeypatch, tool_diags: list[tuple]):
 
 
 @pytest.mark.unit
-@pytest.mark.qt
-def test_run_v2_tool_lint_maps_engine_diag(qapp, monkeypatch):
-    from hpc_gui.ui.widgets.editor_widget import EditorWidget
+def test_run_v2_tool_lint_maps_engine_diag(monkeypatch):
+    from hpc_gui.services.editor_lint import EditorLintPipeline
 
     diag = _fake_engine_diag(code="FLUENT_GUI_IN_HEADLESS", line=5)
     _stub_v2(monkeypatch, [diag], suffix=".jou")
 
-    w = EditorWidget()
+    w = EditorLintPipeline()
     converted = w._run_v2_tool_lint("job.jou", "/display/set\n")
 
     assert len(converted) == 1
@@ -108,20 +95,18 @@ def test_run_v2_tool_lint_maps_engine_diag(qapp, monkeypatch):
 
 
 @pytest.mark.unit
-@pytest.mark.qt
-def test_run_v2_tool_lint_unsupported_suffix_returns_empty(qapp, monkeypatch):
-    from hpc_gui.ui.widgets.editor_widget import EditorWidget
+def test_run_v2_tool_lint_unsupported_suffix_returns_empty(monkeypatch):
+    from hpc_gui.services.editor_lint import EditorLintPipeline
 
     _stub_v2(monkeypatch, [_fake_engine_diag()], suffix=".jou")
 
-    w = EditorWidget()
+    w = EditorLintPipeline()
     assert w._run_v2_tool_lint("notes.xyz", "hello") == []
 
 
 @pytest.mark.unit
-@pytest.mark.qt
-def test_run_v2_tool_lint_broken_engine_is_contained(qapp, monkeypatch):
-    from hpc_gui.ui.widgets.editor_widget import EditorWidget
+def test_run_v2_tool_lint_broken_engine_is_contained(monkeypatch):
+    from hpc_gui.services.editor_lint import EditorLintPipeline
     from hpc_gui.plugins.linter_tools import LinterTool
 
     tool = LinterTool(
@@ -145,54 +130,41 @@ def test_run_v2_tool_lint_broken_engine_is_contained(qapp, monkeypatch):
         lambda *a, **k: (_ for _ in ()).throw(RuntimeError("engine boom")),
     )
 
-    w = EditorWidget()
+    w = EditorLintPipeline()
     # Must not raise; must return empty so editor still shows v1 results.
     assert w._run_v2_tool_lint("job.jou", "text") == []
 
 
 @pytest.mark.integration
-@pytest.mark.qt
-def test_run_lint_merges_v2_with_v1(qapp, monkeypatch):
+def test_run_lint_merges_v2_with_v1(monkeypatch):
     from hpc_gui.lint.models import Diagnostic, Severity
-    from hpc_gui.ui.widgets.editor_widget import EditorWidget
+    from hpc_gui.services.editor_lint import EditorLintPipeline
 
     # Stub v1 packs to return one diagnostic.
     v1_diag = Diagnostic(
         rule_id="V1_RULE", severity=Severity.WARNING, message="v1", line=1
     )
     monkeypatch.setattr(
-        "hpc_gui.ui.widgets.editor_widget.EditorWidget._run_plugin_lint",
+        "hpc_gui.services.editor_lint.EditorLintPipeline._run_plugin_lint",
         lambda self, p, t: [v1_diag],
     )
     monkeypatch.setattr(
-        "hpc_gui.ui.widgets.editor_widget.EditorWidget._run_cross_checks",
+        "hpc_gui.services.editor_lint.EditorLintPipeline._run_cross_checks",
         lambda self, t: [],
     )
     diag = _fake_engine_diag(code="V2_RULE", line=2)
     _stub_v2(monkeypatch, [diag], suffix=".jou")
 
-    shown = {}
-
-    def fake_show(path, issues, diagnostics):
-        shown["diagnostics"] = list(diagnostics)
-
-    w = EditorWidget()
-    w.path_in.setText("job.jou")
-    w.text.setPlainText("/display/set\n")
-    monkeypatch.setattr(w, "_show_lint_results", fake_show)
-    # Avoid the QMessageBox path for lint_need_path / lint_ok
-    w.run_lint()
-
-    codes = [d.rule_id for d in shown["diagnostics"]]
+    _, diagnostics = EditorLintPipeline().collect("job.jou", "/display/set\n")
+    codes = [d.rule_id for d in diagnostics]
     assert "V1_RULE" in codes
     assert "V2_RULE" in codes
 
 
 @pytest.mark.unit
-@pytest.mark.qt
-def test_multi_tool_aggregation_and_prefix(qapp, monkeypatch):
+def test_multi_tool_aggregation_and_prefix(monkeypatch):
     from hpc_gui.plugins.linter_tools import LinterTool
-    from hpc_gui.ui.widgets.editor_widget import EditorWidget
+    from hpc_gui.services.editor_lint import EditorLintPipeline
 
     tool_a = LinterTool("org.a", "0.1.0", "A", "", lambda **k: None, "mod_a")
     tool_b = LinterTool("org.b", "0.1.0", "B", "", lambda **k: None, "mod_b")
@@ -200,7 +172,7 @@ def test_multi_tool_aggregation_and_prefix(qapp, monkeypatch):
     diag_b = _fake_engine_diag(code="CODE_B", line=1)
     _stub_v2_multi(monkeypatch, [(tool_a, [diag_a]), (tool_b, [diag_b])])
 
-    w = EditorWidget()
+    w = EditorLintPipeline()
     converted = w._run_v2_tool_lint("script.py", "x")
 
     assert [d.rule_id for d in converted] == ["CODE_B", "CODE_A"]  # sorted by line
@@ -209,17 +181,16 @@ def test_multi_tool_aggregation_and_prefix(qapp, monkeypatch):
 
 
 @pytest.mark.unit
-@pytest.mark.qt
-def test_multi_tool_dedup_same_diag(qapp, monkeypatch):
+def test_multi_tool_dedup_same_diag(monkeypatch):
     from hpc_gui.plugins.linter_tools import LinterTool
-    from hpc_gui.ui.widgets.editor_widget import EditorWidget
+    from hpc_gui.services.editor_lint import EditorLintPipeline
 
     tool_a = LinterTool("org.a", "0.1.0", "A", "", lambda **k: None, "mod_a")
     tool_b = LinterTool("org.b", "0.1.0", "B", "", lambda **k: None, "mod_b")
     diag = _fake_engine_diag(code="SAME", line=3)
     _stub_v2_multi(monkeypatch, [(tool_a, [diag]), (tool_b, [diag])])
 
-    w = EditorWidget()
+    w = EditorLintPipeline()
     converted = w._run_v2_tool_lint("script.py", "x")
 
     assert len(converted) == 1
@@ -227,10 +198,9 @@ def test_multi_tool_dedup_same_diag(qapp, monkeypatch):
 
 
 @pytest.mark.unit
-@pytest.mark.qt
-def test_multi_tool_broken_second_is_contained(qapp, monkeypatch):
+def test_multi_tool_broken_second_is_contained(monkeypatch):
     from hpc_gui.plugins.linter_tools import LinterTool
-    from hpc_gui.ui.widgets.editor_widget import EditorWidget
+    from hpc_gui.services.editor_lint import EditorLintPipeline
 
     tool_ok = LinterTool("org.ok", "0.1.0", "OK", "", lambda **k: None, "mod_ok")
     tool_broken = LinterTool("org.broken2", "0.1.0", "Broken", "", lambda **k: None, "mod_broken")
@@ -251,7 +221,7 @@ def test_multi_tool_broken_second_is_contained(qapp, monkeypatch):
         fake_for,
     )
 
-    w = EditorWidget()
+    w = EditorLintPipeline()
     converted = w._run_v2_tool_lint("script.py", "x")
 
     assert len(converted) == 1
@@ -283,3 +253,15 @@ def test_tools_supporting_all_suffixes_intersection(monkeypatch):
         "org.a"
     ]
     assert tools_supporting_all_suffixes([".jou", ".xyz"]) == []
+
+
+
+def test_plugin_scope_never_runs_other_engines(monkeypatch):
+    from hpc_gui.services.editor_lint import EditorLintPipeline
+    from hpc_gui.plugins.linter_tools import LinterTool
+
+    a = LinterTool("org.a", "1", "A", "", lambda **k: None, "a")
+    b = LinterTool("org.b", "1", "B", "", lambda **k: None, "b")
+    _stub_v2_multi(monkeypatch, [(a, [_fake_engine_diag("A")]), (b, [_fake_engine_diag("B")])])
+    assert [d.rule_id for d in EditorLintPipeline()._run_v2_tool_lint("job.jou", "text", plugin_id="org.a")] == ["A"]
+    assert EditorLintPipeline()._run_v2_tool_lint("job.jou", "text", plugin_id="missing") == []

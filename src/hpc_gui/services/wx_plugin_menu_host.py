@@ -16,9 +16,14 @@ class WxPluginMenuHost:
         self._editor = editor_page
 
     def run_editor_lint(self, plugin_id: str) -> bool:
-        # No verified wx lint pipeline – explicitly unsupported
-        logger.info("wx run_editor_lint not supported for %s", plugin_id)
-        return False
+        scoped = getattr(self._editor, "run_lint_for_plugin", None)
+        if not callable(scoped):
+            return False
+        try:
+            return bool(scoped(plugin_id))
+        except Exception as exc:
+            logger.warning("wx run_editor_lint failed: %s", exc, exc_info=exc)
+            return False
 
     def open_plugin_templates(self, plugin_id: str) -> bool:
         # Try to use wx editor's plugin-scoped template flow if it exists
@@ -38,8 +43,7 @@ class WxPluginMenuHost:
         scoped = getattr(ed, "new_from_template_for_plugin", None)
         if callable(scoped):
             try:
-                scoped(plugin_id)
-                return True
+                return bool(scoped(plugin_id))
             except Exception as exc:
                 logger.warning("wx open_plugin_templates failed: %s", exc, exc_info=exc)
                 return False

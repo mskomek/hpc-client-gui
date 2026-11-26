@@ -270,6 +270,8 @@ def update_header_enabled(ctx) -> None:
         cb = resolve_callback(model, action_factory, name, direct)
         if name == "on_new_template":
             btn.Enable(not state["in_flight"])
+        elif name == "on_lint":
+            btn.Enable(not state["in_flight"] and not state.get("lint_running") and not state.get("binary_refused"))
         elif cb is None:
             try:
                 btn.Disable()
@@ -319,19 +321,12 @@ def on_template_action(ctx) -> None:
 
 
 def on_lint_action(ctx) -> None:
-    from hpc_gui.core.i18n import t
-
-    try:
-        import wx  # noqa: F401
-    except ImportError as exc:
-        raise RuntimeError("wxPython is not installed") from exc
     model = ctx["model"]
     action_factory = ctx.get("action_factory")
     on_lint = ctx.get("on_lint")
     remote_path = ctx["remote_path"]
     editor = ctx["editor"]
     status = ctx["status"]
-    host = ctx["host"]
     cb = resolve_callback(model, action_factory, "on_lint", on_lint)
     if cb:
         try:
@@ -340,17 +335,9 @@ def on_lint_action(ctx) -> None:
         except Exception as err:
             status.SetLabel(str(err))
         return
-    hdr = remote_path.GetValue().strip()
-    if not hdr:
-        wx.MessageBox(
-            t("editor.lint_need_path"),
-            t("editor.lint_results_title"),
-            wx.OK | wx.ICON_INFORMATION,
-            host,
-        )
-        return
-    issues = collect_lint_issues(hdr, editor.GetValue())
-    show_lint_dialog(host, hdr, issues)
+    from hpc_gui.wx_editor_lint import run_editor_lint
+
+    run_editor_lint(ctx)
 
 
 __all__ = [

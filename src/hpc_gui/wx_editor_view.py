@@ -365,6 +365,13 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     host._wx_editor_state = state
     host._wx_editor_model = model
     host.new_from_template_for_plugin = open_plugin_templates
+
+    def run_plugin_lint(plugin_id):
+        from hpc_gui.wx_editor_lint import run_editor_lint
+
+        return run_editor_lint(ctx, plugin_id=plugin_id)
+
+    host.run_lint_for_plugin = run_plugin_lint
     host._wx_editor_load_document = load_document
     host._wx_editor_save_for_replacement = save_for_replacement
     host._wx_editor_close_tab = close_tab
