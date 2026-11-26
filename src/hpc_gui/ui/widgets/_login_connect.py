@@ -20,7 +20,8 @@ from hpc_gui.config.models import SSHConfig
 from hpc_gui.config.system_profile import normalize_system_settings
 from hpc_gui.core import history as _history
 from hpc_gui.core.i18n import t
-from hpc_gui.core.ui_errors import describe_connection_error, show_exception
+from hpc_gui.core.ui_errors import describe_connection_error
+from hpc_gui.ui._exception_dialog import show_exception
 from hpc_gui.services import files_mock as _files_mock
 from hpc_gui.services import slurm_mock as _slurm_mock
 from hpc_gui.ssh import client as _ssh_client

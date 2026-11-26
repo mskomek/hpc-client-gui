@@ -5,7 +5,7 @@ from hpc_gui.config.storage import (
     get_sbatch_follow_mode,
     set_last_seen_changelog_version,
 )
-from hpc_gui.core.ui_errors import show_exception
+from hpc_gui.ui._exception_dialog import show_exception
 from hpc_gui.services.changelog import chronological_changelog, load_changelog_text
 
 __all__ = [

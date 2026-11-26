@@ -6,7 +6,7 @@ from hpc_gui.config.storage import SBATCH_FOLLOW_MODE_OUTPUTS_TAB
 
 from hpc_gui.core.i18n import t
 
-from hpc_gui.core.ui_errors import show_exception
+from hpc_gui.ui._exception_dialog import show_exception
 
 from hpc_gui.core.history import append_event
 

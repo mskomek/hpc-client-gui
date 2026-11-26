@@ -39,7 +39,7 @@ from hpc_gui.config.storage import (
 )
 from hpc_gui.core.history import append_event
 from hpc_gui.core.i18n import t
-from hpc_gui.core.ui_errors import show_exception
+from hpc_gui.ui._exception_dialog import show_exception
 from hpc_gui.config.system_profile import format_remote_path, normalize_system_settings
 from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
 from hpc_gui.services.slurm_models import is_active_state, parse_scontrol, parse_squeue

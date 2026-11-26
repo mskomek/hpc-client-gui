@@ -31,7 +31,7 @@ LEGACY_EXPORTS = {
     "QDoubleSpinBox": ("PySide6.QtWidgets", "QDoubleSpinBox"),
     "t": ("hpc_gui.core.i18n", "t"),
     "describe_connection_error": ("hpc_gui.core.ui_errors", "describe_connection_error"),
-    "show_exception": ("hpc_gui.core.ui_errors", "show_exception"),
+    "show_exception": ("hpc_gui.ui._exception_dialog", "show_exception"),
     "merge_profile_patch": ("hpc_gui.config.storage", "merge_profile_patch"),
     "coerce_profile_transfer_parallelism": ("hpc_gui.config.storage", "coerce_profile_transfer_parallelism"),
     "coerce_profile_ssh_timeout": ("hpc_gui.config.storage", "coerce_profile_ssh_timeout"),

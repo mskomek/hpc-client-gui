@@ -20,7 +20,7 @@ import os
 from typing import List, Optional, Tuple
 
 from hpc_gui.core.i18n import t
-from hpc_gui.core.ui_errors import show_exception
+from hpc_gui.ui._exception_dialog import show_exception
 from hpc_gui.ui.widgets._remote_mutations import _PlannedOp, _UndoRecord
 
 
