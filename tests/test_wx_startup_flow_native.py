@@ -46,6 +46,8 @@ def pump_until(predicate, timeout=8):
     timer = None
     def check():
         nonlocal timer
+        app.ProcessPendingEvents()
+        loop.ProcessIdle()
         if predicate():
             loop.Exit(0)
         elif time.monotonic() >= deadline:
@@ -54,6 +56,7 @@ def pump_until(predicate, timeout=8):
             timer = wx.CallLater(20, check)
     with wx.EventLoopActivator(loop):
         timer = wx.CallLater(20, check)
+        loop.ProcessIdle()
         code = loop.Run()
     if timer is not None:
         timer.Stop()
@@ -68,8 +71,9 @@ assert 'SFTP backend: unavailable' in log
 assert 'Checking SFTP helper...' not in log
 assert splash._wx_splash_controls['brand_sub'].GetLabel() == t('splash.starting')
 load_language('tr')
+assert flow._cancelled and flow.timer is None
 splash.Destroy()
-pump_until(lambda: flow._cancelled)
+pump_until(lambda: not splash)
 
 entered, release, finished = threading.Event(), threading.Event(), threading.Event()
 def blocked_release(**kw):
@@ -87,7 +91,7 @@ other = start_startup_flow(app, second, lambda: late.append(True))
 try:
     pump_until(entered.is_set)
     second.Destroy()
-    pump_until(lambda: other._cancelled)
+    pump_until(lambda: other._cancelled and not second)
     release.set()
     pump_until(finished.is_set)
     for _ in range(20):

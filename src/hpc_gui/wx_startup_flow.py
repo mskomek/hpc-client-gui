@@ -29,13 +29,28 @@ class StartupFlow:
         self._helper_check = StartupUpdateState()
         self._helper_started_at = 0.0
         self._cancelled = False
+        self._splash_id = self.splash.GetId()
+        self.splash.Bind(wx.EVT_CLOSE, self._on_close)
         self.splash.Bind(wx.EVT_WINDOW_DESTROY, self._on_destroy)
         self._start_update_check()
 
+    def _on_close(self, event) -> None:
+        try:
+            if event.GetEventObject() is self.splash:
+                self.cancel()
+        finally:
+            event.Skip()
+
     def _on_destroy(self, event) -> None:
         try:
-            if event.GetWindow() is self.splash:
+            window = event.GetWindow()
+            if window is self.splash or (
+                isinstance(window, self.wx.TopLevelWindow)
+                and window.GetId() == self._splash_id
+            ):
                 self.cancel()
+        except (AttributeError, RuntimeError):
+            pass
         finally:
             event.Skip()
 
@@ -43,13 +58,24 @@ class StartupFlow:
         self._cancelled = True
         self.update_check.skip()
         self._helper_check.skip()
-        if self.timer is not None:
-            self.timer.Stop()
-            self.timer = None
+        timer, self.timer = self.timer, None
+        if timer is not None:
+            try:
+                timer.Stop()
+            except RuntimeError:
+                pass
 
     def _schedule(self, delay_ms: int, callback) -> None:
         def guarded():
-            if self._cancelled or self.splash._wx_splash_state.get("closed"):
+            if self._cancelled:
+                return
+            try:
+                alive = (bool(self.splash) and not self.splash.IsBeingDeleted()
+                         and not self.splash._wx_splash_state.get("closed"))
+            except (AttributeError, RuntimeError):
+                alive = False
+            if not alive:
+                self.cancel()
                 return
             callback()
 
@@ -212,7 +238,11 @@ class StartupFlow:
     def _show_ready(self) -> None:
         self.splash._wx_splash_set_progress(100, t("common.ready"))
         self.splash._wx_splash_append_log("Ready — starting offline...", "")
-        self._schedule(1800, self.on_complete)
+        def complete():
+            self.cancel()
+            self.on_complete()
+
+        self._schedule(1800, complete)
 
 
 def start_startup_flow(app, splash, on_complete) -> StartupFlow:

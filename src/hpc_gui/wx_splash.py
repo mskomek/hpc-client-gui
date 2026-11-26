@@ -417,13 +417,21 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
 
     dlg.Bind(wx.EVT_CLOSE, on_close)
 
+    splash_id = dlg.GetId()
+
     def on_destroy(evt):
         # Destroy() does not necessarily emit EVT_CLOSE. Release subscriptions
         # on the real top-level destroy event, not on child destruction.
-        if evt.GetWindow() is dlg:
-            on_close(evt)
-        else:
-            evt.Skip()
+        try:
+            window = evt.GetWindow()
+            if window is dlg or (
+                isinstance(window, wx.TopLevelWindow) and window.GetId() == splash_id
+            ):
+                on_close(evt)
+                return
+        except (AttributeError, RuntimeError):
+            pass
+        evt.Skip()
 
     dlg.Bind(wx.EVT_WINDOW_DESTROY, on_destroy)
 
