@@ -311,6 +311,20 @@ class WxPluginManagerModel:
     def remove(self, plugin_id: str) -> list[str]:
         return remove_plugin(plugin_id, root=self.root)
 
+    def resolve_trusted_tool(self, plugin_id: str, active_version: str):
+        """Resolve only a currently enabled, verified installed tool, never registry metadata."""
+        from hpc_gui.plugins.loader import load_installed_plugins
+        from hpc_gui.plugins.trusted_tools import is_approved_trusted_tool
+
+        loaded = load_installed_plugins(root=self.root, app_version=self.app_version)
+        for plugin in loaded.plugins:
+            manifest = plugin.manifest
+            if manifest.id == plugin_id and manifest.version == active_version:
+                if is_approved_trusted_tool(manifest):
+                    return plugin
+                break
+        raise PermissionError("The selected trusted tool is no longer active or approved.")
+
     def open_trusted_tool(self, manifest: dict[str, Any], opener: Callable[[dict[str, Any]], Any]) -> Any:
         from hpc_gui.plugins.trusted_tools import is_approved_trusted_tool
 

@@ -6,6 +6,7 @@ from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language
 from hpc_gui.wx_host import make_host
 from hpc_gui.wx_plugins import WxPluginManagerModel
 
+from ._wx_plugins_trusted import install_trusted_tool_controls
 from ._wx_plugins_view_shared import (
     _VIEW_IDS,
     _loading_label,
@@ -28,7 +29,6 @@ def _build_plugins(
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-
     model = model or WxPluginManagerModel(root=root, install=install, fetcher=fetcher)
     if install is not None and model.install is None:
         model.install = install
@@ -43,10 +43,8 @@ def _build_plugins(
     host, finish = make_host(parent, title=t("plugins.dialog_title"), size=(800, 600), embedded=embedded)
     panel = wx.Panel(host)
     root_sizer = wx.BoxSizer(wx.VERTICAL)
-
     title = wx.StaticText(panel, label=t("plugins.dialog_title"))
     title.SetFont(title.GetFont().Bold())
-
     search = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER)
     try:
         search.SetHint(t("plugins.search_placeholder"))
@@ -155,8 +153,10 @@ def _build_plugins(
             return None
         return visible[idx]
 
+    trusted_controls, refresh_trusted = install_trusted_tool_controls(wx, panel, host, root_sizer, btn_row, model, state, _selected_card)
     def _update_buttons():
         card = _selected_card()
+        refresh_trusted(card)
         if card is None:
             btn_install.Enable(False)
             try:
@@ -484,7 +484,7 @@ def _build_plugins(
         "install": btn_install,
         "disable": btn_disable,
         "remove": btn_remove,
-        "close": btn_close,
+        "close": btn_close, **trusted_controls,
     }
     host._wx_plugins_model = model
     host._wx_plugins_state = state
