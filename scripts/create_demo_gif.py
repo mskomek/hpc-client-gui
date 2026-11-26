@@ -1,19 +1,19 @@
-"""Capture the English product demo from the real application window.
+"""Capture the real wx application with isolated, offline demo backends.
 
-All cluster operations use the application's built-in mock session. The script
-never connects to SSH or uses saved user profiles.
+--check-connection captures the first three scenes; --verify-flow runs all
+operations without screen capture; --assemble rebuilds from existing frames.
+A visible desktop is required for image capture, never for a remote server.
 """
-
 from __future__ import annotations
 
 import os
-import shutil
 import sys
 import tempfile
+from threading import Event
+from unittest.mock import patch
 import time
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "docs" / "demo" / "hpc-client-gui-demo.gif"
@@ -22,6 +22,8 @@ sys.path.insert(0, str(ROOT / "src"))
 
 
 def _font(size: int):
+    from PIL import ImageFont
+
     for path in ("C:/Windows/Fonts/segoeui.ttf", "C:/Windows/Fonts/arial.ttf"):
         if Path(path).exists():
             return ImageFont.truetype(path, size)
@@ -32,7 +34,9 @@ def _caption(
     source: Path,
     title: str,
     subtitle: str,
-) -> Image.Image:
+):
+    from PIL import Image, ImageDraw
+
     image = Image.open(source).convert("RGB")
     image.thumbnail((1280, 650), Image.Resampling.LANCZOS)
     canvas = Image.new("RGB", (1280, 720), "#0b1220")
@@ -72,370 +76,306 @@ def _assemble_existing() -> int:
     return 0
 
 
-def _configure_demo_environment() -> tuple[Path, dict]:
-    home = Path(tempfile.gettempdir()) / "hpc-client-gui-demo" / "researcher"
-    shutil.rmtree(home.parent, ignore_errors=True)
-    home.mkdir(parents=True)
-    for variable in ("HOME", "USERPROFILE", "HOMEPATH"):
-        os.environ[variable] = str(home)
-    os.environ["HOMEDRIVE"] = home.drive or ""
-    os.environ["TRUBA_GUI_FTP_TEST_MODE"] = "1"
-    os.environ["HPC_GUI_LANGUAGE"] = "en"
-    # The real terminal widget is not part of this demo flow.  Disable its
-    # QtWebEngine helper in Windows/headless capture environments; the real
-    # MainWindow then uses its built-in console fallback.
-    os.environ["HPC_GUI_DISABLE_WEBENGINE"] = "1"
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    (home / ".truba_slurm_gui").mkdir()
-    profile = {
-        "name": "Test Cluster",
-        "host": "mock",
-        "port": 22,
-        "username": "researcher",
-        "key_path": "",
-        "host_key_policy": "accept-new",
-        "system": {"home_dir": "/arf/home", "scratch_dir": "/arf/scratch"},
-    }
-    return home, profile
+
+SCENES = ("splash", "profile", "connected", "selected", "uploading",
+          "uploaded", "edited", "jobs", "outputs")
+WORKDIR = "/arf/scratch/user"
+SCRIPT = "#!/bin/bash\n#SBATCH --job-name=demo_case\n#SBATCH --output=demo.out\n#SBATCH --error=demo.err\n#SBATCH --time=00:05:00\n\necho solve\n"
 
 
-def _real_window(app, profile):
-    from hpc_gui.core.i18n import load_language
-    from hpc_gui.ui import main_window
-    from hpc_gui.ui.widgets import login_widget
-
-    load_language("en")
-    login_widget.load_profiles = lambda: [dict(profile)]
-    window = main_window.MainWindow()
-    window._startup_changelog_timer.stop()
-    window._startup_update_timer.stop()
-    window.resize(1280, 720)
-    window.show()
-    app.processEvents()
-    return window
+def _click(wx, button):
+    event = wx.CommandEvent(wx.EVT_BUTTON.typeId, button.GetId())
+    event.SetEventObject(button)
+    button.GetEventHandler().ProcessEvent(event)
 
 
-def _capture(widget, name: str) -> Path:
-    path = FRAME_DIR / f"{name}.png"
-    widget.grab().save(str(path))
-    return path
-
-
-def _wait(app, milliseconds: int) -> None:
-    from PySide6.QtTest import QTest
-
-    QTest.qWait(milliseconds)
-    app.processEvents()
-
-
-def _find_item(tree, text: str):
-    for index in range(tree.topLevelItemCount()):
-        item = tree.topLevelItem(index)
-        if item.text(0) == text:
-            return item
-    raise RuntimeError(f"real widget item not found: {text}")
-
-
-def _select_local_items(ftp, names: tuple[str, ...]) -> None:
-    from PySide6.QtCore import Qt
-    from PySide6.QtTest import QTest
-
-    tree = ftp.local_panel.tree
-    tree.clearSelection()
-    for index, name in enumerate(names):
-        item = _find_item(tree, name)
-        point = tree.visualItemRect(item).center()
-        modifiers = Qt.KeyboardModifier.NoModifier if index == 0 else Qt.KeyboardModifier.ControlModifier
-        QTest.mouseClick(tree.viewport(), Qt.MouseButton.LeftButton, modifiers, point)
-
-
-def _capture_popup(window, name: str) -> Path | None:
-    from PySide6.QtGui import QPainter
-    from PySide6.QtWidgets import QApplication, QMenu
-
-    popup = next((w for w in QApplication.topLevelWidgets() if isinstance(w, QMenu) and w.isVisible()), None)
-    if popup is None:
-        return None
-    pixmap = window.grab()
-    painter = QPainter(pixmap)
-    top_left = popup.mapTo(window, popup.rect().topLeft())
-    painter.drawPixmap(top_left, popup.grab())
-    painter.end()
-    path = FRAME_DIR / f"{name}.png"
-    pixmap.save(str(path))
-    return path
-
-
-def _click_popup_action(window, fragment: str) -> None:
-    from PySide6.QtCore import QTimer
-    from PySide6.QtCore import Qt
-    from PySide6.QtTest import QTest
-    from PySide6.QtWidgets import QApplication, QMenu
-
-    popup = next((w for w in QApplication.topLevelWidgets() if isinstance(w, QMenu) and w.isVisible()), None)
-    if popup is None:
-        QTimer.singleShot(50, lambda: _click_popup_action(window, fragment))
+def _pump(wx, app, predicate, label, timeout=10):
+    if predicate():
         return
-    action = next((a for a in popup.actions() if fragment.lower() in a.text().lower()), None)
-    if action is None:
-        raise RuntimeError(f"real context menu action not found: {fragment}")
-    QTest.mouseClick(popup, Qt.MouseButton.LeftButton, pos=popup.actionGeometry(action).center())
+    loop = wx.GUIEventLoop()
+    deadline = time.monotonic() + timeout
+    timer = None
+
+    def poll():
+        nonlocal timer
+        if predicate():
+            loop.Exit(0)
+        elif time.monotonic() >= deadline:
+            loop.Exit(1)
+        else:
+            timer = wx.CallLater(25, poll)
+
+    with wx.EventLoopActivator(loop):
+        timer = wx.CallLater(25, poll)
+        code = loop.Run()
+    if timer is not None:
+        timer.Stop()
+    if code != 0 or not predicate():
+        raise RuntimeError(f"demo timed out: {label}")
 
 
-def _build_demo_session(window, workspace: Path):
+def _capture(wx, app, window, destination):
+    window.Raise()
+    window.Update()
+    app.ProcessPendingEvents()
+    wx.YieldIfNeeded()
+    rect = window.GetScreenRect()
+    if not window.IsShownOnScreen() or min(rect.width, rect.height) <= 0:
+        raise RuntimeError("demo capture requires a visible window on a desktop")
+    bitmap = wx.Bitmap(rect.width, rect.height)
+    target = wx.MemoryDC(bitmap)
+    try:
+        if not target.Blit(0, 0, rect.width, rect.height, wx.ScreenDC(), rect.x, rect.y):
+            raise RuntimeError("native screen capture failed")
+    finally:
+        target.SelectObject(wx.NullBitmap)
+    if not bitmap.SaveFile(str(destination), wx.BITMAP_TYPE_PNG):
+        raise RuntimeError(f"cannot save capture: {destination}")
+
+
+def _make_backends(release, entered):
     from hpc_gui.services.files_mock import MockFilesBackend
     from hpc_gui.services.slurm_mock import MockSlurmBackend
-    from hpc_gui.ui.widgets import remote_dir_panel
 
     class DemoFiles(MockFilesBackend):
         supports_parallel_transfers = False
-        # Keep the demo backend deterministic: the production transfer path
-        # falls back to direct mock uploads when a backend has no rename API.
-        rename = None
 
-        def upload(self, local_path: str, remote_path: str) -> None:
-            time.sleep(0.18)
+        def upload(self, local_path, remote_path, progress_cb=None):
+            entered.set()
+            if not release.wait(15):
+                raise TimeoutError("demo upload was not released")
             super().upload(local_path, remote_path)
+            if progress_cb is not None:
+                size = Path(local_path).stat().st_size
+                progress_cb(size, size)
 
     files = DemoFiles()
-    slurm = MockSlurmBackend()
-    session = dict(window.login._session)
-    session.update({"connected": True, "files": files, "slurm": slurm, "profile_name": "Test Cluster"})
-    remote_dir_panel.set_upload_preflight_confirmation_enabled(False)
-    remote_dir_panel.get_upload_preflight_confirmation_enabled = lambda: False
-    window.on_session_changed(session)
-    window.ftp.local_panel.set_dir(str(workspace))
-    return session, files
+
+    class DemoSlurm(MockSlurmBackend):
+        submitted = False
+
+        def sbatch(self, script_path):
+            if files.read_text(script_path) != SCRIPT.replace("demo_case", "demo_case_v2"):
+                raise RuntimeError("demo job was not saved before submission")
+            self.submitted = True
+            files.write_text(WORKDIR + "/demo.out", "[1/3] Loading case/\n[2/3] Solving\n[3/3] Complete\n")
+            files.write_text(WORKDIR + "/demo.err", "No errors\n")
+            return super().sbatch(script_path)
+
+        def squeue(self, user):
+            rows = super().squeue(user)
+            if self.submitted:
+                rows += f"12347 short demo_case_v2 {user} R 0:01 1 node001\n"
+            return rows
+
+        def scontrol_show_job(self, job_id):
+            if str(job_id) == "12347":
+                return (f"JobId=12347 JobName=demo_case_v2 JobState=RUNNING Partition=short "
+                        f"WorkDir={WORKDIR} Command={WORKDIR}/run.slurm "
+                        f"StdOut={WORKDIR}/demo.out StdErr={WORKDIR}/demo.err")
+            return super().scontrol_show_job(job_id)
+
+        def active_job_ids(self, user):
+            return super().active_job_ids(user) + ("12347\n" if self.submitted else "")
+
+        def job_state(self, job_id):
+            return "RUNNING\n" if str(job_id) == "12347" else super().job_state(job_id)
+
+    return files, DemoSlurm()
 
 
-def _make_local_workspace() -> Path:
-    workspace = Path(tempfile.gettempdir()) / "hpc-client-gui-demo" / "local"
-    shutil.rmtree(workspace, ignore_errors=True)
-    (workspace / "case").mkdir(parents=True)
-    (workspace / "mesh").mkdir()
-    (workspace / "run.slurm").write_text(
-        "#!/bin/bash\n#SBATCH --job-name=demo_case\n#SBATCH --output=logs/%x_%j.out\n#SBATCH --error=logs/%x_%j.err\n#SBATCH --time=00:05:00\n\npython solve.py\n",
-        encoding="utf-8",
-    )
-    return workspace
+def _select_rows(listing, names):
+    found = set()
+    for index in range(listing.GetItemCount()):
+        name = listing.GetItemText(index)
+        listing.Select(index, name in names)
+        if name in names:
+            found.add(name)
+    if found != set(names):
+        raise RuntimeError(f"demo file rows missing: {set(names) - found}")
+
+
+def _run_demo(workspace, emit, *, connection_only=False):
+    """Drive real wx controls. Only SSH/Slurm/files and terminal navigation are mocked."""
+    import wx
+    from hpc_gui.config.storage import upsert_profile
+    from hpc_gui.core.i18n import load_language
+    from hpc_gui.wx_splash import create_startup_splash
+    from hpc_gui.wx_shell_frame import create_shell_frame
+    from hpc_gui.wx_shell_files import _editor_session_key
+
+    load_language("en")
+    app = wx.App(False)
+    app.SetExitOnFrameDelete(False)
+    profile = {"name": "Test Cluster", "host": "mock.invalid", "port": 22,
+               "username": "user", "system": {"home_dir": "/arf/home/user", "scratch_dir": WORKDIR},
+               "file_manager": {"local_start_dir": str(workspace)}, "save_password": False}
+    upsert_profile(profile)
+    for name in ("case", "mesh"):
+        (workspace / name).mkdir()
+        (workspace / name / "input.txt").write_text(name, encoding="utf-8")
+    (workspace / "run.slurm").write_text(SCRIPT, encoding="utf-8")
+    release, entered = Event(), Event()
+    files, slurm = _make_backends(release, entered)
+    splash = create_startup_splash(pure_splash=True)
+    splash._wx_splash_set_status("Preparing offline demo workspace")
+    splash.Show()
+    emit(wx, app, splash, "splash")
+    splash.Destroy()
+    frame, lifecycle, state = create_shell_frame(app, tray_factory=lambda _frame: None,
+                                                 defer_terminal_webview=True)
+    frame.Show()
+    app.SetTopWindow(frame)
+    shell = frame._wx_shell_controls
+    book, pages = shell["notebook"], shell["pages"]
+
+    def select(key):
+        index = book.FindPage(pages[key]["page"])
+        if index < 0:
+            raise RuntimeError(f"missing demo page: {key}")
+        book.SetSelection(index)
+        app.ProcessPendingEvents()
+
+    try:
+        panel = pages["APP-CONNECT"]["page"]
+        controls = panel._wx_connection_controls
+        choices = controls["choices"]
+        if choices.FindString("Test Cluster") < 0:
+            raise RuntimeError("isolated demo profile not visible")
+        choices.SetStringSelection("Test Cluster")
+        event = wx.CommandEvent(wx.EVT_LISTBOX.typeId, choices.GetId())
+        event.SetEventObject(choices)
+        event.SetInt(choices.GetSelection())
+        choices.GetEventHandler().ProcessEvent(event)
+        panel._wx_connection_model._connect = lambda p: {
+            "connected": True, "profile": p, "profile_name": p["name"],
+            "files": files, "slurm": slurm, "ssh": None,
+        }
+        emit(wx, app, frame, "profile")
+        # Terminal isn't a demo scene. Avoid opening a native browser or
+        # contacting a transport while leaving the real connection path intact.
+        with patch("hpc_gui.wx_shell_events._select_embedded_page", return_value=True):
+            _click(wx, controls["connect"])
+            _pump(wx, app, lambda: state.get("connection_status") == "connected"
+                  and (state.get("session") or {}).get("files") is files, "mock connection")
+        select("APP-CONNECT")
+        emit(wx, app, frame, "connected")
+        if connection_only:
+            return
+
+        select("NAV-FILES")
+        local = pages["NAV-FILES"]["local"]
+        remote = pages["NAV-FILES"]["remote"]
+        local._wx_local_model.navigate(workspace)
+        local._wx_local_controls["path"].SetValue(str(workspace))
+        local._wx_local_refresh()
+        remote._wx_remote_controls["navigate"](WORKDIR)
+        remote._wx_remote_controls["load"]()
+        listing = local._wx_local_controls["listing"]
+        _pump(wx, app, lambda: listing.GetItemCount() >= 3, "local listing")
+        _select_rows(listing, ("case", "mesh", "run.slurm"))
+        emit(wx, app, frame, "selected")
+        _click(wx, pages["NAV-FILES"]["upload_selected"])
+        transfers = pages["NAV-FILES"]["transfers"]
+        _pump(wx, app, lambda: entered.is_set() and bool(transfers._wx_transfer_state["queue_map"]),
+              "upload queue")
+        emit(wx, app, frame, "uploading")
+        release.set()
+        _pump(wx, app, lambda: all(files.exists(WORKDIR + "/" + item)
+              for item in ("case/input.txt", "mesh/input.txt", "run.slurm"))
+              and not state.get("transfer_sessions"), "upload completion")
+        if transfers._wx_transfer_state["failed_map"]:
+            raise RuntimeError("demo transfer failed")
+        emit(wx, app, frame, "uploaded")
+
+        # Use the actual remote Edit action; it creates the real editor window.
+        remote._wx_remote_controls["load"]()
+        remote_listing = remote._wx_remote_controls["listing"]
+        _pump(wx, app, lambda: any(remote_listing.GetItemText(i) == "run.slurm"
+                                   for i in range(remote_listing.GetItemCount())), "remote listing")
+        remote._wx_remote_run_action("edit", [WORKDIR + "/run.slurm"], WORKDIR)
+        manager = state["editor_manager"]
+        _pump(wx, app, lambda: manager.primary_frame is not None, "remote editor")
+        editor = manager.primary_frame
+        editor_controls = editor._wx_editor_controls
+        editor_controls["editor"].SetValue(SCRIPT.replace("demo_case", "demo_case_v2"))
+        emit(wx, app, editor, "edited")
+        _click(wx, editor_controls["submit"])
+        _pump(wx, app, lambda: slurm.submitted and not editor._wx_editor_state["in_flight"],
+              "save and submit")
+        assert files.read_text(WORKDIR + "/run.slurm") == SCRIPT.replace("demo_case", "demo_case_v2")
+        assert _editor_session_key(state)
+        editor.Close()
+        select("NAV-JOBS")
+        jobs = pages["NAV-JOBS"]["page"]
+        job_controls = jobs._wx_jobs_controls
+        jobs._wx_jobs_refresh_jobs()
+        table = job_controls["jobs"]
+
+        def job_index():
+            return next((i for i in range(table.GetItemCount()) if table.GetItemText(i) == "12347"), -1)
+
+        _pump(wx, app, lambda: job_index() >= 0, "submitted job row")
+        table.Select(job_index())
+        event = wx.ListEvent(wx.EVT_LIST_ITEM_SELECTED.typeId, table.GetId())
+        event.SetIndex(job_index())
+        event.SetEventObject(table)
+        table.GetEventHandler().ProcessEvent(event)
+        emit(wx, app, frame, "jobs")
+        job_controls["notebook"].SetSelection(4)
+        jobs._wx_jobs_refresh_outputs()
+        _pump(wx, app, lambda: "Complete" in " ".join(
+            control.GetValue() for control in job_controls["output_channels"].values()),
+            "live mock stdout")
+        emit(wx, app, frame, "outputs")
+    finally:
+        release.set()
+        frame.Close()
+        loop = wx.GUIEventLoop()
+        with wx.EventLoopActivator(loop):
+            # Close callbacks are owned by the production shell.
+            app.ProcessPendingEvents()
+            loop.ProcessIdle()
+            app.ProcessPendingEvents()
+        del lifecycle
+
+
+def _capture_run(*, connection_only=False, verify_only=False):
+    """Never modify HOME or real saved profiles. Publish captures only after success."""
+    with tempfile.TemporaryDirectory(prefix="hpc-wx-demo-") as temporary:
+        root = Path(temporary)
+        workspace = root / "local"
+        workspace.mkdir()
+        staging = root / "captures"
+        staging.mkdir()
+        seen = []
+
+        def emit(wx, app, window, name):
+            seen.append(name)
+            if not verify_only:
+                _capture(wx, app, window, staging / (name + ".png"))
+
+        with patch.dict(os.environ, {"HPC_GUI_CONFIG_ROOT": str(root / "config"),
+                                    "HPC_GUI_LANGUAGE": "en"}):
+            import socket
+            def deny(*args, **kwargs):
+                raise AssertionError("demo attempted a real network connection")
+            with patch.object(socket, "create_connection", deny), patch.object(socket.socket, "connect", deny):
+                _run_demo(workspace, emit, connection_only=connection_only)
+        expected = SCENES[:3] if connection_only else SCENES
+        if tuple(seen) != expected:
+            raise RuntimeError(f"demo scenes incomplete: {seen}")
+        if not verify_only:
+            FRAME_DIR.mkdir(parents=True, exist_ok=True)
+            prefix = "validation-" if connection_only else "real-"
+            for name in seen:
+                (staging / (name + ".png")).replace(FRAME_DIR / (prefix + name + ".png"))
+        print("wx-demo-flow=PASS " + ",".join(seen), flush=True)
+    return 0 if connection_only or verify_only else _assemble_existing()
 
 
 def validate_connection() -> int:
-    """Open the real app and capture the three required connection frames."""
-    home, profile = _configure_demo_environment()
-    from PySide6.QtWidgets import QApplication
-    from PySide6.QtTest import QTest
-    from PySide6.QtCore import Qt
-    from hpc_gui.core.i18n import load_language
-    from hpc_gui.ui.splash_screen import StartupSplash
-
-    app = QApplication.instance() or QApplication([])
-    load_language("en")
-    FRAME_DIR.mkdir(parents=True, exist_ok=True)
-    splash = StartupSplash()
-    splash.set_status("Preparing demo workspace")
-    splash.show()
-    app.processEvents()
-    splash.grab().save(str(FRAME_DIR / "validation-splash.png"))
-    window = _real_window(app, profile)
-    splash.finish(window)
-    login = window.login
-    _capture(window, "validation-profile")
-    item = login.profiles_list.item(0)
-    if item is None or item.text() != "Test Cluster":
-        raise RuntimeError("real profile screen did not contain Test Cluster")
-    point = login.profiles_list.visualItemRect(item).center()
-    QTest.mouseClick(login.profiles_list.viewport(), Qt.MouseButton.LeftButton, pos=point)
-    app.processEvents()
-    QTest.mouseMove(login.profiles_list.viewport(), point)
-    QTest.mouseDClick(login.profiles_list.viewport(), Qt.MouseButton.LeftButton, pos=point, delay=120)
-    app.processEvents()
-    QTest.qWait(250)
-    _capture(window, "validation-connected")
-    if not login._session.get("connected"):
-        raise RuntimeError("real double-click did not produce a connected mock session")
-    print(f"created real connection validation frames in {FRAME_DIR}")
-    window.close()
-    app.processEvents()
-    shutil.rmtree(home.parent, ignore_errors=True)
-    return 0
-
-
-def _full_capture() -> int:
-    print("capture: setup", flush=True)
-    home, profile = _configure_demo_environment()
-    workspace = _make_local_workspace()
-    from PySide6.QtCore import QTimer, Qt
-    from PySide6.QtGui import QContextMenuEvent
-    from PySide6.QtTest import QTest
-    from PySide6.QtWidgets import QApplication, QMessageBox
-    from hpc_gui.core.i18n import load_language
-    from hpc_gui.ui.splash_screen import StartupSplash
-
-    app = QApplication.instance() or QApplication([])
-    load_language("en")
-    FRAME_DIR.mkdir(parents=True, exist_ok=True)
-    splash = StartupSplash()
-    splash.set_status("Preparing demo workspace")
-    splash.show()
-    app.processEvents()
-    print("capture: splash", flush=True)
-    paths = [(splash.grab(), "splash", "HPC Client GUI", "Starting the offline demo workspace", None)]
-    window = _real_window(app, profile)
-    splash.finish(window)
-    login = window.login
-    item = login.profiles_list.item(0)
-    point = login.profiles_list.visualItemRect(item).center()
-    QTest.mouseClick(login.profiles_list.viewport(), Qt.MouseButton.LeftButton, pos=point)
-    app.processEvents()
-    paths.append((window.grab(), "profile", "Connection", "Select Test Cluster", point))
-    QTest.mouseMove(login.profiles_list.viewport(), point)
-    QTest.mouseDClick(login.profiles_list.viewport(), Qt.MouseButton.LeftButton, pos=point, delay=120)
-    _wait(app, 250)
-    if not login._session.get("connected"):
-        raise RuntimeError("real double-click did not connect the mock session")
-    paths.append((window.grab(), "connected", "Connection", "Connected with the application's mock backend", point))
-    print("capture: connected", flush=True)
-    session, files = _build_demo_session(window, workspace)
-    print("capture: session injected", flush=True)
-    print("capture: ftp remote", window.ftp.active_remote_panel().current_dir, flush=True)
-
-    ftp_index = window.tabs.indexOf(window.ftp)
-    QTest.mouseClick(window.tabs.tabBar(), Qt.MouseButton.LeftButton, pos=window.tabs.tabBar().tabRect(ftp_index).center())
-    _wait(app, 350)
-    print("capture: files", flush=True)
-    _select_local_items(window.ftp, ("case", "mesh", "run.slurm"))
-    print("capture: selected", flush=True)
-    print("capture: selected paths", window.ftp.local_panel.selected_paths(), flush=True)
-    paths.append((window.grab(), "selected", "Files", "Select case/, mesh/, and run.slurm", window.ftp.local_panel.tree.visualItemRect(_find_item(window.ftp.local_panel.tree, "run.slurm")).center()))
-    print("capture: click upload", flush=True)
-    QTest.mouseClick(window.ftp.btn_upload, Qt.MouseButton.LeftButton)
-    print("capture: upload clicked", flush=True)
-    _wait(app, 180)
-    paths.append((window.grab(), "uploading", "Files", "Upload selected items", window.ftp.btn_upload.mapTo(window, window.ftp.btn_upload.rect().center())))
-    for _ in range(60):
-        if files.exists("/arf/scratch/run.slurm"):
-            break
-        _wait(app, 500)
-    else:
-        raise RuntimeError("real upload did not finish run.slurm within 30 seconds")
-    panel_debug = window.ftp.active_remote_panel()
-    for _ in range(60):
-        if not panel_debug._transfer_dialogs:
-            break
-        _wait(app, 500)
-    paths.append((window.grab(), "uploaded", "Files", "Transfer completed in the real transfer area", window.ftp.btn_upload.mapTo(window, window.ftp.btn_upload.rect().center())))
-    print("capture: backend", files.listdir("/arf/scratch"), flush=True)
-    print("capture: transfer counts", window.ftp.transfer_activity.completed_list.topLevelItemCount(), window.ftp.transfer_activity.failed_list.topLevelItemCount(), flush=True)
-    panel_debug = window.ftp.active_remote_panel()
-    print("capture: transfer state", len(panel_debug._planning_jobs), len(panel_debug._transfer_dialogs), flush=True)
-    print("capture: upload", flush=True)
-
-    dirs_index = window.tabs.indexOf(window.directories)
-    QTest.mouseClick(window.tabs.tabBar(), Qt.MouseButton.LeftButton, pos=window.tabs.tabBar().tabRect(dirs_index).center())
-    _wait(app, 2000)
-    print("capture: directories", flush=True)
-    view = window.directories.panel_scratch.views["all"]
-    window.directories.panel_scratch.set_dir(window.directories.panel_scratch.current_dir)
-    _wait(app, 1000)
-    print("capture: remote", window.directories.panel_scratch.current_dir, [view.topLevelItem(i).text(0) for i in range(view.topLevelItemCount())], flush=True)
-    run_item = _find_item(view, "run.slurm")
-    run_point = view.visualItemRect(run_item).center()
-    from PySide6.QtWidgets import QMenu
-
-    original_menu_exec = QMenu.exec
-
-    def demo_menu_exec(menu, position):
-        menu.popup(position)
-        app.processEvents()
-        path = _capture_popup(window, "context-menu")
-        if path is not None:
-            from PySide6.QtGui import QPixmap
-
-            paths.append((QPixmap(str(path)), "context-menu", "Directories", "Choose Edit from the real context menu", run_point))
-        action = next((candidate for candidate in menu.actions() if "edit" in candidate.text().lower()), None)
-        if action is None:
-            raise RuntimeError("real context menu Edit action not found")
-        # The menu itself is a real QMenu created by the application. On
-        # Windows, synthetic native-popup mouse events can hang when no
-        # desktop compositor is available; trigger the real QAction after the
-        # visible menu capture so the connected editor slot still runs.
-        action.trigger()
-        app.processEvents()
-        menu.close()
-        return action
-
-    QMenu.exec = demo_menu_exec
-    original_menu_exec_legacy = getattr(QMenu, "exec_", None)
-    if original_menu_exec_legacy is not None:
-        QMenu.exec_ = demo_menu_exec
-    try:
-        context_event = QContextMenuEvent(QContextMenuEvent.Reason.Mouse, run_point)
-        QApplication.sendEvent(view.viewport(), context_event)
-    finally:
-        QMenu.exec = original_menu_exec
-        if original_menu_exec_legacy is not None:
-            QMenu.exec_ = original_menu_exec_legacy
-    _wait(app, 600)
-    _wait(app, 500)
-    print("capture: editor", flush=True)
-
-    editor = window.editor
-    editor_widget = getattr(editor, "editor", None) or getattr(editor, "text", None)
-    if editor_widget is None:
-        raise RuntimeError("real editor text widget not found")
-    _wait(app, 500)
-    editor_widget.setFocus()
-    QTest.keyClick(editor_widget, Qt.Key.Key_A, Qt.KeyboardModifier.ControlModifier)
-    updated = "#!/bin/bash\n#SBATCH --job-name=demo_case_v2\n#SBATCH --output=logs/%x_%j.out\n#SBATCH --error=logs/%x_%j.err\n#SBATCH --time=00:05:00\n\npython solve.py\n"
-    QApplication.clipboard().setText(updated)
-    QTest.keyClick(editor_widget, Qt.Key.Key_V, Qt.KeyboardModifier.ControlModifier)
-    _wait(app, 150)
-    paths.append((window.grab(), "edited", "Edit Slurm job", "Change demo_case to demo_case_v2", editor_widget.mapTo(window, editor_widget.rect().center())))
-    submit_button = editor.btn_save_submit
-
-    def accept_submit_dialog() -> None:
-        dialog = QApplication.activeModalWidget()
-        if isinstance(dialog, QMessageBox):
-            paths.append((window.grab(), "submit-confirmation", "Submit job", "Confirm Save + Submit", dialog.mapTo(window, dialog.rect().center())))
-            button = next((b for b in dialog.buttons() if "submit" in b.text().lower() or "yes" in b.text().lower()), None)
-            if button is not None:
-                QTest.mouseClick(button, Qt.MouseButton.LeftButton)
-                return
-        QTimer.singleShot(100, accept_submit_dialog)
-
-    QTimer.singleShot(300, accept_submit_dialog)
-    QTest.mouseClick(submit_button, Qt.MouseButton.LeftButton)
-    _wait(app, 1600)
-    print("capture: submitted", flush=True)
-    job_id = "12347"
-    out = "/arf/scratch/logs/demo_case_v2_12347.out"
-    err = "/arf/scratch/logs/demo_case_v2_12347.err"
-    files.write_text(out, "[1/3] Loading case/\n[2/3] Solving on 1 node\n[3/3] Complete\nexit code: 0\n")
-    files.write_text(err, "")
-    jobs_index = window.tabs.indexOf(window.jobs_outputs)
-    QTest.mouseClick(window.tabs.tabBar(), Qt.MouseButton.LeftButton, pos=window.tabs.tabBar().tabRect(jobs_index).center())
-    window.on_script_submitted(job_id, "/arf/scratch/run.slurm")
-    _wait(app, 900)
-    paths.append((window.grab(), "jobs", "Jobs / Outputs", "Job 12347 is visible in the real job panel", window.jobs_outputs.meta_job_id.mapTo(window, window.jobs_outputs.meta_job_id.rect().center())))
-    window.jobs_outputs.section_tabs.setCurrentWidget(window.jobs_outputs.outputs_tab)
-    _wait(app, 900)
-    paths.append((window.grab(), "outputs", "Outputs", "Live stdout and stderr for job 12347", window.jobs_outputs.out_box.mapTo(window, window.jobs_outputs.out_box.rect().center())))
-    print("capture: outputs", flush=True)
-
-    frames = []
-    for pixmap, name, title, subtitle, point in paths:
-        raw = FRAME_DIR / f"real-{name}.png"
-        pixmap.save(str(raw))
-        frames.append(_caption(raw, title, subtitle))
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    durations = [4000, 4000, 4000, 4000, 4500, 4500, 4500, 4500, 4500, 4500, 4500]
-    frames[0].save(OUTPUT, save_all=True, append_images=frames[1:], duration=durations, loop=0, optimize=True)
-    print(f"created {OUTPUT.relative_to(ROOT)} ({OUTPUT.stat().st_size / 1024:.0f} KiB, {sum(durations) / 1000:.1f} seconds)")
-    window.close()
-    app.processEvents()
-    shutil.rmtree(home.parent, ignore_errors=True)
-    return 0
+    return _capture_run(connection_only=True)
 
 
 def main() -> int:
@@ -443,7 +383,7 @@ def main() -> int:
         return _assemble_existing()
     if "--check-connection" in sys.argv[1:]:
         return validate_connection()
-    return _full_capture()
+    return _capture_run(verify_only="--verify-flow" in sys.argv[1:])
 
 
 if __name__ == "__main__":
