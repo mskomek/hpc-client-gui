@@ -376,10 +376,21 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
         _errors = validate_submit_request(str(path or ""), None, provider_config=None)
         if _errors:
             raise RuntimeError("Submission validation failed: " + "; ".join(_errors))
+        try:
+            reader = getattr(_resolve_files(), "read_text", None)
+            script_text = reader(path) if callable(reader) else ""
+            if isinstance(script_text, (tuple, list)):
+                script_text = script_text[0] if script_text else ""
+        except Exception:
+            script_text = ""
         _output = slurm.sbatch(path)
         _status, _detail = submit_result_status(str(_output or ""))
         if _status != "SUCCESS":
             raise RuntimeError(f"Submission failed: {_detail}")
+        jobs_panel = session_state.get("_embedded_jobs_panel")
+        on_submitted = getattr(jobs_panel, "_wx_jobs_submission_completed", None)
+        if callable(on_submitted):
+            on_submitted(str(_output or ""), str(path), str(script_text or ""))
         return _output
 
     def _editor(path, content="", request_id=None):
