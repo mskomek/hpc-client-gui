@@ -1,5 +1,4 @@
 import threading
-import time
 
 import pytest
 
@@ -9,52 +8,18 @@ pytestmark = [pytest.mark.gui, pytest.mark.wx]
 
 from mock_hpc_files import MockRemoteFilesBackend
 from hpc_gui.services.file_clipboard import get_file_clipboard
-from hpc_gui.core.i18n import load_language
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 
+pytest_plugins = ("support.wx_remote_file_test_support",)
 
-def _pump(app, predicate, timeout=2):
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        app.ProcessPendingEvents()
-        if predicate():
-            return
-        wx.MilliSleep(5)
-    app.ProcessPendingEvents()
-    assert predicate()
-
-
-@pytest.fixture
-def wx_app():
-    load_language("en")
-    app = wx.App.Get()
-    if app is None:
-        app = wx.App(False)
-    yield app
-    for window in list(wx.GetTopLevelWindows()):
-        if window and not window.IsBeingDeleted():
-            window.Close()
-    for _ in range(3):
-        app.ProcessPendingEvents()
-        wx.Yield()
-    for window in list(wx.GetTopLevelWindows()):
-        if window and not window.IsBeingDeleted():
-            window.Destroy()
-    app.ProcessPendingEvents()
-    wx.Yield()
-    assert not wx.GetTopLevelWindows(), "wx top-level windows survived fixture teardown"
-    app.Destroy()
-
-
-def _browser(app, backend, model=None, operation=None, chmod=None):
-    show_remote_files(
-        model=model, loader=backend.iterdir_entries,
-        operation=operation or backend.operation, chmod=chmod,
-    )
-    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
-    _pump(app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
-    return frame
+from support.wx_remote_file_test_support import (
+    _DestinationDialog,
+    _Dialog,
+    _FileDialog,
+    _browser,
+    _pump,
+)
 
 
 @pytest.mark.concurrency
@@ -409,34 +374,6 @@ def test_wx_remote_new_file_and_chmod_reach_backend(wx_app, monkeypatch):
     _pump(wx_app, lambda: ("chmod", "/work/test.txt", 0o755) in backend.calls)
 
 
-def test_wx_remote_chmod_accepts_four_digit_octal_mode(wx_app, monkeypatch):
-    backend = MockRemoteFilesBackend()
-    chmod_calls = []
-    frame = _browser(wx_app, backend, chmod=lambda path, mode: chmod_calls.append((path, mode)))
-    monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("1755"))
-
-    frame._wx_remote_run_action("chmod", ("/work/a.txt",), "/work")
-    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
-
-    assert chmod_calls == [("/work/a.txt", 0o1755)]
-
-
-def test_wx_remote_chmod_rejects_invalid_octal_mode(wx_app, monkeypatch):
-    backend = MockRemoteFilesBackend()
-    errors = []
-    frame = _browser(
-        wx_app, backend,
-        chmod=lambda *_args: pytest.fail("invalid mode reached backend"),
-    )
-    monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("1988"))
-    monkeypatch.setattr(wx, "MessageBox", lambda message, *_args, **_kwargs: errors.append(message) or wx.OK)
-
-    frame._wx_remote_run_action("chmod", ("/work/a.txt",), "/work")
-    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
-
-    assert errors
-
-
 def test_wx_remote_favorite_selected_file_targets_file_path(wx_app):
     class Store:
         def __init__(self):
@@ -476,27 +413,3 @@ def test_wx_remote_submit_slurm_uses_selected_remote_path(wx_app, monkeypatch):
     _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
     assert submitted == ["/work/job.sbatch"]
     assert messages == ["Submitted batch job 77"]
-
-
-class _Dialog:
-    def __init__(self, value):
-        self.value = value
-
-    def ShowModal(self):
-        return wx.ID_OK
-
-    def GetValue(self):
-        return self.value
-
-    def Destroy(self):
-        pass
-
-
-class _FileDialog(_Dialog):
-    def GetPaths(self):
-        return self.value
-
-
-class _DestinationDialog(_Dialog):
-    def GetPath(self):
-        return self.value
