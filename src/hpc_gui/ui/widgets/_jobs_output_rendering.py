@@ -5,7 +5,7 @@ from PySide6.QtGui import QFontDatabase, QTextCursor
 from PySide6.QtWidgets import QTextEdit
 from shiboken6 import isValid
 
-from ._jobs_output_text import _OUTPUT_MAX_LINES, _bounded_output_text
+from hpc_gui.services.job_output_text import _OUTPUT_MAX_LINES, _bounded_output_text
 
 
 def _apply_terminal_output_style(widget: QTextEdit) -> None:

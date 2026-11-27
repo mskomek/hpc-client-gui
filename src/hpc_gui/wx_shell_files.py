@@ -4,12 +4,13 @@ from __future__ import annotations
 from pathlib import Path
 from pathlib import PurePosixPath
 from threading import Thread
-import os
-from hpc_gui.services.transfer_controller import TransferItem
 import shlex
 from hpc_gui.core.i18n import t
 from hpc_gui.wx_shell_terminal import _run_shell_in_terminal
 from hpc_gui.wx_shell_file_transfer import _start_file_transfers
+from hpc_gui.wx_shell_upload import prepare_upload
+from hpc_gui.wx_shell_download import prepare_download
+from hpc_gui.wx_shell_local_download import build_remote_download_callback
 
 
 def _editor_session_key(session_state):
@@ -143,7 +144,15 @@ def _editor_action_factory(session_state):
                 else:
                     ssh.send_shell_text(f"bash -- {shlex.quote(current.path)}\n")
 
+        profile_data = session.get("profile") or {}
+        provider_data = profile_data.get("provider_template")
+        provider_data = dict(provider_data) if isinstance(provider_data, dict) else {}
+        provider_data["account"] = profile_data.get("account") or provider_data.get("account", "")
         return {
+            "template_context": {"provider_template": provider_data,
+                                 "provider": str(provider_data.get("id") or provider_data.get("name") or ""),
+                                 "profile": str(session.get("profile_name") or profile_data.get("name") or ""),
+                                 "session_key": _editor_session_key(session_state)},
             "save_remote": save_remote if files else None,
             "target_exists": (lambda path: files.exists(path)) if files and callable(getattr(files, "exists", None)) else None,
             "on_submit": submit,
@@ -162,6 +171,31 @@ def _get_editor_manager(session_state, parent, lifecycle, *, save_remote=None, o
         manager = WxEditorWindowManager(parent, action_factory=action_factory, save_remote=save_remote, on_submit=on_submit, on_run=on_run, lifecycle=lifecycle)
         session_state["editor_manager"] = manager
     return manager
+
+
+def _file_lint_callback(session_state, lifecycle, *, remote):
+    from hpc_gui.wx_file_lint import start_file_lint
+
+    def lint_selection(owner, selection, *, tool_only=False, current=lambda: True):
+        session = session_state.get("session")
+        files = session.get("files") if session and remote else None
+        generation = session_state.get("generation")
+        if remote and files is None:
+            import wx
+
+            wx.MessageBox(t("common.no_connection"), t("ansyslint.title"), wx.OK | wx.ICON_WARNING, owner)
+            return False
+
+        def still_current():
+            if getattr(lifecycle, "shutdown_started", False) or not current():
+                return False
+            return (not remote or (session_state.get("session") is session
+                    and session.get("files") is files and session_state.get("generation") == generation))
+
+        return start_file_lint(owner, selection, files=files, tool_only=tool_only,
+                               current=still_current, lifecycle=lifecycle)
+
+    return lint_selection
 
 
 def _local_files_callbacks(session_state, parent, lifecycle):
@@ -231,47 +265,13 @@ def _local_files_callbacks(session_state, parent, lifecycle):
             wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             return
 
+        generation = session_state.get("generation")
+        paths = tuple(paths)
+
         def worker():
             try:
-                items = []
-                seen = set()
-                for local_path in paths:
-                    source = os.path.abspath(str(local_path))
-                    if source in seen:
-                        continue
-                    seen.add(source)
-                    name = os.path.basename(source.rstrip(os.sep))
-                    remote_base = str(PurePosixPath(remote_dir) / name)
-                    if not os.path.isdir(source):
-                        items.append(TransferItem("upload", source, remote_base))
-                        continue
-                    items.append(TransferItem("mkdir_remote", "", remote_base))
-
-                    def raise_walk_error(error):
-                        raise error
-
-                    for root, directories, filenames in os.walk(source, onerror=raise_walk_error):
-                        directories.sort()
-                        filenames.sort()
-                        relative = os.path.relpath(root, source)
-                        remote_root = (
-                            str(PurePosixPath(remote_base) / relative.replace(os.sep, "/"))
-                            if relative != "."
-                            else remote_base
-                        )
-                        for directory in directories:
-                            items.append(TransferItem(
-                                "mkdir_remote", "", str(PurePosixPath(remote_root) / directory)
-                            ))
-                        for filename in filenames:
-                            items.append(TransferItem(
-                                "upload",
-                                os.path.join(root, filename),
-                                str(PurePosixPath(remote_root) / filename),
-                            ))
-                if not items:
-                    return
-                _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
+                prepare_upload(session_state, lifecycle, parent, session, files, paths,
+                               remote_dir, _start_file_transfers, generation=generation)
             except Exception as error:
                 import wx
 
@@ -279,10 +279,16 @@ def _local_files_callbacks(session_state, parent, lifecycle):
 
         Thread(target=worker, daemon=True).start()
 
+    download_remote = build_remote_download_callback(
+        session_state, parent, lifecycle
+    )
+
     return {
         "open_editor": lambda path: open_local(path),
         "open_editor_new_window": lambda path: open_local(path, True),
         "upload": upload_local,
+        "download_remote": download_remote,
+        "lint_selection": _file_lint_callback(session_state, lifecycle, remote=False),
         "run_shell": lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
     }
 
@@ -318,7 +324,9 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
             return True
 
     def remote_operation(action, paths, destination=""):
-        files = _resolve_files()
+        session = _resolve_session()
+        files = session.get("files")
+        generation = session_state.get("generation")
         if action == "delete" and files:
             for remote_path in paths:
                 files.remove(remote_path, recursive=True)
@@ -332,12 +340,12 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
                 (files.copy if action == "copy" else files.move)(remote_path, target)
             return
         if action == "download" and files and destination:
-            items = [TransferItem("download", remote_path, str(Path(destination) / PurePosixPath(remote_path).name)) for remote_path in paths]
-            _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
+            prepare_download(session_state, lifecycle, parent, session, files, paths,
+                             destination, _start_file_transfers, generation=generation)
             return
         if action == "upload" and files and destination:
-            items = [TransferItem("upload", local_path, str(PurePosixPath(destination) / Path(local_path).name)) for local_path in paths]
-            _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
+            prepare_upload(session_state, lifecycle, parent, session, files, paths,
+                           destination, _start_file_transfers, generation=generation)
             return
         if action == "new_folder" and files and destination:
             files.mkdir(destination)
@@ -368,10 +376,21 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
         _errors = validate_submit_request(str(path or ""), None, provider_config=None)
         if _errors:
             raise RuntimeError("Submission validation failed: " + "; ".join(_errors))
+        try:
+            reader = getattr(_resolve_files(), "read_text", None)
+            script_text = reader(path) if callable(reader) else ""
+            if isinstance(script_text, (tuple, list)):
+                script_text = script_text[0] if script_text else ""
+        except Exception:
+            script_text = ""
         _output = slurm.sbatch(path)
         _status, _detail = submit_result_status(str(_output or ""))
         if _status != "SUCCESS":
             raise RuntimeError(f"Submission failed: {_detail}")
+        jobs_panel = session_state.get("_embedded_jobs_panel")
+        on_submitted = getattr(jobs_panel, "_wx_jobs_submission_completed", None)
+        if callable(on_submitted):
+            on_submitted(str(_output or ""), str(path), str(script_text or ""))
         return _output
 
     def _editor(path, content="", request_id=None):
@@ -455,6 +474,7 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
 
     return {
         "loader": loader,
+        "lint_selection": _file_lint_callback(session_state, lifecycle, remote=True),
         "read_text": read_text,
         "operation": remote_operation,
         "open_editor": _editor,

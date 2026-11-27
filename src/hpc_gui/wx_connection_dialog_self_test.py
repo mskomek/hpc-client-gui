@@ -198,6 +198,18 @@ class ConnectionDialogSelfTestMixin:
         # Ensure we do not accidentally persist secret fields – they were already popped
         for sk in ("password_dpapi", "password_enc", "password_salt", "password_keychain_ref"):
             transient.pop(sk, None)
+        # Capture the provider context before the worker starts. Later edits
+        # must not relabel observations from an earlier cluster test.
+        provider = transient.get("provider_template")
+        if provider is None:
+            provider = self._provider_template
+        from copy import deepcopy
+
+        provider = deepcopy(provider)
+        self._self_test_context = {
+            "provider": provider, "project": str(transient.get("project", "")),
+            "account": str(transient.get("account", "")),
+        }
         self.btn_test_cluster.Enable(False)
         self.btn_test_cluster.SetLabel(t("connection.cluster_test_running"))
 
@@ -209,7 +221,7 @@ class ConnectionDialogSelfTestMixin:
                 info = ssh_info_from_profile(transient, WxConnectionModel())
                 result = run_cluster_self_test(
                     info,
-                    provider=self._provider_template,
+                    provider=provider,
                     project=str(transient.get("project", "")),
                     account=str(transient.get("account", "")),
                 )
@@ -226,7 +238,17 @@ class ConnectionDialogSelfTestMixin:
         import threading
 
         threading.Thread(target=worker, daemon=True).start()
+    def _self_test_owner_alive(self) -> bool:
+        if getattr(self, "_destroyed", False):
+            return False
+        try:
+            return not self.dlg.IsBeingDeleted()
+        except RuntimeError:
+            return False
+
     def _show_self_test_error(self, error_type: str) -> None:
+        if not self._self_test_owner_alive():
+            return
         self.btn_test_cluster.Enable(True)
         self.btn_test_cluster.SetLabel(t("connection.test_cluster"))
         self._wx.MessageBox(
@@ -235,28 +257,19 @@ class ConnectionDialogSelfTestMixin:
             self._wx.OK | self._wx.ICON_ERROR,
         )
     def _show_self_test_result(self, result) -> None:
+        if not self._self_test_owner_alive():
+            return
         wx = self._wx
+        from hpc_gui.wx_cluster_self_test_result import create_self_test_result_dialog, RUN_AGAIN_ID
+
         self.btn_test_cluster.Enable(True)
         self.btn_test_cluster.SetLabel(t("connection.test_cluster"))
-        dlg = wx.Dialog(self.dlg, title=t("cluster_self_test.title"), style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
-        dlg.SetMinSize(wx.Size(500, 400))
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        # Summary
-        status_label = wx.StaticText(dlg, label=t("cluster_self_test.summary").format(status=result.status))
-        status_label.Wrap(480)
-        sizer.Add(status_label, 0, wx.EXPAND | wx.ALL, 12)
-        # Sections
-        text = wx.TextCtrl(dlg, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
-        lines = []
-        for sec in getattr(result, "sections", []):
-            lines.append(f"[{sec.id}]")
-            for item in sec.items:
-                lines.append(f"  {item.id}: {item.status} {item.detail}")
-        text.SetValue("\n".join(lines))
-        sizer.Add(text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
-        btns = dlg.CreateStdDialogButtonSizer(wx.OK)
-        sizer.Add(btns, 0, wx.EXPAND | wx.ALL, 12)
-        dlg.SetSizer(sizer)
-        dlg.Fit()
-        dlg.ShowModal()
-        dlg.Destroy()
+        dialog = create_self_test_result_dialog(
+            self.dlg, result, **getattr(self, "_self_test_context", {})
+        )
+        try:
+            action = dialog.ShowModal()
+        finally:
+            dialog.Destroy()
+        if action == RUN_AGAIN_ID and self._self_test_owner_alive():
+            wx.CallAfter(self._test_cluster)

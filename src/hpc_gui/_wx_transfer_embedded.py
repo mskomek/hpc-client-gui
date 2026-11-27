@@ -6,12 +6,16 @@ from typing import Any
 
 from hpc_gui._wx_transfer_common import (
     add_row,
+    progress_text,
+    reset_progress,
+    priority_label,
     find_row,
     is_safe,
     update_button_state,
     update_tab_counts,
 )
 from hpc_gui.core.i18n import t
+from hpc_gui.services.transfer_controller import COMPLETED_HISTORY_LIMIT
 
 
 def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
@@ -31,6 +35,8 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
             return
         try:
             iid = id(item)
+            if event in {"started", "completed", "failed", "removed"}:
+                reset_progress(state, item)
             if event in ("queued", "started"):
                 for _map_name, _list in (("failed_map", failed_list), ("completed_map", completed_list)):
                     if iid in state[_map_name]:
@@ -42,12 +48,46 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                             except Exception:
                                 pass
                 try:
-                    status.SetLabel(t("transfer.active_item").format(item=item.label()))
+                    if event == "started":
+                        status.SetLabel(t("transfer.active_item").format(item=item.label()))
                 except Exception:
                     status.SetLabel(t("transfer.no_active_transfer"))
                 if iid not in state["queue_map"]:
                     state["queue_map"][iid] = item
-                    add_row(state, queue_list, item, "Queued", "")
+                    add_row(state, queue_list, item, t("transfer.queue_tab"), "")
+                if event == "started":
+                    row = find_row(state, queue_list, iid)
+                    if row != -1:
+                        queue_list.SetItem(row, 6, t("transfer.active_item").format(item=item.label()))
+            elif event == "priority":
+                row = find_row(state, queue_list, iid)
+                if row != -1:
+                    queue_list.SetItem(row, 5, priority_label(item))
+                engine = getattr(state.get("controller"), "engine", None)
+                pending = getattr(engine, "pending", ())
+                tokens = [state["row_token"].get(id(it)) for it in pending]
+                ranks = {token: i for i, token in enumerate(tokens) if token is not None}
+
+                def rank(token):
+                    return (1, ranks[token]) if token in ranks else (0, token)
+
+                queue_list.SortItems(lambda a, b: (rank(a) > rank(b)) - (rank(a) < rank(b)))
+            elif event in ("forgotten_failed", "forgotten_completed"):
+                mapping, listing = (
+                    ("failed_map", failed_list) if event == "forgotten_failed"
+                    else ("completed_map", completed_list)
+                )
+                state[mapping].pop(iid, None)
+                row = find_row(state, listing, iid)
+                if row != -1:
+                    listing.DeleteItem(row)
+                state["row_token"].pop(iid, None)
+            elif event == "removed":
+                state["queue_map"].pop(iid, None)
+                row = find_row(state, queue_list, iid)
+                if row != -1:
+                    queue_list.DeleteItem(row)
+                state["row_token"].pop(iid, None)
             elif event == "completed":
                 try:
                     status.SetLabel(t("transfer.completed_tab"))
@@ -62,7 +102,16 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                         pass
                 if iid not in state["completed_map"]:
                     state["completed_map"][iid] = item
-                    add_row(state, completed_list, item, "Successful", "")
+                    add_row(state, completed_list, item, t("transfer.completed_tab"), "")
+                    # Keep completed display history bounded across queue owners.
+                    # Failed and pending items remain available for retry/action.
+                    while len(state["completed_map"]) > COMPLETED_HISTORY_LIMIT:
+                        oldest = next(iter(state["completed_map"]))
+                        row = find_row(state, completed_list, oldest)
+                        if row != -1:
+                            completed_list.DeleteItem(row)
+                        state["completed_map"].pop(oldest)
+                        state["row_token"].pop(oldest, None)
             elif event == "failed":
                 try:
                     status.SetLabel(t("transfer.errors_tab"))
@@ -87,19 +136,19 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
         except RuntimeError:
             return
 
-    def update_progress(item, done, total):
+    def update_progress(item, done, total, *, now=None):
         if not is_safe(host, state, status):
             return
         try:
             iid = id(item)
             row = find_row(state, queue_list, iid)
             try:
-                label = t("transfer.progress_detail").format(item=item.label(), done=done, total=total, speed="", eta="")
+                label = progress_text(state, item, done, total, now=now)
             except Exception:
                 label = f"{done}/{total}"
             if row != -1:
                 try:
-                    queue_list.SetItem(row, 3, label)
+                    queue_list.SetItem(row, 4, label)
                 except RuntimeError:
                     pass
             try:
@@ -123,6 +172,8 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                     status.SetLabel(t("transfer.cancelled"))
                 else:
                     status.SetLabel(t("transfer.errors_tab"))
+            elif ctrl and ctrl.engine.stop_requested and ctrl.engine.pending:
+                status.SetLabel(t("transfer.stopped_after_current"))
             elif ctrl:
                 status.SetLabel(t("transfer.completed_tab"))
             try:
@@ -174,25 +225,24 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
             except RuntimeError:
                 pass
 
-    def do_clear_pending(_event=None):
+    def do_stop(_event=None):
+        engine = getattr(state.get("controller"), "engine", None)
+        if engine is not None and engine.running:
+            engine.stop_after_current()
+            update_button_state(host, state, controls, True)
+
+    def do_process_queue(_event=None):
         ctrl = state.get("controller")
-        for target in (ctrl, getattr(ctrl, "engine", None)):
-            if target is None:
-                continue
-            m = getattr(target, "clear_pending", None)
-            if callable(m):
-                try:
-                    m()
-                except Exception:
-                    pass
-                break
-        if is_safe(host, state, status):
-            try:
-                queue_list.DeleteAllItems()
-                state["queue_map"].clear()
-                update_button_state(host, state, controls, True)
-            except RuntimeError:
-                pass
+        engine = getattr(ctrl, "engine", None)
+        if engine is not None and not engine.running and engine.pending:
+            ctrl.start()
+            update_button_state(host, state, controls, True)
+
+    def do_clear_pending(_event=None):
+        engine = getattr(state.get("controller"), "engine", None)
+        if engine is not None:
+            engine.clear_pending()
+            update_button_state(host, state, controls, True)
 
     def do_retry_failed(_event=None):
         ctrl = state.get("controller")
@@ -218,6 +268,7 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                     pass
             return
         state["closed"] = True
+        reset_progress(state)
         try:
             from hpc_gui.core.i18n import unsubscribe_language_change as _unsub
 
@@ -291,6 +342,7 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
                         except Exception:
                             pass
             controls["stop"].SetLabel(t("transfer.stop"))
+            controls["process_queue"].SetLabel(t("transfer.process_queue"))
             controls["cancel"].SetLabel(t("transfer.cancel"))
             controls["clear_pending"].SetLabel(t("transfer.clear_pending"))
             controls["retry_failed"].SetLabel(t("transfer.retry_failed"))
@@ -299,7 +351,11 @@ def bind_embedded(host, state: dict[str, Any], controls: dict[str, Any]):
             return
 
     if wx is not None:
-        controls["stop"].Bind(wx.EVT_BUTTON, do_cancel)
+        from hpc_gui._wx_transfer_queue_menu import bind_transfer_menus
+
+        bind_transfer_menus(wx, host, state, controls)
+        controls["stop"].Bind(wx.EVT_BUTTON, do_stop)
+        controls["process_queue"].Bind(wx.EVT_BUTTON, do_process_queue)
         controls["cancel"].Bind(wx.EVT_BUTTON, do_cancel)
         controls["clear_pending"].Bind(wx.EVT_BUTTON, do_clear_pending)
         controls["retry_failed"].Bind(wx.EVT_BUTTON, do_retry_failed)

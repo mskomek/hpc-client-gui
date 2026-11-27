@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, codex/wx-native-close-integrated-20261121]
   workflow_dispatch:
 
 permissions:
@@ -32,8 +32,8 @@ jobs:
           python-version: "3.14"
       - name: Install architecture test runner
         run: python -m pip install "pytest>=7"
-      - name: Architecture gate regression tests
-        run: python -m pytest tests/test_source_architecture_gate.py -q
+      - name: Architecture and Qt removal gate regression tests
+        run: python -m pytest tests/test_source_architecture_gate.py tests/test_qt_removal_gate.py -q
       - name: Enforce global source size, dependencies, cycles and public APIs
         run: >-
           python scripts/check_source_architecture.py
@@ -118,6 +118,9 @@ jobs:
           tests/test_wx_application_native_exit_policy.py
           tests/test_wx_shortcut_preferences.py
           tests/test_wx_shell_sizing.py
+          tests/test_wx_shell_layout_migration.py
+          tests/test_transfer_gauge_range.py
+          tests/test_transfer_progress.py
           tests/test_wx_clipboard.py
           tests/test_ssh_files_error_contracts.py
           tests/test_ssh_files_text_mixin.py
@@ -125,6 +128,28 @@ jobs:
           tests/test_config_refactor_contracts.py
           tests/test_x11_server_discovery.py
           tests/test_x11_server_startup.py
+          tests/test_x11_runner_subprocess.py
+          tests/test_terminal_bridge.py
+          tests/test_ui_errors.py
+          tests/test_shared_ui_contracts.py
+          tests/test_remote_entry_format.py
+          tests/test_w44_arch_qt_wx_package.py
+          tests/test_startup_i18n.py
+          tests/test_wx_help.py
+          tests/test_cluster_self_test.py
+          tests/test_cluster_self_test_dialog.py
+          tests/test_wx_logs.py
+          tests/test_startup_changelog.py
+          tests/test_retired_startup_boundary.py
+          tests/test_startup_checks.py
+          tests/test_startup_update_state.py
+          tests/test_wx_startup_notices.py::test_startup_notices_persist_version_and_welcome_choice
+          tests/test_wx_startup_notices.py::test_failed_changelog_does_not_mark_version_seen
+          tests/test_performance_probe.py::PerformanceProbeTests::test_slow_event_loop_tick_is_recorded
+          tests/test_performance_probe.py::PerformanceProbeTests::test_fast_event_loop_tick_does_not_write_delay
+          tests/test_macos_product_surface.py::test_application_identity_uses_product_name
+          tests/test_linux_x11.py
+          tests/test_macos_x11.py
           tests/test_wx_webview_native_retry.py
           tests/test_wx_terminal_native_teardown_contracts.py
           -q --tb=short
@@ -134,3 +159,112 @@ jobs:
           python -m pytest
           tests/test_wx_terminal_webview_bridge.py::test_wx_terminal_close_releases_native_webview
           -q --tb=short
+
+      - name: Transfer concurrency and resource isolation (no Qt dependency)
+        run: >-
+          python -m pytest
+          tests/test_transfer_concurrency.py
+          tests/test_transfer_controller.py
+          tests/test_transfer_conflict_session_scope.py
+          tests/test_upload_plan.py
+          tests/test_slurm_arrays.py
+          tests/test_job_templates.py
+          tests/test_wx_editor_template_model.py
+          tests/test_editor_v2_lint.py
+          tests/test_lint_engine.py
+          tests/test_job_context.py
+          tests/test_ansys_tool_presentation.py
+          tests/test_file_lint.py
+          tests/test_linter_tools_v2.py
+          tests/test_plugin_management_state.py
+          tests/test_plugin_manager_ui.py
+          tests/test_plugin_entrypoint_errors.py
+          tests/test_menu_redesign.py
+          tests/test_plugin_manager_ui_catalog_discovery.py
+          tests/test_trusted_tool_disclosure.py
+          tests/test_wx_plugins.py
+          tests/test_download_plan.py
+          tests/test_wx_transfer_mode_execution.py
+          tests/test_transfer_wave17.py
+          tests/test_transfer_resume_identity.py
+          tests/test_transfer_cancel_recovery.py
+          tests/test_transfer_queue_priority.py
+          -q --tb=short
+      - name: Native wx transfer limit parity (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest tests/test_wx_transfer_parallel_hint.py -q --tb=short
+
+      - name: Native wx cancel and retry recovery (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest tests/test_wx_transfer_cancel_recovery_native.py tests/test_wx_transfer_queue_menu_native.py tests/test_wx_preflight_conflict_native.py -q --tb=short
+      - name: Headless updater and diagnostic regressions
+        run: >-
+          python -m pytest
+          tests/test_updater_helper.py
+          tests/test_app_updater.py
+          tests/test_linux_update_handoff.py
+          tests/test_debug_support_runtime.py
+          tests/test_crash_logging_filter.py
+          tests/test_wx_crash_reporting_runtime.py::test_headless_exception_hook_persists_without_gui_imports
+          -q --tb=short
+      - name: Native wx structural telemetry and connection diagnostics (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest
+          tests/test_wx_debug_telemetry_native.py
+          tests/test_debug_telemetry.py
+          tests/test_w15_fresh_user_startup.py::test_closed_port_connect_fails_visibly_without_connected_state
+          -q --tb=short
+      - name: Native wx offline demo workflow (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest tests/test_wx_demo_flow.py -q --tb=short
+      - name: Native wx startup flow and callback lifetime (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest tests/test_wx_startup_flow_native.py -q --tb=short
+      - name: Native wx startup notices (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest tests/test_wx_startup_notices.py::test_native_startup_dialogs_are_read_only_and_opt_out_is_persisted -q --tb=short
+      - name: Native wx quick tour and product icon (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest tests/test_wx_tour_icon_native.py tests/test_about_dialog.py tests/test_wx_help_send_logs_native.py tests/test_wx_cluster_self_test_result_native.py tests/test_wx_slurm_array_native.py tests/test_wx_template_browser_native.py tests/test_wx_lint_native.py tests/test_wx_ansys_native.py tests/test_wx_file_lint_native.py tests/test_wx_plugin_trusted_native.py tests/test_wx_plugin_management_native.py tests/test_wx_plugin_menu_guard_native.py tests/test_wx_plugin_catalog_native.py -q --tb=short
+      - name: Native wx performance recorder (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest tests/test_performance_probe.py::PerformanceProbeTests::test_wx_event_loop_block_is_detected -q --tb=short
+      - name: Native wx crash diagnostics (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest tests/test_wx_crash_reporting_runtime.py::test_wx_previous_and_live_crash_diagnostics -q --tb=short
+      - name: Native wx independent updater helper (Windows)
+        if: runner.os == 'Windows'
+        run: python -m pytest tests/test_wx_updater_helper_native.py -q --tb=short
+
+  qt-removal-readiness:
+    name: Strict Qt removal readiness (stacked migration)
+    if: github.event_name == 'pull_request' && github.base_ref == 'codex/wx-native-close-integrated-20261121'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact migration HEAD
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.14"
+      - name: Execute full tracked production Qt removal gate
+        run: python scripts/qt_removal_gate.py --output .tmp/qt-removal-gate.json
+      - name: Preserve gate evidence even on NO-GO
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: qt-removal-gate
+          path: .tmp/qt-removal-gate.json
+          if-no-files-found: error

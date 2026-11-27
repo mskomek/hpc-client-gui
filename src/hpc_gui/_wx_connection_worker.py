@@ -298,7 +298,12 @@ def run_connect_selected(host, model, get_selection: Callable[[], str], load_liv
                 except Exception:
                     status.SetLabel(msg)
                 return
-            wx.MessageBox(msg, t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            from hpc_gui.core.ui_errors import prepare_exception
+
+            title, diagnostic = prepare_exception(
+                title=t("login.err_title"), user_message=msg, area="SSH",
+            )
+            wx.MessageBox(diagnostic, title, wx.OK | wx.ICON_ERROR)
             if progress_view is not None:
                 progress_view.set_stage(msg)
         else:

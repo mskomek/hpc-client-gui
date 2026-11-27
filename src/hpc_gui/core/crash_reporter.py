@@ -63,25 +63,3 @@ def clear_crash_flag() -> None:
             p.unlink(missing_ok=True)
     except Exception:
         pass
-
-
-def show_crash_dialog(parent) -> None:
-    try:
-        from PySide6.QtCore import QTimer
-
-        from hpc_gui.ui.dialogs.send_logs_dialog import SendLogsDialog
-
-        def _show():
-            try:
-                flag = read_crash_flag()
-                dlg = SendLogsDialog(parent, crash_context=True, crash_summary=flag.get("summary", "") if flag else "")
-                dlg.setAttribute(getattr(dlg, "WA_DeleteOnClose", True))
-                dlg.show()
-                dlg.raise_()
-                dlg.activateWindow()
-            except Exception:
-                pass
-
-        QTimer.singleShot(300, _show)
-    except Exception:
-        pass

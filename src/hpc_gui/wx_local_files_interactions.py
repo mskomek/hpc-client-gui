@@ -8,6 +8,7 @@ from hpc_gui.wx_smart_file_open import open_local_file
 def install_interactions(view):
     active_tab_state = view.active_tab_state
     create_tab = view.create_tab
+    download_remote = view.download_remote
     host = view.host
     labels = view.labels
     model = view.model
@@ -105,8 +106,14 @@ def install_interactions(view):
         for action in actions:
             item = menu.Append(wx.ID_ANY, t(labels.get(action, "help.help_title")))
             listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action), item)
-        listing.PopupMenu(menu)
-        menu.Destroy()
+        from hpc_gui.wx_file_lint import append_file_lint_actions
+
+        append_file_lint_actions(menu, selection, view.lint_selection, host,
+                                 current=lambda: not view.state["closed"] and not tstate.get("closed"))
+        try:
+            listing.PopupMenu(menu)
+        finally:
+            menu.Destroy()
 
     def selected_entries() -> list[LocalEntry]:
         tstate = active_tab_state()
@@ -124,7 +131,27 @@ def install_interactions(view):
             return
         listing = tstate["listing"]
         if event.ControlDown() and event.GetKeyCode() in (ord("C"), ord("X"), ord("V")):
-            run_action({ord("C"): "copy", ord("X"): "cut", ord("V"): "paste"}[event.GetKeyCode()])
+            key = event.GetKeyCode()
+            if key == ord("V") and callable(download_remote):
+                from hpc_gui.services.file_clipboard import get_file_clipboard
+
+                remote_clip = get_file_clipboard().get()
+                if remote_clip and remote_clip.paths:
+                    dialog = wx.DirDialog(
+                        host,
+                        t("dirs.select_local_folder"),
+                        defaultPath=str(tstate["path"]),
+                        style=wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST,
+                    )
+                    try:
+                        if dialog.ShowModal() == wx.ID_OK:
+                            download_remote(
+                                tuple(remote_clip.paths), dialog.GetPath()
+                            )
+                    finally:
+                        dialog.Destroy()
+                    return
+            run_action({ord("C"): "copy", ord("X"): "cut", ord("V"): "paste"}[key])
             return
         if event.ControlDown() and event.GetKeyCode() == ord("A"):
             for index in range(listing.GetItemCount()):

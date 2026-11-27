@@ -17,6 +17,9 @@ class ConnectionDialogViewMixin:
             "duplicate": t("login.duplicate"),
         }.get(self.mode, t("connection.dialog_title"))
         self.dlg = wx.Dialog(parent, title=dlg_title, style=style)
+        from hpc_gui.wx_debug_telemetry import install_optional_window_telemetry
+
+        install_optional_window_telemetry(self.dlg)
         self.dlg.SetMinSize(wx.Size(720, 560))
         # Content scrolled window
         scrolled = wx.ScrolledWindow(self.dlg, style=wx.VSCROLL)

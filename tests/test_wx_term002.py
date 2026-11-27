@@ -113,19 +113,24 @@ def test_fallback_terminal_preserves_unicode_and_terminal_keys(monkeypatch):
     panel = build_terminal_panel(frame, model=TerminalModel(sent.append))
     input_ctrl = panel._wx_terminal_controls["input"]
 
-    def send(keycode, unicode_key, *, shift=False):
+    def send(keycode, unicode_key, *, shift=False, control=False):
         event = wx.KeyEvent(wx.wxEVT_CHAR)
         event.SetKeyCode(keycode)
         event.SetUnicodeKey(unicode_key)
         if shift:
             event.SetShiftDown(True)
+        if control:
+            event.SetControlDown(True)
         input_ctrl.ProcessEvent(event)
 
     try:
         send(ord("ç"), ord("ç"))
         send(wx.WXK_UP, wx.WXK_NONE)
+        send(wx.WXK_LEFT, wx.WXK_NONE)
+        send(wx.WXK_DELETE, wx.WXK_NONE)
         send(wx.WXK_TAB, wx.WXK_NONE, shift=True)
-        assert sent == ["ç", "\x1b[A", "\x1b[Z"]
+        send(ord("C"), ord("c"), control=True)
+        assert sent == ["ç", "\x1b[A", "\x1b[D", "\x1b[3~", "\x1b[Z", "\x03"]
     finally:
         frame.Destroy()
         app.ProcessPendingEvents()

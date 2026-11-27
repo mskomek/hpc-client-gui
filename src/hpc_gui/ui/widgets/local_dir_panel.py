@@ -6,7 +6,6 @@ LocalContextMenuMixin.
 
 - _local_tree owns the local tree control and comparison-column rendering.
 - _local_fs_ops owns clipboard, navigation, create/delete/rename, and open flows.
-- _local_lint_tools owns lint discovery, plugin menus, and ANSYS lint runs.
 - _local_context_menu owns local file action menus.
 
 The facade and leaves depend on service contracts, not remote panels, FTP, or
@@ -60,7 +59,6 @@ from hpc_gui.ui.widgets._local_context_menu import (
     LocalContextMenuMixin,
 )
 from hpc_gui.ui.widgets._local_fs_ops import LocalFsOpsMixin
-from hpc_gui.ui.widgets._local_lint_tools import LocalLintToolsMixin
 from hpc_gui.ui.widgets._local_tree import (
     _LocalTree as _LocalTree,  # noqa: F401 — legacy re-export
     _SORT_MTIME_ROLE as _SORT_MTIME_ROLE,  # noqa: F401 — legacy re-export
@@ -77,7 +75,7 @@ logger = logging.getLogger(__name__)
 
 
 class LocalDirPanel(
-    LocalComparisonMixin, LocalFsOpsMixin, LocalLintToolsMixin, LocalContextMenuMixin, QWidget
+    LocalComparisonMixin, LocalFsOpsMixin, LocalContextMenuMixin, QWidget
 ):
     remotePathsDropped = Signal(list, str)
     directoryChanged = Signal(str)
@@ -352,7 +350,6 @@ _enable_legacy_patch_targets(
         "QInputDialog": (("hpc_gui.ui.widgets._local_fs_ops", "QInputDialog"),),
         "QMessageBox": (
             ("hpc_gui.ui.widgets._local_fs_ops", "QMessageBox"),
-            ("hpc_gui.ui.widgets._local_lint_tools", "QMessageBox"),
         ),
         "QMenu": (("hpc_gui.ui.widgets._local_context_menu", "QMenu"),),
     },

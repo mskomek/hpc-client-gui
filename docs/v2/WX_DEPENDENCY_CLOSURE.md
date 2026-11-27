@@ -18,3 +18,13 @@ Strategy:
 - Windows/macOS CI can pip install wxPython directly (wheel).
 - Linux CI must either compile from sdist (apt-get install libgtk-3-dev libwebkit2gtk-4.1-dev libgstreamer...) or document as BLOCKED with build-deps.
 - Release packaging: Qt remains default; wx artifact uses same wx version.
+
+## 2026-11-25 status correction (source inspection)
+
+The table above is historical, not a new wheel availability check. At integration
+base `40706bf81481925328b5b1350ce8ce5fa43e98c9`, `pyproject.toml` declares
+wxPython in the main dependencies and PySide6 only in the `legacy-qt` extra;
+`src/hpc_gui/runtime.py` selects wx by default. The historical strategy above
+must not be read as the current installation contract. Remaining Qt source,
+legacy tests, plugin dependencies and packaged artifacts still require a complete
+scan and native platform evidence. This correction is not a Qt removal GO.

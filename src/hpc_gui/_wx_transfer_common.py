@@ -3,6 +3,32 @@
 from __future__ import annotations
 
 from hpc_gui.core.i18n import t
+from hpc_gui.services.transfer_progress import ProgressSamples
+
+
+def progress_text(state, item, done, total, *, now=None):
+    samples = state.setdefault("progress_samples", ProgressSamples())
+    return samples.detail(item, done, total, now=now)
+
+
+def reset_progress(state, item=None):
+    samples = state.get("progress_samples")
+    if samples is not None:
+        samples.reset(item)
+
+
+def gauge_range_value(done: int, total: int) -> tuple[int, int]:
+    """Map byte progress to a safe native signed-int gauge range.
+
+    Keep exact byte values for small files; scale larger transfers without
+    floating-point precision loss or reporting completion prematurely.
+    """
+    total = max(0, int(total))
+    done = min(total, max(0, int(done)))
+    if total <= 2**31 - 1:
+        return max(1, total), done
+    maximum = 10000
+    return maximum, done * maximum // total
 
 
 def post_to(state, callback, *args) -> None:
@@ -76,21 +102,35 @@ def update_button_state(host, state, controls, embedded: bool) -> None:
         return
     ctrl = state.get("controller")
     try:
+        hint = controls.get("parallel_hint")
+        if hint is not None:
+            configured = getattr(ctrl, "configured_parallel_limit", None)
+            effective = getattr(getattr(ctrl, "engine", None), "parallel_limit", None)
+            label = ""
+            if type(configured) is int and type(effective) is int:
+                if configured != effective:
+                    label = t("transfer.parallel_hint_pair").format(
+                        configured=configured, effective=effective,
+                        reason=t("transfer.parallel_reduced_backend"),
+                    )
+                else:
+                    label = t("transfer.parallel_hint_effective").format(
+                        configured=configured, effective=effective,
+                    )
+            hint.SetLabel(label)
+        engine = getattr(ctrl, "engine", None)
+        running = bool(getattr(engine, "running", False))
+        pending = bool(getattr(engine, "pending", ()))
+        stopping = bool(getattr(engine, "stop_requested", False))
+        cancelling = bool(getattr(engine, "cancel_requested", False))
         if embedded:
-            has_cancel = _has_cancel(ctrl)
-            has_clear = _has_clear(ctrl)
-            controls["stop"].Enable(has_cancel)
-            controls["cancel"].Enable(has_cancel)
-            controls["clear_pending"].Enable(has_clear)
+            controls["stop"].Enable(running and not stopping)
+            controls["cancel"].Enable(running and not cancelling and _has_cancel(ctrl))
+            controls["clear_pending"].Enable(pending and _has_clear(ctrl))
+            controls["process_queue"].Enable(pending and not running)
             controls["retry_failed"].Enable(_has_failed(ctrl))
         else:
-            if ctrl is None:
-                controls["cancel"].Disable()
-            else:
-                if _has_cancel(ctrl):
-                    controls["cancel"].Enable(True)
-                else:
-                    controls["cancel"].Disable()
+            controls["cancel"].Enable(running and not cancelling and _has_cancel(ctrl))
     except RuntimeError:
         pass
 
@@ -117,6 +157,13 @@ def find_row(state, lst, iid: int) -> int:
     return -1
 
 
+def priority_label(item) -> str:
+    from hpc_gui.services.transfer_controller import TRANSFER_PRIORITIES
+
+    value = getattr(item, "priority", "Normal")
+    return t(f"transfer.priority_{value.lower()}") if value in TRANSFER_PRIORITIES else str(value)
+
+
 def add_row(state, lst, item, status_text: str, progress_text: str) -> int:
     op = str(getattr(item, "op", "") or "")
     local, remote = str(getattr(item, "src", "")), str(getattr(item, "dst", ""))
@@ -126,9 +173,12 @@ def add_row(state, lst, item, status_text: str, progress_text: str) -> int:
     lst.InsertItem(idx, local)
     lst.SetItem(idx, 1, op)
     lst.SetItem(idx, 2, remote)
-    lst.SetItem(idx, 3, str(getattr(item, "size", "") or ""))
+    size = getattr(item, "cached_size", None)
+    if size is None:
+        size = getattr(item, "size", None)
+    lst.SetItem(idx, 3, "" if size is None else str(size))
     lst.SetItem(idx, 4, progress_text)
-    lst.SetItem(idx, 5, str(getattr(item, "priority", "") or ""))
+    lst.SetItem(idx, 5, priority_label(item))
     lst.SetItem(idx, 6, status_text)
     try:
         lst.SetItemData(idx, row_token(state, item))

@@ -48,14 +48,12 @@ def log_startup_snapshot() -> None:
     except Exception:
         loc_s = ""
 
-    try:
-        import PySide6
-
-        qt_v = getattr(PySide6.QtCore, "__version__", "") if hasattr(PySide6, "QtCore") else ""
-        pyside_v = getattr(PySide6, "__version__", "")
-    except Exception:
-        qt_v = ""
-        pyside_v = ""
+    # Diagnostics must not initialize a second native GUI toolkit. Report
+    # versions only for modules already loaded by the selected runtime.
+    qt_core = sys.modules.get("PySide6.QtCore")
+    qt_v = getattr(qt_core, "__version__", "")
+    pyside_v = getattr(sys.modules.get("PySide6"), "__version__", "")
+    wx_v = getattr(sys.modules.get("wx"), "__version__", "")
 
     log.info("=== App startup ===")
     log.info("app_version=%s", __version__)
@@ -66,6 +64,8 @@ def log_startup_snapshot() -> None:
     log.info("arch=%s", arch)
     if loc_s:
         log.info("locale=%s", loc_s)
+    if wx_v:
+        log.info("wxpython=%s", wx_v)
     if pyside_v:
         log.info("pyside6=%s", pyside_v)
     if qt_v:

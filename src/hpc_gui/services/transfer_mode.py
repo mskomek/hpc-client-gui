@@ -45,6 +45,9 @@ def _upload_remote(
     progress_cb=None,
     resume_identity=None,
     resume_registry=None,
+    *, allow_resume: bool = True, stage_remote: bool = True, verify_bytes=None,
+    require_valid_resume: bool = False, cleanup_legacy_metadata: bool = True,
+    atomic_overwrite: bool = False, no_replace: bool = False,
 ) -> None:
     """Upload to a server-side ``<remote>.part`` and rename once when the
     backend can rename; otherwise upload directly to the final name.
@@ -53,9 +56,19 @@ def _upload_remote(
     destination and still lets rename-capable backends resume against the
     same server-side partial on a retry.
     """
+    atomic_replace = getattr(files, "atomic_replace_upload", None)
+    if atomic_overwrite and callable(atomic_replace):
+        atomic_replace(local_path, remote_path, progress_cb=progress_cb, verify_bytes=verify_bytes)
+        return
     rename = getattr(files, "rename", None)
-    if not callable(rename):
+    if not stage_remote or not callable(rename):
+        if no_replace:
+            raise ValueError("Backend cannot stage a renamed upload")
+        if require_valid_resume:
+            raise ValueError("Backend cannot resume a staged upload")
         _upload_file(files, local_path, remote_path, progress_cb=progress_cb)
+        if verify_bytes is not None:
+            verify_bytes(local_path, remote_path)
         return
     temp_remote = remote_path + PARTIAL_SUFFIX
     meta_remote = temp_remote + ".meta"
@@ -75,14 +88,18 @@ def _upload_remote(
     try:
         # Remove sidecars created by older releases; resume identity now lives
         # in the encrypted application profile store.
-        try:
-            if files.exists(meta_remote):
-                files.remove(meta_remote)
-        except Exception:
-            pass
+        if cleanup_legacy_metadata:
+            try:
+                if files.exists(meta_remote):
+                    files.remove(meta_remote)
+            except Exception:
+                pass
         if files.exists(temp_remote):
+            if no_replace:
+                raise FileExistsError(temp_remote)
             resume = bool(
-                registry
+                allow_resume
+                and registry
                 and record
                 and record.get("identity") == identity
                 and record.get("partial_path") == temp_remote
@@ -95,16 +112,24 @@ def _upload_remote(
                 except Exception:
                     resume = False
             if not resume:
+                if require_valid_resume:
+                    raise ValueError("Upload partial identity does not match; choose Overwrite to restart")
                 files.remove(temp_remote)
+        elif require_valid_resume:
+            raise FileNotFoundError(temp_remote)
         if registry:
             try:
                 registry.save(key, identity, temp_remote, partial_size if resume else 0)
             except Exception:
+                if require_valid_resume:
+                    raise
                 registry = None
                 if resume:
                     files.remove(temp_remote)
                 resume = complete = False
     except (AttributeError, NotImplementedError):
+        if require_valid_resume:
+            raise
         registry = None
         resume = complete = False
     try:
@@ -121,6 +146,18 @@ def _upload_remote(
             except Exception:
                 pass
         raise
+    if verify_bytes is not None:
+        try:
+            verify_bytes(local_path, temp_remote)
+        except Exception:
+            if registry:
+                try:
+                    registry.remove(key)
+                except Exception:
+                    pass
+            raise
+    if no_replace and files.exists(remote_path):
+        raise FileExistsError(remote_path)
     rename(temp_remote, remote_path)
     if registry:
         try:
@@ -135,12 +172,12 @@ def _upload_file(files, local_path: str, remote_path: str, progress_cb=None, *, 
         method = files.upload
     try:
         signature = inspect.signature(method)
-        if "progress_cb" in signature.parameters:
-            method(local_path, remote_path, progress_cb=progress_cb)
-            return
     except (TypeError, ValueError):
-        pass
-    method(local_path, remote_path)
+        signature = None
+    if signature is not None and "progress_cb" in signature.parameters:
+        method(local_path, remote_path, progress_cb=progress_cb)
+    else:
+        method(local_path, remote_path)
 
 
 def upload_with_mode(
@@ -149,6 +186,9 @@ def upload_with_mode(
     remote_path: str,
     requested: str,
     progress_cb=None,
+    *, allow_resume: bool = True, stage_remote: bool = True, verify_bytes=None,
+    require_valid_resume: bool = False, cleanup_legacy_metadata: bool = True,
+    atomic_overwrite: bool = False, no_replace: bool = False,
 ) -> str:
     with open(local_path, "rb") as source:
         sample = source.read(CHUNK_SIZE)
@@ -173,6 +213,9 @@ def upload_with_mode(
             progress_cb=progress_cb,
             resume_identity=resume_identity,
             resume_registry=resume_registry,
+            allow_resume=allow_resume, stage_remote=stage_remote, verify_bytes=verify_bytes,
+            require_valid_resume=require_valid_resume, cleanup_legacy_metadata=cleanup_legacy_metadata,
+            atomic_overwrite=atomic_overwrite, no_replace=no_replace,
         )
         return effective
     # ASCII conversion streams the source so its line endings can be
@@ -190,6 +233,9 @@ def upload_with_mode(
             progress_cb=progress_cb,
             resume_identity=resume_identity,
             resume_registry=resume_registry,
+            allow_resume=allow_resume, stage_remote=stage_remote, verify_bytes=verify_bytes,
+            require_valid_resume=require_valid_resume, cleanup_legacy_metadata=cleanup_legacy_metadata,
+            atomic_overwrite=atomic_overwrite, no_replace=no_replace,
         )
     finally:
         if temp_path:
@@ -206,12 +252,22 @@ def _download_file(files, remote_path: str, local_path: str, progress_cb=None, *
         method = files.download
     try:
         signature = inspect.signature(method)
-        if "progress_cb" in signature.parameters:
-            method(remote_path, local_path, progress_cb=progress_cb)
-            return
     except (TypeError, ValueError):
-        pass
-    method(remote_path, local_path)
+        signature = None
+    if signature is not None and "progress_cb" in signature.parameters:
+        method(remote_path, local_path, progress_cb=progress_cb)
+    else:
+        method(remote_path, local_path)
+
+
+def _publish_download(source: Path, destination: Path, *, no_replace: bool) -> None:
+    if no_replace:
+        # Atomic create-if-absent on the same filesystem. Do not fall back
+        # to replace() if hard links are unsupported or the name was taken.
+        os.link(source, destination)
+        source.unlink()
+    else:
+        os.replace(source, destination)
 
 
 def download_with_mode(
@@ -220,10 +276,17 @@ def download_with_mode(
     local_path: str,
     requested: str,
     progress_cb=None,
+    *, allow_resume: bool = True, verify_bytes=None,
+    require_valid_resume: bool = False, cleanup_legacy_metadata: bool = True,
+    no_replace: bool = False,
 ) -> str:
     destination = Path(local_path).expanduser()
     destination.parent.mkdir(parents=True, exist_ok=True)
     part_path = Path(str(destination) + PARTIAL_SUFFIX)
+    if part_path.is_symlink():
+        raise ValueError(f"Refusing symlink as transfer partial: {part_path}")
+    if no_replace and (part_path.exists() or destination.exists() or destination.is_symlink()):
+        raise FileExistsError(str(destination))
     meta_path = Path(str(part_path) + ".meta")
     # Persist only identity and byte offset in encrypted per-profile app data.
     # The adjacent .part contains transfer bytes; no metadata sidecar is used.
@@ -245,13 +308,17 @@ def download_with_mode(
         part_identity = str(part_path.resolve())
         key = transfer_record_key("download", str(destination))
         record = registry.get(key) if registry else None
-        try:
-            meta_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+        if cleanup_legacy_metadata:
+            try:
+                meta_path.unlink(missing_ok=True)
+            except OSError:
+                pass
         if part_path.exists():
+            if no_replace:
+                raise FileExistsError(str(part_path))
             resume = bool(
-                registry
+                allow_resume
+                and registry
                 and record
                 and record.get("identity") == identity
                 and record.get("partial_path") == part_identity
@@ -261,7 +328,11 @@ def download_with_mode(
                 resume = 0 < partial_size <= remote_size
                 complete = resume and partial_size == remote_size
             if not resume:
+                if require_valid_resume:
+                    raise ValueError("Download partial identity does not match; choose Overwrite to restart")
                 part_path.unlink(missing_ok=True)
+        elif require_valid_resume:
+            raise FileNotFoundError(str(part_path))
         if registry:
             try:
                 registry.save(
@@ -269,10 +340,14 @@ def download_with_mode(
                     part_path.stat().st_size if resume else 0,
                 )
             except Exception:
+                if require_valid_resume:
+                    raise
                 registry = None
                 resume = complete = False
                 part_path.unlink(missing_ok=True)
     else:
+        if require_valid_resume:
+            raise ValueError("Remote metadata is unavailable for safe resume")
         identity = {
             "direction": "download",
             "remote_path": str(remote_path),
@@ -282,9 +357,14 @@ def download_with_mode(
         part_identity = str(part_path.resolve())
         key = transfer_record_key("download", str(destination))
         try:
-            meta_path.unlink(missing_ok=True)
+            if cleanup_legacy_metadata:
+                meta_path.unlink(missing_ok=True)
             if part_path.exists():
+                if no_replace:
+                    raise FileExistsError(str(part_path))
                 part_path.unlink()
+        except FileExistsError:
+            raise
         except OSError:
             pass
         if registry:
@@ -305,6 +385,16 @@ def download_with_mode(
             except Exception:
                 pass
         raise
+    if verify_bytes is not None:
+        try:
+            verify_bytes(str(part_path), remote_path)
+        except Exception:
+            if registry:
+                try:
+                    registry.remove(key)
+                except Exception:
+                    pass
+            raise
     try:
         with open(part_path, "rb") as stream:
             sample = stream.read(CHUNK_SIZE)
@@ -312,10 +402,11 @@ def download_with_mode(
         sample = b""
     effective = resolve_transfer_mode(remote_path, requested, sample)
     if effective == ASCII:
-        converted_path = Path(str(destination) + ".tmp")
+        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=".hpc-convert-", delete=False) as temp:
+            converted_path = Path(temp.name)
         try:
             _stream_utf8_lines(str(part_path), str(converted_path), os.linesep)
-            os.replace(converted_path, destination)
+            _publish_download(converted_path, destination, no_replace=no_replace)
         finally:
             try:
                 converted_path.unlink(missing_ok=True)
@@ -326,7 +417,7 @@ def download_with_mode(
         except OSError:
             pass
     else:
-        os.replace(part_path, destination)
+        _publish_download(part_path, destination, no_replace=no_replace)
     if registry:
         try:
             registry.remove(key)

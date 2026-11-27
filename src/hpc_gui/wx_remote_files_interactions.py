@@ -171,8 +171,14 @@ def install_interactions(view):
             item = menu.Append(wx.ID_ANY, t(labels.get(action, f"dirs.{action}")))
             target_dir = clicked.path if clicked and clicked.is_dir else tstate["path"]
             listing.Bind(wx.EVT_MENU, lambda _event, action=action, target=target_dir: run_action(action, selected, target), item)
-        listing.PopupMenu(menu)
-        menu.Destroy()
+        from hpc_gui.wx_file_lint import append_file_lint_actions
+
+        append_file_lint_actions(menu, selection, view.lint_selection, host,
+                                 current=lambda: not view.state["closed"] and not tstate.get("closed"))
+        try:
+            listing.PopupMenu(menu)
+        finally:
+            menu.Destroy()
 
     view.key_down = key_down
     view.activate = activate

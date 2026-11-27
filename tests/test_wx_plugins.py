@@ -25,12 +25,15 @@ def test_trusted_tool_rejection_is_fail_closed():
 
 
 @pytest.mark.unit
-def test_plugin_lifecycle_actions(monkeypatch):
+def test_plugin_lifecycle_actions(monkeypatch, tmp_path):
     calls = []
     monkeypatch.setattr("hpc_gui.wx_plugins.activate_version", lambda *args, **kwargs: calls.append(("rollback", args)))
     monkeypatch.setattr("hpc_gui.wx_plugins.set_plugin_disabled", lambda *args, **kwargs: calls.append(("enabled", args)))
     monkeypatch.setattr("hpc_gui.wx_plugins.remove_plugin", lambda *args, **kwargs: ["1.0"])
-    model = WxPluginManagerModel()
-    model.rollback("p", "1.0")
-    model.set_enabled("p", False)
-    assert model.remove("p") == ["1.0"] and [call[0] for call in calls] == ["rollback", "enabled"]
+    from hpc_gui.plugins.state import record_installed_version
+
+    record_installed_version("org.example.tool", "1.0", root=tmp_path)
+    model = WxPluginManagerModel(root=tmp_path)
+    model.rollback("org.example.tool", "1.0")
+    model.set_enabled("org.example.tool", False)
+    assert model.remove("org.example.tool") == ["1.0"] and [call[0] for call in calls] == ["rollback", "enabled"]

@@ -96,3 +96,234 @@ def test_controller_enqueue_adds_work_while_running() -> None:
     release.set()
     assert controller.wait(2)
     assert completed == ["first", "second"]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("direction", ["upload", "download"])
+def test_failed_directory_blocks_descendants_until_successful_retry(tmp_path, direction):
+    mkdir_op = "mkdir_remote" if direction == "upload" else "mkdir_local"
+    root = "/work" if direction == "upload" else str(tmp_path)
+    bad = root + "/bad"
+    parent = TransferItem(mkdir_op, "", bad)
+    child = TransferItem(mkdir_op, "", bad + "/nested")
+    nested = TransferItem(direction, "source", bad + "/nested/file")
+    direct = TransferItem(direction, "source", bad + "/file")
+    sibling = TransferItem(direction, "source", root + "/bad-sibling/file")
+    called = []
+    fail = True
+
+    def run(item, progress):
+        called.append(item)
+        if item is parent and fail:
+            raise PermissionError("mkdir denied")
+        progress(1, 1)
+
+    controller = TransferController([parent, child, nested, direct, sibling], run, parallel_limit=3)
+    controller.start()
+    assert controller.wait(5)
+    assert called == [parent, sibling]
+    assert controller.completed == [sibling]
+    errors = {item.dst: error for item, error in controller.failed}
+    assert errors[bad] == "mkdir denied"
+    for item in (child, nested, direct):
+        assert "Destination directory prerequisite failed:" in errors[item.dst]
+
+    # Retrying only a child must not bypass the failed directory.
+    assert controller.retry_failed_items([nested]) == 1
+    controller.start()
+    assert controller.wait(5)
+    assert called == [parent, sibling]
+    assert len(controller.failed) == 4
+
+    # Retrying the prerequisites and descendants recovers the queue without
+    # repeating the independent transfer that already completed.
+    fail = False
+    assert controller.retry_failed() == 4
+    controller.start()
+    assert controller.wait(5)
+    assert not controller.failed and not controller.pending
+    assert called[:4] == [parent, sibling, parent, child]
+    assert set(id(item) for item in called[4:]) == {id(nested), id(direct)}
+    assert len(controller.completed) == 5
+
+
+@pytest.mark.unit
+def test_forgotten_directory_failure_does_not_unlock_descendants():
+    parent = TransferItem("mkdir_remote", "", "/work/fail")
+    child = TransferItem("upload", "source", "/work/fail/data")
+    called = []
+
+    def run(item, progress):
+        called.append(item)
+        raise OSError("denied")
+
+    controller = TransferController([parent, child], run)
+    controller.start()
+    assert controller.wait(5)
+    assert controller.remove_failed_items([parent]) == 1
+    assert controller.retry_failed() == 1
+    controller.start()
+    assert controller.wait(5)
+    assert called == [parent]
+    assert "prerequisite failed" in controller.failed[0][1]
+
+
+@pytest.mark.unit
+@pytest.mark.concurrency
+def test_recursive_plan_prepares_all_mkdirs_before_parallel_upload_phase():
+    prepared = []
+    started = []
+    release = threading.Event()
+    all_started = threading.Event()
+    lock = threading.Lock()
+    items = [
+        TransferItem("mkdir_remote", "", "/remote/root"),
+        TransferItem("mkdir_remote", "", "/remote/root/one"),
+        TransferItem("upload", "one.bin", "/remote/root/one/one.bin"),
+        TransferItem("mkdir_remote", "", "/remote/root/two"),
+        TransferItem("upload", "two.bin", "/remote/root/two/two.bin"),
+        TransferItem("upload", "root.bin", "/remote/root/root.bin"),
+    ]
+
+    def run(item, progress):
+        if item.op == "mkdir_remote":
+            prepared.append(item.dst)
+        else:
+            with lock:
+                assert prepared == ["/remote/root", "/remote/root/one", "/remote/root/two"]
+                started.append(item.src)
+                if len(started) == 3:
+                    all_started.set()
+            assert release.wait(5)
+        progress(1, 1)
+
+    controller = TransferController(items, run, parallel_limit=3)
+    try:
+        controller.start()
+        assert all_started.wait(5), started
+    finally:
+        release.set()
+        assert controller.wait(5)
+    assert not controller.failed
+    assert len(controller.completed) == len(items)
+    assert set(started) == {"one.bin", "two.bin", "root.bin"}
+
+
+def test_transfer_item_trailing_cached_size_keeps_positional_construction():
+    plain = TransferItem("download", "/remote/a.txt", "a.txt")
+    assert plain.cached_size is None and not plain.recursive and plain.priority == "Normal"
+    sized = TransferItem("upload", "local.bin", "/remote/local.bin", False, "High", 2048)
+    assert sized.cached_size == 2048 and sized.priority == "High"
+    assert TransferItem("download", "/remote/b.bin", "b.bin", cached_size=777).cached_size == 777
+
+
+@pytest.mark.unit
+def test_mixed_mutation_plan_preserves_original_execution_order():
+    items = [
+        TransferItem("mkdir_remote", "", "/remote/root"),
+        TransferItem("upload", "one.bin", "/remote/root/one.bin"),
+        TransferItem("delete", "", "/remote/old.bin"),
+        TransferItem("upload", "two.bin", "/remote/root/two.bin"),
+    ]
+    calls = []
+    controller = TransferController(items, lambda item, progress: calls.append(item), parallel_limit=3)
+    assert controller.pending == items
+    controller.start()
+    assert controller.wait(5)
+    assert not controller.failed
+    assert calls == items
+
+
+@pytest.mark.unit
+@pytest.mark.concurrency
+def test_delete_barrier_serializes_next_transfer_before_later_items():
+    items = [
+        TransferItem("delete", "", "/remote/a.bin"),
+        TransferItem("upload", "a.bin", "/remote/a.bin"),
+        TransferItem("upload", "b.bin", "/remote/b.bin"),
+    ]
+    deleted = threading.Event()
+    first_entered = threading.Event()
+    first_finished = threading.Event()
+    second_entered = threading.Event()
+    release = threading.Event()
+
+    def run(item, progress):
+        if item is items[0]:
+            deleted.set()
+        elif item is items[1]:
+            assert deleted.is_set()
+            first_entered.set()
+            assert release.wait(5)
+            first_finished.set()
+        else:
+            second_entered.set()
+            assert first_finished.is_set()
+
+    controller = TransferController(items, run, parallel_limit=2)
+    try:
+        controller.start()
+        assert first_entered.wait(5)
+        assert not second_entered.is_set()
+    finally:
+        release.set()
+        assert controller.wait(5)
+    assert second_entered.is_set()
+    assert not controller.failed
+    assert controller.completed == items
+
+
+@pytest.mark.unit
+@pytest.mark.concurrency
+def test_transfer_parallel_limit_bounds_inflight_work():
+    items = [TransferItem("download", f"/remote/{i}", str(i)) for i in range(3)]
+    started = []
+    finished = []
+    two_started = threading.Event()
+    release = threading.Event()
+    lock = threading.Lock()
+
+    def run(item, progress):
+        with lock:
+            started.append(item)
+            if len(started) == 2:
+                two_started.set()
+        assert release.wait(5)
+        with lock:
+            finished.append(item)
+
+    controller = TransferController(items, run, parallel_limit=2)
+    try:
+        controller.start()
+        assert two_started.wait(5)
+        with lock:
+            assert len(started) == 2 and not finished
+    finally:
+        release.set()
+        assert controller.wait(5)
+    assert not controller.failed
+    assert {id(item) for item in started} == {id(item) for item in items}
+    assert {id(item) for item in finished} == {id(item) for item in items}
+
+
+def test_completed_history_eviction_notifies_subscribers_without_losing_failures():
+    items = [TransferItem("upload", str(i), f"/remote/{i}") for i in range(5)]
+    events = []
+
+    def run(item, progress):
+        if item is items[1]:
+            raise OSError("retryable")
+        progress(1, 1)
+
+    controller = TransferController(items, run, history_limit=2,
+                                    on_queue=lambda event, item: events.append((event, item)))
+    controller.start()
+    assert controller.wait(5)
+    assert controller.completed == items[3:]
+    assert controller.failed == [(items[1], "retryable")]
+    assert [item for event, item in events if event == "forgotten_completed"] == [items[0], items[2]]
+    assert [item for event, item in events if event == "completed"] == [items[0], *items[2:]]
+    assert controller.remove_completed_items() == 2
+    assert not controller.completed
+    assert [item for event, item in events if event == "forgotten_completed"] == [items[0], *items[2:]]
+    assert controller.failed == [(items[1], "retryable")]

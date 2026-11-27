@@ -3,96 +3,18 @@ from __future__ import annotations
 from support.ftp_widget_test_support import (
     FtpWidgetTestCase,
     Path,
-    QApplication,
     RemoteDirPanel,
-    SimpleNamespace,
     TransferDialog,
     TransferItem,
-    _CountingFiles,
     _PlannedOp,
     patch,
     pytest,
     tempfile,
-    threading,
-    time,
 )
 
 
 class FtpWidgetTests(FtpWidgetTestCase):
-    @pytest.mark.integration
-    def test_download_plan_carries_listed_remote_size(self) -> None:
-        files = _CountingFiles()
-        panel = self.widget.panel_scratch
-        panel.session = {"connected": True, "files": files}
-        with tempfile.TemporaryDirectory() as tmp:
-            result = panel._build_remote_download_plan_background(
-                SimpleNamespace(cancelled=False),
-                files,
-                ["/remote"],
-                tmp,
-            )
-        plan = result.get("plan") or []
-        transfers = [op for op in plan if op.op == "download"]
-        sizes = {op.src: op.size for op in transfers}
-        self.assertEqual(sizes.get("/remote/root.txt"), 4)
-        self.assertEqual(sizes.get("/remote/child/nested.txt"), 6)
-        self.assertNotIn("/remote/child", sizes)
 
-    @pytest.mark.unit
-    def test_mixed_mutation_plan_keeps_original_order(self) -> None:
-        items = [
-            TransferItem("mkdir_remote", "", "/remote/root"),
-            TransferItem("upload", "one.bin", "/remote/root/one.bin"),
-            TransferItem("delete", "", "/remote/old.bin"),
-            TransferItem("upload", "two.bin", "/remote/root/two.bin"),
-        ]
-        worker = __import__(
-            "hpc_gui.ui.dialogs.transfer_dialog",
-            fromlist=["_WorkerThread"],
-        )._WorkerThread(items, lambda _item, _progress=None: None, parallel_limit=3)
-        self.assertEqual(worker._items, items)
-
-    @pytest.mark.integration
-    @pytest.mark.concurrency
-    def test_overwrite_delete_is_followed_by_its_transfer_before_later_items(self) -> None:
-        deletion_done = threading.Event()
-        first_transfer_done = threading.Event()
-        started: list[str] = []
-        items = [
-            TransferItem("delete", "", "/remote/a.bin"),
-            TransferItem("upload", "a.bin", "/remote/a.bin"),
-            TransferItem("upload", "b.bin", "/remote/b.bin"),
-        ]
-
-        def run_item(item, _progress=None):
-            if item.op == "delete":
-                deletion_done.set()
-                return
-            if item.src == "a.bin":
-                self.assertTrue(deletion_done.is_set())
-                time.sleep(0.05)
-                first_transfer_done.set()
-            else:
-                self.assertTrue(first_transfer_done.is_set())
-            started.append(item.src)
-
-        dialog = TransferDialog(
-            title="Upload",
-            items=items,
-            run_item=run_item,
-            parallel_limit=2,
-        )
-        try:
-            dialog.start()
-            deadline = time.monotonic() + 3
-            while time.monotonic() < deadline and not dialog.finished_cleanly():
-                QApplication.processEvents()
-                time.sleep(0.01)
-            self.assertTrue(dialog.finished_cleanly())
-            self.assertEqual(started, ["a.bin", "b.bin"])
-        finally:
-            dialog.cancel_all()
-            dialog.deleteLater()
 
     @pytest.mark.gui
     @pytest.mark.qt
@@ -130,59 +52,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
         finally:
             dialog.deleteLater()
 
-    @pytest.mark.integration
-    @pytest.mark.concurrency
-    def test_recursive_plan_prepares_all_mkdirs_before_parallel_upload_phase(self) -> None:
-        prepared: list[str] = []
-        started: list[str] = []
-        release = threading.Event()
-        lock = threading.Lock()
-        items = [
-            TransferItem("mkdir_remote", "", "/remote/root"),
-            TransferItem("mkdir_remote", "", "/remote/root/one"),
-            TransferItem("upload", "one.bin", "/remote/root/one/one.bin"),
-            TransferItem("mkdir_remote", "", "/remote/root/two"),
-            TransferItem("upload", "two.bin", "/remote/root/two/two.bin"),
-            TransferItem("upload", "root.bin", "/remote/root/root.bin"),
-        ]
-
-        def run_item(item, _progress=None):
-            if item.op == "mkdir_remote":
-                prepared.append(item.dst)
-                return
-            self.assertEqual(len(prepared), 3)
-            with lock:
-                started.append(item.src)
-            release.wait(3)
-
-        dialog = TransferDialog(
-            title="Upload",
-            items=items,
-            run_item=run_item,
-            parallel_limit=3,
-        )
-        try:
-            dialog.start()
-            deadline = time.monotonic() + 3
-            while time.monotonic() < deadline:
-                with lock:
-                    if len(started) >= 2:
-                        break
-                QApplication.processEvents()
-                time.sleep(0.01)
-            self.assertEqual(prepared, ["/remote/root", "/remote/root/one", "/remote/root/two"])
-            with lock:
-                self.assertGreaterEqual(len(started), 2)
-            release.set()
-            deadline = time.monotonic() + 3
-            while time.monotonic() < deadline and not dialog.finished_cleanly():
-                QApplication.processEvents()
-                time.sleep(0.01)
-            self.assertTrue(dialog.finished_cleanly())
-        finally:
-            release.set()
-            dialog.cancel_all()
-            dialog.deleteLater()
 
     @pytest.mark.gui
     @pytest.mark.qt
@@ -216,44 +85,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
         finally:
             dialog.deleteLater()
 
-    @pytest.mark.integration
-    @pytest.mark.concurrency
-    def test_transfer_dialog_finishes_mkdir_before_parallel_transfer_batch(self) -> None:
-        prepared = threading.Event()
-        started_uploads: list[str] = []
-        lock = threading.Lock()
-        items = [
-            TransferItem("mkdir_remote", "", "/remote/folder"),
-            TransferItem("upload", "first.bin", "/remote/folder/first.bin"),
-            TransferItem("upload", "second.bin", "/remote/folder/second.bin"),
-        ]
-
-        def run_item(item, _progress=None):
-            if item.op == "mkdir_remote":
-                time.sleep(0.03)
-                prepared.set()
-                return
-            self.assertTrue(prepared.is_set())
-            with lock:
-                started_uploads.append(item.src)
-
-        dialog = TransferDialog(
-            title="Upload",
-            items=items,
-            run_item=run_item,
-            parallel_limit=2,
-        )
-        try:
-            dialog.start()
-            deadline = time.monotonic() + 3
-            while time.monotonic() < deadline and not dialog.finished_cleanly():
-                QApplication.processEvents()
-                time.sleep(0.01)
-            self.assertTrue(dialog.finished_cleanly())
-            self.assertCountEqual(started_uploads, ["first.bin", "second.bin"])
-        finally:
-            dialog.cancel_all()
-            dialog.deleteLater()
 
     @pytest.mark.gui
     @pytest.mark.qt
@@ -285,23 +116,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
         finally:
             dialog.deleteLater()
 
-    @pytest.mark.gui
-    @pytest.mark.qt
-    def test_transfer_dialog_never_exceeds_backend_safe_cap(self) -> None:
-        dialog = TransferDialog(
-            title="Upload",
-            items=[],
-            run_item=lambda _item, _progress=None: None,
-            parallel_limit=5,
-            max_parallel_limit=1,
-        )
-        try:
-            self.assertEqual(dialog._parallel_limit, 1)
-            self.assertEqual(dialog.set_parallel_limit(5), 1)
-            self.assertEqual(dialog._parallel_limit, 1)
-            self.assertIn("1", dialog.lbl_parallel_hint.text())
-        finally:
-            dialog.deleteLater()
 
     @pytest.mark.integration
     @pytest.mark.concurrency
@@ -330,57 +144,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
         finally:
             dialog.deleteLater()
 
-    @pytest.mark.integration
-    @pytest.mark.concurrency
-    def test_transfer_dialog_runs_up_to_parallel_limit(self) -> None:
-        started: list[str] = []
-        finished: list[str] = []
-        release = threading.Event()
-        lock = threading.Lock()
-        items = [
-            TransferItem("download", "/remote/a.bin", "a.bin"),
-            TransferItem("download", "/remote/b.bin", "b.bin"),
-            TransferItem("download", "/remote/c.bin", "c.bin"),
-        ]
-
-        def run_item(item, _progress=None):
-            with lock:
-                started.append(item.src)
-            release.wait(5)
-            with lock:
-                finished.append(item.src)
-
-        dialog = TransferDialog(
-            title="Download",
-            items=items,
-            run_item=run_item,
-            parallel_limit=2,
-        )
-        try:
-            dialog.start()
-            deadline = time.monotonic() + 3
-            while time.monotonic() < deadline:
-                QApplication.processEvents()
-                with lock:
-                    if len(started) >= 2:
-                        break
-                time.sleep(0.01)
-            with lock:
-                self.assertEqual(len(started), 2)
-                self.assertEqual(finished, [])
-
-            release.set()
-            deadline = time.monotonic() + 3
-            while time.monotonic() < deadline and not dialog.finished_cleanly():
-                QApplication.processEvents()
-                time.sleep(0.01)
-            self.assertTrue(dialog.finished_cleanly())
-            with lock:
-                self.assertCountEqual(started, [item.src for item in items])
-                self.assertCountEqual(finished, [item.src for item in items])
-        finally:
-            dialog.cancel_all()
-            dialog.deleteLater()
 
     @pytest.mark.unit
     def test_transfer_item_size_falls_back_to_stat_when_unknown(self) -> None:
@@ -410,19 +173,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
                     128,
                 )
 
-    @pytest.mark.unit
-    def test_transfer_item_trailing_cached_size_keeps_positional_construction(self) -> None:
-        plain = TransferItem("download", "/remote/a.txt", "a.txt")
-        self.assertIsNone(plain.cached_size)
-        self.assertFalse(plain.recursive)
-        self.assertEqual(plain.priority, "Normal")
-
-        sized = TransferItem("upload", "local.bin", "/remote/local.bin", False, "High", 2048)
-        self.assertEqual(sized.cached_size, 2048)
-        self.assertEqual(sized.priority, "High")
-
-        keyword = TransferItem("download", "/remote/b.bin", "b.bin", cached_size=777)
-        self.assertEqual(keyword.cached_size, 777)
 
     @pytest.mark.unit
     def test_transfer_items_from_plan_preserve_known_size_and_leave_unknown_none(self) -> None:

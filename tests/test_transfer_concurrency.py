@@ -4,11 +4,10 @@ Covers:
 
 - FTP safely caps queued transfers at one despite isolated connections;
 - two FTP transfers actually overlap using distinct connections;
-- the transfer dialog closes every isolated backend on success, failure,
+- the wx transfer session closes every isolated backend on success, failure,
   and cancellation, and retry creates fresh resources;
 - SFTP transfers use distinct channel objects;
 - a backend capability downgrade results in effective parallelism one;
-- the transfer dialog shows configured vs effective limits.
 """
 
 from __future__ import annotations
@@ -183,40 +182,23 @@ def test_two_ftp_transfers_overlap_with_distinct_connections(ftp_server, tmp_pat
 
 
 # ---------------------------------------------------------------------------
-# TransferDialog backend lifecycle (success / failure / cancellation)
-#
-# These call ``_execute_item`` directly (synchronously or on short-lived
-# helper threads that are always joined) so no dialog watcher threads leak
-# into later tests or interpreter teardown.
+# wx transfer session backend lifecycle (success / failure / cancellation).
+# The queue runs the production wx shell workflow without a GUI parent.
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
-def qapp():
-    import os
-
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    from PySide6.QtWidgets import QApplication
-
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
 class _FakeBackend:
-    def __init__(self, *, fail=False, hang_until=None, entered=None):
+    def __init__(self, *, fail=False, release=None, entered=None):
         self.closed = False
         self.fail = fail
-        self.hang_until = hang_until
+        self.release = release
         self.entered = entered
 
     def upload(self, local_path, remote_path, progress_cb=None):
-        if self.hang_until is not None:
-            if progress_cb:
-                progress_cb(1, 10)
-            if self.entered is not None:
-                self.entered.set()
-            self.hang_until.wait(5)
-            raise _SimulatedCancel()
+        if self.entered is not None:
+            self.entered.set()
+            if not self.release.wait(5):
+                raise TimeoutError("test did not release blocked worker")
         if self.fail:
             raise OSError("simulated failure")
         if progress_cb:
@@ -226,29 +208,31 @@ class _FakeBackend:
         self.closed = True
 
 
-class _SimulatedCancel(Exception):
-    pass
+class _FactoryBackend:
+    supports_parallel_transfers = False
+
+    def __init__(self, factory):
+        self.open_transfer_backend = factory
+
+    def exists(self, path):
+        return False
+
+    def upload(self, *args, **kwargs):
+        raise AssertionError("transfer must not use the shared browser backend")
 
 
-def _make_dialog(items, factory):
-    from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
+def _start_wx_transfer(files, items=None):
+    from hpc_gui.wx_shell_file_transfer import _start_file_transfers
 
-    return TransferDialog(
-        None,
-        title="t",
-        items=items,
-        run_item=lambda item, progress=None, files=None: files.upload(
-            item.src, item.dst, progress
-        ),
-        parallel_limit=1,
-        max_parallel_limit=10,
-        backend_context_factory=factory,
+    state = {"session": {"files": files, "profile": {"transfer_parallelism": 4}}}
+    return _start_file_transfers(
+        state, None, items or [TransferItem("upload", "a", "/remote/a")]
     )
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.resource
-def test_dialog_closes_isolated_backend_on_success(qapp):
+def test_wx_transfer_closes_isolated_backend_on_success():
     created = []
 
     def factory():
@@ -256,17 +240,16 @@ def test_dialog_closes_isolated_backend_on_success(qapp):
         created.append(backend)
         return backend
 
-    dialog = _make_dialog(
-        [TransferItem("upload", "a", "/remote/a")], factory
-    )
-    dialog._execute_item(dialog._items[0])
-    assert len(created) == 1
-    assert created[0].closed is True
+    controller = _start_wx_transfer(_FactoryBackend(factory))
+    assert controller.engine.wait(5)
+    assert len(controller.engine.completed) == 1
+    assert not controller.engine.failed
+    assert len(created) == 1 and created[0].closed
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.resource
-def test_dialog_closes_isolated_backend_on_failure(qapp):
+def test_wx_transfer_closes_isolated_backend_on_failure():
     created = []
 
     def factory():
@@ -274,119 +257,101 @@ def test_dialog_closes_isolated_backend_on_failure(qapp):
         created.append(backend)
         return backend
 
-    dialog = _make_dialog([TransferItem("upload", "a", "/remote/a")], factory)
-    with pytest.raises(OSError):
-        dialog._execute_item(dialog._items[0])
-    assert len(created) == 1
-    assert created[0].closed is True
+    controller = _start_wx_transfer(_FactoryBackend(factory))
+    assert controller.engine.wait(5)
+    assert len(controller.engine.failed) == 1
+    assert "simulated failure" in controller.engine.failed[0][1]
+    assert len(created) == 1 and created[0].closed
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.resource
-def test_cancelled_transfer_releases_isolated_backend(qapp):
+def test_cancelled_wx_transfer_releases_isolated_backend():
     release = threading.Event()
     entered = threading.Event()
     created = []
 
     def factory():
-        backend = _FakeBackend(hang_until=release, entered=entered)
+        backend = _FakeBackend(release=release, entered=entered)
         created.append(backend)
         return backend
 
-    dialog = _make_dialog([TransferItem("upload", "a", "/remote/a")], factory)
-
-    outcome: dict = {}
-
-    def run():
-        try:
-            dialog._execute_item(dialog._items[0])
-            outcome["error"] = None
-        except Exception as exc:  # noqa: BLE001 - test assertion below
-            outcome["error"] = exc
-
-    worker = threading.Thread(target=run)
-    worker.start()
+    controller = _start_wx_transfer(_FactoryBackend(factory))
     try:
-        assert entered.wait(timeout=5), "upload worker did not reach the blocked operation"
+        assert entered.wait(5), "upload worker did not reach the blocked operation"
+        controller.cancel()
     finally:
         release.set()
-        worker.join(timeout=5)
-    assert not worker.is_alive()
-    assert isinstance(outcome.get("error"), _SimulatedCancel)
-    assert created and created[0].closed is True
+        assert controller.engine.wait(5)
+    assert len(controller.engine.failed) == 1
+    assert controller.engine.failed[0][1] == "cancelled"
+    assert created and created[0].closed
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.resource
-def test_retry_creates_fresh_backend_resources(qapp):
-    class _FlakyFactory:
-        def __init__(self):
-            self.backends = []
+def test_wx_retry_creates_fresh_backend_resources():
+    created = []
 
-        def __call__(self):
-            backend = _FakeBackend(fail=len(self.backends) == 0)
-            self.backends.append(backend)
-            return backend
+    def factory():
+        backend = _FakeBackend(fail=not created)
+        created.append(backend)
+        return backend
 
-    factory = _FlakyFactory()
-    dialog = _make_dialog([TransferItem("upload", "a", "/remote/a")], factory)
+    controller = _start_wx_transfer(_FactoryBackend(factory))
+    assert controller.engine.wait(5)
+    assert len(controller.engine.failed) == 1
+    assert len(created) == 1 and created[0].closed
 
-    # First attempt fails through the isolated backend (closed afterwards).
-    with pytest.raises(OSError):
-        dialog._execute_item(dialog._items[0])
-    assert len(factory.backends) == 1 and factory.backends[0].closed is True
-
-    # Retry creates a healthy new resource, never the failed one.
-    dialog._execute_item(dialog._items[0])
-    assert len(factory.backends) == 2
-    assert factory.backends[1].closed is True
-    assert factory.backends[1] is not factory.backends[0]
+    assert controller.engine.retry_failed() == 1
+    controller.start()
+    assert controller.engine.wait(5)
+    assert not controller.engine.failed
+    assert len(controller.engine.completed) == 1
+    assert len(created) == 2
+    assert created[1].closed and created[1] is not created[0]
 
 
-@pytest.mark.gui
-def test_effective_limit_label_shows_configured_and_effective(qapp):
-    from hpc_gui.core.i18n import load_language, t
-    from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
+@pytest.mark.integration
+@pytest.mark.resource
+def test_wx_transfer_factory_failure_does_not_fall_back_to_shared_backend():
+    def factory():
+        raise OSError("isolated connection unavailable")
 
-    load_language("en")
-    dialog = TransferDialog(
-        None,
-        title="t",
-        items=[],
-        run_item=lambda item, progress=None: None,
-        parallel_limit=1,
-        max_parallel_limit=1,
-        configured_limit=4,
+    controller = _start_wx_transfer(_FactoryBackend(factory))
+    assert controller.engine.wait(5)
+    assert not controller.engine.completed
+    assert len(controller.engine.failed) == 1
+    assert "isolated connection unavailable" in controller.engine.failed[0][1]
+
+
+@pytest.mark.integration
+@pytest.mark.resource
+def test_wx_ftp_queue_uses_isolated_connections_and_serial_limit(ftp_server, tmp_path):
+    registry = []
+    main = _TrackingFTPBackend(
+        ftp_server.host, port=ftp_server.port, username="user", password="pw",
+        registry=registry,
     )
+    items = []
+    for index in range(2):
+        source = tmp_path / f"wx-{index}.bin"
+        source.write_bytes(bytes([index]) * 8192)
+        items.append(TransferItem("upload", str(source), f"/wx-{index}.bin"))
     try:
-        text = dialog.lbl_parallel_hint.text()
-        assert "4" in text and "1" in text
-        assert t("transfer.parallel_reduced_backend") in text
+        controller = _start_wx_transfer(main, items)
+        assert controller.engine.parallel_limit == 1
+        assert controller.engine.wait(15)
+        assert not controller.engine.failed
+        assert len(controller.engine.completed) == 2
+        assert len(registry) == 2 and registry[0] is not registry[1]
+        assert all(backend._registry_closed for backend in registry)
+        assert all(backend.ftp is not main.ftp for backend in registry)
+        assert not main._closed
+        for item in items:
+            assert (ftp_server.root / item.dst.lstrip("/")).read_bytes() == Path(item.src).read_bytes()
     finally:
-        dialog.deleteLater()
-
-
-@pytest.mark.gui
-def test_effective_limit_label_when_matching(qapp):
-    from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
-    from hpc_gui.core.i18n import load_language, t
-
-    load_language("en")
-    dialog = TransferDialog(
-        None,
-        title="t",
-        items=[],
-        run_item=lambda item, progress=None: None,
-        parallel_limit=4,
-        max_parallel_limit=10,
-        configured_limit=4,
-    )
-    try:
-        text = dialog.lbl_parallel_hint.text()
-        assert text.count("4") >= 2
-        assert t("transfer.parallel_reduced_server") not in text
-    finally:
-        dialog.deleteLater()
+        main.close()
 
 
 # ---------------------------------------------------------------------------

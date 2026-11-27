@@ -5,12 +5,9 @@ from __future__ import annotations
 import hashlib
 import inspect
 import json
-import os
 from pathlib import Path
 
 import pytest
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from hpc_gui.lint.engine import (
     DEFAULT_MAX_DIAGNOSTICS_PER_RULE,
@@ -364,133 +361,71 @@ def test_incompatible_lint_plugin_not_loaded(tmp_path: Path):
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(scope="module")
-def qapp():
-    from PySide6.QtWidgets import QApplication
-
-    app = QApplication.instance() or QApplication([])
-    from hpc_gui.core.i18n import load_language
-
-    load_language("en")
-    yield app
-
-
-def _make_dialog_with_box_capture():
-    from hpc_gui.ui.widgets.editor_widget import EditorWidget
-
-    widget = EditorWidget()
-    shown = []
-
-    class FakeBox:
-        Information = 1
-
-        @staticmethod
-        def information(*args, **kwargs):
-            shown.append(("information", args))
-
-        @staticmethod
-        def warning(*args, **kwargs):
-            shown.append(("warning", args))
-
-    return widget, FakeBox, shown
-
-
 @pytest.mark.integration
-@pytest.mark.qt
-def test_editor_without_linter_shows_no_linter_hint(qapp, monkeypatch):
-    from hpc_gui.core.i18n import t
+def test_editor_without_linter_has_no_findings(monkeypatch):
+    from hpc_gui.services.editor_lint import EditorLintPipeline
 
     monkeypatch.setattr("hpc_gui.lint.rulepack.load_lint_packs", lambda: [])
     monkeypatch.setattr(
         "hpc_gui.plugins.linter_tools.tools_supporting_suffix", lambda _suffix: []
     )
-    widget, FakeBox, shown = _make_dialog_with_box_capture()
-    widget.path_in.setText("case.jou")
-    widget.text.setPlainText("/display set\n")
-    monkeypatch.setattr("hpc_gui.ui.widgets.editor_linting.QMessageBox", FakeBox)
-    widget.run_lint()
-    assert any(t("editor.lint_ok") in str(args) for _, args in shown)
+    issues, diagnostics = EditorLintPipeline().collect("case.jou", "/display set\n")
+    assert issues == [] and diagnostics == []
 
 
 @pytest.mark.integration
-@pytest.mark.qt
-def test_editor_runs_installed_linter_for_jou_files(qapp, tmp_path, monkeypatch):
-    build_lint_plugin(tmp_path)
-    widget, FakeBox, shown = _make_dialog_with_box_capture()
+def test_editor_runs_installed_linter_for_jou_files(tmp_path, monkeypatch):
+    from hpc_gui.services.editor_lint import EditorLintPipeline
 
+    build_lint_plugin(tmp_path)
     executed = []
 
     def fake_lint_text(text, *, file_name, rule_pack, **kwargs):
         executed.append((file_name, rule_pack.linter_id))
         from hpc_gui.lint.models import Diagnostic
 
-        return [
-            Diagnostic(
-                rule_id="FLUENT002",
-                severity=Severity.ERROR,
-                message="GUI-only command used.",
-                line=1,
-                column=1,
-                plugin_id=rule_pack.plugin_id,
-            )
-        ]
+        return [Diagnostic(rule_id="FLUENT002", severity=Severity.ERROR,
+                           message="GUI-only command used.", line=1, column=1,
+                           plugin_id=rule_pack.plugin_id)]
 
     monkeypatch.setattr("hpc_gui.lint.engine.lint_text", fake_lint_text)
     test_pack = make_pack(
         [compiled("forbidden-keyword", "/gui/mesh", id="FLUENT002")],
         file_patterns=("*.jou",),
     )
-    monkeypatch.setattr(
-        "hpc_gui.lint.rulepack.load_lint_packs", lambda *a, **k: [test_pack]
-    )
-    monkeypatch.setattr(
-        widget,
-        "_show_lint_results",
-        lambda path, issues, diagnostics: shown.append((path, issues, diagnostics)),
-    )
-    monkeypatch.setattr("hpc_gui.ui.widgets.editor_linting.QMessageBox", FakeBox)
-
-    widget.path_in.setText("case.jou")
-    widget.text.setPlainText("/gui/mesh\n")
-    widget.run_lint()
+    monkeypatch.setattr("hpc_gui.lint.rulepack.load_lint_packs", lambda *a, **k: [test_pack])
+    monkeypatch.setattr("hpc_gui.plugins.linter_tools.tools_supporting_suffix", lambda _: [])
+    issues, diagnostics = EditorLintPipeline().collect("case.jou", "/gui/mesh\n")
 
     assert executed and executed[0] == ("case.jou", "fluent-journal")
-    path, issues, diagnostics = shown[0]
     assert diagnostics and diagnostics[0].rule_id == "FLUENT002"
-    _ = path, issues
+    assert not issues
 
 
 @pytest.mark.unit
-@pytest.mark.qt
-def test_lint_result_entries_are_line_aware(qapp):
+def test_lint_result_entries_are_line_aware():
     from hpc_gui.lint.models import Diagnostic
-    from hpc_gui.ui.widgets.editor_widget import EditorWidget
+    from hpc_gui.services.editor_lint import EditorLintPipeline
 
     diagnostics = [
         Diagnostic(rule_id="B2", severity=Severity.INFO, message="b", line=3, column=2),
         Diagnostic(rule_id="A1", severity=Severity.ERROR, message="a", line=1, column=5),
     ]
-    labels, positions = EditorWidget._lint_result_entries(["builtin issue"], diagnostics)
+    labels, positions = EditorLintPipeline._lint_result_entries(["builtin issue"], diagnostics)
     assert labels[0] == "- builtin issue"
     assert positions[0] == -1
-    # Sorted by line.
     assert "A1" in labels[1] and "B2" in labels[2]
     assert positions[1:] == [0, 2]
 
 
 @pytest.mark.integration
-@pytest.mark.qt
-def test_editor_lint_does_not_mutate_file(qapp, tmp_path, monkeypatch):
+def test_editor_lint_does_not_mutate_file(tmp_path, monkeypatch):
+    from hpc_gui.services.editor_lint import EditorLintPipeline
+
     target = tmp_path / "case.jou"
     target.write_text("/display set\n", encoding="utf-8")
-    widget, FakeBox, _ = _make_dialog_with_box_capture()
-    monkeypatch.setattr("hpc_gui.ui.widgets.editor_linting.QMessageBox", FakeBox)
-    monkeypatch.setattr(
-        widget,
-        "_show_lint_results",
-        lambda *args: None,
-    )
-    widget.path_in.setText(str(target))
     original = target.read_bytes()
-    widget.run_lint()
+    monkeypatch.setattr("hpc_gui.lint.rulepack.load_lint_packs", lambda: [])
+    monkeypatch.setattr("hpc_gui.plugins.linter_tools.tools_supporting_suffix", lambda _: [])
+    EditorLintPipeline().collect(str(target), target.read_text(encoding="utf-8"))
     assert target.read_bytes() == original

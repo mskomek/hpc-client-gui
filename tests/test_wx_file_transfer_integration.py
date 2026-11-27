@@ -12,6 +12,9 @@ class _Files:
     def __init__(self):
         self.calls = []
 
+    def exists(self, path):
+        return False
+
     def upload(self, source, destination):
         self.calls.append(("upload", source, destination))
 

@@ -56,7 +56,13 @@ def test_wx_local_ctrl_a_selects_all_active_tab_rows(wx_app, tmp_path: Path):
     event.SetKeyCode(ord("A"))
     event.SetControlDown(True)
     listing.ProcessEvent(event)
-    assert all(listing.IsSelected(i) for i in range(listing.GetItemCount()))
+    parent_rows = [
+        i for i in range(listing.GetItemCount()) if listing.GetItemText(i) == ".."
+    ]
+    selectable_rows = [i for i in range(listing.GetItemCount()) if i not in parent_rows]
+    assert all(not listing.IsSelected(i) for i in parent_rows)
+    assert len(selectable_rows) == 3
+    assert all(listing.IsSelected(i) for i in selectable_rows)
 
 def test_wx_local_ctrl_c_copies_selected_paths(wx_app, tmp_path: Path):
     src=tmp_path / "src.txt"
@@ -241,7 +247,14 @@ def test_wx_remote_ctrl_a_selects_all_rows(wx_app):
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(ord("A")); event.SetControlDown(True)
     listing.ProcessEvent(event)
-    assert all(listing.IsSelected(i) for i in range(listing.GetItemCount()))
+    parent_rows = [
+        i for i in range(listing.GetItemCount()) if listing.GetItemText(i) == ".."
+    ]
+    selectable_rows = [i for i in range(listing.GetItemCount()) if i not in parent_rows]
+    assert parent_rows
+    assert all(not listing.IsSelected(i) for i in parent_rows)
+    assert selectable_rows
+    assert all(listing.IsSelected(i) for i in selectable_rows)
 
 def test_wx_remote_ctrl_v_pastes_into_active_tab(wx_app):
     backend=MockRemoteFilesBackend()

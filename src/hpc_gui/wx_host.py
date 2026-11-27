@@ -49,6 +49,9 @@ def make_host(parent, *, title, size, embedded):
         return host, finish
     else:
         host = wx.Frame(parent, title=title, size=size)
+        from hpc_gui.wx_debug_telemetry import install_optional_window_telemetry
+
+        install_optional_window_telemetry(host)
 
         def set_host_title(text):
             host.SetTitle(text)

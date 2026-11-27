@@ -380,6 +380,17 @@ def main() -> int:
     except Exception as e:
         print(f"settings fail {e}")
 
+    # Help uses the actual V2 dialog. Historical Qt screenshots stay unchanged.
+    from hpc_gui.wx_help import show_help
+    show_help(frame)
+    help_frame = next(w for w in wx.GetTopLevelWindows()
+                      if hasattr(w, "_wx_help_controls"))
+    try:
+        grab_dialog(help_frame, "120-help-default")
+    finally:
+        help_frame.Close()
+        wx.SafeYield()
+
     # Menus
     try:
         mbar = frame.GetMenuBar()

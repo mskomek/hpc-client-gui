@@ -18,7 +18,7 @@ from PySide6.QtWidgets import QFileDialog, QMenu, QMessageBox
 
 from hpc_gui.core.i18n import t
 from hpc_gui.services.transfer_mode import BINARY, normalize_transfer_mode
-from hpc_gui.ui.dialogs.transfer_dialog import TransferItem
+from hpc_gui.services.transfer_controller import TransferItem
 
 
 class RemoteTransferUiMixin:

@@ -23,8 +23,25 @@ def _saved_ratio(key: str, default: float) -> float:
     try:
         settings = load_settings()
         ratios = settings.get("wx_splitter_ratios", {})
-        value = ratios.get(key) if isinstance(ratios, dict) else None
-        return _coerce_ratio(value, default)
+        if isinstance(ratios, dict) and key in ratios:
+            return _coerce_ratio(ratios[key], default)
+        # Preserve the two legacy browser proportions when a user first
+        # opens V2. The new wx preference always wins, including an invalid
+        # value (which falls back to the current default).
+        if key in {"directories_remote_panels", "files_local_remote"}:
+            legacy = settings.get("splitter_ratios")
+            if isinstance(legacy, dict) and key in legacy:
+                return _coerce_ratio(legacy[key], default)
+        if key == "files_local_remote":
+            sizes = settings.get("ftp_splitter_sizes")
+            if isinstance(sizes, list) and len(sizes) == 2:
+                try:
+                    first, second = (max(0, int(value)) for value in sizes)
+                    if first + second:
+                        return _coerce_ratio(first / (first + second), default)
+                except (TypeError, ValueError, OverflowError):
+                    pass
+        return default
     except Exception:
         return default
 

@@ -40,6 +40,7 @@ class PluginCard:
     capabilities: tuple[str, ...] = ()
     update_available: bool = False
     active_version: str | None = None
+    problem: str = ""
 
 
 def _search_text_for_card(card: PluginCard) -> str:
@@ -123,6 +124,8 @@ class WxPluginManagerModel:
         self.registry_source = "offline"
         self.registry_entries: dict[str, dict[str, Any]] = {}
         self.other_versions: dict[str, tuple[str, ...]] = {}
+        self._registry_snapshot: dict | None = None
+        self.problems: tuple = ()
 
     def set_registry(self, entries: list[dict[str, Any]], source: str = "cache") -> None:
         self.registry_source = source if source in {"network", "cache", "offline"} else "offline"
@@ -154,6 +157,8 @@ class WxPluginManagerModel:
             str(item.get("id")): dict(item) for item in entries if item.get("id")
         }
         self.other_versions = {}
+        self._registry_snapshot = {"plugins": [dict(item) for item in entries]}
+        self.problems = ()
 
     def build_cards_from_registry(
         self,
@@ -171,6 +176,9 @@ class WxPluginManagerModel:
         """
         from hpc_gui.plugins.storage import read_active_versions, read_disabled_ids
 
+        self._registry_snapshot = registry
+        if root is not None:
+            self.root = root
         effective_root = root if root is not None else self.root
         effective_app = app_version or self.app_version
         self.registry_source = source if source in {"network", "cache", "offline"} else "offline"
@@ -187,6 +195,12 @@ class WxPluginManagerModel:
             disabled = read_disabled_ids(effective_root)
         except Exception:
             disabled = set()
+        from hpc_gui.plugins.loader import load_installed_plugins
+
+        loaded = load_installed_plugins(root=effective_root, app_version=effective_app)
+        self.problems = tuple(loaded.problems)
+        problems = {item.plugin_id: item.reason for item in loaded.problems}
+        verified = {item.manifest.id: item.manifest for item in loaded.plugins}
         grouped = _group_latest_registry_entries(entries, effective_app)
         cards: list[PluginCard] = []
         raw_by_id: dict[str, dict[str, Any]] = {}
@@ -221,6 +235,7 @@ class WxPluginManagerModel:
                     capabilities=tuple(str(c) for c in capabilities if str(c)),
                     update_available=update_available,
                     active_version=active_version,
+                    problem=problems.get(plugin_id, ""),
                 )
             )
             raw_by_id[plugin_id] = dict(best)
@@ -231,18 +246,20 @@ class WxPluginManagerModel:
         for plugin_id in sorted(active):
             if plugin_id in registry_ids:
                 continue
+            manifest = verified.get(plugin_id)
             cards.append(
                 PluginCard(
                     plugin_id=plugin_id,
-                    name=plugin_id,
+                    name=manifest.name if manifest else plugin_id,
                     version=str(active.get(plugin_id) or ""),
                     installed=True,
                     enabled=plugin_id not in disabled,
                     compatible=True,
-                    description="",
-                    capabilities=(),
+                    description=manifest.description if manifest else "",
+                    capabilities=tuple(manifest.capabilities) if manifest else (),
                     update_available=False,
                     active_version=str(active.get(plugin_id) or ""),
+                    problem=problems.get(plugin_id, ""),
                 )
             )
         cards.sort(key=lambda c: (c.name or c.plugin_id).lower())
@@ -250,6 +267,37 @@ class WxPluginManagerModel:
         self.registry_entries = raw_by_id
         self.other_versions = others_by_id
         return self.cards
+
+    def reload_installed(self):
+        return self.build_cards_from_registry(self._registry_snapshot, self.registry_source)
+
+    def installed_versions(self, plugin_id):
+        from hpc_gui.plugins.installed_state import read_installed_state
+        from hpc_gui.services.plugin_manager_state import sort_versions_desc
+
+        record = read_installed_state(self.root).get(plugin_id, {})
+        return tuple(sort_versions_desc(record.get("versions", [])))
+
+    def details_for(self, card):
+        from hpc_gui.core.i18n import t
+        from hpc_gui.services.plugin_manager_state import details_lines
+
+        entry = self.registry_entry_for(card.plugin_id)
+        if entry is None:
+            entry = {"id": card.plugin_id, "name": card.name, "version": card.version,
+                     "description": card.description, "capabilities": list(card.capabilities)}
+        state = t("plugins.installed_not_installed")
+        if card.installed:
+            state = t("plugins.installed_active" if card.enabled else "plugins.installed_disabled")
+            if card.active_version:
+                state += f" ({card.active_version})"
+        lines = details_lines(entry, state, list(self.other_versions.get(card.plugin_id, ())))
+        if self.registry_entry_for(card.plugin_id) is None:
+            # No registry provenance for an installed-only record.
+            lines = [line for line in lines if not line.startswith(t("plugins.source_label") + ":")]
+        if card.problem:
+            lines.extend(["", t("plugins.invalid_plugin"), card.problem])
+        return "\n".join(lines)
 
     def filtered_cards(self, view: str = "discover", needle: str = "") -> tuple[PluginCard, ...]:
         """Distinct Browse/Manage/Updates states plus a truthful search filter."""
@@ -263,7 +311,10 @@ class WxPluginManagerModel:
                 continue
             if normalized == "updates" and not (card.update_available and card.installed):
                 continue
-            if query and query not in _search_text_for_card(card):
+            raw = self.registry_entries.get(card.plugin_id, {})
+            search_text = " ".join((_search_text_for_card(card), str(raw.get("publisher", "")),
+                                    *self.other_versions.get(card.plugin_id, ()), card.active_version or "")).lower()
+            if query and query not in search_text:
                 continue
             selected.append(card)
         return tuple(selected)
@@ -303,13 +354,29 @@ class WxPluginManagerModel:
         return self.default_installer(entry)
 
     def rollback(self, plugin_id: str, version: str) -> None:
-        activate_version(plugin_id, version, root=self.root)
+        if version not in self.installed_versions(plugin_id):
+            raise ValueError("The selected version is not installed.")
+        activate_version(plugin_id, version, root=self.root, app_version=self.app_version)
 
     def set_enabled(self, plugin_id: str, enabled: bool) -> None:
         set_plugin_disabled(plugin_id, not enabled, root=self.root)
 
     def remove(self, plugin_id: str) -> list[str]:
         return remove_plugin(plugin_id, root=self.root)
+
+    def resolve_trusted_tool(self, plugin_id: str, active_version: str):
+        """Resolve only a currently enabled, verified installed tool, never registry metadata."""
+        from hpc_gui.plugins.loader import load_installed_plugins
+        from hpc_gui.plugins.trusted_tools import is_approved_trusted_tool
+
+        loaded = load_installed_plugins(root=self.root, app_version=self.app_version)
+        for plugin in loaded.plugins:
+            manifest = plugin.manifest
+            if manifest.id == plugin_id and manifest.version == active_version:
+                if is_approved_trusted_tool(manifest):
+                    return plugin
+                break
+        raise PermissionError("The selected trusted tool is no longer active or approved.")
 
     def open_trusted_tool(self, manifest: dict[str, Any], opener: Callable[[dict[str, Any]], Any]) -> Any:
         from hpc_gui.plugins.trusted_tools import is_approved_trusted_tool

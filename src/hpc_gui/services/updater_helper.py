@@ -313,84 +313,119 @@ def perform_update(config: HelperConfig, progress: Progress, runner=subprocess.r
 
 
 def run_helper(config_path: Path) -> int:
+    """Run the independent updater with a wx-owned modal event loop."""
+    from threading import Lock, Thread
+
+    import wx
+
     from hpc_gui.core.i18n import load_saved_language, system_default_language, t
-    from PySide6.QtCore import QObject, QThread, Qt, Signal
-    from PySide6.QtWidgets import QApplication, QDialog, QLabel, QProgressBar, QVBoxLayout
 
     load_saved_language(system_default_language())
-    _application = QApplication.instance() or QApplication([])
-    dialog = QDialog()
-    dialog.setWindowTitle(t("updates.helper_title"))
-    dialog.setFixedSize(480, 250)
-    dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-    layout = QVBoxLayout(dialog)
-    title = QLabel(t("updates.helper_title").upper())
-    title.setStyleSheet("font-size: 28px; font-weight: bold;")
-    title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    status = QLabel(t("updates.helper_preparing"))
-    status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    bar = QProgressBar()
-    bar.setRange(0, 100)
-    bar.setValue(0)
-    bar.setTextVisible(True)
-    layout.addStretch()
-    layout.addWidget(title)
-    layout.addWidget(
-        QLabel(t("updates.helper_updating"), alignment=Qt.AlignmentFlag.AlignCenter)
-    )
-    layout.addStretch()
-    layout.addWidget(status)
-    layout.addWidget(bar)
-    layout.addStretch()
+    _application = wx.GetApp() or wx.App(False)
+    dialog = wx.Dialog(None, title=t("updates.helper_title"), size=(480, 250),
+                       style=wx.CAPTION)
+    panel = wx.Panel(dialog)
+    layout = wx.BoxSizer(wx.VERTICAL)
+    title = wx.StaticText(panel, label=t("updates.helper_title").upper())
+    font = title.GetFont()
+    font.SetPointSize(20)
+    font.MakeBold()
+    title.SetFont(font)
+    status = wx.StaticText(panel, label=t("updates.helper_preparing"),
+                           style=wx.ALIGN_CENTER)
+    bar = wx.Gauge(panel, range=100)
+    percent = wx.StaticText(panel, label="0%", style=wx.ALIGN_CENTER)
+    layout.AddStretchSpacer()
+    layout.Add(title, 0, wx.ALIGN_CENTER | wx.ALL, 8)
+    layout.Add(wx.StaticText(panel, label=t("updates.helper_updating")),
+               0, wx.ALIGN_CENTER | wx.ALL, 4)
+    layout.Add(status, 0, wx.EXPAND | wx.ALL, 8)
+    layout.Add(bar, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 20)
+    layout.Add(percent, 0, wx.ALIGN_CENTER | wx.ALL, 4)
+    layout.AddStretchSpacer()
+    panel.SetSizer(layout)
+    outer = wx.BoxSizer(wx.VERTICAL)
+    outer.Add(panel, 1, wx.EXPAND)
+    dialog.SetSizer(outer)
+    dialog.Centre()
 
-    class Worker(QObject):
-        changed = Signal(object, str)
-        done = Signal()
-        failed = Signal(str)
+    # The worker owns no wx objects. A bounded latest-progress slot avoids
+    # flooding the native event queue during large file copies.
+    lock = Lock()
+    state = {"progress": None, "finished": False, "error": None}
 
-        def run(self):
-            try:
-                perform_update(HelperConfig.load(config_path), self.changed.emit)
-            except Exception as exc:
-                self.failed.emit(str(exc))
+    def publish(value, message):
+        with lock:
+            state["progress"] = (value, message)
+
+    def work():
+        try:
+            perform_update(HelperConfig.load(config_path), publish)
+        except Exception as exc:
+            with lock:
+                state["error"] = str(exc)
+        finally:
+            with lock:
+                state["finished"] = True
+
+    worker = Thread(target=work, name="updater-install")
+    timer = wx.Timer(dialog)
+
+    def refresh(_event):
+        with lock:
+            progress = state["progress"]
+            finished = state["finished"]
+            error = state["error"]
+        if progress is not None:
+            value, message = progress
+            status.SetLabel(_localized_progress_text(message, t))
+            if value is None:
+                bar.Pulse()
+                percent.SetLabel("")
             else:
-                self.done.emit()
+                bar.SetValue(max(0, min(100, int(value))))
+                percent.SetLabel(f"{bar.GetValue()}%")
+        if finished:
+            timer.Stop()
+            if error is not None:
+                status.SetLabel(t("updates.helper_failed"))
+                wx.MessageBox(t("updates.helper_failed_detail").format(error=error),
+                              t("updates.helper_title"), wx.OK | wx.ICON_ERROR, dialog)
+                dialog.EndModal(wx.ID_CANCEL)
+            else:
+                dialog.EndModal(wx.ID_OK)
 
-    worker = Worker()
-    thread = QThread()
-    worker.moveToThread(thread)
-    thread.started.connect(worker.run)
-    def update_progress(value, message: str) -> None:
-        status.setText(_localized_progress_text(message, t))
-        if value is None:
-            bar.setRange(0, 0)
-        else:
-            bar.setRange(0, 100)
-            bar.setValue(value)
+    def prevent_close(event):
+        # The installer may be replacing files. Never abandon it mid-update.
+        if event.CanVeto():
+            event.Veto()
 
-    worker.changed.connect(update_progress)
-    worker.done.connect(dialog.accept)
-    def show_failure(message: str) -> None:
-        from PySide6.QtWidgets import QMessageBox
-
-        status.setText(t("updates.helper_failed"))
-        bar.setRange(0, 100)
-        QMessageBox.critical(
-            dialog,
-            t("updates.helper_title"),
-            t("updates.helper_failed_detail").format(error=message),
-        )
-        dialog.reject()
-
-    worker.failed.connect(show_failure)
-    worker.done.connect(thread.quit)
-    worker.failed.connect(thread.quit)
-    dialog.show()
-    config_path.with_suffix(".ready").write_text("ready", encoding="ascii")
-    thread.start()
-    result = dialog.exec()
-    thread.wait()
-    return 0 if result else 1
+    dialog.Bind(wx.EVT_TIMER, refresh, timer)
+    dialog.Bind(wx.EVT_CLOSE, prevent_close)
+    started = False
+    try:
+        # Preserve the handoff contract: signal readiness before waiting for
+        # the parent application to exit, but only after UI construction.
+        config_path.with_suffix(".ready").write_text("ready", encoding="ascii")
+        worker.start()
+        started = True
+        timer.Start(50)
+        result = dialog.ShowModal()
+        return 0 if result == wx.ID_OK else 1
+    finally:
+        timer.Stop()
+        if started:
+            worker.join()
+        dialog.Destroy()
+        # Destroy() may defer native top-level deletion until idle. This
+        # independent helper has no outer MainLoop after ShowModal returns.
+        _application.ProcessPendingEvents()
+        # The idle-processing API belongs to the event loop, not wx.App.
+        # A temporary loop restores the previous native loop on exit.
+        cleanup_loop = wx.GUIEventLoop()
+        with wx.EventLoopActivator(cleanup_loop):
+            cleanup_loop.ProcessIdle()
+            _application.ProcessPendingEvents()
 
 
 def _localized_progress_text(message: str, translate) -> str:

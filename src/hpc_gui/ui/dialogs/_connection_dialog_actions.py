@@ -15,7 +15,6 @@ from hpc_gui.config.file_manager_profile import (
 from hpc_gui.config.jump_host_profile import (
     patch_jump_host_settings,
 )
-from hpc_gui.ui.dialogs.cluster_self_test_dialog import ClusterSelfTestDialog
 
 ProfileData = dict[str, Any]
 
@@ -129,11 +128,6 @@ class _ConnectionDialogActionsMixin:
         if self._on_save is not None and not self._on_save(profile):
             return
         self.accept()
-
-    def _test_cluster(self) -> None:
-        profile = self._collect_profile()
-        if profile is not None:
-            ClusterSelfTestDialog(self, profile).exec()
 
     def _save_and_connect_clicked(self) -> None:
         profile = self._collect_profile()

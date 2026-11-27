@@ -98,8 +98,13 @@ def show_help(parent=None, topic_id: str | None = None) -> int:
     panel.SetSizer(root)
     navigation = model.navigation()
     results = []
+    state = {"closed": False}
 
     def refresh(_lang=None):
+        if state["closed"]:
+            return
+        search.SetHint(t("help.search_placeholder"))
+        close.SetLabel(t("common.close"))
         sidebar.Set([item.title() for item in navigation])
         sidebar.SetSelection(next((index for index, item in enumerate(navigation) if item.id == model.current_topic_id), 0))
         search_results.Set([f"{item.title} ({item.context})" for item in results])
@@ -109,8 +114,10 @@ def show_help(parent=None, topic_id: str | None = None) -> int:
         panel.Layout()
 
     def choose(_event):
-        model.select_topic(navigation[sidebar.GetSelection()].id)
-        refresh()
+        index = sidebar.GetSelection()
+        if 0 <= index < len(navigation):
+            model.select_topic(navigation[index].id)
+            refresh()
 
     def search_changed(_event):
         nonlocal results
@@ -118,8 +125,9 @@ def show_help(parent=None, topic_id: str | None = None) -> int:
         refresh()
 
     def choose_result(_event):
-        if results:
-            model.navigate_result(results[search_results.GetSelection()])
+        index = search_results.GetSelection()
+        if 0 <= index < len(results):
+            model.navigate_result(results[index])
             refresh()
 
     sidebar.Bind(wx.EVT_LISTBOX, choose)
@@ -127,10 +135,22 @@ def show_help(parent=None, topic_id: str | None = None) -> int:
     search_results.Bind(wx.EVT_LISTBOX, choose_result)
     close.Bind(wx.EVT_BUTTON, lambda _event: frame.Close())
     def on_language(lang):
-        wx.CallAfter(refresh, lang)
+        if not state["closed"]:
+            wx.CallAfter(refresh, lang)
+
+    def dispose(event):
+        if event.GetEventObject() is frame:
+            state["closed"] = True
+            unsubscribe_language_change(on_language)
+        event.Skip()
 
     subscribe_language_change(on_language)
-    frame.Bind(wx.EVT_CLOSE, lambda event: (unsubscribe_language_change(on_language), event.Skip()))
+    frame.Bind(wx.EVT_CLOSE, dispose)
+    frame.Bind(wx.EVT_WINDOW_DESTROY, dispose)
+    frame._wx_help_controls = {
+        "search": search, "results": search_results, "sidebar": sidebar,
+        "content": content, "close": close,
+    }
     refresh()
     frame.Show()
     return wx.ID_OK

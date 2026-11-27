@@ -3,7 +3,6 @@ from __future__ import annotations
 from support.ftp_widget_test_support import (
     BINARY,
     FtpWidgetTestCase,
-    MainWindow,
     MockFilesBackend,
     Path,
     QEvent,
@@ -325,40 +324,6 @@ class FtpWidgetTests(FtpWidgetTestCase):
         self.assertEqual(channel.assert_mode, "ab")
         self.assertEqual(bytes(channel.writer.data), b"abcdefgh")
         self.assertTrue(channel.closed)
-
-    @pytest.mark.gui
-    @pytest.mark.qt
-    @pytest.mark.semantic
-    def test_submission_follow_modes_route_to_the_requested_destination(self) -> None:
-        with patch("hpc_gui.ui.main_window.QTimer.singleShot"):
-            window = MainWindow()
-        try:
-            for mode, shows_jobs_page in {
-                "none": False,
-                "outputs_tab": True,
-                "new_tabs_split": True,
-                "new_window_combined": False,
-                "new_windows_split": False,
-            }.items():
-                window.tabs.setCurrentWidget(window.ftp)
-                with patch.object(window.jobs_outputs, "focus_job") as focus, patch(
-                    "hpc_gui.ui.main_window.get_sbatch_follow_mode",
-                    return_value=mode,
-                ):
-                    window.on_script_submitted("123", "/remote/job.sbatch")
-                self.assertIs(
-                    window.tabs.currentWidget(),
-                    window.jobs_outputs if shows_jobs_page else window.ftp,
-                )
-                focus.assert_called_once_with(
-                    "123",
-                    "/remote/job.sbatch",
-                    switch_to_outputs=shows_jobs_page,
-                    follow_mode=mode,
-                )
-        finally:
-            window.graceful_shutdown()
-            window.deleteLater()
 
     @pytest.mark.integration
     @pytest.mark.semantic

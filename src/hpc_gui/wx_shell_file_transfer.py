@@ -1,28 +1,20 @@
 """wx shell file transfer workflows."""
 from __future__ import annotations
 
-from threading import Event, Thread
-from pathlib import PurePosixPath
+from threading import Event
 from hpc_gui.services.transfer_session_controller import TransferSessionController
 from hpc_gui.services.transfer_controller import TransferCancelled
-from hpc_gui.services.transfer_conflict_policy import resolve_conflict_action
+from hpc_gui.services.transfer_conflict_policy import (
+    available_rename_destination, conflict_target, destination_exists, read_conflict_metadata, resolve_conflict_action,
+)
 import inspect
-import os
+from pathlib import Path
 from hpc_gui.core.i18n import t
 
 
 def _destination_exists(files, op: str, destination: str) -> bool:
-    """Does the transfer destination already exist?
-
-    A download writes to the local filesystem, so asking the remote backend
-    whether the destination exists would both miss real conflicts and report
-    phantom ones.
-    """
-    if op == "download":
-        return os.path.exists(destination)
-    probe = getattr(files, "exists", None)
-    return bool(probe) and bool(probe(destination))
-
+    """Probe the destination namespace, not the source namespace."""
+    return destination_exists(files, op, destination)
 
 def _run_file_view_item(files, item, progress, *, conflict_decision=None):
     """Execute one wx file-view transfer item against a files backend.
@@ -32,6 +24,9 @@ def _run_file_view_item(files, item, progress, *, conflict_decision=None):
     engine cancellation can interrupt an in-flight transfer instead of only
     taking effect between queued items.
     """
+    if conflict_decision == "rename" and item.op in {"upload", "download"}:
+        if destination_exists(files, item.op, item.dst):
+            raise FileExistsError(item.dst)
     if item.op == "upload":
         method = files.resume_upload if conflict_decision == "resume" else files.upload
         try:
@@ -48,6 +43,11 @@ def _run_file_view_item(files, item, progress, *, conflict_decision=None):
             raise
         except Exception as error:
             raise RuntimeError(f"Download failed ({item.src} -> {item.dst}): {error}") from error
+    elif item.op == "mkdir_local":
+        target = Path(item.dst)
+        if target.is_symlink():
+            raise ValueError(f"Unsafe local directory symlink: {target}")
+        target.mkdir(parents=True, exist_ok=True)
     elif item.op == "mkdir_remote":
         try:
             files.mkdir(item.dst)
@@ -116,7 +116,7 @@ def _verify_transfer_item(files, item):
     passthrough; a digest mismatch raises so the engine records ``FAILED``
     instead of success.  Returns the :class:`VerificationState`.
     """
-    from hpc_gui.services.transfer_integrity import VerificationState, verify_transfer
+    from hpc_gui.services.transfer_integrity import VerificationState
 
     try:
         from hpc_gui.config.storage import get_transfer_checksum_verification_enabled
@@ -125,11 +125,18 @@ def _verify_transfer_item(files, item):
         enabled = False
     if not enabled:
         return VerificationState.OFF
+    local_path = item.src if item.op == "upload" else item.dst
+    remote_path = item.dst if item.op == "upload" else item.src
+    return _verify_transfer_bytes(files, local_path, remote_path)
+
+
+def _verify_transfer_bytes(files, local_path, remote_path):
+    """Compare transferred bytes, before ASCII conversion discards raw data."""
+    from hpc_gui.services.transfer_integrity import VerificationState, verify_transfer
+
     remote_hash = getattr(files, "sha256", None)
     if not callable(remote_hash):
         return VerificationState.UNSUPPORTED
-    local_path = item.src if item.op == "upload" else item.dst
-    remote_path = item.dst if item.op == "upload" else item.src
     try:
         remote_digest = remote_hash(remote_path)
     except Exception:
@@ -154,120 +161,83 @@ def _transfer_checksum_requested() -> bool:
 def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, conflict_resolver=None, files_backend=None, parent=None):
     """Queue file-view transfers through the shared transfer lifecycle."""
     from hpc_gui.wx_transfer_workspace import create_transfer_progress
-    from hpc_gui.config.storage import coerce_profile_transfer_parallelism
-    from hpc_gui.services.transfer_conflict_policy import get_session_conflict_action
+    from hpc_gui.services.upload_plan import transfer_limits
 
     session = session_state.get("session") or {}
     files = files_backend or session.get("files")
     if not files or not items:
         raise RuntimeError(t("common.no_connection"))
 
-    rename_for_all = {"enabled": False}
+    generation = session_state.get("generation")
+    requested_mode = session_state.get("ftp_transfer_type")
+    mode_enabled = requested_mode is not None
+    if mode_enabled:
+        from hpc_gui.services.transfer_mode_execution import validate_staging_paths
 
-    def conflict_evaluator(item, action):
-        def metadata(path, *, local):
-            try:
-                if local:
-                    info = os.stat(path)
-                    return int(info.st_size), int(info.st_mtime)
-                size, mtime = files.stat(path)
-                return int(size), int(mtime)
-            except Exception:
-                return None, None
+        items = list(items)
+        validate_staging_paths(items)
 
-        source_local = item.op == "upload"
-        target_local = item.op == "download"
-        source_size, source_mtime = metadata(item.src, local=source_local)
-        target_size, target_mtime = metadata(item.dst, local=target_local)
-        return resolve_conflict_action(
-            action,
-            source_size=source_size,
-            target_size=target_size,
-            source_mtime=source_mtime,
-            target_mtime=target_mtime,
+    def target_for(item):
+        return conflict_target(files, item.op, item.dst, include_partial=mode_enabled)
+
+    def current():
+        return (
+            session_state.get("session") is session
+            and session_state.get("generation") == generation
+            and not getattr(lifecycle, "shutdown_started", False)
+            and not controller.engine.cancel_requested
         )
 
+    def conflict_evaluator(item, action):
+        source, target = read_conflict_metadata(files, item, target_path=target_for(item))
+        return resolve_conflict_action(
+            action, source_size=source.size, target_size=target.size,
+            source_mtime=source.mtime, target_mtime=target.mtime,
+        )
+
+    def automatic_rename(item):
+        if not current():
+            return "cancel"
+        candidate = available_rename_destination(files, item.op, item.dst, include_partial=mode_enabled)
+        return ("rename", candidate) if candidate is not None and current() else "cancel"
+
     def wx_conflict_resolver(item):
-        import wx
+        from hpc_gui.wx_conflict_bridge import request_conflict_decision
 
-        if (
-            session_state.get("conflict_policy") == "rename"
-            or rename_for_all["enabled"]
-            or get_session_conflict_action(item.op) == "rename"
-        ):
-            target = PurePosixPath(item.dst)
-            suffix = target.suffix
-            stem = target.name[: -len(suffix)] if suffix else target.name
-            for index in range(1, 10000):
-                candidate = target.with_name(f"{stem} ({index}){suffix}")
-                if not _destination_exists(files, item.op, str(candidate)):
-                    return ("rename", str(candidate))
-            return "cancel"
+        return request_conflict_decision(
+            parent, files, item, current, read_conflict_metadata(files, item, target_path=target_for(item)),
+        )
 
-        from hpc_gui.wx_transfer_conflict_dialog import create_wx_transfer_conflict_dialog
+    def execute(backend, item, progress, conflict_decision):
+        if mode_enabled and item.op in {"upload", "download"}:
+            from hpc_gui.services.transfer_mode_execution import execute_with_mode, reserve_transfer_paths
 
-        decision = {"value": "cancel"}
-        ready = Event()
+            def verify_bytes(local, remote):
+                item.verification_state = _verify_transfer_bytes(backend, local, remote)
 
-        def ask():
-            try:
-                dlg = create_wx_transfer_conflict_dialog(parent, files, item)
-                if not dlg:
-                    decision["value"] = "cancel"
-                    return
-                dlg.ShowModal()
-                raw = dlg._wx_conflict_result["value"]
-                apply_all = bool(
-                    getattr(dlg, "_wx_conflict_apply_all", None)
-                    and dlg._wx_conflict_apply_all.GetValue()
+            with reserve_transfer_paths(files, item):
+                item.effective_mode = execute_with_mode(
+                    backend, item, progress, requested_mode, conflict_decision, _run_file_view_item,
+                    verify_bytes=verify_bytes if controller.checksum_enabled else None,
                 )
-                always_use = bool(
-                    getattr(dlg, "_wx_conflict_always_use", None)
-                    and dlg._wx_conflict_always_use.GetValue()
-                )
-                downloads_only = bool(
-                    getattr(dlg, "_wx_conflict_downloads_only", None)
-                    and dlg._wx_conflict_downloads_only.GetValue()
-                )
-                # if rename, raw is tuple
-                if isinstance(raw, tuple) and raw and raw[0] == "rename":
-                    selected = raw
-                    if apply_all:
-                        rename_for_all["enabled"] = True
-                else:
-                    # map string decisions
-                    selected = raw if raw in {
-                        "overwrite",
-                        "overwrite_if_newer",
-                        "overwrite_if_size_differs",
-                        "overwrite_if_size_differs_or_newer",
-                        "skip",
-                        "resume",
-                        "cancel",
-                    } else "cancel"
-                decision["value"] = (
-                    {
-                        "value": selected,
-                        "apply_all": apply_all,
-                        "always_use": always_use,
-                        "downloads_only": downloads_only,
-                    }
-                    if apply_all or always_use
-                    else selected
-                )
-                dlg.Destroy()
-            finally:
-                ready.set()
-
-        try:
-            wx.CallAfter(ask)
-        except BaseException:
-            return "cancel"
-        ready.wait()
-        return decision["value"]
+        else:
+            _run_file_view_item(backend, item, progress, conflict_decision=conflict_decision)
 
     def run_item(item, progress, *, conflict_decision=None):
-        _run_file_view_item(files, item, progress, conflict_decision=conflict_decision)
+        # FTP advertises serial queueing, but the browser/control connection
+        # must still be independent of each transfer. SSH handles channel
+        # isolation internally, so it does not need a second backend wrapper.
+        opener = getattr(files, "open_transfer_backend", None)
+        if item.op not in {"upload", "download"} or not callable(opener):
+            execute(files, item, progress, conflict_decision)
+            return
+        backend = opener()
+        if backend is None or backend is files:
+            raise RuntimeError("Transfer backend factory did not return an isolated backend")
+        try:
+            execute(backend, item, progress, conflict_decision)
+        finally:
+            backend.close()
 
     transfer_window = None
     # Prefer embedded transfers panel when shell has one and caller is the shell frame
@@ -291,6 +261,16 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         except Exception:
             return False
 
+    if embedded and _embedded_alive(embedded):
+        previous = getattr(embedded, "_wx_transfer_state", {}).get("controller")
+        previous_engine = getattr(previous, "engine", None)
+        if previous_engine is not None and (previous_engine.running or previous_engine.pending or previous_engine.failed):
+            # A second batch must not replace a live or resumable queue owner.
+            if parent is None:
+                import wx
+
+                parent = wx.GetTopLevelParent(embedded)
+            embedded = None
     if embedded and _embedded_alive(embedded):
         # Route shell's own file transfers to the embedded panel; keep detached path for external parents
         if parent is not None and hasattr(parent, "_wx_shell_controls"):
@@ -326,57 +306,52 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
                     "Transfer failed without a backend error message.",
                 )
                 item.error_message = str(error)
-            transfer_window._wx_transfer_queue(event, item)
+            transfer_window._wx_transfer_queue(event, item, owner=controller)
 
     def progress_event(item, done, total):
         if transfer_window:
-            transfer_window._wx_transfer_progress(item, done, total)
+            transfer_window._wx_transfer_progress(item, done, total, owner=controller)
         if on_progress:
             on_progress(item, done, total)
 
     profile = session.get("profile") if isinstance(session.get("profile"), dict) else {}
-    configured_parallel_limit = coerce_profile_transfer_parallelism(
-        profile.get("transfer_parallelism", 1)
-    )
-    # A profile cannot override the backend's channel-safety contract. FTP
-    # adapters share a control/data session and advertise serial-only; SSH
-    # adapters may opt in after isolating each transfer channel.
-    parallel_limit = (
-        configured_parallel_limit
-        if bool(getattr(files, "supports_parallel_transfers", False))
-        else 1
-    )
+    configured_parallel_limit, parallel_limit = transfer_limits(files, profile)
+    sessions = session_state.setdefault("transfer_sessions", set())
+
+    def register_run():
+        sessions.add(controller)
+
+    def finish_run():
+        sessions.discard(controller)
+        if transfer_window:
+            transfer_window._wx_transfer_finish(owner=controller)
+
+    custom_resolver = conflict_resolver or session_state.get("conflict_resolver")
     controller = TransferSessionController(
         items,
         run_item,
         parallel_limit=parallel_limit,
         conflict_check=lambda item: (
             item.op in {"upload", "download"}
-            and _destination_exists(files, item.op, item.dst)
+            and target_for(item) is not None
         ),
-        conflict_resolver=conflict_resolver or session_state.get("conflict_resolver") or (wx_conflict_resolver if parent else None),
+        conflict_resolver=custom_resolver or (wx_conflict_resolver if parent else None),
+        conflict_rename=automatic_rename if parent and custom_resolver is None else None,
         conflict_evaluator=conflict_evaluator,
-        verify=lambda item: _verify_transfer_item(files, item),
+        verify=None if mode_enabled else lambda item: _verify_transfer_item(files, item),
         on_queue=queue_event,
         on_progress=progress_event,
+        on_start=register_run,
+        on_done=finish_run,
     )
+    controller.configured_parallel_limit = configured_parallel_limit
     if _transfer_checksum_requested():
         controller.set_checksum_enabled(True)
     if transfer_window:
         transfer_window._wx_transfer_set_controller(controller)
     if session_state.get("conflict_policy"):
         controller.set_conflict_policy(session_state["conflict_policy"])
-    sessions = session_state.setdefault("transfer_sessions", set())
-    sessions.add(controller)
     controller.start()
-
-    def forget_when_done():
-        controller.engine.wait()
-        sessions.discard(controller)
-        if transfer_window:
-            transfer_window._wx_transfer_finish()
-
-    Thread(target=forget_when_done, daemon=True).start()
     if lifecycle is not None:
         register_cleanup = lifecycle.register_cleanup
         try:

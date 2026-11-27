@@ -394,7 +394,7 @@ class TestRemoteEntryHelpers:
     def test_file_type_directory(self):
         """file_type should detect directories correctly."""
         from hpc_gui.core.i18n import current_language, load_language, t
-        from hpc_gui.ui.models.remote_entry_helpers import file_type
+        from hpc_gui.services.remote_entry_format import file_type
 
         previous_language = current_language()
         try:
@@ -407,14 +407,14 @@ class TestRemoteEntryHelpers:
 
     def test_file_type_file(self):
         """file_type should detect files correctly."""
-        from hpc_gui.ui.models.remote_entry_helpers import file_type
+        from hpc_gui.services.remote_entry_format import file_type
 
         result = file_type("test.txt", is_dir=False)
         assert result != "Folder"
 
     def test_file_type_unicode_name(self):
         """file_type should handle Unicode names."""
-        from hpc_gui.ui.models.remote_entry_helpers import file_type
+        from hpc_gui.services.remote_entry_format import file_type
 
         result = file_type("日本語.txt", is_dir=False)
         assert result, "file_type should return a non-empty string"

@@ -117,6 +117,64 @@ def test_wx_jobs_outputs_live_follow():
     finally:
         _close(frame)
 
+
+@pytest.mark.integration
+@pytest.mark.wx
+@pytest.mark.semantic
+def test_submitted_job_id_routes_into_wx_output_following(monkeypatch):
+    from hpc_gui.wx_shell import _remote_files_callbacks
+
+    class Files:
+        pass
+
+    class Slurm:
+        def sbatch(self, path):
+            assert path == "/scratch/job.sbatch"
+            return "Submitted batch job 12345"
+
+    state = {"session": {"files": Files(), "slurm": Slurm()}}
+    callbacks = _remote_files_callbacks(state, None, None)
+    result = callbacks["submit_slurm"]("/scratch/job.sbatch")
+    assert result == "Submitted batch job 12345"
+
+    app, frame, panel = _build_panel(
+        list_jobs=lambda: [{
+            "id": "12345",
+            "state": "RUNNING",
+            "name": "job",
+            "workdir": "/scratch",
+            "stdout_path": "/scratch/12345.out",
+        }],
+        read_output=lambda job_id: {
+            "stdout": f"output for {job_id}",
+            "stderr": "",
+        },
+    )
+    try:
+        controls = panel._wx_jobs_controls
+        panel._wx_jobs_refresh_jobs()
+        for _ in range(40):
+            wx.Yield()
+            if controls["jobs"].GetItemCount():
+                break
+            wx.MilliSleep(10)
+        event = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, controls["jobs"].GetId())
+        event.SetIndex(0)
+        controls["jobs"].GetEventHandler().ProcessEvent(event)
+        controls["notebook"].SetSelection(4)
+        panel._wx_jobs_refresh_outputs()
+        for _ in range(50):
+            wx.Yield()
+            if any("output for 12345" in item.GetValue()
+                   for item in controls["output_channels"].values()):
+                break
+            wx.MilliSleep(10)
+        assert panel._wx_jobs_state["selected_job"] == "12345"
+        assert any("output for 12345" in item.GetValue()
+                   for item in controls["output_channels"].values())
+    finally:
+        _close(frame)
+
 @pytest.mark.gui
 @pytest.mark.wx
 def test_wx_jobs_outputs_pause_resume():

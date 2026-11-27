@@ -24,6 +24,40 @@ def test_large_batched_listing_stale_refresh_and_cache():
 @pytest.mark.unit
 @pytest.mark.wx
 @pytest.mark.semantic
+def test_remote_listing_cache_ttl_force_refresh_and_invalidation(monkeypatch):
+    import hpc_gui.wx_remote_files as remote_files
+
+    now = {"value": 10.0}
+    monkeypatch.setattr(remote_files.time, "monotonic", lambda: now["value"])
+    model = WxRemoteDirectoryModel("/remote", cache_ttl=60)
+    calls = []
+
+    def loader(path):
+        calls.append(path)
+        return (RemoteEntry(f"{path}/{len(calls)}"),)
+
+    first = model.list_entries(loader)
+    now["value"] = 69.0
+    assert model.list_entries(loader) == first
+    assert len(calls) == 1
+
+    now["value"] = 71.0
+    expired = model.list_entries(loader)
+    assert expired != first
+    assert len(calls) == 2
+
+    forced = model.list_entries(loader, force=True)
+    assert forced != expired
+    assert len(calls) == 3
+
+    model.invalidate("/remote")
+    model.list_entries(loader)
+    assert calls == ["/remote"] * 4
+
+
+@pytest.mark.unit
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_remote_clipboard_undo_permissions_and_middle_click():
     model = WxRemoteDirectoryModel()
     assert model.clipboard_payload(["/a/space name", "/b"]).startswith("/a/")

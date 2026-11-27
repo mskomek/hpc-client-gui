@@ -42,8 +42,14 @@ FEATURE_EVIDENCE = {
     "GUI-EDIT-002": Evidence("COVERED", "main_window.py", "wx_shell.py; wx_editor_windows.py; wx_editor_view.py", "test_wx_editor_tabs.py; test_wx_editor.py; test_wx_editor_window_parity.py; test_wx_remote_editor_flow.py; test_wx_term002.py", "Wave 51: multi-doc save/dirty/close/reorder proven via Notebook events, standalone independence preserved."),
     "GUI-PLUGIN-001": Evidence("COVERED", "plugin_manager_dialog.py", "wx_plugins.py", "test_wx_plugins.py"),
     "GUI-PLUGIN-002": Evidence("COVERED", "ansys_lint_results_dialog.py", "wx_ansys_view.py; wx_ansys.py", "test_wx_ansys_view.py; test_wx_ansys.py", "Wave 54: real wx event -> file_chooser seam -> WxAnsysModel -> engine -> visible ListCtrl with grouped severity, details, copy/docs, EN/TR and close-in-flight safety. 8 view tests + 2 model tests."),
-    "GUI-SET-001": Evidence("COVERED", "settings_dialog.py", "wx_settings.py", "test_wx_settings.py"),
-    "GUI-LOG-001": Evidence("COVERED", "logs_widget.py", "wx_logs.py", "test_wx_logs.py"),
+    "GUI-SET-001": Evidence(
+        "COVERED",
+        "retired Qt Settings dialog",
+        "wx_settings.py; wx_settings_view.py; wx_settings_preferences.py; wx_shortcut_editor.py; wx_shortcuts.py",
+        "test_wx_settings.py; test_wx_settings_preferences_native.py; test_wx_settings_speed_native.py; test_wx_shortcut_preferences.py; test_transfer_speed_test.py; test_transfer_speed_test_ssh_wire.py",
+        "wx covers global/profile preference controls, runtime language changes, refresh/live tracking, transfer mode and checksum, terminal graphics reset, remote cache clearing, remote path defaults, asynchronous speed testing, file associations, Smart Open reset, Apply/Cancel, profile/plugin preservation, and editable persisted shortcuts. Applying shortcut changes refreshes shell accelerators on the wx event loop.",
+    ),
+    "GUI-LOG-001": Evidence("COVERED", "wx_logs_view.py", "wx_logs.py", "test_wx_logs.py"),
     "GUI-HELP-001": Evidence("COVERED", "help_dialog.py", "wx_help.py", "test_wx_help.py"),
     "GUI-A11Y-001": Evidence("PARTIAL", "GUI_FEATURE_PARITY_BASELINE.md", "wx_connection.py; wx_connection_dialog.py", "test_wx_a11y.py; test_wx_connection_profiles.py", "Connection controls have visible labels, keyboard equivalents, focus/error handling, textual states, and named primary actions; no human keyboard/screen-reader audit was performed."),
 }

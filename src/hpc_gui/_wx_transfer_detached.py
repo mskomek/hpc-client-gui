@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from hpc_gui._wx_transfer_common import is_safe
+from hpc_gui._wx_transfer_common import (
+    gauge_range_value, is_safe, progress_text, reset_progress, update_button_state,
+)
 from hpc_gui.core.i18n import t
 
 
@@ -19,22 +21,26 @@ def bind_detached(host, state: dict[str, Any], controls: dict[str, Any]):
         if not is_safe(host, state, controls.get("detail")):
             return
         try:
+            if event in {"started", "completed", "failed", "removed"}:
+                reset_progress(state, item)
             if event == "started":
                 controls["detail"].SetLabel(t("transfer.active_item").format(item=item.label()))
             elif event == "completed":
                 controls["detail"].SetLabel(t("transfer.completed_tab"))
             elif event == "failed":
                 controls["detail"].SetLabel(t("transfer.errors_tab"))
+            update_button_state(host, state, controls, False)
         except RuntimeError:
             return
 
-    def update_progress(item, done, total):
+    def update_progress(item, done, total, *, now=None):
         if not is_safe(host, state, controls.get("detail")):
             return
         try:
-            controls["gauge"].SetRange(max(1, int(total)))
-            controls["gauge"].SetValue(min(max(0, int(done)), controls["gauge"].GetRange()))
-            controls["detail"].SetLabel(t("transfer.progress_detail").format(item=item.label(), done=done, total=total, speed="", eta=""))
+            maximum, value = gauge_range_value(done, total)
+            controls["gauge"].SetRange(maximum)
+            controls["gauge"].SetValue(value)
+            controls["detail"].SetLabel(progress_text(state, item, done, total, now=now))
         except RuntimeError:
             return
 
@@ -85,6 +91,7 @@ def bind_detached(host, state: dict[str, Any], controls: dict[str, Any]):
 
     def close(_event):
         state["closed"] = True
+        reset_progress(state)
         try:
             from hpc_gui.core.i18n import unsubscribe_language_change as _unsub
 

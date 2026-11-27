@@ -59,9 +59,6 @@ class _ConnectionDialogTemplatesMixin:
                         selected
                     )
                 )
-        menu.addSeparator()
-        more_action = menu.addAction(t("connection.get_more_plugins"))
-        more_action.triggered.connect(self._open_plugin_manager)
         self._system_template_menu = menu
         self._system_template_submenus = submenus
         self.btn_system_templates.setMenu(menu)

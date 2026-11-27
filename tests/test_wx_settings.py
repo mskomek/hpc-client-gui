@@ -28,3 +28,29 @@ def test_shortcut_changes_and_legacy_qt_setting_ignored():
 def test_settings_use_native_macos_shortcuts():
     model = WxSettingsModel(platform="macos")
     assert any(item.binding == "Cmd+," for item in model.shortcuts.bindings())
+
+
+def test_transfer_parallel_limit_is_profile_scoped():
+    from hpc_gui.wx_settings import GLOBAL_KEYS, PROFILE_KEYS
+
+    assert "transfer_parallelism" not in GLOBAL_KEYS
+    assert "transfer_parallelism" in PROFILE_KEYS
+
+
+def test_sbatch_follow_mode_legacy_migrates_and_persists(monkeypatch):
+    from hpc_gui.config import storage
+
+    monkeypatch.setattr(storage, "load_settings", lambda: {
+        "focus_jobs_outputs_after_submission_enabled": False,
+    })
+    assert storage.get_sbatch_follow_mode() == "none"
+    monkeypatch.setattr(storage, "load_settings", lambda: {
+        "focus_jobs_outputs_after_submission_enabled": True,
+    })
+    assert storage.get_sbatch_follow_mode() == "outputs_tab"
+    monkeypatch.setattr(storage, "load_settings", lambda: {})
+    assert storage.get_sbatch_follow_mode() == "outputs_tab"
+    writes = []
+    monkeypatch.setattr(storage, "update_settings", lambda patch: writes.append(dict(patch)))
+    assert storage.set_sbatch_follow_mode("new_tabs_split") == "new_tabs_split"
+    assert writes == [{"sbatch_follow_mode": "new_tabs_split"}]

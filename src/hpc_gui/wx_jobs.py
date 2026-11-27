@@ -40,6 +40,7 @@ from hpc_gui.jobs.workspace_lifecycle import (
 from hpc_gui.jobs.workspace_callbacks import normalize_provider_callbacks
 from hpc_gui.jobs.workspace_navigation import go_to_jobs, select_workspace_page
 from hpc_gui.jobs.workspace_test_access import expose_workspace_access
+from hpc_gui.jobs.job_submission_follow import install_submission_callback
 from hpc_gui.config import storage
 from hpc_gui.services.output_channel_resolver import OutputResolver
 from hpc_gui.wx_host import make_host
@@ -441,6 +442,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             "show_details_content": _show_details_content,
         },
     )
+    install_submission_callback(wx, host, model, state, refresh_jobs, refresh_outputs_tab, _resolve_output_channels, _ensure_output_tabs, _select_inner_page, views.outputs.page, kwargs, _remote_reader, _remote_statter, lifecycle, str(kwargs.get("profile_id") or ""), str(kwargs.get("cluster_id") or ""), str(kwargs.get("provider_id") or ""))
     host.Bind(wx.EVT_WINDOW_DESTROY, lifecycle_controller.on_destroy)
     _update_outputs_visibility()
     _show_files_selected_state(False)

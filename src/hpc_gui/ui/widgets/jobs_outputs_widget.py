@@ -39,7 +39,7 @@ from hpc_gui.config.storage import (
 )
 from hpc_gui.core.history import append_event
 from hpc_gui.core.i18n import t
-from hpc_gui.core.ui_errors import show_exception
+from hpc_gui.ui._exception_dialog import show_exception
 from hpc_gui.config.system_profile import format_remote_path, normalize_system_settings
 from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
 from hpc_gui.services.slurm_models import is_active_state, parse_scontrol, parse_squeue
@@ -54,7 +54,7 @@ from ._jobs_outputs_lifecycle import _JobsOutputsLifecycleMixin
 from ._jobs_outputs_jobs import _JobsOutputsJobsMixin
 from ._jobs_outputs_followers import _JobsOutputsFollowersMixin
 from ._jobs_outputs_live import _JobsOutputsLiveMixin
-from ._jobs_output_text import _ANSI_TOKEN_RE, _ANSI_COLORS, _LIVE_TAIL_INTERVAL_MS, _LIVE_TAIL_LINE_COUNT, _LIVE_TAIL_MAX_RETRY_INTERVAL_MS, _LIVE_TAIL_SLOW_INTERVAL_MS, _LIVE_TAIL_FILE_RETRY_INTERVAL_MS, _LIVE_TAIL_INITIAL_RETRY_SECONDS, _LIVE_TAIL_FILE_RETRY_WINDOW_SECONDS, _OUTPUT_MAX_LINES, _OUTPUT_TRUNCATION_MARKER, _ansi_prefix_for_tail, _bounded_output_text, _ansi_to_html
+from hpc_gui.services.job_output_text import _ANSI_TOKEN_RE, _ANSI_COLORS, _LIVE_TAIL_INTERVAL_MS, _LIVE_TAIL_LINE_COUNT, _LIVE_TAIL_MAX_RETRY_INTERVAL_MS, _LIVE_TAIL_SLOW_INTERVAL_MS, _LIVE_TAIL_FILE_RETRY_INTERVAL_MS, _LIVE_TAIL_INITIAL_RETRY_SECONDS, _LIVE_TAIL_FILE_RETRY_WINDOW_SECONDS, _OUTPUT_MAX_LINES, _OUTPUT_TRUNCATION_MARKER, _ansi_prefix_for_tail, _bounded_output_text, _ansi_to_html
 from ._jobs_output_rendering import _apply_terminal_output_style as _render_terminal_output_style
 from ._jobs_output_follower_views import _NavigableTextEdit, _OutputFollowerWidget
 from ._jobs_output_follower_windows import _FollowerWindow, _SingleFileFollowerWidget

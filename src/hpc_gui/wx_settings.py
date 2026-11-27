@@ -29,7 +29,7 @@ from hpc_gui.core.platform import current_os
 from hpc_gui.services.shortcut_preferences import ShortcutPreferences
 
 
-GLOBAL_KEYS = frozenset({"jobs_outputs_refresh_interval", "remote_directory_cache", "transfer_checksum", "ssh_connection_attempts", "shortcut_preferences"})
+GLOBAL_KEYS = frozenset({"jobs_outputs_refresh_interval", "remote_directory_cache", "transfer_checksum", "upload_preflight_confirmation", "ssh_connection_attempts", "shortcut_preferences"})
 PROFILE_KEYS = frozenset({"transfer_parallelism", "ssh_timeout", "keepalive_interval_seconds", "x11_enabled"})
 LEGACY_IGNORED_KEYS = frozenset({"terminal_graphics_auto_compatibility", "qt_webengine_gpu"})
 
@@ -37,6 +37,7 @@ LEGACY_IGNORED_KEYS = frozenset({"terminal_graphics_auto_compatibility", "qt_web
 GLOBAL_STORAGE_KEYS: dict[str, str] = {
     "remote_directory_cache": "remote_directory_cache_enabled",
     "transfer_checksum": "transfer_checksum_verification_enabled",
+    "upload_preflight_confirmation": "upload_preflight_confirmation_enabled",
     "jobs_outputs_refresh_interval": "jobs_outputs_refresh_interval_seconds",
     "shortcut_preferences": "shortcut_preferences",
     "ssh_connection_attempts": "ssh_connection_attempts",
@@ -58,6 +59,7 @@ PROFILE_STORAGE_KEYS: dict[str, str] = {
 LIVE_APPLY_KEYS = frozenset({
     "remote_directory_cache",
     "transfer_checksum",
+    "upload_preflight_confirmation",
     "jobs_outputs_refresh_interval",
     "ssh_connection_attempts",
     "transfer_parallelism",
@@ -82,6 +84,7 @@ RESTART_REQUIRED_KEYS = frozenset()
 QT_PARITY_MAP: dict[str, str] = {
     "remote_directory_cache_enabled": "PORT-TO-WX",
     "transfer_checksum_verification_enabled": "PORT-TO-WX",
+    "upload_preflight_confirmation_enabled": "PORT-TO-WX",
     "jobs_outputs_refresh_interval_seconds": "PORT-TO-WX",
     "transfer_parallelism": "PORT-TO-WX",
     "ssh_timeout": "PORT-TO-WX",
@@ -99,6 +102,7 @@ QT_PARITY_MAP: dict[str, str] = {
 SETTINGS_INVENTORY: tuple[dict[str, Any], ...] = (
     {"key": "remote_directory_cache", "owner": "core/files", "type": "bool", "default": True, "persisted": "config.json:settings.remote_directory_cache_enabled", "sensitive": False, "migrated_from": None, "consumer": "get_remote_directory_cache_enabled", "ui_control": "wx Settings checkbox", "scope": "global", "live": True},
     {"key": "transfer_checksum", "owner": "core/transfers", "type": "bool", "default": False, "persisted": "config.json:settings.transfer_checksum_verification_enabled", "sensitive": False, "migrated_from": None, "consumer": "get_transfer_checksum_verification_enabled", "ui_control": "wx Settings checkbox", "scope": "global", "live": True},
+    {"key": "upload_preflight_confirmation", "owner": "core/transfers", "type": "bool", "default": True, "persisted": "config.json:settings.upload_preflight_confirmation_enabled", "sensitive": False, "migrated_from": None, "consumer": "get_upload_preflight_confirmation_enabled", "ui_control": "wx Settings checkbox", "scope": "global", "live": True},
     {"key": "jobs_outputs_refresh_interval", "owner": "core/jobs", "type": "int seconds", "default": 15, "persisted": "config.json:settings.jobs_outputs_refresh_interval_seconds", "sensitive": False, "migrated_from": None, "consumer": "get_jobs_outputs_refresh_interval_seconds", "ui_control": "Jobs refresh path (no Settings dialog spin; hidden-capability, not orphan)", "scope": "global", "live": True},
     {"key": "shortcut_preferences", "owner": "core/keymap", "type": "object", "default": {}, "persisted": "config.json:settings.shortcut_preferences", "sensitive": False, "migrated_from": None, "consumer": "ShortcutPreferences", "ui_control": "shortcut preferences surface", "scope": "global", "live": True},
     {"key": "ssh_connection_attempts", "owner": "core/connection", "type": "int 1..5", "default": 5, "persisted": "config.json:settings.ssh_connection_attempts", "sensitive": False, "migrated_from": None, "consumer": "get_ssh_connection_attempts", "ui_control": "wx Settings spin", "scope": "global", "live": True},
@@ -204,6 +208,7 @@ def build_model_from_storage(
     global_values: dict[str, Any] = {
         "remote_directory_cache": _storage.get_remote_directory_cache_enabled(),
         "transfer_checksum": _storage.get_transfer_checksum_verification_enabled(),
+        "upload_preflight_confirmation": _storage.get_upload_preflight_confirmation_enabled(),
         "jobs_outputs_refresh_interval": _storage.get_jobs_outputs_refresh_interval_seconds(),
         "ssh_connection_attempts": _storage.get_ssh_connection_attempts(),
     }
@@ -301,6 +306,14 @@ def persist_model_snapshot(
             persisted["global"]["transfer_checksum"] = value
         except Exception as exc:
             _fail("transfer_checksum", exc)
+    if "upload_preflight_confirmation" in mapping:
+        try:
+            value = _storage.set_upload_preflight_confirmation_enabled(
+                bool(mapping["upload_preflight_confirmation"])
+            )
+            persisted["global"]["upload_preflight_confirmation"] = value
+        except Exception as exc:
+            _fail("upload_preflight_confirmation", exc)
     if "jobs_outputs_refresh_interval" in mapping:
         try:
             value = _storage.set_jobs_outputs_refresh_interval_seconds(

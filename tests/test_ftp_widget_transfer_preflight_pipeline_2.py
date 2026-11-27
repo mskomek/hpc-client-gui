@@ -277,3 +277,66 @@ class FtpWidgetTests(FtpWidgetTestCase):
         self.assertNotIn("/remote/target", panel._directory_cache)
         self.assertNotIn("/remote/source", panel._directory_cache)
         self.assertNotIn("/remote/source/folder", panel._directory_cache)
+
+
+    @pytest.mark.integration
+    @pytest.mark.concurrency
+    def test_upload_conflict_planning_keeps_probes_off_gui_thread(self) -> None:
+        gui_thread = threading.get_ident()
+        probe_threads = []
+
+        class Files:
+            supports_parallel_transfers = False
+
+            @staticmethod
+            def exists(path):
+                probe_threads.append(threading.get_ident())
+                return path in {"/remote/folder", "/remote/folder/occupied.txt"}
+
+            @staticmethod
+            def is_dir(path):
+                probe_threads.append(threading.get_ident())
+                return path == "/remote/folder"
+
+            @staticmethod
+            def stat(_path):
+                probe_threads.append(threading.get_ident())
+                return 5, 1
+
+        panel = self.widget.panel_scratch
+        panel.session = {"connected": True, "files": Files()}
+        decision_threads = []
+
+        def decide(*_args, **kwargs):
+            decision_threads.append(threading.get_ident())
+            self.assertEqual(kwargs["target"].path, "/remote/folder/occupied.txt")
+            return TransferConflictDecision("skip")
+
+        clear_session_conflict_action()
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                folder = Path(tmp, "folder")
+                folder.mkdir()
+                (folder / "occupied.txt").write_text("new")
+                (folder / "new.txt").write_text("payload")
+                with (
+                    patch.object(TransferConflictDialog, "get_decision", side_effect=decide) as decision,
+                    patch.object(panel, "_run_plan_with_progress") as run_plan,
+                ):
+                    self.assertTrue(panel._apply_local_upload_incremental([str(folder)], "/remote"))
+                    deadline = time.monotonic() + 5
+                    while time.monotonic() < deadline and not run_plan.called:
+                        QApplication.processEvents()
+                        time.sleep(0.01)
+                    decision.assert_called_once()
+                    run_plan.assert_called_once()
+                    self.assertEqual(decision_threads, [gui_thread])
+                    self.assertTrue(probe_threads)
+                    self.assertTrue(all(ident != gui_thread for ident in probe_threads))
+                    self.assertEqual(
+                        [(item.op, item.dst) for item in run_plan.call_args.args[0]],
+                        [("mkdir_remote", "/remote/folder"),
+                         ("upload", "/remote/folder/new.txt")],
+                    )
+        finally:
+            clear_session_conflict_action()

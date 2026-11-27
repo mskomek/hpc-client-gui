@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
 )
 
 from hpc_gui.core.i18n import t, tr as _tr
-from hpc_gui.core.ui_errors import show_exception
+from hpc_gui.ui._exception_dialog import show_exception
 from hpc_gui.services.file_clipboard import get_file_clipboard
 
 

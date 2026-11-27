@@ -5,6 +5,7 @@ import logging
 import sys
 import threading
 from logging.handlers import RotatingFileHandler
+from typing import Callable
 
 from hpc_gui.core.logging import log_path
 from hpc_gui.core.log_redaction import redact_text
@@ -121,8 +122,8 @@ def setup_logging(level: int = logging.INFO) -> None:
         pass
 
 
-def install_excepthook() -> None:
-    """Log uncaught exceptions to the app log and show crash dialog."""
+def install_excepthook(present_crash: Callable[[], None] | None = None) -> None:
+    """Persist uncaught exceptions; optionally notify the owning GUI runtime."""
 
     def _hook(exc_type, exc, tb):
         try:
@@ -130,17 +131,11 @@ def install_excepthook() -> None:
         except Exception:
             pass
         try:
-            from hpc_gui.core.crash_reporter import write_crash_flag, show_crash_dialog
+            from hpc_gui.core.crash_reporter import write_crash_flag
 
             write_crash_flag(exc_type, exc, tb)
-            try:
-                from PySide6.QtWidgets import QApplication
-
-                app = QApplication.instance()
-                if app is not None:
-                    show_crash_dialog(None)
-            except Exception:
-                pass
+            if present_crash is not None:
+                present_crash()
         except Exception:
             pass
         try:

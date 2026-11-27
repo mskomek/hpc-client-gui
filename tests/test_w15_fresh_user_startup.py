@@ -26,6 +26,7 @@ All filesystem fixtures are tmp-based; the developer home is never touched.
 from __future__ import annotations
 
 import json
+import re
 import socket
 import sys
 import tempfile
@@ -301,13 +302,15 @@ def test_profile_created_through_visible_add_dialog(monkeypatch):
 
 @pytest.mark.wx
 @pytest.mark.semantic
-def test_closed_port_connect_fails_visibly_without_connected_state(monkeypatch):
+def test_closed_port_connect_fails_visibly_without_connected_state(monkeypatch, caplog):
     """NEG-W15-SAFE-FAILURE: refused connect ends FAILED, never connected-looking."""
     from hpc_gui.config import storage
     from hpc_gui.core.i18n import t
     from hpc_gui.wx_connection import build_connection_panel
 
-    _fresh_env(monkeypatch)
+    fresh = _fresh_env(monkeypatch)
+    messages = []
+    monkeypatch.setattr(wx, "MessageBox", lambda text, *a, **k: messages.append(text) or wx.ID_OK)
     storage.save_config({"profiles": [], "settings": {}})
     storage.upsert_profile({"name": "dead-port", "host": "127.0.0.1", "port": 1, "username": "u"})
     app = wx.App(False)
@@ -355,6 +358,7 @@ def test_closed_port_connect_fails_visibly_without_connected_state(monkeypatch):
             if (
                 model.controller.state.value == "failed"
                 and t("connection.status_failed") in texts
+                and messages
             ):
                 label = texts
                 break
@@ -363,8 +367,13 @@ def test_closed_port_connect_fails_visibly_without_connected_state(monkeypatch):
             "failure must be visible, not silent; "
             f"state={model.controller.state.value}, labels={texts}"
         )
+        diagnostic = next((re.search(r"SSH-[0-9A-F]{6}", text) for text in messages
+                           if re.search(r"SSH-[0-9A-F]{6}", text)), None)
+        assert diagnostic is not None, messages
+        assert f"Error-ID={diagnostic.group(0)}" in caplog.text
     finally:
         frame.Destroy()
+        fresh.cleanup()
 
 
 @pytest.mark.wx

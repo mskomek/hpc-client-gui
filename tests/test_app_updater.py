@@ -2,6 +2,8 @@ import hashlib
 import base64
 import os
 import subprocess
+import sys
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -18,10 +20,9 @@ from hpc_gui.services.app_updater import (
     release_asset_names,
 )
 from hpc_gui.services.installation_context import InstallationContext
-from hpc_gui.ui.main_window import MainWindow
-from hpc_gui.ui.splash_screen import UpdateSplash
-
-_CHECK_FOR_UPDATES = MainWindow._check_for_updates
+from hpc_gui._wx_updater_state import STATE_CHECKING, STATE_DOWNLOAD_CANCELLED, STATE_DOWNLOADING
+from hpc_gui._wx_updater_text import _format_bytes
+from hpc_gui.wx_updater_view import WxUpdateDialog
 
 
 class _Response:
@@ -111,51 +112,63 @@ def test_update_reuses_verified_download(monkeypatch, tmp_path: Path):
 
 
 @pytest.mark.unit
-def test_closing_update_progress_cancels_active_download():
-    class Worker:
-        cancelled = False
-
-        def cancel(self):
-            self.cancelled = True
-
-    worker = Worker()
-    closed = False
-
-    def close():
-        nonlocal closed
-        closed = True
-
-    window = SimpleNamespace(_update_cancelled=False, _update_workers={object(): worker}, _close_update_progress=close)
-    MainWindow._cancel_update_jobs(window)
-
-    assert worker.cancelled and window._update_cancelled and closed
+@pytest.mark.parametrize("confirm", [False, True])
+def test_closing_update_progress_confirms_before_cancel(confirm):
+    states = []
+    vetoes = []
+    timer_stops = []
+    dialog = WxUpdateDialog.__new__(WxUpdateDialog)
+    dialog.wx = SimpleNamespace(
+        YES=1, YES_NO=2, ICON_WARNING=4,
+        MessageBox=lambda *_args: int(confirm),
+        CallAfter=lambda callback: callback(),
+    )
+    dialog.dlg = object()
+    dialog.state = STATE_DOWNLOADING
+    dialog._cancelled = False
+    dialog._closed = False
+    dialog._pulse_timer = SimpleNamespace(Stop=lambda: timer_stops.append(True))
+    dialog._build_for_state = states.append
+    dialog._on_close(SimpleNamespace(Veto=lambda: vetoes.append(True)))
+    assert dialog._cancelled is confirm
+    assert vetoes == [True]
+    assert states == ([STATE_DOWNLOAD_CANCELLED] if confirm else [])
+    assert timer_stops == ([True] if confirm else [])
 
 
 @pytest.mark.unit
-def test_manual_update_check_shows_splash_before_worker_starts():
+def test_manual_update_check_shows_splash_before_worker_starts(monkeypatch):
+    from hpc_gui import wx_updater_view
+    from hpc_gui.wx_shell_settings import run_wx_update_check
+
     events = []
-    window = SimpleNamespace(
-        _update_busy_count=0,
-        _show_update_progress=lambda value, status: events.append(("splash", value, status)),
-        _run_update_job=lambda fn, on_success: events.append(("worker", fn, on_success)),
-        _on_release_checked=lambda release: None,
-    )
 
-    # The autouse fixture disables this startup timer callback for other tests.
-    _CHECK_FOR_UPDATES(window, manual=True)
+    def fake_dialog(parent, release):
+        assert parent is window
+        assert release is None
+        return SimpleNamespace(
+            _build_for_state=lambda state: events.append(state),
+            dlg=SimpleNamespace(Show=lambda: events.append("shown")),
+        )
 
-    assert events[0] == ("splash", 5, "checking")
-    assert events[1][0] == "worker"
-    assert events[1][2] is window._on_release_checked
-    assert window._update_manual is True
-    assert window._update_interactive is True
+    def fake_thread(*, target, daemon):
+        assert callable(target)
+        assert daemon is True
+        return SimpleNamespace(start=lambda: events.append("worker"))
+
+    window = object()
+    monkeypatch.setitem(sys.modules, "wx", SimpleNamespace())
+    monkeypatch.setattr(wx_updater_view, "WxUpdateDialog", fake_dialog)
+    monkeypatch.setattr(threading, "Thread", fake_thread)
+    run_wx_update_check(window)
+    assert events == [STATE_CHECKING, "shown", "worker"]
 
 
 @pytest.mark.unit
 def test_update_splash_formats_binary_units():
-    assert UpdateSplash._format_bytes(1024) == "1.0 KB"
-    assert UpdateSplash._format_bytes(1024**2) == "1.0 MB"
-    assert UpdateSplash._format_bytes(1024**3) == "1.0 GB"
+    assert _format_bytes(1024) == "1.0 KB"
+    assert _format_bytes(1024**2) == "1.0 MB"
+    assert _format_bytes(1024**3) == "1.0 GB"
 
 
 @pytest.mark.release
@@ -183,18 +196,43 @@ def test_unpackaged_app_never_launches_installer(monkeypatch, tmp_path: Path):
         launch_update_installer(tmp_path / "update.dmg", "1.5.0")
 
 
-@pytest.mark.audit
-def test_install_handoff_never_shows_complete_before_helper_starts():
-    source = "\n".join(
-        Path(path).read_text(encoding="utf-8")
-        for path in (
-            "src/hpc_gui/ui/main_window.py",
-            "src/hpc_gui/ui/_main_window_updates.py",
-        )
+@pytest.mark.unit
+def test_install_handoff_never_shows_complete_before_helper_starts(monkeypatch, tmp_path):
+    from hpc_gui import wx_updater_view
+
+    events = []
+    splash = SimpleNamespace(
+        Show=lambda: events.append("shown at 0%"),
+        Destroy=lambda: events.append("destroyed"),
     )
-    handoff = source[source.index("def _on_update_downloaded"):source.index("def _on_update_error")]
-    assert '_show_update_progress(100, "installing")' not in handoff
-    assert '_show_update_progress(0, "preparing")' in handoff
+    dialog = WxUpdateDialog.__new__(WxUpdateDialog)
+    dialog.release = SimpleNamespace(version="2.0", install_strategy="windows-portable")
+    dialog.parent = object()
+    dialog._zip_path = tmp_path / "update.zip"
+    dialog._artifact_verified = True
+    dialog._unsaved_count = lambda: 0
+    dialog.dlg = SimpleNamespace(EndModal=lambda _code: events.append("closed"))
+    dialog.wx = SimpleNamespace(
+        ID_OK=1,
+        CallAfter=lambda callback: callback(),
+        GetApp=lambda: SimpleNamespace(ExitMainLoop=lambda: events.append("quit")),
+    )
+    monkeypatch.setattr(wx_updater_view, "show_installing_splash", lambda *_: splash)
+    monkeypatch.setattr(
+        threading, "Thread",
+        lambda *, target, daemon: SimpleNamespace(start=target),
+    )
+
+    def launch(path, version, strategy):
+        assert (path, version, strategy) == (dialog._zip_path, "2.0", "windows-portable")
+        assert events == ["closed", "shown at 0%"]
+        events.append("helper started")
+
+    monkeypatch.setattr(app_updater, "launch_update_installer", launch)
+    dialog._start_install()
+    assert events == ["closed", "shown at 0%", "helper started", "destroyed", "quit"]
+    source = Path(wx_updater_view.__file__).read_text(encoding="utf-8")
+    assert 'percent = wx.StaticText(panel, label="0%")' in source
 
 
 @pytest.mark.release

@@ -77,8 +77,10 @@ def _build_send_logs(parent, model: WxLogsModel | None = None, *, log_path: str 
         try:
             txt = log_view.GetValue()
             if wx.TheClipboard.Open():
-                wx.TheClipboard.SetData(wx.TextDataObject(txt))
-                wx.TheClipboard.Close()
+                try:
+                    wx.TheClipboard.SetData(wx.TextDataObject(txt))
+                finally:
+                    wx.TheClipboard.Close()
         except Exception:
             pass
 
@@ -98,7 +100,7 @@ def _build_send_logs(parent, model: WxLogsModel | None = None, *, log_path: str 
 
         def worker():
             try:
-                p = create_diagnostic_bundle(dest)
+                p = model.export_bundle(dest)
                 if state["closed"]:
                     return
                 wx.CallAfter(lambda: wx.MessageBox(t("logs.bundle_created").format(path=str(p)), t("logs.diagnostics_title"), wx.OK | wx.ICON_INFORMATION, host) if not state["closed"] else None)
@@ -111,8 +113,18 @@ def _build_send_logs(parent, model: WxLogsModel | None = None, *, log_path: str 
 
     def on_close(evt):
         state["closed"] = True
-        unsubscribe_language_change(refresh_labels)
+        unsubscribe_language_change(on_language)
         evt.Skip()
+
+    def on_destroy(evt):
+        if evt.GetEventObject() is host:
+            on_close(evt)
+        else:
+            evt.Skip()
+
+    def on_language(language=None):
+        if not state["closed"]:
+            wx.CallAfter(refresh_labels, language)
 
     def refresh_labels(_language=None):
         if state["closed"]:
@@ -130,8 +142,9 @@ def _build_send_logs(parent, model: WxLogsModel | None = None, *, log_path: str 
     btn_copy.Bind(wx.EVT_BUTTON, copy_logs)
     btn_export.Bind(wx.EVT_BUTTON, export_diagnostics)
     btn_close.Bind(wx.EVT_BUTTON, lambda e: host.Close())
-    subscribe_language_change(refresh_labels)
+    subscribe_language_change(on_language)
     host.bind_host_close(on_close)
+    host.Bind(wx.EVT_WINDOW_DESTROY, on_destroy)
 
     host._wx_send_logs_controls = {
         "header": header,

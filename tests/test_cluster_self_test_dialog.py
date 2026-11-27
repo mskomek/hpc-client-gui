@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from hpc_gui.services.cluster_self_test import ClusterSelfTestResult, SelfTestItem, SelfTestSection
-from hpc_gui.ui.dialogs.cluster_self_test_dialog import format_self_test_result
+from hpc_gui.services.cluster_self_test import format_self_test_result
 
 
 @pytest.mark.unit

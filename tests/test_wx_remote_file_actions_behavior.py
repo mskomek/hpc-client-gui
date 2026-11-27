@@ -1,5 +1,4 @@
 import threading
-import time
 
 import pytest
 
@@ -9,49 +8,16 @@ pytestmark = [pytest.mark.gui, pytest.mark.wx]
 
 from mock_hpc_files import MockRemoteFilesBackend
 from hpc_gui.services.file_clipboard import get_file_clipboard
-from hpc_gui.core.i18n import load_language
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 
-
-def _pump(app, predicate, timeout=2):
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        app.ProcessPendingEvents()
-        if predicate():
-            return
-        wx.MilliSleep(5)
-    app.ProcessPendingEvents()
-    assert predicate()
-
-
-@pytest.fixture
-def wx_app():
-    load_language("en")
-    app = wx.App.Get()
-    if app is None:
-        app = wx.App(False)
-    yield app
-    for window in list(wx.GetTopLevelWindows()):
-        if window and not window.IsBeingDeleted():
-            window.Close()
-    for _ in range(3):
-        app.ProcessPendingEvents()
-        wx.Yield()
-    for window in list(wx.GetTopLevelWindows()):
-        if window and not window.IsBeingDeleted():
-            window.Destroy()
-    app.ProcessPendingEvents()
-    wx.Yield()
-    assert not wx.GetTopLevelWindows(), "wx top-level windows survived fixture teardown"
-    app.Destroy()
-
-
-def _browser(app, backend, model=None, operation=None):
-    show_remote_files(model=model, loader=backend.iterdir_entries, operation=operation or backend.operation)
-    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
-    _pump(app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
-    return frame
+from support.wx_remote_file_test_support import (
+    _DestinationDialog,
+    _Dialog,
+    _FileDialog,
+    _browser,
+    _pump,
+)
 
 
 @pytest.mark.concurrency
@@ -223,7 +189,18 @@ def test_wx_remote_ctrl_a_selects_all_rows(wx_app):
     event.SetKeyCode(ord("A"))
     event.SetControlDown(True)
     listing.ProcessEvent(event)
-    assert all(listing.IsSelected(index) for index in range(listing.GetItemCount()))
+    parent_rows = [
+        index
+        for index in range(listing.GetItemCount())
+        if listing.GetItemText(index) == ".."
+    ]
+    selectable_rows = [
+        index for index in range(listing.GetItemCount()) if index not in parent_rows
+    ]
+    assert parent_rows
+    assert all(not listing.IsSelected(index) for index in parent_rows)
+    assert selectable_rows
+    assert all(listing.IsSelected(index) for index in selectable_rows)
 
 
 def test_wx_remote_backspace_navigates_parent_and_f5_refreshes(wx_app):
@@ -434,27 +411,3 @@ def test_wx_remote_submit_slurm_uses_selected_remote_path(wx_app, monkeypatch):
     _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
     assert submitted == ["/work/job.sbatch"]
     assert messages == ["Submitted batch job 77"]
-
-
-class _Dialog:
-    def __init__(self, value):
-        self.value = value
-
-    def ShowModal(self):
-        return wx.ID_OK
-
-    def GetValue(self):
-        return self.value
-
-    def Destroy(self):
-        pass
-
-
-class _FileDialog(_Dialog):
-    def GetPaths(self):
-        return self.value
-
-
-class _DestinationDialog(_Dialog):
-    def GetPath(self):
-        return self.value

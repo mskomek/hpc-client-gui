@@ -5,13 +5,13 @@ from __future__ import annotations
 from hpc_gui.core.i18n import t
 
 
-def create_wx_transfer_conflict_dialog(parent, files, item):
+def create_wx_transfer_conflict_dialog(parent, files, item, *, metadata=None):
     """Create the shared conflict dialog with an apply-to-this-queue option."""
     import wx
 
     from hpc_gui.wx_transfer_workspace import create_transfer_conflict_dialog
 
-    dialog = create_transfer_conflict_dialog(parent, files, item)
+    dialog = create_transfer_conflict_dialog(parent, files, item, metadata=metadata)
     if dialog is None:
         return None
 
@@ -41,7 +41,7 @@ def create_wx_transfer_conflict_dialog(parent, files, item):
     panel_sizer.Layout()
     panel.Layout()
     dialog.Layout()
-    dialog.Fit()
+    dialog.SetSize((680, 600))
     dialog._wx_conflict_apply_all = queue_checkbox
     dialog._wx_conflict_always_use = session_checkbox
     dialog._wx_conflict_downloads_only = downloads_checkbox

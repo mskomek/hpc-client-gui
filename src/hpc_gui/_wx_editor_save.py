@@ -199,6 +199,7 @@ def save_document(ctx, mode="save", on_done=None) -> None:
     editor.Enable(False)
     for button in (save, submit, run, btn_open, btn_template, btn_lint):
         button.Enable(False)
+    update_header_enabled()
 
     def worker(snapshot=snapshot):
         saved = False
@@ -267,7 +268,11 @@ def update_header_enabled(ctx) -> None:
     on_lint = ctx.get("on_lint")
     for btn, name, direct in ((ctx["btn_open"], "on_open", on_open), (ctx["btn_template"], "on_new_template", on_new_template), (ctx["btn_lint"], "on_lint", on_lint)):
         cb = resolve_callback(model, action_factory, name, direct)
-        if cb is None:
+        if name == "on_new_template":
+            btn.Enable(not state["in_flight"])
+        elif name == "on_lint":
+            btn.Enable(not state["in_flight"] and not state.get("lint_running") and not state.get("binary_refused"))
+        elif cb is None:
             try:
                 btn.Disable()
             except Exception:
@@ -299,19 +304,10 @@ def on_open_action(ctx) -> None:
 
 
 def on_template_action(ctx) -> None:
-    from hpc_gui.core.i18n import t
-
-    try:
-        import wx
-    except ImportError as exc:
-        raise RuntimeError("wxPython is not installed") from exc
     model = ctx["model"]
     action_factory = ctx.get("action_factory")
     on_new_template = ctx.get("on_new_template")
-    remote_path = ctx["remote_path"]
-    editor = ctx["editor"]
     status = ctx["status"]
-    host = ctx["host"]
     cb = resolve_callback(model, action_factory, "on_new_template", on_new_template)
     if cb:
         try:
@@ -319,39 +315,18 @@ def on_template_action(ctx) -> None:
         except Exception as err:
             status.SetLabel(str(err))
         return
-    try:
-        from hpc_gui.plugins.job_templates import load_job_templates
-        templates = load_job_templates()
-    except Exception:
-        templates = []
-    if not templates:
-        wx.MessageBox(t("templates.none_installed"), t("editor.new_from_template"), wx.OK | wx.ICON_INFORMATION, host)
-        return
-    try:
-        from hpc_gui.plugins.job_templates import render_template
-        tpl = templates[0]
-        rendered = render_template(tpl, {})
-        editor.SetValue(rendered)
-        model.controller.update_content(rendered)
-        remote_path.SetValue(tpl.file_name or "")
-    except Exception as err:
-        status.SetLabel(str(err))
+    from hpc_gui._wx_editor_templates import open_template
+
+    open_template(ctx)
 
 
 def on_lint_action(ctx) -> None:
-    from hpc_gui.core.i18n import t
-
-    try:
-        import wx  # noqa: F401
-    except ImportError as exc:
-        raise RuntimeError("wxPython is not installed") from exc
     model = ctx["model"]
     action_factory = ctx.get("action_factory")
     on_lint = ctx.get("on_lint")
     remote_path = ctx["remote_path"]
     editor = ctx["editor"]
     status = ctx["status"]
-    host = ctx["host"]
     cb = resolve_callback(model, action_factory, "on_lint", on_lint)
     if cb:
         try:
@@ -360,17 +335,9 @@ def on_lint_action(ctx) -> None:
         except Exception as err:
             status.SetLabel(str(err))
         return
-    hdr = remote_path.GetValue().strip()
-    if not hdr:
-        wx.MessageBox(
-            t("editor.lint_need_path"),
-            t("editor.lint_results_title"),
-            wx.OK | wx.ICON_INFORMATION,
-            host,
-        )
-        return
-    issues = collect_lint_issues(hdr, editor.GetValue())
-    show_lint_dialog(host, hdr, issues)
+    from hpc_gui.wx_editor_lint import run_editor_lint
+
+    run_editor_lint(ctx)
 
 
 __all__ = [

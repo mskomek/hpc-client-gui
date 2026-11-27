@@ -20,6 +20,7 @@ import subprocess
 import tempfile
 import time
 from pathlib import Path
+from threading import RLock
 from typing import Any, Dict, Optional
 
 from hpc_gui.core.logging import get_logger
@@ -28,6 +29,7 @@ from hpc_gui.core.paths import app_data_dir
 
 
 _log = get_logger("hpc_gui.proc")
+_registry_lock = RLock()
 
 
 def _registry_path() -> Path:
@@ -75,16 +77,17 @@ def register(pid: int, *, kind: str, cmd: str = "", meta: Optional[Dict[str, Any
         return
     if pid <= 0:
         return
-    data = _read_all()
-    data[str(pid)] = {
-        "pid": pid,
-        "kind": str(kind or ""),
-        "cmd": redact_text(str(cmd or "")),
-        "meta": json.loads(redact_text(json.dumps(meta or {}, ensure_ascii=False))),
-        "ts": int(time.time()),
-        "host_pid": os.getpid(),
-    }
-    _write_all(data)
+    with _registry_lock:
+        data = _read_all()
+        data[str(pid)] = {
+            "pid": pid,
+            "kind": str(kind or ""),
+            "cmd": redact_text(str(cmd or "")),
+            "meta": json.loads(redact_text(json.dumps(meta or {}, ensure_ascii=False))),
+            "ts": int(time.time()),
+            "host_pid": os.getpid(),
+        }
+        _write_all(data)
 
 
 def unregister(pid: int) -> None:
@@ -92,24 +95,56 @@ def unregister(pid: int) -> None:
         pid = int(pid)
     except Exception:
         return
-    data = _read_all()
-    if str(pid) in data:
-        data.pop(str(pid), None)
-        _write_all(data)
+    with _registry_lock:
+        data = _read_all()
+        if str(pid) in data:
+            data.pop(str(pid), None)
+            _write_all(data)
 
 
-def _pid_exists_windows(pid: int) -> bool:
+def _pid_exists_windows(pid: int) -> bool | None:
+    """Return False only for a confirmed missing/exited process.
+
+    Access denied and query failures are unknown, not proof of absence.
+    """
+    import ctypes
+    from ctypes import wintypes
+
     try:
-        proc = subprocess.run(
-            ["tasklist", "/FI", f"PID eq {pid}"],
-            capture_output=True,
-            text=True,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        )
-        out = (proc.stdout or "")
-        return str(pid) in out
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        open_process = kernel.OpenProcess
+        open_process.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+        open_process.restype = wintypes.HANDLE
+        get_exit_code = kernel.GetExitCodeProcess
+        get_exit_code.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+        get_exit_code.restype = wintypes.BOOL
+        close_handle = kernel.CloseHandle
+        close_handle.argtypes = (wintypes.HANDLE,)
+        close_handle.restype = wintypes.BOOL
+        handle = open_process(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not handle:
+            return False if ctypes.get_last_error() == 87 else None
+        try:
+            code = wintypes.DWORD()
+            if not get_exit_code(handle, ctypes.byref(code)):
+                return None
+            return code.value == 259  # STILL_ACTIVE
+        finally:
+            close_handle(handle)
     except Exception:
+        return None
+
+
+def _pid_exists(pid: int) -> bool | None:
+    if _is_windows():
+        return _pid_exists_windows(pid)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
         return False
+    except (PermissionError, OSError, OverflowError):
+        return None
+    return True
 
 
 def _kill_tree_windows(pid: int) -> None:
@@ -131,40 +166,42 @@ def cleanup_orphans(*, aggressive: bool = False, age_s: int = 2 * 3600) -> None:
     - If aggressive=True on Windows, will taskkill remaining registered PIDs.
       This is intended only for helpers spawned by HPC Client GUI.
     """
-    data = _read_all()
-    if not data:
-        return
+    with _registry_lock:
+        data = _read_all()
+        if not data:
+            return
 
-    changed = False
-    now = int(time.time())
-    for pid_s, rec in list(data.items()):
-        try:
-            pid = int(pid_s)
-        except Exception:
-            data.pop(pid_s, None)
-            changed = True
-            continue
+        changed = False
+        now = int(time.time())
+        for pid_s, rec in list(data.items()):
+            try:
+                pid = int(pid_s)
+            except Exception:
+                data.pop(pid_s, None)
+                changed = True
+                continue
 
-        exists = True
-        if _is_windows():
-            exists = _pid_exists_windows(pid)
-        # Non-windows: don't assume we can check/kill.
+            if pid <= 0:
+                data.pop(pid_s, None)
+                changed = True
+                continue
+            exists = _pid_exists(pid)
 
-        if not exists:
-            data.pop(pid_s, None)
-            changed = True
-            continue
+            if exists is False:
+                data.pop(pid_s, None)
+                changed = True
+                continue
 
-        if aggressive and _is_windows():
-            kind = str((rec or {}).get("kind") or "")
-            ts = int((rec or {}).get("ts") or 0)
-            # Be conservative: only kill helpers that look like ours and are "old".
-            if kind.startswith("vcxsrv") or kind.startswith("x11_"):
-                if ts and (now - ts) >= max(60, int(age_s)):
-                    _log.info(f"orphan cleanup: killing pid={pid} kind={kind}")
-                    _kill_tree_windows(pid)
-                    data.pop(pid_s, None)
-                    changed = True
+            if aggressive and exists is True and _is_windows():
+                kind = str((rec or {}).get("kind") or "")
+                ts = int((rec or {}).get("ts") or 0)
+                # Be conservative: only kill helpers that look like ours and are "old".
+                if kind.startswith("vcxsrv") or kind.startswith("x11_"):
+                    if ts and (now - ts) >= max(60, int(age_s)):
+                        _log.info(f"orphan cleanup: killing pid={pid} kind={kind}")
+                        _kill_tree_windows(pid)
+                        data.pop(pid_s, None)
+                        changed = True
 
-    if changed:
-        _write_all(data)
+        if changed:
+            _write_all(data)

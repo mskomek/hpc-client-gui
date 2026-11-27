@@ -3,11 +3,48 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from PySide6.QtCore import QUrl, QTimer, Qt, Signal, Slot
+from PySide6.QtCore import QObject, QUrl, QTimer, Qt, Signal, Slot
 from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
 from hpc_gui.services.terminal_bridge import TerminalBridge
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
+
+class QtTerminalBridge(QObject):
+    """Legacy QWebChannel adapter; channel behavior lives in the shared service."""
+
+    output = Signal(str)
+    state_changed = Signal(str)
+    error = Signal(str)
+    ready = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._bridge = TerminalBridge(
+            on_output=self.output.emit, on_state=self.state_changed.emit,
+            on_error=self.error.emit, on_ready=self.ready.emit,
+        )
+
+    def attach(self, ssh):
+        self._bridge.attach(ssh)
+
+    def detach(self):
+        self._bridge.detach()
+
+    def receive_output(self, text):
+        self._bridge.receive_output(text)
+
+    @Slot()
+    def terminal_ready(self):
+        self._bridge.terminal_ready()
+
+    @Slot(str)
+    def send_input(self, text):
+        self._bridge.send_input(text)
+
+    @Slot(int, int, int, int)
+    def resize(self, columns, rows, pixel_width=0, pixel_height=0):
+        self._bridge.resize(columns, rows, pixel_width, pixel_height)
+
 
 class TerminalWidget(QWidget):
     READINESS_TIMEOUT_MS = 5000
@@ -32,7 +69,7 @@ class TerminalWidget(QWidget):
                 del navigation_type
                 return bool(url.isLocalFile() and is_main_frame)
 
-        self.bridge = TerminalBridge(self)
+        self.bridge = QtTerminalBridge(self)
         self.setAccessibleName(t("login.terminal_accessible_name"))
         self._language_change_cb = self._refresh_accessibility_name
         subscribe_language_change(self._language_change_cb)

@@ -1,12 +1,4 @@
-"""Shared pytest fixtures.
-
-The autouse fixture below neuters the two MainWindow startup side effects
-(the changelog modal after 700 ms and the background update check after
-1500 ms). Tests never run a Qt event loop of their own, so those single-shot
-timers otherwise detonate inside the next unrelated test that pumps events,
-opening modal dialogs that block the suite forever. Only these two methods
-are stubbed; every other QTimer.singleShot user keeps working.
-"""
+"""Shared pytest fixtures for offline and native tests."""
 
 from __future__ import annotations
 
@@ -14,7 +6,6 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMP_ROOT = ROOT / ".tmp"
@@ -62,38 +53,34 @@ else:
 
     wx.App.__init__ = _wx_app_init_without_modal_logging
 
-try:
-    # Lightweight runs such as the Plugin API contract suite execute without
-    # Qt installed; the startup-popup guard below only applies then.
-    from hpc_gui.ui import main_window as main_window_module  # noqa: E402
-except ImportError:  # pragma: no cover - exercised only in non-Qt environments
-    main_window_module = None
-
-
-@pytest.fixture(autouse=True)
-def _no_main_window_startup_popups():
-    if main_window_module is None:
-        yield
-        return
-    with (
-        patch.object(
-            main_window_module.MainWindow,
-            "_show_changelog_dialog",
-            lambda self, text: None,
-        ),
-        patch.object(
-            main_window_module.MainWindow,
-            "_check_for_updates",
-            lambda self, manual=True: None,
-        ),
-        ):
-            yield
-
-
 @pytest.fixture(autouse=True)
 def _isolate_plugin_data(tmp_path, monkeypatch):
     """Prevent developer-installed plugins from changing offline test results."""
     monkeypatch.setattr("hpc_gui.plugins.storage.app_data_dir", lambda: tmp_path)
+
+
+@pytest.fixture
+def wx_app():
+    """Create and tear down the native wx app used by remote file tests."""
+    wx = pytest.importorskip("wx")
+    from hpc_gui.core.i18n import load_language
+
+    load_language("en")
+    app = wx.App.Get() or wx.App(False)
+    yield app
+    for window in list(wx.GetTopLevelWindows()):
+        if window and not window.IsBeingDeleted():
+            window.Close()
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        wx.Yield()
+    for window in list(wx.GetTopLevelWindows()):
+        if window and not window.IsBeingDeleted():
+            window.Destroy()
+    app.ProcessPendingEvents()
+    wx.Yield()
+    assert not wx.GetTopLevelWindows(), "wx top-level windows survived fixture teardown"
+    app.Destroy()
 
 
 @pytest.fixture(autouse=True)

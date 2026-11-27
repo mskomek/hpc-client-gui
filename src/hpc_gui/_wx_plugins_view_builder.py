@@ -6,6 +6,8 @@ from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language
 from hpc_gui.wx_host import make_host
 from hpc_gui.wx_plugins import WxPluginManagerModel
 
+from ._wx_plugins_trusted import install_trusted_tool_controls
+from ._wx_plugins_management import install_management_controls
 from ._wx_plugins_view_shared import (
     _VIEW_IDS,
     _loading_label,
@@ -28,7 +30,6 @@ def _build_plugins(
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-
     model = model or WxPluginManagerModel(root=root, install=install, fetcher=fetcher)
     if install is not None and model.install is None:
         model.install = install
@@ -39,14 +40,11 @@ def _build_plugins(
     normalized_tab = str(initial_tab or "discover").strip().lower()
     if normalized_tab not in _VIEW_IDS:
         normalized_tab = "discover"
-    # Spec §91: Plugins 800×600 resizable, §92 split 30-35% / 65-70%
     host, finish = make_host(parent, title=t("plugins.dialog_title"), size=(800, 600), embedded=embedded)
     panel = wx.Panel(host)
     root_sizer = wx.BoxSizer(wx.VERTICAL)
-
     title = wx.StaticText(panel, label=t("plugins.dialog_title"))
     title.SetFont(title.GetFont().Bold())
-
     search = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER)
     try:
         search.SetHint(t("plugins.search_placeholder"))
@@ -80,6 +78,8 @@ def _build_plugins(
     top.Add(search, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 12)
     top.Add(status, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 12)
 
+    empty_note = wx.StaticText(panel, label="")
+    empty_note.Hide()
     btn_row = wx.BoxSizer(wx.HORIZONTAL)
     btn_row.Add(btn_refresh, 0, wx.RIGHT, 8)
     btn_row.Add(btn_install, 0, wx.RIGHT, 8)
@@ -90,8 +90,7 @@ def _build_plugins(
 
     root_sizer.Add(top, 0, wx.EXPAND)
     root_sizer.Add(list_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
-    # W33 (HPC-W08-LIFE-005): state the real enable/disable behavior where
-    # the toggle is offered; a bare checkbox is misleading.
+    root_sizer.Add(empty_note, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     effect_note = wx.StaticText(
         panel,
         label=t("plugins.lifecycle_effect_note"),
@@ -101,7 +100,6 @@ def _build_plugins(
     except Exception:
         pass
     root_sizer.Add(effect_note, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
-    # Spec §16 footer 12-16px
     root_sizer.Add(btn_row, 0, wx.EXPAND | wx.ALL, 16)
     panel.SetSizer(root_sizer)
 
@@ -118,6 +116,8 @@ def _build_plugins(
         return state["view"]
 
     def _refresh_list():
+        if state["closed"]:
+            return
         del visible[:]
         needle = ""
         try:
@@ -134,19 +134,25 @@ def _build_plugins(
         list_ctrl.DeleteAllItems()
         for card in visible:
             idx = list_ctrl.InsertItem(list_ctrl.GetItemCount(), card.name or card.plugin_id)
-            # W26 (HPC-W06-TODO-PLUGIN-COMPAT-001): version, install/enabled
-            # state and compatibility must be visible where relevant.
-            state_bits = []
-            state_bits.append("installed" if card.installed else "available")
-            state_bits.append("enabled" if card.enabled else "disabled")
+            from hpc_gui.services.plugin_manager_state import capability_label
+            state_bits = [t("plugins.installed_badge") if card.installed else t("plugins.installed_not_installed")]
+            if card.installed:
+                state_bits.append(t("plugins.active_badge") if card.enabled else t("plugins.disabled_label"))
+            if card.problem:
+                state_bits.append(t("plugins.invalid_plugin"))
             if not card.compatible:
-                state_bits.append("incompatible")
+                state_bits.append(t("plugins.incompatible"))
             if card.update_available:
-                state_bits.append("update-available")
+                state_bits.append(t("plugins.update_available"))
+            state_bits.extend(capability_label(cap) for cap in card.capabilities)
             detail = f"{card.version} {' / '.join(state_bits)}"
             if card.active_version and card.active_version != card.version:
-                detail += f" (active {card.active_version})"
+                detail += f" ({t('plugins.active_badge')} {card.active_version})"
             list_ctrl.SetItem(idx, 1, detail)
+        empty_keys = {"discover": "plugins.no_plugins", "installed": "plugins.no_installed", "updates": "plugins.no_updates"}
+        empty_note.SetLabel(t(empty_keys[view]) if not needle else "")
+        empty_note.Show(not visible and not needle)
+        refresh_problems(view)
         _update_buttons()
 
     def _selected_card():
@@ -155,8 +161,19 @@ def _build_plugins(
             return None
         return visible[idx]
 
+    trusted_controls, refresh_trusted = install_trusted_tool_controls(wx, panel, host, root_sizer, btn_row, model, state, _selected_card)
+    from ._wx_plugins_management import install_problem_control, notify_plugin_change
+    problem_control, refresh_problems = install_problem_control(wx, panel, root_sizer, model)
+    management_controls, refresh_management = install_management_controls(
+        wx, panel, host, root_sizer, model, state, _selected_card, lambda: _refresh_list(),
+        lambda: notify_plugin_change(parent))
     def _update_buttons():
+        if state["closed"]:
+            return
         card = _selected_card()
+        refresh_trusted(card)
+        refresh_management(card)
+        btn_refresh.Enable(not state["in_flight"])
         if card is None:
             btn_install.Enable(False)
             try:
@@ -191,17 +208,18 @@ def _build_plugins(
                 btn_install.SetLabel(t("plugins.install"))
             except Exception:
                 pass
-        btn_disable.Enable(True)
+        btn_disable.Enable(bool(card.installed) and not state["in_flight"])
         try:
             btn_disable.SetLabel(t("plugins.enable") if not card.enabled else t("plugins.disable"))
         except Exception:
             pass
-        btn_remove.Enable(bool(card.installed))
+        btn_remove.Enable(bool(card.installed) and not state["in_flight"])
 
     def refresh_registry(_event=None):
         if state["closed"] or state["in_flight"]:
             return
         state["in_flight"] = True
+        _update_buttons()
         state["gen"] += 1
         gen = state["gen"]
         btn_refresh.Enable(False)
@@ -219,9 +237,9 @@ def _build_plugins(
                 wx.CallAfter(on_done, gen, None, exc)
 
         def on_done(expected_gen, result, error):
-            state["in_flight"] = False
             if state["closed"] or expected_gen != state["gen"]:
                 return
+            state["in_flight"] = False
             btn_refresh.Enable(True)
             if result is not None:
                 try:
@@ -258,7 +276,7 @@ def _build_plugins(
         card = _selected_card()
         if not card or state["closed"] or state["in_flight"]:
             return
-        if not card.compatible:
+        if not card.compatible or (card.installed and not card.update_available):
             try:
                 wx.MessageBox(
                     t("plugins.incompatible"),
@@ -270,11 +288,13 @@ def _build_plugins(
                 pass
             return
         state["in_flight"] = True
+        _update_buttons()
         state["gen"] += 1
         gen = state["gen"]
         btn_install.Enable(False)
         status.SetLabel(_loading_label())
         plugin_id = card.plugin_id
+        payload_entry = model.registry_entry_for(plugin_id) or {"id": plugin_id, "name": card.name}
 
         def worker():
             try:
@@ -289,77 +309,37 @@ def _build_plugins(
                 else:
                     outcome = model.default_installer(payload)
                 # Fail-closed: no backend action (None) is never success.
-                if outcome is None:
-                    raise RuntimeError("plugin installer produced no backend action")
-                wx.CallAfter(on_done, gen, None, plugin_id)
+                if not outcome or (model.install is None and not outcome.activated):
+                    raise RuntimeError("plugin installer produced no activated result")
+                wx.CallAfter(on_done, gen, None, outcome)
             except Exception as exc:
-                wx.CallAfter(on_done, gen, exc, plugin_id)
+                wx.CallAfter(on_done, gen, exc, None)
 
-        def on_done(expected_gen, error, expected_plugin_id):
-            state["in_flight"] = False
+        def on_done(expected_gen, error, outcome):
             if state["closed"] or expected_gen != state["gen"]:
                 return
-            btn_install.Enable(True)
-            if error is not None:
-                status.SetLabel(_status_label_for_source(model.registry_source))
-                try:
-                    wx.MessageBox(
-                        str(error),
-                        t("plugins.dialog_title"),
-                        wx.OK | wx.ICON_ERROR,
-                        host,
-                    )
-                except Exception:
-                    pass
-            else:
-                try:
-                    from hpc_gui.plugins.loader import load_installed_plugins
-
-                    loaded = load_installed_plugins(
-                        root=model.root, app_version=model.app_version
-                    )
-                    _ = loaded
-                except Exception:
-                    pass
-                status.SetLabel(_status_label_for_source(model.registry_source))
-                try:
-                    name = expected_plugin_id
-                    for candidate in visible:
-                        if candidate.plugin_id == expected_plugin_id:
-                            name = candidate.name or candidate.plugin_id
-                            break
-                    success_text = t("plugins.install_generic")
-                    if success_text == "[plugins.install_generic]":
-                        success_text = f"Installed {name}"
-                    else:
-                        try:
-                            success_text = success_text.format(name=name)
-                        except Exception:
-                            pass
-                    wx.MessageBox(
-                        success_text,
-                        t("plugins.dialog_title"),
-                        wx.OK | wx.ICON_INFORMATION,
-                        host,
-                    )
-                except Exception:
-                    pass
-            # Re-read installed state so enable/disable/update readback is live.
+            state["in_flight"] = False
+            from hpc_gui.services.plugin_manager_state import install_summary_text, install_error_message
+            status.SetLabel(_status_label_for_source(model.registry_source))
             try:
-                from hpc_gui.plugins.storage import read_active_versions
-
-                _ = read_active_versions(model.root)
-            except Exception:
-                pass
-            _refresh_list()
+                model.reload_installed()
+                if error is not None:
+                    wx.MessageBox(install_error_message(error), t("plugins.dialog_title"), wx.OK | wx.ICON_ERROR, host)
+                else:
+                    notify_plugin_change(parent)
+                    wx.MessageBox(install_summary_text(payload_entry, outcome),
+                                  t("plugins.dialog_title"), wx.OK | wx.ICON_INFORMATION, host)
+            finally:
+                _refresh_list()
 
         Thread(target=worker, daemon=True).start()
 
     def do_toggle(_event=None):
         card = _selected_card()
-        if not card or state["closed"] or state["in_flight"]:
+        if not card or not card.installed or state["closed"] or state["in_flight"]:
             return
         state["in_flight"] = True
+        _update_buttons()
         state["gen"] += 1
         gen = state["gen"]
         plugin_id = card.plugin_id
@@ -373,9 +353,9 @@ def _build_plugins(
                 wx.CallAfter(on_done, gen, exc)
 
         def on_done(expected_gen, error):
-            state["in_flight"] = False
             if state["closed"] or expected_gen != state["gen"]:
                 return
+            state["in_flight"] = False
             if error is not None:
                 try:
                     wx.MessageBox(
@@ -383,6 +363,9 @@ def _build_plugins(
                     )
                 except Exception:
                     pass
+            model.reload_installed()
+            if error is None:
+                notify_plugin_change(parent)
             _refresh_list()
 
         Thread(target=worker, daemon=True).start()
@@ -393,7 +376,13 @@ def _build_plugins(
             return
         if not card.installed:
             return
+        if wx.MessageBox(t("plugins.remove_confirm_text").format(name=card.name),
+                         t("plugins.remove_confirm_title"), wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION, host) != wx.YES:
+            return
+        if state["closed"] or state["in_flight"] or _selected_card() is not card:
+            return
         state["in_flight"] = True
+        _update_buttons()
         state["gen"] += 1
         gen = state["gen"]
         plugin_id = card.plugin_id
@@ -406,9 +395,9 @@ def _build_plugins(
                 wx.CallAfter(on_done, gen, exc)
 
         def on_done(expected_gen, error):
-            state["in_flight"] = False
             if state["closed"] or expected_gen != state["gen"]:
                 return
+            state["in_flight"] = False
             if error is not None:
                 try:
                     wx.MessageBox(
@@ -416,11 +405,17 @@ def _build_plugins(
                     )
                 except Exception:
                     pass
+            model.reload_installed()
+            if error is None:
+                notify_plugin_change(parent)
             _refresh_list()
 
         Thread(target=worker, daemon=True).start()
 
     def on_close(evt):
+        if state["closed"]:
+            evt.Skip()
+            return
         state["closed"] = True
         state["gen"] += 1
         state["in_flight"] = False
@@ -443,12 +438,15 @@ def _build_plugins(
             current_view=_current_view,
             update_buttons=_update_buttons,
         )
+        if not state["closed"]:
+            status.SetLabel(_loading_label() if state["in_flight"] else _status_label_for_source(model.registry_source))
+            _refresh_list()
 
     btn_refresh.Bind(wx.EVT_BUTTON, refresh_registry)
     btn_install.Bind(wx.EVT_BUTTON, do_install)
     btn_disable.Bind(wx.EVT_BUTTON, do_toggle)
     btn_remove.Bind(wx.EVT_BUTTON, do_remove)
-    btn_close.Bind(wx.EVT_BUTTON, lambda e: host.Close())
+    btn_close.Bind(wx.EVT_BUTTON, lambda e: host.Close() if not embedded else (on_close(e), host.Hide()))
     try:
         list_ctrl.Bind(wx.EVT_LIST_ITEM_SELECTED, lambda _e: (_refresh_list() if False else _update_buttons()) or _e.Skip())
         list_ctrl.Bind(wx.EVT_LIST_ITEM_DESELECTED, lambda _e: _update_buttons() or _e.Skip())
@@ -472,6 +470,7 @@ def _build_plugins(
 
     subscribe_language_change(refresh_labels)
     host.bind_host_close(on_close)
+    host.Bind(wx.EVT_WINDOW_DESTROY, lambda event: on_close(event) if event.GetEventObject() is host else event.Skip())
 
     host._wx_plugins_controls = {
         "title": title,
@@ -484,13 +483,16 @@ def _build_plugins(
         "install": btn_install,
         "disable": btn_disable,
         "remove": btn_remove,
-        "close": btn_close,
+        "close": btn_close, "empty_note": empty_note, "problems": problem_control, **trusted_controls, **management_controls,
     }
     host._wx_plugins_model = model
     host._wx_plugins_state = state
 
+    status.SetLabel(_status_label_for_source(model.registry_source))
     _refresh_list()
     finish()
+    if not embedded and not model.cards:
+        wx.CallAfter(refresh_registry)
     return host
 
 __all__ = ["_build_plugins"]

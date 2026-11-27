@@ -38,7 +38,8 @@ class AnsysToolPresentation:
     def run(self, text: str, file_name: str = "") -> ToolRunState:
         try:
             module = __import__(self.tool.module_name, fromlist=["lint_text"])
-            diagnostics = tuple(module.lint_text(text, file_name=file_name))
+            result = module.lint_text(text, file_name=file_name)
+            diagnostics = tuple(result.diagnostics if hasattr(result, "diagnostics") else result)
             return ToolRunState("completed", diagnostics)
         except Exception as exc:
             return ToolRunState("failed", error=str(exc))

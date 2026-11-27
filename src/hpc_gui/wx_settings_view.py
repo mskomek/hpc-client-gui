@@ -7,23 +7,50 @@ from threading import Thread
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.wx_host import make_host
 from hpc_gui.wx_settings import WxSettingsModel
+from hpc_gui.services.transfer_speed_test import run_transfer_speed_test
+from hpc_gui.wx_settings_speed import resolve_transfer_speed_target, transfer_speed_target_is_current
 
 
-def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=None, apply=None, embedded: bool):
+def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=None, apply=None, embedded: bool, session_state=None):
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
 
     model = model or WxSettingsModel(settings, apply=apply)
+    state = {"closed": False, "speed_test_running": False}
     if apply is not None and getattr(model, "apply_callback", None) is None:
         # SETTINGS-PERSIST-001: a caller-supplied persistence callback must
         # not be silently dropped when a prebuilt model is injected.
         model.apply_callback = apply
     # Spec §96: Settings 840×620 resizable, §4 dialog body 16px, §98 label width 180-240px
     host, finish = make_host(parent, title=t("settings.dialog_title"), size=(840, 620), embedded=embedded)
-    panel = wx.Panel(host)
+    panel = wx.ScrolledWindow(host)
+    panel.SetScrollRate(0, 12)
     root = wx.BoxSizer(wx.VERTICAL)
+    from hpc_gui.config.storage import load_settings, load_profiles, update_settings
+    from hpc_gui.wx_settings_preferences import build_settings_preferences, collect_settings_preferences
+    raw_preferences = load_settings()
+    (
+        preference_groups, preference_controls, reset_graphics_button,
+        reset_remote_defaults_button, refresh_preferences,
+    ) = build_settings_preferences(wx, panel, raw_preferences, load_profiles(), session_state)
+    from hpc_gui.wx_shortcut_editor import build_shortcut_editor
+    shortcut_group, shortcut_controls, refresh_shortcut_labels = build_shortcut_editor(
+        wx, panel, model.shortcuts, host,
+    )
+    from hpc_gui.core.terminal_graphics import normalize_settings
+    _graphics_mode, graphics_auto_compatibility = normalize_settings(raw_preferences)
+    preference_controls["terminal_graphics_auto_compatibility"] = graphics_auto_compatibility
+    if wx.GetOsDescription().lower().find("mac") >= 0:
+        preference_controls["close_vcxsrv_on_exit"].Hide()
+    session_for_paths = (session_state or {}).get("session") or {}
+    path_profile = session_for_paths.get("profile") or {}
+    active_profile_name = str(session_for_paths.get("profile_name") or path_profile.get("name") or "").strip()
+    initial_remote_paths = (
+        preference_controls["profile_scratch_dir"].GetValue(),
+        preference_controls["profile_home_dir"].GetValue(),
+    )
 
     title = wx.StaticText(panel, label=t("settings.dialog_title"))
     title.SetFont(title.GetFont().Bold())
@@ -31,9 +58,74 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     # Global settings
     cb_remote_cache = wx.CheckBox(panel, label=t("settings.remote_directory_cache_label"))
     cb_remote_cache.SetValue(bool(model.global_settings.get("remote_directory_cache", True)))
+    btn_clear_remote_cache = wx.Button(panel, label=t("settings.remote_directory_cache_clear"))
     cb_checksum = wx.CheckBox(panel, label=t("settings.transfer_checksum_verification_label"))
     cb_checksum.SetValue(bool(model.global_settings.get("transfer_checksum", False)))
+    cb_preflight = wx.CheckBox(panel, label=t("settings.upload_preflight_confirmation_label"))
+    cb_preflight.SetValue(bool(model.global_settings.get("upload_preflight_confirmation", True)))
     btn_reset_smart_open = wx.Button(panel, label=t("settings.smart_open_reset"))
+    association_title = wx.StaticText(panel, label=t("settings.file_associations_section"))
+    association_list = wx.ListBox(panel)
+    association_change = wx.Button(panel, label=t("settings.file_association_change"))
+    association_clear = wx.Button(panel, label=t("settings.file_association_clear"))
+    speed_label = wx.StaticText(panel, label=t("settings.transfer_speed_test_size_label"))
+    speed_size = wx.Choice(panel, choices=["8 MiB", "32 MiB", "100 MiB"])
+    speed_size.SetSelection(0)
+    speed_button = wx.Button(panel, label=t("settings.transfer_speed_test"))
+    speed_state = {"running": False}
+    state["speed_test_running"] = False
+
+    from hpc_gui.config.storage import clear_file_association, get_file_associations, set_file_association
+    file_associations = get_file_associations()
+
+    def refresh_associations():
+        association_list.Clear()
+        for extension, program in sorted(file_associations.items()):
+            association_list.Append(f"{extension} -> {program}", clientData=extension)
+        selected = association_list.GetSelection() != wx.NOT_FOUND
+        has_items = association_list.GetCount() > 0
+        association_change.Enable(has_items)
+        association_clear.Enable(selected)
+
+    def change_association(_event=None):
+        index = association_list.GetSelection()
+        if index == wx.NOT_FOUND:
+            wx.MessageBox(t("settings.file_association_none_selected"), t("common.info"), wx.OK | wx.ICON_INFORMATION, host)
+            return
+        extension = association_list.GetClientData(index)
+        dialog = wx.FileDialog(
+            host, t("files.open_with_select_program"),
+            defaultFile=file_associations.get(extension, ""),
+            wildcard=t("files.open_with_program_filter"),
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        )
+        try:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+            file_associations.update(set_file_association(extension, dialog.GetPath()))
+            refresh_associations()
+        finally:
+            dialog.Destroy()
+
+    def clear_association(_event=None):
+        index = association_list.GetSelection()
+        if index == wx.NOT_FOUND:
+            wx.MessageBox(t("settings.file_association_none_selected"), t("common.info"), wx.OK | wx.ICON_INFORMATION, host)
+            return
+        extension = association_list.GetClientData(index)
+        file_associations.clear()
+        file_associations.update(clear_file_association(extension))
+        refresh_associations()
+
+    association_list.Bind(wx.EVT_LISTBOX, lambda _event: association_clear.Enable(association_list.GetSelection() != wx.NOT_FOUND))
+    association_change.Bind(wx.EVT_BUTTON, change_association)
+    association_clear.Bind(wx.EVT_BUTTON, clear_association)
+    refresh_associations()
+    try:
+        resolve_transfer_speed_target(session_state)
+        speed_button.Enable(True)
+    except RuntimeError:
+        speed_button.Enable(False)
 
     # Profile settings
     lbl_parallel = wx.StaticText(panel, label=t("connection.transfer_parallelism"))
@@ -53,8 +145,24 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     # layout — §4 spacing scale 4/8/12/16, §16 dialog body 16px, footer 12-16px
     root.Add(title, 0, wx.ALL, 16)
     root.Add(cb_remote_cache, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    root.Add(btn_clear_remote_cache, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     root.Add(cb_checksum, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    root.Add(cb_preflight, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    for preference_group in preference_groups:
+        root.Add(preference_group, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     root.Add(btn_reset_smart_open, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    root.Add(association_title, 0, wx.LEFT | wx.RIGHT | wx.TOP, 12)
+    root.Add(association_list, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 12)
+    association_buttons = wx.BoxSizer(wx.HORIZONTAL)
+    association_buttons.Add(association_change, 0, wx.RIGHT, 6)
+    association_buttons.Add(association_clear, 0)
+    root.Add(association_buttons, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    root.Add(shortcut_group, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+    speed_row = wx.BoxSizer(wx.HORIZONTAL)
+    speed_row.Add(speed_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+    speed_row.Add(speed_size, 0, wx.RIGHT, 8)
+    speed_row.Add(speed_button, 0)
+    root.Add(speed_row, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     row1 = wx.BoxSizer(wx.HORIZONTAL)
     row1.Add(lbl_parallel, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
     row1.Add(sp_parallel, 0)
@@ -71,8 +179,6 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
 
     panel.SetSizer(root)
 
-    state = {"closed": False}
-
     def apply_settings(_event=None):
         # W02 error governance (HPC-W01-TODO-018 / HPC-W01-TODO-020): staging
         # failures must not be swallowed and must never end in an "OK" dialog.
@@ -86,6 +192,10 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
         except Exception as exc:
             set_errors.append(("transfer_checksum", exc))
         try:
+            model.set_global("upload_preflight_confirmation", bool(cb_preflight.GetValue()))
+        except Exception as exc:
+            set_errors.append(("upload_preflight_confirmation", exc))
+        try:
             model.set_profile("transfer_parallelism", int(sp_parallel.GetValue()))
         except Exception as exc:
             set_errors.append(("transfer_parallelism", exc))
@@ -97,6 +207,13 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             model.set_global("ssh_connection_attempts", int(sp_attempts.GetValue()))
         except Exception as exc:
             set_errors.append(("ssh_connection_attempts", exc))
+        try:
+            preferences = collect_settings_preferences(preference_controls)
+            model.set_global("jobs_outputs_refresh_interval", preferences["jobs_outputs_refresh_interval_seconds"])
+            model.set_global("shortcut_preferences", model.shortcuts.serialize())
+        except Exception as exc:
+            set_errors.append(("settings_preferences", exc))
+            preferences = {}
 
         def worker(pending=set_errors):
             try:
@@ -126,12 +243,90 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
                             _persist(snapshot)
                 except Exception as exc:
                     raise RuntimeError(f"settings persist rejected: {exc}") from exc
+                additional_preferences = {
+                    key: value for key, value in preferences.items()
+                    if key not in {
+                        "jobs_outputs_refresh_interval_seconds",
+                        "profile_scratch_dir",
+                        "profile_home_dir",
+                    }
+                }
+                if additional_preferences:
+                    update_settings(additional_preferences)
+                refresh_shortcuts = getattr(parent, "_wx_shell_refresh_shortcuts", None)
+                if callable(refresh_shortcuts):
+                    wx.CallAfter(refresh_shortcuts)
+                current_remote_paths = (
+                    preferences.get("profile_scratch_dir", ""),
+                    preferences.get("profile_home_dir", ""),
+                )
+                if active_profile_name and current_remote_paths != initial_remote_paths:
+                    from hpc_gui.config.storage import load_profiles, upsert_profile
+                    stored_profile = next(
+                        (item for item in load_profiles() if item.get("name") == active_profile_name),
+                        None,
+                    )
+                    if stored_profile is None:
+                        raise RuntimeError(f"active profile {active_profile_name!r} is no longer available")
+                    updated_profile = dict(stored_profile)
+                    settings_key = "system" if isinstance(updated_profile.get("system"), dict) else "system_settings"
+                    system_settings = dict(updated_profile.get(settings_key) or {})
+                    system_settings["scratch_dir"], system_settings["home_dir"] = current_remote_paths
+                    updated_profile[settings_key] = system_settings
+                    upsert_profile(updated_profile)
                 wx.CallAfter(lambda: wx.MessageBox(t("common.ok"), t("settings.dialog_title"), wx.OK | wx.ICON_INFORMATION, host) if not state["closed"] else None)
             except Exception as exc:
                 # Visible, diagnosable error with a stable code; "OK" is only
                 # shown on the success path above, never after a failure.
                 from hpc_gui.core.wx_errors import report_wx_action_error
                 wx.CallAfter(lambda exc=exc: report_wx_action_error(host, area="SETTINGS", message_key="settings.apply_failed", exc=exc) if not state["closed"] else None)
+
+        Thread(target=worker, daemon=True).start()
+
+    def start_speed_test(_event=None):
+        if speed_state["running"] or state["closed"]:
+            return
+        try:
+            target = resolve_transfer_speed_target(session_state)
+        except Exception as exc:
+            from hpc_gui.core.wx_errors import report_wx_action_error
+            report_wx_action_error(host, area="SETTINGS", message_key="settings.apply_failed", exc=exc)
+            return
+        selected = speed_size.GetStringSelection().split()[0]
+        try:
+            size_mib = int(selected)
+        except ValueError:
+            size_mib = 8
+        speed_state["running"] = True
+        state["speed_test_running"] = True
+        speed_button.Enable(False)
+
+        def worker():
+            result = None
+            error = None
+            try:
+                result = run_transfer_speed_test(target.files, remote_dir=target.remote_dir, size_mib=size_mib)
+            except Exception as exc:
+                error = exc
+
+            def finish_speed_test():
+                speed_state["running"] = False
+                state["speed_test_running"] = False
+                if state["closed"] or not transfer_speed_target_is_current(session_state, target):
+                    return
+                speed_button.Enable(True)
+                if error is not None:
+                    from hpc_gui.core.wx_errors import report_wx_action_error
+                    report_wx_action_error(host, area="SETTINGS", message_key="settings.apply_failed", exc=error)
+                    return
+                wx.MessageBox(
+                    t("settings.transfer_speed_test_result").format(
+                        size=result["size_mib"], upload=result["upload_mib_s"], download=result["download_mib_s"]
+                    ),
+                    t("settings.dialog_title"), wx.OK | wx.ICON_INFORMATION, host,
+                )
+
+            wx.CallAfter(finish_speed_test)
 
         Thread(target=worker, daemon=True).start()
 
@@ -150,6 +345,29 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             from hpc_gui.core.wx_errors import report_wx_action_error
             report_wx_action_error(host, area="SETTINGS", message_key="settings.apply_failed", exc=exc)
 
+    def clear_remote_directory_cache(_event=None):
+        remote_panel = (session_state or {}).get("_embedded_remote_files_panel")
+        remote_controls = getattr(remote_panel, "_wx_remote_controls", {})
+        invalidate = remote_controls.get("invalidate_cache") if isinstance(remote_controls, dict) else None
+        if not callable(invalidate):
+            from hpc_gui.core.wx_errors import report_wx_action_error
+            report_wx_action_error(
+                host, area="SETTINGS", message_key="settings.apply_failed",
+                exc=RuntimeError("remote directory cache is unavailable"),
+            )
+            return
+        try:
+            invalidate()
+            wx.MessageBox(t("common.ok"), t("settings.dialog_title"), wx.OK | wx.ICON_INFORMATION, host)
+        except Exception as exc:
+            from hpc_gui.core.wx_errors import report_wx_action_error
+            report_wx_action_error(host, area="SETTINGS", message_key="settings.apply_failed", exc=exc)
+
+    def reset_terminal_graphics(_event=None):
+        choice, _values = preference_controls["terminal_graphics_mode"]
+        choice.SetSelection(0)
+        preference_controls["terminal_graphics_auto_compatibility"] = False
+
     def close_host(_event=None):
         if state["closed"]:
             return
@@ -167,6 +385,12 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
         unsubscribe_language_change(refresh_labels)
         evt.Skip()
 
+    def on_destroy(evt):
+        if evt.GetEventObject() is host:
+            state["closed"] = True
+            unsubscribe_language_change(refresh_labels)
+        evt.Skip()
+
     def refresh_labels(_language=None):
         if state["closed"]:
             return
@@ -174,8 +398,17 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             host.set_host_title(t("settings.dialog_title"))
             title.SetLabel(t("settings.dialog_title"))
             cb_remote_cache.SetLabel(t("settings.remote_directory_cache_label"))
+            btn_clear_remote_cache.SetLabel(t("settings.remote_directory_cache_clear"))
             cb_checksum.SetLabel(t("settings.transfer_checksum_verification_label"))
+            cb_preflight.SetLabel(t("settings.upload_preflight_confirmation_label"))
             btn_reset_smart_open.SetLabel(t("settings.smart_open_reset"))
+            refresh_preferences()
+            association_title.SetLabel(t("settings.file_associations_section"))
+            association_change.SetLabel(t("settings.file_association_change"))
+            association_clear.SetLabel(t("settings.file_association_clear"))
+            refresh_shortcut_labels()
+            speed_label.SetLabel(t("settings.transfer_speed_test_size_label"))
+            speed_button.SetLabel(t("settings.transfer_speed_test"))
             lbl_parallel.SetLabel(t("connection.transfer_parallelism"))
             lbl_timeout.SetLabel(t("connection.ssh_timeout"))
             btn_apply.SetLabel(t("settings.apply"))
@@ -185,15 +418,32 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
 
     btn_apply.Bind(wx.EVT_BUTTON, apply_settings)
     btn_reset_smart_open.Bind(wx.EVT_BUTTON, reset_smart_open)
+    btn_clear_remote_cache.Bind(wx.EVT_BUTTON, clear_remote_directory_cache)
+    reset_graphics_button.Bind(wx.EVT_BUTTON, reset_terminal_graphics)
+    reset_remote_defaults_button.Bind(wx.EVT_BUTTON, lambda _event: (
+        preference_controls["profile_scratch_dir"].SetValue(""),
+        preference_controls["profile_home_dir"].SetValue(""),
+    ))
+    speed_button.Bind(wx.EVT_BUTTON, start_speed_test)
     btn_close.Bind(wx.EVT_BUTTON, lambda e: host.Close())
     subscribe_language_change(refresh_labels)
     host.bind_host_close(on_close)
+    host.Bind(wx.EVT_WINDOW_DESTROY, on_destroy)
 
     host._wx_settings_controls = {
         "title": title,
         "remote_cache": cb_remote_cache,
+        "clear_remote_cache": btn_clear_remote_cache,
         "checksum": cb_checksum,
+        "upload_preflight": cb_preflight,
         "reset_smart_open": btn_reset_smart_open,
+        "reset_terminal_graphics": reset_graphics_button,
+        "reset_remote_defaults": reset_remote_defaults_button,
+        "file_associations": association_list,
+        "file_association_change": association_change,
+        "file_association_clear": association_clear,
+        "speed_test_size": speed_size,
+        "speed_test": speed_button,
         "parallelism": sp_parallel,
         "timeout": sp_timeout,
         "apply": btn_apply,
@@ -201,22 +451,24 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     }
     host._wx_settings_model = model
     host._wx_settings_state = state
+    host._wx_settings_preference_controls = preference_controls
+    host._wx_settings_shortcut_controls = shortcut_controls
 
     finish()
     return host
 
 
-def build_settings_panel(parent, model: WxSettingsModel | None = None, *, settings=None, apply=None):
+def build_settings_panel(parent, model: WxSettingsModel | None = None, *, settings=None, apply=None, session_state=None):
     """Embedded panel factory. Returns the wx.Panel host."""
-    return _build_settings(parent, model, settings=settings, apply=apply, embedded=True)
+    return _build_settings(parent, model, settings=settings, apply=apply, embedded=True, session_state=session_state)
 
 
-def show_settings(parent=None, model: WxSettingsModel | None = None, *, settings=None, apply=None) -> int:
+def show_settings(parent=None, model: WxSettingsModel | None = None, *, settings=None, apply=None, session_state=None) -> int:
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    _build_settings(parent, model, settings=settings, apply=apply, embedded=False)
+    _build_settings(parent, model, settings=settings, apply=apply, embedded=False, session_state=session_state)
     return wx.ID_OK
 
 

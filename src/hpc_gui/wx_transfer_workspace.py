@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from hpc_gui._wx_transfer_common import post_to, row_token, update_button_state
+from time import monotonic
+
+from hpc_gui._wx_transfer_common import add_row, post_to, reset_progress, update_button_state, update_tab_counts
 from hpc_gui._wx_transfer_conflict import _supports_resume, create_transfer_conflict_dialog
 from hpc_gui._wx_transfer_detached import bind_detached
 from hpc_gui._wx_transfer_embedded import bind_embedded
@@ -22,6 +24,7 @@ def _build_transfers(parent, controller=None, embedded=False):
         host, finish = make_host(parent, title=t("transfer.ftp_activity_title"), size=(520, 260), embedded=True)
         panel = wx.Panel(host)
         status = wx.StaticText(panel, label=t("transfer.no_active_transfer"))
+        parallel_hint = wx.StaticText(panel, label="")
         notebook = wx.Notebook(panel)
 
         def _make_list():
@@ -53,10 +56,12 @@ def _build_transfers(parent, controller=None, embedded=False):
         notebook.AddPage(failed_page, f"{t('transfer.failed_tab')} (0)")
         notebook.AddPage(completed_page, f"{t('transfer.completed_tab')} (0)")
         btn_stop = wx.Button(panel, label=t("transfer.stop"))
+        btn_process = wx.Button(panel, label=t("transfer.process_queue"))
         btn_cancel = wx.Button(panel, label=t("transfer.cancel"))
         btn_clear = wx.Button(panel, label=t("transfer.clear_pending"))
         btn_retry = wx.Button(panel, label=t("transfer.retry_failed"))
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        btn_sizer.Add(btn_process, 0, wx.ALL, 4)
         btn_sizer.Add(btn_stop, 0, wx.ALL, 4)
         btn_sizer.Add(btn_cancel, 0, wx.ALL, 4)
         btn_sizer.Add(btn_clear, 0, wx.ALL, 4)
@@ -64,17 +69,20 @@ def _build_transfers(parent, controller=None, embedded=False):
         btn_sizer.AddStretchSpacer(1)
         layout = wx.BoxSizer(wx.VERTICAL)
         layout.Add(status, 0, wx.ALL | wx.EXPAND, 6)
+        layout.Add(parallel_hint, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 6)
         layout.Add(notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
         layout.Add(btn_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
         panel.SetSizer(layout)
         state = {"closed": False, "controller": controller, "queue_map": {}, "failed_map": {}, "completed_map": {}, "row_token": {}, "row_seq": 0}
         controls = {
             "status": status,
+            "parallel_hint": parallel_hint,
             "notebook": notebook,
             "queue": queue_list,
             "failed": failed_list,
             "completed": completed_list,
             "stop": btn_stop,
+            "process_queue": btn_process,
             "cancel": btn_cancel,
             "clear_pending": btn_clear,
             "retry_failed": btn_retry,
@@ -83,15 +91,17 @@ def _build_transfers(parent, controller=None, embedded=False):
         host_sizer.Add(panel, 1, wx.EXPAND)
         host.SetSizer(host_sizer)
     else:
-        host, finish = make_host(parent, title=t("transfer.ftp_activity_title"), size=(520, 150), embedded=False)
+        host, finish = make_host(parent, title=t("transfer.ftp_activity_title"), size=(620, 190), embedded=False)
         panel = wx.Panel(host)
         title = wx.StaticText(panel, label=t("transfer.ftp_activity_title"))
         detail = wx.StaticText(panel, label=t("transfer.no_active_transfer"))
+        parallel_hint = wx.StaticText(panel, label="")
         gauge = wx.Gauge(panel, range=1)
         cancel = wx.Button(panel, label=t("transfer.cancel"))
         layout = wx.BoxSizer(wx.VERTICAL)
         layout.Add(title, 0, wx.ALL | wx.EXPAND, 8)
         layout.Add(detail, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 8)
+        layout.Add(parallel_hint, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 8)
         layout.Add(gauge, 0, wx.ALL | wx.EXPAND, 8)
         layout.Add(cancel, 0, wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
         panel.SetSizer(layout)
@@ -100,72 +110,33 @@ def _build_transfers(parent, controller=None, embedded=False):
         host.SetSizer(host_sizer)
         host.Layout()
         state = {"closed": False, "controller": controller}
-        controls = {"title": title, "detail": detail, "gauge": gauge, "cancel": cancel}
+        controls = {"title": title, "detail": detail, "gauge": gauge, "cancel": cancel,
+                    "parallel_hint": parallel_hint}
         status = detail
 
     def post(callback, *args):
         post_to(state, callback, *args)
 
     def set_controller(value):
-        state["controller"] = value
-
         def _do_set():
-            update_button_state(host, state, controls, embedded)
+            if state.get("closed"):
+                return
+            if state.get("controller") is not value:
+                reset_progress(state)
+            state["controller"] = value
             if embedded and value is not None:
-                try:
-                    eng = getattr(value, "engine", None)
-                    pending = []
-                    if eng is not None and hasattr(eng, "pending"):
-                        try:
-                            pending = list(eng.pending)
-                        except Exception:
-                            pending = []
-                    elif hasattr(value, "pending"):
-                        try:
-                            pending = list(value.pending)
-                        except Exception:
-                            pending = []
-                    for it in pending:
-                        iid = id(it)
-                        if iid not in state["queue_map"]:
-                            state["queue_map"][iid] = it
-                            found = False
-                            token = row_token(state, it)
-                            for idx in range(queue_list.GetItemCount()):
-                                try:
-                                    if queue_list.GetItemData(idx) == token:
-                                        found = True
-                                        break
-                                except Exception:
-                                    continue
-                            if not found:
-                                try:
-                                    queue_list.InsertItem(queue_list.GetItemCount(), str(getattr(it, "src", "")))
-                                    row = queue_list.GetItemCount() - 1
-                                    queue_list.SetItem(row, 1, str(getattr(it, "dst", "")))
-                                    queue_list.SetItem(row, 2, "Queued")
-                                    queue_list.SetItem(row, 3, "")
-                                    queue_list.SetItem(row, 4, str(getattr(it, "priority", "Normal")))
-                                    queue_list.SetItemData(row, row_token(state, it))
-                                except RuntimeError:
-                                    pass
-                except Exception:
-                    pass
+                eng = getattr(value, "engine", None)
+                for item in getattr(eng, "pending", ()):
+                    if id(item) not in state["queue_map"]:
+                        state["queue_map"][id(item)] = item
+                        add_row(state, queue_list, item, t("transfer.queue_tab"), "")
+                update_tab_counts(notebook, state)
+            update_button_state(host, state, controls, embedded)
 
-        try:
-            if wx.IsMainThread():
-                _do_set()
-            else:
-                post(_do_set)
-                try:
-                    wx.CallAfter(_do_set)
-                except Exception:
-                    pass
-        except Exception:
-            try:
-                post(_do_set)
-            except Exception:
-                pass
+        if wx.IsMainThread():
+            _do_set()
+        else:
+            post(_do_set)
 
     if embedded:
         bound = bind_embedded(host, state, controls)
@@ -190,21 +161,26 @@ def _build_transfers(parent, controller=None, embedded=False):
     host._wx_transfer_state = state
     host._wx_transfer_set_controller = set_controller
 
-    def _post_queue(event, item):
+    def _post_queue(event, item, *, owner=None):
         def cb():
-            update_queue(event, item)
+            if owner is None or state.get("controller") is owner:
+                update_queue(event, item)
 
         post(cb)
 
-    def _post_progress(item, done, total):
+    def _post_progress(item, done, total, *, owner=None):
+        observed_at = monotonic()
+
         def cb():
-            update_progress(item, done, total)
+            if owner is None or state.get("controller") is owner:
+                update_progress(item, done, total, now=observed_at)
 
         post(cb)
 
-    def _post_finish():
+    def _post_finish(*, owner=None):
         def cb():
-            finish()
+            if owner is None or state.get("controller") is owner:
+                finish()
 
         post(cb)
 

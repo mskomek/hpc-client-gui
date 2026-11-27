@@ -1,6 +1,6 @@
 import pytest
 
-from hpc_gui.ui.widgets.jobs_outputs_widget import (
+from hpc_gui.services.job_output_text import (
     _OUTPUT_MAX_LINES,
     _OUTPUT_TRUNCATION_MARKER,
     _ansi_to_html,

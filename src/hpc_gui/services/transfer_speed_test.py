@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 import posixpath
+import sys
 import tempfile
 import time
 import uuid
@@ -47,13 +48,23 @@ def run_transfer_speed_test(
             "remote_path": remote_path,
         }
     finally:
+        active_error = sys.exc_info()[1]
+        cleanup_error = None
         try:
             files.remove(remote_path)
-        except Exception:
-            pass
+        except Exception as exc:
+            cleanup_error = exc
         for path in (source, target):
             if path is not None:
                 try:
                     path.unlink(missing_ok=True)
                 except OSError:
                     pass
+        if cleanup_error is not None:
+            if active_error is None:
+                raise RuntimeError(
+                    f"speed test completed but remote temporary file cleanup failed: {cleanup_error}"
+                ) from cleanup_error
+            raise RuntimeError(
+                f"speed test failed ({active_error}); remote temporary file cleanup also failed: {cleanup_error}"
+            ) from active_error

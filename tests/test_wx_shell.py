@@ -4,6 +4,7 @@ import threading
 import pytest
 
 wx = pytest.importorskip("wx")
+import hpc_gui.wx_shell as wx_shell
 
 
 @pytest.mark.audit
@@ -23,7 +24,12 @@ def test_wx_shell_uses_shared_commands_and_responsive_start_size():
 
 @pytest.mark.audit
 def test_wx_shell_dispatches_core_views():
-    source = "".join(path.read_text(encoding="utf-8") for path in Path("src/hpc_gui").glob("wx_shell*.py"))
+    root = Path("src/hpc_gui")
+    source_files = list(root.glob("wx_shell*.py")) + [
+        root / "wx_directories_view.py",
+        root / "wx_shell_files.py",
+    ]
+    source = "".join(path.read_text(encoding="utf-8") for path in source_files)
     assert 'command_id == "NAV-FILES"' in source
     assert '"open_editor_new_window": lambda path: open_local(path, True)' in source
     assert "def _read_text(path)" in source and "files.read_text(path)" in source
@@ -44,8 +50,8 @@ def test_wx_shell_dispatches_core_views():
     assert '"operation": remote_operation' in source and "files.remove(remote_path, recursive=True)" in source
     assert "files.rename(paths[0], destination)" in source
     assert "files.copy if action == \"copy\" else files.move" in source
-    assert "TransferItem(\"download\", remote_path" in source and "_start_file_transfers" in source
-    assert 'TransferItem("upload", local_path' in source and "_start_file_transfers" in source
+    assert "prepare_download(session_state, lifecycle" in source and "_start_file_transfers" in source
+    assert "prepare_upload(session_state, lifecycle" in source and "_start_file_transfers" in source
     assert "files.mkdir(destination)" in source
     assert 'command_id == "NAV-TERMINAL"' in source and "show_terminal(parent, ssh=session.get(\"ssh\"), lifecycle=lifecycle)" in source
     # New shell uses menu_items + t("menu.settings") not old command_items/settings_btn
@@ -55,9 +61,111 @@ def test_wx_shell_dispatches_core_views():
 
 @pytest.mark.integration
 @pytest.mark.wx
+def test_wx_shell_exposes_directories_and_remote_files_pages():
+    app = wx.GetApp() or wx.App(False)
+    frame, _lifecycle, state = wx_shell.create_shell_frame(
+        app, defer_terminal_webview=True
+    )
+    try:
+        pages = frame._wx_shell_controls["pages"]
+        notebook = frame._wx_shell_controls["notebook"]
+        for command_id in ("NAV-DIRECTORIES", "NAV-FILES"):
+            page = pages[command_id]["page"]
+            assert notebook.FindPage(page) >= 0
+    finally:
+        try:
+            frame.Close()
+        except Exception:
+            pass
+        for _ in range(3):
+            wx.Yield()
+        try:
+            if not frame.IsBeingDeleted():
+                frame.Destroy()
+        except Exception:
+            pass
+        for _ in range(3):
+            wx.Yield()
+
+
+@pytest.mark.integration
+@pytest.mark.wx
+@pytest.mark.semantic
+def test_wx_batch_shell_keeps_selection_order_and_quotes_paths(monkeypatch):
+    from hpc_gui.wx_shell_terminal import _run_shell_in_terminal
+    import hpc_gui.wx_terminal as terminal
+
+    app = wx.GetApp() or wx.App(False)
+    frame = wx.Frame(None)
+    sent = []
+
+    class Ssh:
+        def send_shell_text(self, text):
+            sent.append(text)
+
+    class Lifecycle:
+        def register_cleanup(self, _callback, **_kwargs):
+            pass
+
+    shown = []
+    monkeypatch.setattr(terminal, "show_terminal", lambda *args, **kwargs: shown.append(args))
+    state = {"session": {"ssh": Ssh()}}
+    try:
+        _run_shell_in_terminal(
+            state, frame, Lifecycle(), ["/remote/Z name.sh", "/remote/a.sh"]
+        )
+        assert sent == ["bash -- '/remote/Z name.sh'\nbash -- /remote/a.sh\n"]
+        assert shown and shown[0][0] is frame
+    finally:
+        frame.Destroy()
+        app.ProcessPendingEvents()
+
+
+@pytest.mark.integration
+@pytest.mark.wx
+@pytest.mark.semantic
+def test_wx_remote_directory_actions_and_script_submission_use_live_session():
+    from hpc_gui.wx_shell import _remote_files_callbacks
+
+    class Files:
+        def __init__(self):
+            self.calls = []
+
+        def move(self, source, target):
+            self.calls.append(("move", source, target))
+
+        def mkdir(self, path):
+            self.calls.append(("mkdir", path))
+
+    class Slurm:
+        def sbatch(self, path):
+            assert path == "/scratch/job.sbatch"
+            return "Submitted batch job 12345"
+
+    class Lifecycle:
+        def register_cleanup(self, _callback, **_kwargs):
+            pass
+
+    files = Files()
+    state = {"session": {"files": files, "slurm": Slurm()}}
+    callbacks = _remote_files_callbacks(state, None, Lifecycle())
+
+    callbacks["operation"]("move", ["/scratch/result.out"], "/home/archive")
+    callbacks["operation"]("new_folder", [], "/home/archive/new")
+    result = callbacks["submit_slurm"]("/scratch/job.sbatch")
+
+    assert files.calls == [
+        ("move", "/scratch/result.out", "/home/archive/result.out"),
+        ("mkdir", "/home/archive/new"),
+    ]
+    assert result == "Submitted batch job 12345"
+
+
+@pytest.mark.integration
+@pytest.mark.wx
 @pytest.mark.semantic
 def test_directories_default_download_uses_transfer_queue(monkeypatch, tmp_path):
-    from hpc_gui import wx_directories_view, wx_remote_files_view, wx_shell
+    from hpc_gui import wx_directories_view, wx_remote_files_view, wx_shell_file_transfer
 
     app = wx.GetApp() or wx.App(False)
     frame = wx.Frame(None)
@@ -75,7 +183,7 @@ def test_directories_default_download_uses_transfer_queue(monkeypatch, tmp_path)
 
     started = []
     monkeypatch.setattr(wx_remote_files_view, "build_remote_files_panel", fake_remote_panel)
-    monkeypatch.setattr(wx_shell, "_start_file_transfers", lambda *args, **kwargs: started.append((args, kwargs)))
+    monkeypatch.setattr(wx_shell_file_transfer, "_start_file_transfers", lambda *args, **kwargs: started.append((args, kwargs)))
 
     try:
         wx_directories_view.build_directories_panel(frame, session_state=state)

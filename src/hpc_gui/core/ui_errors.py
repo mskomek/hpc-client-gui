@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import errno
+import logging
 import socket
 from typing import Optional
 
@@ -73,26 +74,30 @@ def describe_connection_error(exc: BaseException, fallback: str = "") -> str:
     return explanation
 
 
-def show_exception(
-    parent,
+def prepare_exception(
     *,
     title: Optional[str] = None,
     user_message: Optional[str] = None,
     exc: Optional[BaseException] = None,
     area: str = "GEN",
-) -> None:
-    try:
-        from PySide6.QtWidgets import QMessageBox
-    except Exception:
-        return
+) -> tuple[str, str]:
+    """Build a localized diagnostic without a GUI toolkit.
 
+    Credential handlers should pass an already-redacted description rather
+    than the original exception, so secrets cannot enter a traceback.
+    """
     if exc is not None:
         err_id = log_exception_with_id(area, exc)
     else:
         err_id = new_error_id(area)
+        from hpc_gui.core.log_redaction import redact_text
+
+        logging.getLogger("hpc_gui").error(
+            "Error-ID=%s %s", err_id, redact_text(user_message or t("common.error")),
+        )
 
     ttl = title or t("common.error")
     label = t("common.error_code")
     hint = t("common.error_code_hint")
     msg = (user_message or t("common.error")) + f"\n\n{label}: {err_id}\n{hint}"
-    QMessageBox.critical(parent, ttl, msg)
+    return ttl, msg

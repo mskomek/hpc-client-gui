@@ -267,42 +267,6 @@ class RemoteContextMenuMixin:
         act_save_as.setEnabled(has_selection)
         act_add_queue.setEnabled(False)
         act_view_edit.setEnabled(single_selection and not single_selection_is_dir)
-        # Batch-aware quick lint: 1-10 files and a common tool exists.
-        lint_batch_ok = False
-        if has_selection:
-            all_files = all(not is_dir for _, is_dir in selected_entries)
-            if all_files and 1 <= len(sel_paths) <= 10:
-                try:
-                    from hpc_gui.plugins.linter_tools import tools_supporting_all_suffixes
-
-                    suffixes = [self._remote_suffix(p) for p in sel_paths]
-                    lint_batch_ok = bool(tools_supporting_all_suffixes(suffixes))
-                except Exception:
-                    lint_batch_ok = False
-            elif single_selection and single_selection_is_dir and self.session:
-                # The recursive remote scan runs only after the user chooses it.
-                lint_batch_ok = True
-        act_ansys_lint = menu.addAction(_tr("files.ansys_lint", "ANSYS Journal Lint"))
-        act_ansys_lint.setEnabled(lint_batch_ok)
-        if single_selection and not single_selection_is_dir:
-            self._build_send_to_plugin_menu(
-                menu, sel_paths[0] if single_selection and not single_selection_is_dir else None
-            )
-        elif lint_batch_ok:
-            try:
-                from hpc_gui.plugins.linter_tools import tools_supporting_all_suffixes
-
-                suffixes = [self._remote_suffix(p) for p in sel_paths]
-                batch_tools = tools_supporting_all_suffixes(suffixes)
-            except Exception:
-                batch_tools = []
-            if batch_tools:
-                send_menu = menu.addMenu(t("files.send_to_plugin"))
-                for tool in batch_tools:
-                    action = send_menu.addAction(tool.title)
-                    action.triggered.connect(
-                        lambda _=False, tl=tool, ps=list(sel_paths): self.open_in_tool_batch(tl, ps)
-                    )
         act_open_new_tab.setEnabled(single_selection and single_selection_is_dir)
         if act_open_out1 is not None:
             act_open_out1.setEnabled(single_selection and not single_selection_is_dir)
@@ -384,16 +348,6 @@ class RemoteContextMenuMixin:
 
         if act_run_shell is not None and chosen == act_run_shell:
             self.run_shell_requested.emit(shell_run_path)
-            return
-
-        if chosen == act_ansys_lint:
-            if len(sel_paths) == 1:
-                if single_selection_is_dir:
-                    self.run_ansys_lint_folder(sel_paths[0])
-                else:
-                    self.run_ansys_lint(sel_paths[0])
-            else:
-                self.run_ansys_lint_batch(sel_paths)
             return
 
         if chosen == act_view_edit:

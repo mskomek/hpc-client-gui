@@ -54,6 +54,103 @@ def _browser(wx_app, path, **callbacks):
 
 @pytest.mark.gui
 @pytest.mark.wx
+@pytest.mark.semantic
+def test_local_open_with_saves_program_for_file_extension(
+    wx_app, tmp_path: Path, monkeypatch
+):
+    source = tmp_path / "job.slurm"
+    source.write_text("echo ok", encoding="utf-8")
+    program = tmp_path / "editor.exe"
+    program.write_text("", encoding="utf-8")
+    frame = _browser(wx_app, tmp_path)
+    listing = frame._wx_local_controls["listing"]
+    row = next(
+        index
+        for index in range(listing.GetItemCount())
+        if listing.GetItemText(index) == source.name
+    )
+    listing.Select(row)
+
+    class ProgramDialog:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def ShowModal(self):
+            return wx.ID_OK
+
+        def GetPath(self):
+            return str(program)
+
+        def Destroy(self):
+            pass
+
+    saved = []
+    launched = []
+    monkeypatch.setattr(wx, "FileDialog", ProgramDialog)
+    monkeypatch.setattr(wx, "MessageBox", lambda *_args: wx.YES)
+    monkeypatch.setattr(
+        "hpc_gui.wx_local_open_with.get_file_association", lambda _ext: ""
+    )
+    monkeypatch.setattr(
+        "hpc_gui.wx_local_open_with.set_file_association",
+        lambda extension, app: saved.append((extension, app)),
+    )
+    monkeypatch.setattr(
+        "hpc_gui.wx_local_open_with.subprocess.Popen",
+        lambda args: launched.append(args),
+    )
+
+    frame._wx_local_run_action("open_with")
+
+    assert saved == [(".slurm", str(program))]
+    assert launched == [[str(program), str(source.resolve())]]
+
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+def test_local_ctrl_v_downloads_remote_clipboard_to_chosen_directory(
+    wx_app, tmp_path: Path, monkeypatch
+):
+    from hpc_gui.services.file_clipboard import get_file_clipboard
+
+    destinations = []
+    clipboard = get_file_clipboard()
+    clipboard.set("copy", ["/remote/out.txt"])
+
+    class DestinationDialog:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def ShowModal(self):
+            return wx.ID_OK
+
+        def GetPath(self):
+            return str(tmp_path)
+
+        def Destroy(self):
+            pass
+
+    monkeypatch.setattr(wx, "DirDialog", DestinationDialog)
+    frame = _browser(
+        wx_app,
+        tmp_path,
+        download_remote=lambda paths, destination: destinations.append(
+            (paths, destination)
+        ),
+    )
+    try:
+        event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+        event.SetKeyCode(ord("V"))
+        event.SetControlDown(True)
+        frame._wx_local_controls["listing"].ProcessEvent(event)
+        assert destinations == [(("/remote/out.txt",), str(tmp_path))]
+    finally:
+        clipboard.clear()
+
+
+@pytest.mark.gui
+@pytest.mark.wx
 def test_local_double_click_routes_file_to_editor_and_folder_to_visible_navigation(wx_app, tmp_path: Path):
     (tmp_path / "job.slurm").write_text("#!/bin/bash\n", encoding="utf-8")
     (tmp_path / "results").mkdir()

@@ -14,7 +14,7 @@ from hpc_gui.config.storage import get_jobs_outputs_refresh_interval_seconds, ge
 
 from hpc_gui.core.i18n import t
 
-from ._jobs_output_text import _LIVE_TAIL_FILE_RETRY_INTERVAL_MS, _LIVE_TAIL_FILE_RETRY_WINDOW_SECONDS, _LIVE_TAIL_INITIAL_RETRY_SECONDS, _LIVE_TAIL_INTERVAL_MS, _LIVE_TAIL_LINE_COUNT
+from hpc_gui.services.job_output_text import _LIVE_TAIL_FILE_RETRY_INTERVAL_MS, _LIVE_TAIL_FILE_RETRY_WINDOW_SECONDS, _LIVE_TAIL_INITIAL_RETRY_SECONDS, _LIVE_TAIL_INTERVAL_MS, _LIVE_TAIL_LINE_COUNT
 from ._jobs_output_rendering import _is_scrolled_to_bottom as _render_is_scrolled_to_bottom
 from ._jobs_output_rendering import _scroll_to_latest as _render_scroll_to_latest
 from ._jobs_output_rendering import _set_live_text as _render_set_live_text

@@ -15,8 +15,6 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QGroupBox,
-    QListWidget,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -41,9 +39,9 @@ from hpc_gui.services.files_base import RemoteEntry
 from hpc_gui.services.directory_comparison import ComparableEntry
 from hpc_gui.core.platform import current_os
 from hpc_gui.services.shortcut_preferences import active_binding
+from hpc_gui.services.transfer_controller import TransferItem as TransferItem
 from hpc_gui.ui.dialogs.transfer_dialog import (
     TransferDialog as TransferDialog,  # noqa: F401 — annotation use + legacy re-export
-    TransferItem as TransferItem,  # noqa: F401 — annotation use + legacy re-export
     TransferPreflightDialog as TransferPreflightDialog,  # noqa: F401 — legacy re-export
 )
 from hpc_gui.ui.widgets._fm_dnd_contract import (
@@ -55,11 +53,6 @@ from hpc_gui.ui.widgets._fm_dnd_contract import (
 from hpc_gui.ui.widgets._remote_context_menu import (
     REMOTE_CONTEXT_MENU_LABELS as REMOTE_CONTEXT_MENU_LABELS,  # noqa: F401 — legacy re-export
     RemoteContextMenuMixin,
-)
-from hpc_gui.ui.widgets._remote_lint_tools import (
-    RemoteLintToolsMixin,
-    _RemoteLintSignals as _RemoteLintSignals,  # noqa: F401 — legacy re-export
-    _RemoteLintWorker as _RemoteLintWorker,  # noqa: F401 — legacy re-export
 )
 from hpc_gui.ui.widgets._remote_listing import (
     DIRECTORY_CACHE_TTL_SECONDS as DIRECTORY_CACHE_TTL_SECONDS,  # noqa: F401 — legacy re-export
@@ -84,17 +77,13 @@ from hpc_gui.ui.widgets._remote_transfer_copy_move import RemoteTransferCopyMove
 from hpc_gui.ui.widgets._remote_transfer_download import RemoteTransferDownloadMixin
 from hpc_gui.ui.widgets._remote_transfer_exec import (
     RemoteTransferExecMixin,
-    _FileOpWorker as _FileOpWorker,  # noqa: F401 — legacy re-export
 )
 from hpc_gui.ui.widgets._remote_transfer_plan import (
     RemoteTransferPlanMixin,
-    _LocalUploadPlanJob as _LocalUploadPlanJob,  # noqa: F401 — legacy re-export
     _TransferPlanWorker as _TransferPlanWorker,  # noqa: F401 — legacy re-export
 )
-from hpc_gui.ui.widgets._remote_transfer_progress import RemoteTransferProgressMixin
 from hpc_gui.ui.widgets._remote_transfer_ui import RemoteTransferUiMixin
 from hpc_gui.ui.widgets._remote_transfer_upload import RemoteTransferUploadMixin
-from hpc_gui.ui.widgets._remote_transfer_upload_plan import RemoteTransferUploadPlanMixin
 from hpc_gui.ui.widgets._remote_tree_view import (
     RemoteTreeViewMixin,
     _FILE_MODE_ROLE as _FILE_MODE_ROLE,  # noqa: F401 — legacy re-export
@@ -115,13 +104,10 @@ class RemoteDirPanel(
     RemoteContextMenuMixin,
     RemoteTransferPlanMixin,
     RemoteTransferExecMixin,
-    RemoteTransferProgressMixin,
     RemoteTransferDownloadMixin,
-    RemoteTransferUploadPlanMixin,
     RemoteTransferUploadMixin,
     RemoteTransferCopyMoveMixin,
     RemoteNavigationMixin,
-    RemoteLintToolsMixin,
     RemoteTransferUiMixin,
     RemoteMetadataMixin,
     QWidget,
@@ -186,15 +172,12 @@ class RemoteDirPanel(
         self._local_target_refresh_callback: Optional[Callable[[str], None]] = None
         self._transfer_dialogs: List[TransferDialog] = []
         self._active_transfer_keys: set[tuple[str, str, str]] = set()
-        self._local_upload_plan_jobs: Dict[int, _LocalUploadPlanJob] = {}
-        self._next_local_upload_plan_id = 0
         self._planning_jobs: Dict[int, Tuple[QThread, _TransferPlanWorker]] = {}
         self._next_planning_job_id = 0
         self._show_transfer_dialog = True
         self._directory_cache: Dict[str, Tuple[float, List[RemoteEntry]]] = {}
         self._listing_generation = 0
         self._listing_worker: Optional[_DirectoryListingWorker] = None
-        self._remote_lint_worker: Optional[_RemoteLintWorker] = None
         self._pending_listing: Optional[Tuple[object, str]] = None
         self._dirty_views: set[str] = set()
         self._navigation_store = None
@@ -327,27 +310,12 @@ class RemoteDirPanel(
         lay.addWidget(self.directory_tabs)
         lay.addWidget(self.tabs)
 
-        # Transfer queue (batch view)
-        self.queue_group = QGroupBox(t("dirs.queue_title"))
-        qlay = QVBoxLayout(self.queue_group)
-        self.queue_current = QLabel("-")
-        self.queue_list = QListWidget()
-        self.queue_list.setMinimumHeight(80)
-        self.queue_current_label = QLabel(t("dirs.queue_current"))
-        qlay.addWidget(self.queue_current_label)
-
-        # ---- active batch tracking (for graceful shutdown / diagnostics)
+        # Active batch tracking retained for legacy shutdown callers.
         self._active_thread: Optional[QThread] = None
-        self._active_worker: Optional[_FileOpWorker] = None
+        self._active_worker: object = None
         self._active_plan: List[_PlannedOp] = []
         self._active_step: int = 0
         self._active_title: str = ""
-        qlay.addWidget(self.queue_current)
-        self.queue_next_label = QLabel(t("dirs.queue_pending"))
-        qlay.addWidget(self.queue_next_label)
-        qlay.addWidget(self.queue_list)
-        self.queue_group.setVisible(False)
-        lay.addWidget(self.queue_group)
 
         self._update_undo_enabled()
         self._update_navigation_controls()
@@ -364,9 +332,6 @@ class RemoteDirPanel(
         binding = active_binding("FILE-NEW-FOLDER", current_os())
         self.btn_new_folder.setToolTip(f"{t('dirs.new_folder')} ({binding})" if binding else t("dirs.new_folder"))
         self.path_label.setText(t("dirs.path"))
-        self.queue_group.setTitle(t("dirs.queue_title"))
-        self.queue_current_label.setText(t("dirs.queue_current"))
-        self.queue_next_label.setText(t("dirs.queue_pending"))
         tab_keys = ("all", "folders", "iso", "archives", "slurm", "shell", "other")
         for index, key in enumerate(tab_keys):
             self.tabs.setTabText(index, t(f"dirs.tab_{key}"))
@@ -450,7 +415,6 @@ _enable_legacy_patch_targets(
         ),
         "QMessageBox": (
             ("hpc_gui.ui.widgets._remote_context_menu", "QMessageBox"),
-            ("hpc_gui.ui.widgets._remote_lint_tools", "QMessageBox"),
             ("hpc_gui.ui.widgets._remote_metadata", "QMessageBox"),
             ("hpc_gui.ui.widgets._remote_mutations", "QMessageBox"),
             ("hpc_gui.ui.widgets._remote_permissions_dialog", "QMessageBox"),
