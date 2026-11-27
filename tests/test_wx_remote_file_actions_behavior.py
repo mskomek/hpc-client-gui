@@ -11,8 +11,6 @@ from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 
-pytest_plugins = ("support.wx_remote_file_test_support",)
-
 from support.wx_remote_file_test_support import (
     _DestinationDialog,
     _Dialog,

@@ -6,8 +6,6 @@ wx = pytest.importorskip("wx")
 
 from mock_hpc_files import MockRemoteFilesBackend
 
-pytest_plugins = ("support.wx_remote_file_test_support",)
-
 from support.wx_remote_file_test_support import _Dialog, _browser, _pump
 
 

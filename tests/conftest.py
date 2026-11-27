@@ -59,6 +59,30 @@ def _isolate_plugin_data(tmp_path, monkeypatch):
     monkeypatch.setattr("hpc_gui.plugins.storage.app_data_dir", lambda: tmp_path)
 
 
+@pytest.fixture
+def wx_app():
+    """Create and tear down the native wx app used by remote file tests."""
+    wx = pytest.importorskip("wx")
+    from hpc_gui.core.i18n import load_language
+
+    load_language("en")
+    app = wx.App.Get() or wx.App(False)
+    yield app
+    for window in list(wx.GetTopLevelWindows()):
+        if window and not window.IsBeingDeleted():
+            window.Close()
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        wx.Yield()
+    for window in list(wx.GetTopLevelWindows()):
+        if window and not window.IsBeingDeleted():
+            window.Destroy()
+    app.ProcessPendingEvents()
+    wx.Yield()
+    assert not wx.GetTopLevelWindows(), "wx top-level windows survived fixture teardown"
+    app.Destroy()
+
+
 @pytest.fixture(autouse=True)
 def _no_wx_modal_popups(monkeypatch):
     """Prevent any wx modal dialog from blocking the test suite.
