@@ -2,7 +2,8 @@
 
 from threading import Thread
 from hpc_gui.core.i18n import t
-from hpc_gui.wx_local_files_model import open_with_system, reveal_in_file_manager
+from hpc_gui.wx_local_files_model import reveal_in_file_manager
+from hpc_gui.wx_local_open_with import open_local_with_program
 from hpc_gui.wx_clipboard import write_text
 
 def install_mutations(view):
@@ -176,10 +177,7 @@ def install_mutations(view):
                     for item in selected:
                         open_editor(str(item.path))
         elif action == "open_with":
-            try:
-                open_with_system(entry.path)
-            except OSError as error:
-                wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            open_local_with_program(wx, host, entry.path)
         elif action == "copy_path":
             write_text(wx, str(entry.path))
         elif action == "rename":

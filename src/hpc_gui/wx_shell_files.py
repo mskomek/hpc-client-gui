@@ -10,6 +10,7 @@ from hpc_gui.wx_shell_terminal import _run_shell_in_terminal
 from hpc_gui.wx_shell_file_transfer import _start_file_transfers
 from hpc_gui.wx_shell_upload import prepare_upload
 from hpc_gui.wx_shell_download import prepare_download
+from hpc_gui.wx_shell_local_download import build_remote_download_callback
 
 
 def _editor_session_key(session_state):
@@ -278,10 +279,15 @@ def _local_files_callbacks(session_state, parent, lifecycle):
 
         Thread(target=worker, daemon=True).start()
 
+    download_remote = build_remote_download_callback(
+        session_state, parent, lifecycle
+    )
+
     return {
         "open_editor": lambda path: open_local(path),
         "open_editor_new_window": lambda path: open_local(path, True),
         "upload": upload_local,
+        "download_remote": download_remote,
         "lint_selection": _file_lint_callback(session_state, lifecycle, remote=False),
         "run_shell": lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
     }
