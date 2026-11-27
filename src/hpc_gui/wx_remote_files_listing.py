@@ -7,6 +7,10 @@ from hpc_gui.services.file_filter_registry import FileFilter
 from hpc_gui.services.remote_entry_format import natural_sort_key as _shared_natural_sort_key
 from hpc_gui.wx_remote_files_support import _format_mtime, _fmt_size, _type_label
 from hpc_gui.wx_file_list_style import alternate_row_colour
+from hpc_gui.wx_file_dragdrop import (
+    begin_remote_file_drag,
+    install_local_file_drop,
+)
 from hpc_gui.wx_file_type_icons import file_type_icon_index, install_file_type_icons
 
 
@@ -283,6 +287,23 @@ def install_listing(view):
         }
         next_tab_id[0] += 1
         tabs.append(tab_entry)
+
+        listing.Bind(
+            wx.EVT_LIST_BEGIN_DRAG,
+            lambda event: begin_remote_file_drag(wx, listing, tab_entry["entries"], event),
+        )
+        if callable(operation):
+            def upload_dropped_files(paths, destination):
+                operation("upload", paths, destination)
+
+            def target_directory():
+                return (active_tab_state() or {}).get("path")
+            install_local_file_drop(
+                wx, listing, target_directory, upload_dropped_files
+            )
+            install_local_file_drop(
+                wx, tab_panel, target_directory, upload_dropped_files
+            )
 
         def _on_filter_changed(evt):
             sel = filter_nb.GetSelection()

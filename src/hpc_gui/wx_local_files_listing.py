@@ -5,6 +5,10 @@ from threading import Thread
 from hpc_gui.core.i18n import t
 from hpc_gui.services.local_files import list_windows_drives
 from hpc_gui.wx_file_list_style import alternate_row_colour
+from hpc_gui.wx_file_dragdrop import (
+    begin_local_file_drag,
+    install_remote_file_drop,
+)
 from hpc_gui.wx_file_type_icons import file_type_icon_index, install_file_type_icons
 from hpc_gui.wx_local_files_model import LocalEntry, format_local_size
 from hpc_gui.wx_local_files_support import _format_mtime, _type_label
@@ -19,6 +23,7 @@ def install_listing(view):
     btn_parent = view.btn_parent
     btn_refresh = view.btn_refresh
     context_menu = view.context_menu
+    download_remote = view.download_remote
     host = view.host
     key_down = view.key_down
     middle_click = view.middle_click
@@ -228,6 +233,17 @@ def install_listing(view):
         # sync model
         # caller will handle notebook insertion
         # bind events for this listing
+        listing.Bind(
+            wx.EVT_LIST_BEGIN_DRAG,
+            lambda event: begin_local_file_drag(wx, listing, tab_entry["entries"], event),
+        )
+        if callable(download_remote):
+            install_remote_file_drop(
+                wx,
+                listing,
+                lambda: (active_tab_state() or {}).get("path"),
+                download_remote,
+            )
         listing.Bind(wx.EVT_LIST_ITEM_ACTIVATED, activate)
         listing.Bind(wx.EVT_CONTEXT_MENU, context_menu)
         listing.Bind(wx.EVT_KEY_DOWN, key_down)
