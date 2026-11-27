@@ -47,8 +47,11 @@ def wx_app():
     app.Destroy()
 
 
-def _browser(app, backend, model=None, operation=None):
-    show_remote_files(model=model, loader=backend.iterdir_entries, operation=operation or backend.operation)
+def _browser(app, backend, model=None, operation=None, chmod=None):
+    show_remote_files(
+        model=model, loader=backend.iterdir_entries,
+        operation=operation or backend.operation, chmod=chmod,
+    )
     frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
     _pump(app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
     return frame
@@ -404,6 +407,34 @@ def test_wx_remote_new_file_and_chmod_reach_backend(wx_app, monkeypatch):
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("755"))
     frame._wx_remote_run_action("chmod", ("/work/test.txt",), "/work")
     _pump(wx_app, lambda: ("chmod", "/work/test.txt", 0o755) in backend.calls)
+
+
+def test_wx_remote_chmod_accepts_four_digit_octal_mode(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    chmod_calls = []
+    frame = _browser(wx_app, backend, chmod=lambda path, mode: chmod_calls.append((path, mode)))
+    monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("1755"))
+
+    frame._wx_remote_run_action("chmod", ("/work/a.txt",), "/work")
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
+
+    assert chmod_calls == [("/work/a.txt", 0o1755)]
+
+
+def test_wx_remote_chmod_rejects_invalid_octal_mode(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    errors = []
+    frame = _browser(
+        wx_app, backend,
+        chmod=lambda *_args: pytest.fail("invalid mode reached backend"),
+    )
+    monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("1988"))
+    monkeypatch.setattr(wx, "MessageBox", lambda message, *_args, **_kwargs: errors.append(message) or wx.OK)
+
+    frame._wx_remote_run_action("chmod", ("/work/a.txt",), "/work")
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
+
+    assert errors
 
 
 def test_wx_remote_favorite_selected_file_targets_file_path(wx_app):
