@@ -109,10 +109,20 @@ def test_wx_file_submission_registers_job_and_routes_output_followers(
         elif mode == storage.SBATCH_FOLLOW_MODE_NEW_WINDOW_COMBINED:
             _pump(lambda: any(getattr(window, "_wx_output_followers", None) for window in wx.GetTopLevelWindows()))
             pair = next(window for window in wx.GetTopLevelWindows() if getattr(window, "_wx_output_followers", None))
+            assert pair.GetTitle() == "Job 678 — Output and Error"
             assert [follower.state.path for follower in pair._wx_output_followers] == [
                 "/work/run-678.out",
                 "/work/run-678.err",
             ]
+            labels = []
+            pending = list(pair.GetChildren())
+            while pending:
+                child = pending.pop()
+                pending.extend(child.GetChildren())
+                if isinstance(child, wx.StaticText):
+                    labels.append(child.GetLabel())
+            assert any(label == "Output: /work/run-678.out" for label in labels)
+            assert any(label == "Error: /work/run-678.err" for label in labels)
             _pump(lambda: all(control.GetValue().startswith("tail ") for control in pair._wx_output_controls))
         else:
             _pump(lambda: sum(bool(getattr(window, "_wx_output_controls", {}).get("follower")) for window in wx.GetTopLevelWindows()) == 2)
